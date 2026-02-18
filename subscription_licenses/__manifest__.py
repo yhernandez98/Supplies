@@ -4,6 +4,7 @@
     'author': 'Supplies de Colombia',
     'category': 'Sales/Subscriptions',
     'depends': ['sale', 'stock', 'account', 'product', 'base', 'web', 'product_suppiles', 'subscription_nocount'],
+    'external_dependencies': {'python': ['openpyxl']},
     'assets': {
         'web.assets_backend': [
             'subscription_licenses/static/src/css/list_group_visible.css',

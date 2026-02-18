@@ -51,9 +51,76 @@
         setInterval(updateBodyClass, 1500);
     }
 
+    /** Barra de desplazamiento horizontal también arriba en lista Consolidado (Proveedor). */
+    function findScrollable(el) {
+        if (!el || el.nodeType !== 1) return null;
+        var style = window.getComputedStyle(el);
+        var ox = style.overflowX || style.overflow;
+        if ((ox === 'auto' || ox === 'scroll') && el.scrollWidth > el.clientWidth) {
+            return el;
+        }
+        for (var i = 0; i < el.children.length; i++) {
+            var found = findScrollable(el.children[i]);
+            if (found) return found;
+        }
+        return null;
+    }
+
+    function setupTopScrollbar() {
+        var listRoot = document.querySelector('.o_list_consolidado_top_scroll, .o_list_view.o_list_consolidado_top_scroll');
+        if (!listRoot) {
+            var tab = document.querySelector('[data-tab-name="report_consolidated_page"], .tab-pane[id*="report_consolidated"]');
+            if (tab) listRoot = tab.querySelector('.o_list_view');
+        }
+        if (!listRoot || listRoot.dataset.topScrollbar === '1') return;
+        var scrollable = findScrollable(listRoot);
+        if (!scrollable) return;
+        var topBar = document.createElement('div');
+        topBar.className = 'o_list_consolidado_top_scroll_bar';
+        topBar.setAttribute('aria-hidden', 'true');
+        topBar.style.cssText = 'overflow-x: auto; overflow-y: hidden; height: 12px; margin-bottom: 4px; max-width: 100%;';
+        var inner = document.createElement('div');
+        inner.style.height = '1px';
+        inner.style.width = scrollable.scrollWidth + 'px';
+        topBar.appendChild(inner);
+        scrollable.parentNode.insertBefore(topBar, scrollable);
+        listRoot.dataset.topScrollbar = '1';
+
+        function syncFromTable() {
+            topBar.scrollLeft = scrollable.scrollLeft;
+        }
+        function syncFromTop() {
+            scrollable.scrollLeft = topBar.scrollLeft;
+        }
+        scrollable.addEventListener('scroll', syncFromTable);
+        topBar.addEventListener('scroll', syncFromTop);
+        var ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(function () {
+            inner.style.width = (scrollable.scrollWidth) + 'px';
+            topBar.scrollLeft = scrollable.scrollLeft;
+        }) : null;
+        if (ro) ro.observe(scrollable);
+        syncFromTable();
+    }
+
+    function runTopScrollbar() {
+        setupTopScrollbar();
+        setTimeout(setupTopScrollbar, 500);
+        setTimeout(setupTopScrollbar, 1500);
+    }
+
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', run);
     } else {
         run();
     }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        runTopScrollbar();
+        var mo = window.MutationObserver && new MutationObserver(function () {
+            runTopScrollbar();
+        });
+        if (mo) {
+            mo.observe(document.body, { childList: true, subtree: true });
+        }
+    });
 })();
