@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+  <record id="action_product_asset_category" model="ir.actions.act_window">
+    <field name="name">Categorías de Activo</field>
+    <field name="res_model">product.asset.category</field>
+    <field name="view_mode">list,form</field>
+    <field name="context">{}</field>
+    <field name="help" type="html">
+      <p>Define las categorías de activo para clasificar tus productos.</p>
+    </field>
+  </record>
+  <menuitem id="menu_product_asset_setting" name="Configuracion Categorias - Clases" parent="stock.menu_stock_config_settings" action="" />
+  <menuitem id="menu_product_asset_category" name="Categorías de Activo" parent="menu_product_asset_setting" action="action_product_asset_category" />
+
+  <!-- Vista lista -->
+  <record id="view_product_asset_category_list" model="ir.ui.view">
+    <field name="name">product.asset.category.list</field>
+    <field name="model">product.asset.category</field>
+    <field name="arch" type="xml">
+      <list>
+        <field name="name" />
+        <field name="code" />
+        <field name="company_id" />
+        <field name="active" />
+      </list>
+    </field>
+  </record>
+
+  <!-- Vista formulario -->
+  <record id="view_product_asset_category_form" model="ir.ui.view">
+    <field name="name">product.asset.category.form</field>
+    <field name="model">product.asset.category</field>
+    <field name="arch" type="xml">
+      <form string="Categoría de Activo">
+        <group>
+          <field name="name" />
+          <field name="code" />
+          <field name="company_id" />
+          <field name="active" />
+        </group>
+        <group>
+          <field name="description" />
+        </group>
+        <chatter />
+      </form>
+    </field>
+  </record>
+
+
+  <record id="action_product_asset_class" model="ir.actions.act_window">
+    <field name="name">Clases de Activo</field>
+    <field name="res_model">product.asset.class</field>
+    <field name="view_mode">list,form</field>
+    <field name="context">{}</field>
+    <field name="help" type="html">
+      <p>Define las Clases de activo para clasificar tus productos.</p>
+    </field>
+  </record>
+
+  <menuitem id="menu_product_asset_class" name="Clases de Activo" parent="menu_product_asset_setting" action="action_product_asset_class" />
+
+  <record id="view_product_asset_class_list" model="ir.ui.view">
+    <field name="name">product.asset.class.list</field>
+    <field name="model">product.asset.class</field>
+    <field name="arch" type="xml">
+      <list editable="bottom">
+        <field name="name" />
+        <field name="code" />
+        <field name="category_id" />
+        <field name="company_id" />
+        <field name="active" />
+      </list>
+    </field>
+  </record>
+  <record id="view_product_asset_class_form" model="ir.ui.view">
+    <field name="name">product.asset.class.form</field>
+    <field name="model">product.asset.class</field>
+    <field name="arch" type="xml">
+      <form string="Clase de Activo">
+        <sheet>
+          <group>
+            <group>
+              <field name="name" required="1" />
+              <field name="code" required="1" />
+              <field name="active" />
+            </group>
+            <group>
+              <field name="company_id" required="1" />
+              <field name="category_id" required="1" />
+            </group>
+          </group>
+          <group>
+            <field name="description" placeholder="Descripción / notas..." />
+          </group>
+        </sheet>
+      </form>
+    </field>
+  </record>
+ 
+  <record id="view_product_business_line_list" model="ir.ui.view">
+    <field name="name">product.business.line.list</field>
+    <field name="model">product.business.line</field>
+    <field name="arch" type="xml">
+      <list editable="bottom">
+        <field name="name" />
+        <field name="code" />
+        <field name="company_id" />
+        <field name="active" />
+      </list>
+    </field>
+  </record>
+  <record id="view_product_business_line_form" model="ir.ui.view">
+    <field name="name">product.business.line.form</field>
+    <field name="model">product.business.line</field>
+    <field name="arch" type="xml">
+      <form string="Clase de Activo">
+        <sheet>
+          <group>
+            <group>
+              <field name="name" required="1" />
+              <field name="code" required="1" />
+              <field name="active" />
+            </group>
+            <group>
+              <field name="company_id" required="1" />
+            </group>
+          </group>
+          <group>
+            <field name="description" placeholder="Descripción / notas..." />
+          </group>
+        </sheet>
+      </form>
+    </field>
+  </record>
+
+</odoo>

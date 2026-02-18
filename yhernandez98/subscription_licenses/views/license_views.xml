@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_license_tree" model="ir.ui.view">
+        <field name="name">license.template.tree</field>
+        <field name="model">license.template</field>
+        <field name="arch" type="xml">
+            <list string="Licencias" class="o_license_module_list" decoration-muted="not active" 
+                  decoration-danger="stock &gt; 0 and used_licenses &gt;= stock"
+                  decoration-warning="stock &gt; 0 and (stock - used_licenses) &lt;= 5 and (stock - used_licenses) &gt; 0"
+                  default_order="code">
+                <field name="code" string="Código" optional="show"/>
+                <field name="name" string="Categoría" optional="show"/>
+                <field name="product_id" string="Producto/Servicio" optional="show"/>
+                <field name="applies_to_equipment" widget="boolean_toggle" string="Aplica Equipo" optional="hide"/>
+                <field name="applies_to_user" widget="boolean_toggle" string="Aplica Usuario" optional="hide"/>
+                <field name="stock" string="Licencias Disponibles" optional="show"/>
+                <field name="used_licenses" string="Cantidad en Uso" optional="show"/>
+                <field name="available_licenses" string="Disponibles Restantes" optional="show"/>
+                <field name="total_quantity" string="Cantidad Total Asignada" sum="Total" optional="show"/>
+                <field name="assignment_count" string="Total Asignaciones" optional="show"/>
+                <field name="active" widget="boolean_toggle" string="Activo" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_license_form" model="ir.ui.view">
+        <field name="name">license.template.form</field>
+        <field name="model">license.template</field>
+        <field name="arch" type="xml">
+            <form string="Licencia" class="o_subscription_form o_license_module_form">
+                <header>
+                    <button name="action_activate" string="Activar" type="object" class="btn-primary" 
+                            invisible="active"/>
+                    <button name="action_deactivate" string="Desactivar" type="object" class="btn-secondary"
+                            invisible="not active"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="%(action_license_assignment)d" type="action" 
+                                class="oe_stat_button" icon="fa-users" context="{'default_license_id': id}">
+                            <field name="assignment_count" widget="statinfo" string="Asignaciones"/>
+                        </button>
+                        <button name="action_view_provider_stock" type="object" 
+                                class="oe_stat_button" icon="fa-truck">
+                            <field name="provider_stock_count" widget="statinfo" string="Proveedores"/>
+                        </button>
+                        <button name="%(action_license_category)d" type="action" 
+                                class="oe_stat_button" icon="fa-tags">
+                            <div>Categorías</div>
+                        </button>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="code" placeholder="Ej: LIANT, LIMIC-RDP"/>
+                <field name="name" string="Categorías" 
+                       placeholder="Seleccione o cree una categoría" 
+                       help="Categoría de licencia para agrupar en suscripciones (ej: Office 365, Google Workspace). Todas las licencias con la misma categoría se agruparán juntas en la pestaña Facturable."/>
+                            <field name="product_id" options="{'no_create': True}" 
+                                   help="Producto de servicio para esta licencia. Este producto debe llamarse con el nombre del tipo específico (ej: 'Basic', 'Estándar', 'E3'). Este producto es el que debe tener precio en USD en la lista de precios del cliente. En la lista de precios, busca este producto (ej: 'Basic') para configurar el precio."/>
+                        </group>
+                        <group>
+                            <field name="active" widget="boolean_toggle"/>
+                            <field name="applies_to_equipment" widget="boolean_toggle" 
+                                   help="Marque esta casilla si la licencia puede ser asignada a equipos (hardware/dispositivos)"/>
+                            <field name="applies_to_user" widget="boolean_toggle" 
+                                   help="Marque esta casilla si la licencia puede ser asignada a usuarios"/>
+                            <field name="provider_stock_count" invisible="1"/>
+                            <field name="stock" 
+                                   invisible="provider_stock_count &gt; 0"
+                                   help="Cantidad total de licencias disponibles (solo si no usa proveedores)."/>
+                            <field name="used_licenses" readonly="1" 
+                                   help="Cantidad total de licencias asignadas y activas (suma de todas las asignaciones sin importar proveedor)"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Descripción">
+                            <field name="description" placeholder="Descripción detallada de la licencia..."/>
+                        </page>
+                        <page string="Cantidad por proveedor">
+                            <field name="provider_stock_ids" nolabel="1" context="{'default_license_template_id': id, 'default_license_product_id': product_id}">
+                                <list create="1" edit="1" delete="0">
+                                    <field name="provider_id" options="{'no_create': False}"/>
+                                    <field name="license_product_id" options="{'no_create': True}" column_invisible="1"/>
+                                    <field name="license_template_id" column_invisible="1"/>
+                                    <field name="cost_per_unit_usd" string="Costo Proveedor"/>
+                                    <field name="is_unlimited" widget="boolean_toggle" string="Ilimitado"/>
+                                    <field name="quantity" string="Cantidad Total"/>
+                                    <field name="assigned_quantity" string="Cantidad Asignada" readonly="1"/>
+                                    <field name="available_quantity_display" string="Disponible" readonly="1"/>
+                                    <field name="license_category_id" optional="hide"/>
+                                    <button name="action_open_delete_wizard" type="object" string="Eliminar" icon="fa-trash" class="btn-danger" title="Eliminar proveedor"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Asignaciones">
+                            <field name="assignment_ids" readonly="1">
+                                <list>
+                                    <field name="partner_id"/>
+                                    <field name="license_provider_id" string="Proveedor"/>
+                                    <field name="location_id"/>
+                                    <field name="quantity"/>
+                                    <field name="state"/>
+                                    <field name="start_date"/>
+                                    <field name="end_date"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_license_search" model="ir.ui.view">
+        <field name="name">license.template.search</field>
+        <field name="model">license.template</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Licencias">
+                <field name="code" string="Código"/>
+                <field name="name" string="Categoría"/>
+                <field name="product_id" string="Producto/Servicio"/>
+                <separator/>
+                <filter string="Activas" name="active" domain="[('active', '=', True)]"/>
+                <filter string="Inactivas" name="inactive" domain="[('active', '=', False)]"/>
+                <separator/>
+                <filter string="Aplica para Equipo" name="applies_equipment" domain="[('applies_to_equipment', '=', True)]"/>
+                <filter string="Aplica para Usuario" name="applies_user" domain="[('applies_to_user', '=', True)]"/>
+                <separator/>
+                <filter string="Con Asignaciones" name="with_assignments" domain="[('assignment_ids', '!=', False)]"/>
+                <filter string="Sin Asignaciones" name="no_assignments" domain="[('assignment_ids', '=', False)]"/>
+                <group expand="0" string="Agrupar por">
+                    <filter string="Categoría" name="group_category" context="{'group_by': 'name'}"/>
+                    <filter string="Producto" name="group_product" context="{'group_by': 'product_id'}"/>
+                    <filter string="Estado" name="group_active" context="{'group_by': 'active'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_license" model="ir.actions.act_window">
+        <field name="name">Licencias</field>
+        <field name="res_model">license.template</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_active': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Cree una nueva licencia
+            </p>
+            <p>
+                <strong>Configuración de Licencias:</strong>
+            </p>
+            <ul>
+                <li><strong>Categoría:</strong> Seleccione o cree una categoría (ej: "Office 365", "Google Workspace"). Las licencias con la misma categoría se agruparán juntas en la pestaña "Facturable" de las suscripciones.</li>
+                <li><strong>Producto/Servicio:</strong> Asocie un producto de tipo servicio con el nombre del tipo específico (ej: "Basic", "Estándar", "E3"). Este producto es el que debe tener precio en USD en la lista de precios del cliente.</li>
+            </ul>
+            <p>
+                <strong>📋 Ejemplo de Configuración:</strong>
+            </p>
+            <ul>
+                <li><strong>Licencia 1:</strong> Categoría = "Office 365", Producto = "Basic"</li>
+                <li><strong>Licencia 2:</strong> Categoría = "Office 365", Producto = "Estándar"</li>
+                <li><strong>Licencia 3:</strong> Categoría = "Office 365", Producto = "E3"</li>
+            </ul>
+            <p>
+                <strong>💰 Lista de Precios (IMPORTANTE):</strong>
+            </p>
+            <ul>
+                <li>En la lista de precios del cliente, aparecerán los <strong>productos específicos</strong>: "Basic", "Estándar", "E3"</li>
+                <li>Configure el precio en USD para cada uno: "Basic" = $10 USD, "Estándar" = $20 USD, "E3" = $30 USD</li>
+                <li><strong>NO</strong> configure precio para "Office 365" (la categoría), solo para los productos específicos</li>
+            </ul>
+            <p>
+                <strong>📊 En Suscripciones (Facturable):</strong>
+            </p>
+            <ul>
+                <li>Todas las licencias con categoría "Office 365" (Basic, Estándar, E3) se agruparán juntas</li>
+                <li>Aparecerá una sola línea: <strong>"Office 365"</strong> con la cantidad total y costo total</li>
+                <li>El sistema suma automáticamente las cantidades y costos de todos los tipos (Basic + Estándar + E3)</li>
+            </ul>
+        </field>
+    </record>
+</odoo>
+

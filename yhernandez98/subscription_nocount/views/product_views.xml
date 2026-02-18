@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista eliminada: El campo subscription_service_product_id ahora está en stock.lot -->
+    <!-- Cada serial puede tener su propio servicio de suscripción -->
+    
+    <!-- Eliminar la vista anterior si existe en la base de datos -->
+    <record id="view_product_template_form_subscription_service" model="ir.ui.view">
+        <field name="active" eval="False"/>
+    </record>
+</odoo>

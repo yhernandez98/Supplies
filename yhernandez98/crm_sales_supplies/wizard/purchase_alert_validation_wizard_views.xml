@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Vista de formulario del wizard de validación -->
+        <record id="view_purchase_alert_validation_wizard_form" model="ir.ui.view">
+            <field name="name">purchase.alert.validation.wizard.form</field>
+            <field name="model">purchase.alert.validation.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Validar Cotizaciones">
+                    <sheet>
+                        <group>
+                            <group>
+                                <field name="alert_id" invisible="1"/>
+                                <div class="alert alert-info" role="alert">
+                                    <p><strong>📋 Validación de Cotizaciones</strong></p>
+                                    <p>Revise las cotizaciones creadas y valide que todo esté correcto antes de proceder.</p>
+                                </div>
+                            </group>
+                        </group>
+                        <group string="Cotizaciones">
+                            <field name="purchase_order_ids" 
+                                   widget="many2many" 
+                                   options="{'no_create': True, 'no_create_edit': True}">
+                                <list>
+                                    <field name="name"/>
+                                    <field name="partner_id" string="Proveedor"/>
+                                    <field name="amount_total" string="Total" widget="monetary"/>
+                                    <field name="state"/>
+                                    <field name="approved_by_crm" string="Aprobada" widget="boolean_toggle"/>
+                                    <field name="rejected_by_crm" string="Rechazada" widget="boolean_toggle" invisible="1"/>
+                                </list>
+                            </field>
+                        </group>
+                        <div class="alert alert-info" role="alert">
+                            <p><strong>💡 Instrucciones:</strong></p>
+                            <ul>
+                                <li>Haga clic en el nombre de la cotización para ver el detalle completo (productos, precios, proveedores).</li>
+                                <li>Para aprobar una cotización, marque la casilla "Aprobada" en la columna correspondiente.</li>
+                                <li>Puede aprobar una o varias cotizaciones según su criterio.</li>
+                                <li><strong>⚠️ Importante:</strong> Las cotizaciones que NO marque como aprobadas serán automáticamente rechazadas al validar.</li>
+                                <li>Al finalizar, haga clic en "Validar Cotizaciones" para confirmar la validación de la alerta.</li>
+                            </ul>
+                        </div>
+                        <group>
+                            <field name="validation_notes" 
+                                   placeholder="Escriba aquí sus comentarios sobre la validación de las cotizaciones (opcional)..."
+                                   widget="text"/>
+                        </group>
+                    </sheet>
+                    <footer>
+                        <button name="action_validate" 
+                                string="Validar Cotizaciones" 
+                                type="object" 
+                                class="btn-primary"/>
+                        <button string="Cancelar" 
+                                class="btn-secondary" 
+                                special="cancel"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+    </data>
+</odoo>
+

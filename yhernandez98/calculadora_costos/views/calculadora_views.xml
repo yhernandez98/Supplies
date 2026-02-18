@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_calculadora_form" model="ir.ui.view">
+        <field name="name">calculadora.costos.form</field>
+        <field name="model">calculadora.costos</field>
+        <field name="arch" type="xml">
+            <form string="Calculadora de Costos">
+                <header>
+                    <button name="action_print_report" 
+                            type="object" 
+                            string="Imprimir Reporte" 
+                            icon="fa-print"
+                            class="oe_highlight"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name" placeholder="Ej: Equipo All in One / Renting Equipo"/>
+                            <field name="tipo_calculo"/>
+                            <field name="active"/>
+                            <field name="partner_id" options="{'no_create': True, 'no_create_edit': True}"/>
+                        </group>
+                        <group>
+                            <field name="costo_total_cop" widget="monetary" 
+                                   options="{'currency_field': 'currency_id'}" readonly="1"/>
+                            <field name="pago_mensual" widget="monetary" 
+                                   options="{'currency_field': 'currency_id'}" readonly="1"/>
+                            <field name="subscription_count" invisible="not partner_id"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Costos del Equipo">
+                            <group>
+                                <group string="Valores en USD">
+                                    <field name="valor_usd"/>
+                                    <field name="valor_garantia_usd"/>
+                                    <field name="costo_total_usd" widget="monetary" 
+                                           options="{'currency_field': 'currency_usd_id'}" readonly="1"/>
+                                </group>
+                                <group string="Conversión a COP">
+                                    <field name="porcentaje_utilidad"/>
+                                    <field name="trm"/>
+                                    <field name="costo_con_utilidad_usd" widget="monetary" 
+                                           options="{'currency_field': 'currency_usd_id'}" readonly="1"/>
+                                    <field name="costo_total_cop" widget="monetary" 
+                                           options="{'currency_field': 'currency_id'}" readonly="1"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Servicios Técnicos">
+                            <group>
+                                <group>
+                                    <field name="costo_servicios_completos"/>
+                                    <field name="porcentaje_margen_servicio"/>
+                                    <field name="servicio_con_margen" widget="monetary" 
+                                           options="{'currency_field': 'currency_id'}" readonly="1"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Parámetros Financieros">
+                            <group>
+                                <group string="Tasas de Interés">
+                                    <field name="tasa_nominal"/>
+                                    <field name="tasa_mensual" readonly="1"/>
+                                    <field name="tasa_efectiva_anual" readonly="1"/>
+                                </group>
+                                <group string="Plazo">
+                                    <field name="plazo_meses"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Opción de Compra">
+                            <group>
+                                <group>
+                                    <field name="porcentaje_opcion_compra"/>
+                                    <field name="valor_opcion_compra" widget="monetary" 
+                                           options="{'currency_field': 'currency_id'}" readonly="1"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Valores por Plazo" invisible="tipo_calculo != 'renting'">
+                            <group>
+                                <group string="Comparación de Plazos">
+                                    <label for="valor_24_meses" string="24 Meses:"/>
+                                    <div>
+                                        <field name="valor_24_meses" widget="monetary" 
+                                               options="{'currency_field': 'currency_id'}" readonly="1"/>
+                                    </div>
+                                    <label for="valor_36_meses" string="36 Meses:"/>
+                                    <div>
+                                        <field name="valor_36_meses" widget="monetary" 
+                                               options="{'currency_field': 'currency_id'}" readonly="1"/>
+                                    </div>
+                                    <label for="valor_48_meses" string="48 Meses:"/>
+                                    <div>
+                                        <field name="valor_48_meses" widget="monetary" 
+                                               options="{'currency_field': 'currency_id'}" readonly="1"/>
+                                    </div>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Suscripciones No Contables" invisible="not partner_id">
+                            <group>
+                                <group>
+                                    <label for="partner_id" string="Cliente:"/>
+                                    <div>
+                                        <field name="partner_id" options="{'no_create': True, 'no_create_edit': True}"/>
+                                    </div>
+                                    <label for="subscription_count" string="Suscripciones Activas:"/>
+                                    <div>
+                                        <field name="subscription_count" readonly="1"/>
+                                    </div>
+                                    <div>
+                                        <button name="action_view_subscriptions" 
+                                                string="Ver Suscripciones Activas" 
+                                                type="object" 
+                                                class="btn-primary"
+                                                icon="fa-file-text"
+                                                invisible="not partner_id"/>
+                                    </div>
+                                </group>
+                            </group>
+                            <div class="alert alert-info" role="alert" invisible="partner_id">
+                                <strong>Nota:</strong> Seleccione un cliente para ver sus suscripciones no contables activas.
+                            </div>
+                        </page>
+                        <page string="Resumen">
+                            <group>
+                                <group string="Resumen Financiero">
+                                    <label for="costo_total_cop" string="Costo Total:"/>
+                                    <div>
+                                        <field name="costo_total_cop" widget="monetary" 
+                                               options="{'currency_field': 'currency_id'}" readonly="1"/>
+                                    </div>
+                                    <label for="pago_mensual" string="Pago Mensual:"/>
+                                    <div>
+                                        <field name="pago_mensual" widget="monetary" 
+                                               options="{'currency_field': 'currency_id'}" readonly="1"/>
+                                    </div>
+                                    <label for="plazo_meses" string="Plazo:"/>
+                                    <div>
+                                        <field name="plazo_meses" readonly="1"/>
+                                        <span> meses</span>
+                                    </div>
+                                    <label for="total_pagar" string="Total a Pagar:" invisible="tipo_calculo == 'renting'"/>
+                                    <div invisible="tipo_calculo == 'renting'">
+                                        <strong>
+                                            <field name="total_pagar" widget="monetary" 
+                                                   options="{'currency_field': 'currency_id'}" 
+                                                   readonly="1"/>
+                                        </strong>
+                                    </div>
+                                    <label for="valor_24_meses" string="24 Meses:" invisible="tipo_calculo != 'renting'"/>
+                                    <div invisible="tipo_calculo != 'renting'">
+                                        <field name="valor_24_meses" widget="monetary" 
+                                               options="{'currency_field': 'currency_id'}" readonly="1"/>
+                                    </div>
+                                    <label for="valor_36_meses" string="36 Meses:" invisible="tipo_calculo != 'renting'"/>
+                                    <div invisible="tipo_calculo != 'renting'">
+                                        <field name="valor_36_meses" widget="monetary" 
+                                               options="{'currency_field': 'currency_id'}" readonly="1"/>
+                                    </div>
+                                    <label for="valor_48_meses" string="48 Meses:" invisible="tipo_calculo != 'renting'"/>
+                                    <div invisible="tipo_calculo != 'renting'">
+                                        <field name="valor_48_meses" widget="monetary" 
+                                               options="{'currency_field': 'currency_id'}" readonly="1"/>
+                                    </div>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Notas">
+                            <group>
+                                <field name="notas" placeholder="Notas adicionales sobre el cálculo..."/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_calculadora_list" model="ir.ui.view">
+        <field name="name">calculadora.costos.list</field>
+        <field name="model">calculadora.costos</field>
+        <field name="arch" type="xml">
+            <list string="Calculadoras" decoration-muted="active == False">
+                <field name="name"/>
+                <field name="tipo_calculo"/>
+                <field name="partner_id"/>
+                <field name="valor_usd" widget="monetary" 
+                       options="{'currency_field': 'currency_usd_id'}"/>
+                <field name="costo_total_cop" widget="monetary" 
+                       options="{'currency_field': 'currency_id'}"/>
+                <field name="pago_mensual" widget="monetary" 
+                       options="{'currency_field': 'currency_id'}"/>
+                <field name="plazo_meses"/>
+                <field name="subscription_count" invisible="not partner_id"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_calculadora_search" model="ir.ui.view">
+        <field name="name">calculadora.costos.search</field>
+        <field name="model">calculadora.costos</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Calculadoras">
+                <field name="name" string="Nombre"/>
+                <field name="partner_id" string="Cliente"/>
+                <field name="tipo_calculo" string="Tipo"/>
+                <separator/>
+                <filter string="Equipos" name="filter_equipo" domain="[('tipo_calculo', '=', 'equipo')]"/>
+                <filter string="Renting" name="filter_renting" domain="[('tipo_calculo', '=', 'renting')]"/>
+                <filter string="Activos" name="filter_active" domain="[('active', '=', True)]"/>
+                <filter string="Inactivos" name="filter_inactive" domain="[('active', '=', False)]"/>
+                <group expand="0" string="Agrupar por">
+                    <filter string="Tipo" name="group_tipo" context="{'group_by': 'tipo_calculo'}"/>
+                    <filter string="Cliente" name="group_partner" context="{'group_by': 'partner_id'}"/>
+                    <filter string="Plazo" name="group_plazo" context="{'group_by': 'plazo_meses'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_calculadora" model="ir.actions.act_window">
+        <field name="name">Calculadora de Costos</field>
+        <field name="res_model">calculadora.costos</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Crear nueva calculadora
+            </p>
+            <p>
+                La calculadora unificada permite calcular costos tanto para equipos como para renting/leasing.
+                Seleccione el tipo de cálculo y complete los datos necesarios.
+            </p>
+        </field>
+    </record>
+</odoo>
