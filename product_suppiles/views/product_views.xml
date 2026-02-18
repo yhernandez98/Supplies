@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <record id="view_product_template_form_inherit_supplies" model="ir.ui.view">
+        <field name="name">product.template.form.supplies.inherit</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet[1]/field[5]" position="after">
+                <group>
+                    <field name="business_line_id" invisible="not type == 'service'"/>
+                    <field name="ui_apply_defaults" invisible="1"/>
+                </group>
+            </xpath>
+
+            <xpath expr="//div[3]" position="inside">
+                <span class="d-inline-flex" invisible="type == 'service'">
+                    <field name="is_composite"/>
+                    <label for="is_composite"/>
+                </span>
+                <span class="d-inline-flex" invisible="type == 'service'">
+                    <field name="use_peripherals"/>
+                    <label for="use_peripherals"/>
+                </span>
+                <span class="d-inline-flex" invisible="type == 'service'">
+                    <field name="use_complements"/>
+                    <label for="use_complements"/>
+                </span>
+            </xpath>
+            <xpath expr="//page[1]/group[1]/group[1]" position="inside">
+                <field name="asset_category_id"/>
+                <field name="asset_class_id" domain="[('category_id', '=', asset_category_id)]"/>
+                <!-- <field name="model_name" />
+                <field name="inventory_plate" />
+                <field name="security_plate" />
+                <field name="billing_code" /> -->
+            </xpath>
+
+            <xpath expr="//sheet/notebook" position="before">
+                <group>
+                    <field name="classification" invisible="type == 'service'"/>
+                    <field name="product_renting" invisible="not type == 'service'"/>
+                    <field name="component_cost_method" invisible="1"/>
+                    <field name="receive_parent_stock" invisible="not is_composite"/>
+                    <field name="parent_valuation_policy" invisible="1"/>
+                    <field name="type" widget="radio" options="{'horizontal': True}"/>
+                </group>
+            </xpath>
+            <xpath expr="//page[1]/group[1]/group[1]/field[@name='type']" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+            <xpath expr="//sheet/notebook/page[@name='general_information']" position="attributes">
+                <attribute name="invisible">type == 'service'</attribute>
+            </xpath>
+            <xpath expr="//sheet/notebook" position="inside">
+                <page string="Renting" invisible="not product_renting">
+                    <group>
+                        <field name="renting_applicable_tmpl_ids" widget="many2many_tags" options="{'no_create_edit': false}" domain="['|','|', ('is_composite','=',True), ('use_peripherals','=',True), ('use_complements','=',True), ('id','!=', id)]"/>
+                    </group>
+                    <span class="o_form_label">
+                        Seleccione los productos objetivo. Al vender el renting se pedirá cuál aplicar y se generarán líneas logísticas del objetivo y su explosión.
+                    </span>
+                </page>
+
+                <page string="Componentes" invisible="not is_composite">
+                    <field name="composite_line_ids">
+                        <list editable="bottom">
+                            <field name="sequence" widget="handle"/>
+                            <field name="component_product_id"/>
+                            <field name="component_qty"/>
+                            <field name="component_uom_id"/>
+                        </list>
+                    </field>
+                    <group string="Historial de Componentes">
+                        <field name="history_component_ids" nolabel="1">
+                            <list>
+                                <field name="purchase_date"/>
+                                <field name="purchase_id"/>
+                                <field name="vendor_id"/>
+                                <field name="product_id"/>
+                                <field name="quantity"/>
+                                <field name="uom_id"/>
+                                <field name="state"/>
+                            </list>
+                        </field>
+                    </group>
+                </page>
+
+                <page string="Periféricos" invisible="not use_peripherals">
+                    <field name="peripheral_line_ids">
+                        <list editable="bottom">
+                            <field name="sequence" widget="handle"/>
+                            <field name="peripheral_product_id"/>
+                            <field name="peripheral_qty"/>
+                            <field name="peripheral_uom_id"/>
+                        </list>
+                    </field>
+                    <group string="Historial de Periféricos">
+                        <field name="history_peripheral_ids" nolabel="1">
+                            <list>
+                                <field name="purchase_date"/>
+                                <field name="purchase_id"/>
+                                <field name="vendor_id"/>
+                                <field name="product_id"/>
+                                <field name="quantity"/>
+                                <field name="uom_id"/>
+                                <field name="state"/>
+                            </list>
+                        </field>
+                    </group>
+                </page>
+
+                <page string="Complementos" invisible="not use_complements">
+                    <field name="complement_line_ids">
+                        <list editable="bottom">
+                            <field name="sequence" widget="handle"/>
+                            <field name="complement_product_id"/>
+                            <field name="complement_qty"/>
+                            <field name="complement_uom_id"/>
+                        </list>
+                    </field>
+                    <group string="Historial de Complementos">
+                        <field name="history_complement_ids" nolabel="1">
+                            <list>
+                                <field name="purchase_date"/>
+                                <field name="purchase_id"/>
+                                <field name="vendor_id"/>
+                                <field name="product_id"/>
+                                <field name="quantity"/>
+                                <field name="uom_id"/>
+                                <field name="state"/>
+                            </list>
+                        </field>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_product_composite_line_list" model="ir.ui.view">
+        <field name="name">product.composite.line.list</field>
+        <field name="model">product.composite.line</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="sequence"/>
+                <field name="parent_product_tmpl_id"/>
+                <field name="component_product_id"/>
+                <field name="component_qty"/>
+                <field name="component_uom_id"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_product_peripheral_line_list" model="ir.ui.view">
+        <field name="name">product.peripheral.line.list</field>
+        <field name="model">product.peripheral.line</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="sequence"/>
+                <field name="parent_product_tmpl_id"/>
+                <field name="peripheral_product_id"/>
+                <field name="peripheral_qty"/>
+                <field name="peripheral_uom_id"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_product_complement_line_list" model="ir.ui.view">
+        <field name="name">product.complement.line.list</field>
+        <field name="model">product.complement.line</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="sequence"/>
+                <field name="parent_product_tmpl_id"/>
+                <field name="complement_product_id"/>
+                <field name="complement_qty"/>
+                <field name="complement_uom_id"/>
+            </list>
+        </field>
+    </record>
+
+</odoo>
