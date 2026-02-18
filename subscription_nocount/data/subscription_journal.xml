@@ -1,0 +1,9 @@
+<odoo>
+    <record id="journal_proforma" model="account.journal">
+        <field name="name">Proformas No Contables</field>
+        <field name="code">PROF</field>
+        <field name="type">sale</field>
+        <field name="company_id" ref="base.main_company"/>
+        <field name="active" eval="True"/>
+    </record>
+</odoo>

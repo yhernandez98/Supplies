@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Extender vista de CRM Lead -->
+        <record id="view_crm_lead_form_sales_supplies" model="ir.ui.view">
+            <field name="name">crm.lead.form.sales.supplies</field>
+            <field name="model">crm.lead</field>
+            <field name="inherit_id" ref="crm.crm_lead_view_form"/>
+            <field name="arch" type="xml">
+                <!-- Agregar campos en la pestaña de información general -->
+                <xpath expr="//field[@name='partner_id']" position="after">
+                    <field name="is_subscription_opportunity"/>
+                    <field name="auto_generate_subscription" invisible="not is_subscription_opportunity"/>
+                    <field name="location_id" invisible="not is_subscription_opportunity"/>
+                </xpath>
+
+                <!-- Agregar pestañas -->
+                <xpath expr="//notebook" position="inside">
+                    <!-- Agregar pestaña de suscripciones -->
+                    <page string="Suscripciones" name="subscriptions" invisible="not is_subscription_opportunity">
+                        <field name="subscription_count" widget="statinfo" string="Suscripciones"/>
+                        <field name="subscription_ids" nolabel="1">
+                            <list>
+                                <field name="name"/>
+                                <field name="state"/>
+                                <field name="start_date"/>
+                                <field name="monthly_amount"/>
+                            </list>
+                        </field>
+                    </page>
+                </xpath>
+            </field>
+        </record>
+
+        <!-- Acción para generar suscripción -->
+        <record id="action_crm_lead_generate_subscription" model="ir.actions.server">
+            <field name="name">Generar Suscripción</field>
+            <field name="model_id" ref="crm.model_crm_lead"/>
+            <field name="binding_model_id" ref="crm.model_crm_lead"/>
+            <field name="binding_view_types">form</field>
+            <field name="state">code</field>
+            <field name="code">
+if records:
+    action = records.action_generate_subscription()
+</field>
+        </record>
+
+        <!-- Acción para solicitar cotización -->
+        <record id="action_crm_lead_request_quotation" model="ir.actions.server">
+            <field name="name">Solicitar Cotización</field>
+            <field name="model_id" ref="crm.model_crm_lead"/>
+            <field name="binding_model_id" ref="crm.model_crm_lead"/>
+            <field name="binding_view_types">form</field>
+            <field name="state">code</field>
+            <field name="code">
+if records:
+    result = records.action_request_quotation()
+    if result:
+        action = result
+</field>
+        </record>
+
+        <!-- Acción para solicitar compra -->
+        <record id="action_crm_lead_request_purchase" model="ir.actions.server">
+            <field name="name">Solicitar Compra</field>
+            <field name="model_id" ref="crm.model_crm_lead"/>
+            <field name="binding_model_id" ref="crm.model_crm_lead"/>
+            <field name="binding_view_types">form</field>
+            <field name="state">code</field>
+            <field name="code">
+if records:
+    result = records.action_request_purchase()
+    if result:
+        action = result
+</field>
+        </record>
+    </data>
+</odoo>
+

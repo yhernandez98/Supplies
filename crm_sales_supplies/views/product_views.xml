@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Extender vista de formulario de producto para campos de leasing -->
+    <record id="view_product_template_form_inherit_leasing" model="ir.ui.view">
+        <field name="name">product.template.form.leasing.inherit</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_form_view"/>
+        <field name="arch" type="xml">
+            <!-- Agregar campos de leasing en la pestaña de ventas -->
+            <xpath expr="//page[@name='sales']" position="inside">
+                <group string="Leasing" name="leasing_group">
+                    <field name="is_leasing" widget="boolean_toggle"/>
+                    <field name="leasing_contract_id" 
+                           invisible="not is_leasing"
+                           options="{'no_create': True}"/>
+                    <field name="leasing_brand_id" 
+                           invisible="not is_leasing"
+                           readonly="1"/>
+                </group>
+                <group string="Proveedores de Leasing" 
+                       name="leasing_providers_group"
+                       invisible="not is_leasing">
+                    <field name="leasing_provider_ids" 
+                           widget="many2many_tags"
+                           options="{'no_create': True}"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Vista de lista de productos con filtro de leasing -->
+    <!-- Comentada porque product.product_template_tree_view puede no existir o usar estructura diferente -->
+    <!-- Los campos de leasing están disponibles en formulario y búsqueda, que es suficiente -->
+
+    <!-- Vista de búsqueda de productos con filtro de leasing -->
+    <record id="view_product_template_search_inherit_leasing" model="ir.ui.view">
+        <field name="name">product.template.search.leasing.inherit</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_search_view"/>
+        <field name="arch" type="xml">
+            <!-- Agregar filtros de leasing al final, usando group si existe -->
+            <xpath expr="//filter[last()]" position="after">
+                <separator/>
+                <filter string="Productos de Leasing" name="leasing" domain="[('is_leasing', '=', True)]"/>
+                <filter string="Productos Normales" name="no_leasing" domain="[('is_leasing', '=', False)]"/>
+            </xpath>
+            <!-- Agregar campos de búsqueda de leasing después del último campo -->
+            <xpath expr="//field[last()]" position="after">
+                <field name="leasing_brand_id"/>
+                <field name="leasing_contract_id"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>
+

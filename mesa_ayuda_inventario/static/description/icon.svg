@@ -1,0 +1,63 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Gradiente principal corporativo -->
+    <linearGradient id="gradMain" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+    <!-- Gradiente para la pantalla -->
+    <linearGradient id="gradScreen" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4facfe;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00f2fe;stop-opacity:1" />
+    </linearGradient>
+    <!-- Sombra suave -->
+    <filter id="shadow">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2"/>
+      <feOffset dx="0" dy="2" result="offsetblur"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.3"/>
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Fondo con bordes redondeados y sombra -->
+  <rect width="128" height="128" rx="28" fill="url(#gradMain)"/>
+  
+  <!-- Escritorio/Mesa base -->
+  <rect x="18" y="78" width="92" height="10" rx="5" fill="#ffffff" opacity="0.95" filter="url(#shadow)"/>
+  
+  <!-- Monitor/Pantalla principal -->
+  <rect x="30" y="24" width="68" height="48" rx="8" fill="#ffffff" opacity="0.95" filter="url(#shadow)"/>
+  <rect x="34" y="28" width="60" height="40" rx="5" fill="url(#gradScreen)"/>
+  
+  <!-- Base del monitor -->
+  <rect x="58" y="72" width="12" height="6" rx="2" fill="#ffffff" opacity="0.9"/>
+  
+  <!-- Símbolo de ayuda/soporte en la pantalla -->
+  <circle cx="64" cy="48" r="14" fill="#ffffff" opacity="0.95"/>
+  <text x="64" y="57" font-family="Arial, sans-serif" font-size="22" font-weight="bold" fill="#667eea" text-anchor="middle">?</text>
+  
+  <!-- Herramienta/Wrench decorativa -->
+  <g transform="translate(88, 45)">
+    <path d="M 0 -2 L 6 -5 L 10 -1 L 6 3 Z" fill="#ffffff" opacity="0.85"/>
+    <rect x="3" y="-1.5" width="1.5" height="18" rx="0.75" fill="#ffffff" opacity="0.85"/>
+    <circle cx="3.75" cy="17" r="2.5" fill="#ffffff" opacity="0.85"/>
+  </g>
+  
+  <!-- Indicador de ticket/notificación -->
+  <circle cx="92" cy="30" r="9" fill="#ff6b6b"/>
+  <circle cx="92" cy="30" r="7" fill="#ffffff" opacity="0.2"/>
+  <text x="92" y="36" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#ffffff" text-anchor="middle">!</text>
+  
+  <!-- Líneas decorativas en la base del escritorio -->
+  <line x1="26" y1="88" x2="102" y2="88" stroke="#ffffff" stroke-width="2.5" opacity="0.4" stroke-linecap="round"/>
+  <line x1="28" y1="93" x2="100" y2="93" stroke="#ffffff" stroke-width="2" opacity="0.3" stroke-linecap="round"/>
+  
+  <!-- Puntos decorativos -->
+  <circle cx="24" cy="48" r="2" fill="#ffffff" opacity="0.6"/>
+  <circle cx="104" cy="48" r="2" fill="#ffffff" opacity="0.6"/>
+</svg>

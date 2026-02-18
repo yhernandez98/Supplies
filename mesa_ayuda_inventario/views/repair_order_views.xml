@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Vista lista mínima para reparaciones -->
+        <record id="view_repair_order_list" model="ir.ui.view">
+            <field name="name">repair.order.list</field>
+            <field name="model">repair.order</field>
+            <field name="arch" type="xml">
+                <list string="Reparaciones">
+                    <field name="name"/>
+                    <field name="partner_id"/>
+                    <field name="state"/>
+                </list>
+            </field>
+        </record>
+        
+        <!-- Acción para ver reparaciones -->
+        <record id="action_repair_order" model="ir.actions.act_window">
+            <field name="name">Reparaciones</field>
+            <field name="res_model">repair.order</field>
+            <field name="view_mode">list,form</field>
+            <field name="view_id" ref="view_repair_order_list"/>
+        </record>
+    </data>
+</odoo>

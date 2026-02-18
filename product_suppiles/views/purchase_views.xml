@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="view_purchase_order_line_form_inherit_add_items" model="ir.ui.view">
+            <field name="name">purchase.order.form.add.items.inherit</field>
+            <field name="model">purchase.order</field>
+            <field name="inherit_id" ref="purchase.purchase_order_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='order_line']/list//field[@name='product_id']" position="after">
+                    <button name="action_open_add_items_wizard" 
+                            type="object" 
+                            string="Comp./Perif." 
+                            icon="fa-plus" 
+                            class="btn-link"
+                            invisible="not product_id"/>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</odoo>

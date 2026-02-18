@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!--
+            ============================================================
+            ACCIÓN DE SERVIDOR PARA ACTUALIZAR TODOS LOS NOMBRES
+            ============================================================
+        -->
+        <record id="action_update_all_outgoing_names_server" model="ir.actions.server">
+            <field name="name">Actualizar Nombres de Órdenes de Entrega</field>
+            <field name="model_id" ref="stock.model_stock_picking_type"/>
+            <field name="binding_model_id" ref="stock.model_stock_picking_type"/>
+            <field name="binding_view_types">list</field>
+            <field name="state">code</field>
+            <field name="code">
+result = model.action_update_all_outgoing_names()
+            </field>
+        </record>
+
+        <!--
+            ============================================================
+            ACCIÓN DE SERVIDOR PARA ACTUALIZAR REGLAS "SALIDA - TRANSPORTE"
+            ============================================================
+        -->
+        <record id="action_update_transport_rules_picking_type_server" model="ir.actions.server">
+            <field name="name">Actualizar Reglas Salida - Transporte (picking_type_id = 43)</field>
+            <field name="model_id" ref="stock.model_stock_rule"/>
+            <field name="binding_model_id" ref="stock.model_stock_rule"/>
+            <field name="binding_view_types">list</field>
+            <field name="state">code</field>
+            <field name="code">
+result = model.update_transport_rules_picking_type()
+            </field>
+        </record>
+    </data>
+</odoo>
+
