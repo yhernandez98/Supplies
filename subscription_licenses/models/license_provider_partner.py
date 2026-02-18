@@ -207,7 +207,10 @@ class LicenseProviderPartner(models.Model):
                 ('assignment_id', '=', assig.id),
             ], limit=1)
             if existing:
-                existing.write(vals)
+                # No sobrescribir Costo Proveedor en líneas existentes: el usuario puede haberlo editado
+                # en «Ver licencias contratadas»; la asignación trae valor calculado desde stock (a veces 0).
+                update_vals = {k: v for k, v in vals.items() if k != 'provider_cost_usd'}
+                existing.write(update_vals)
                 updated += 1
             else:
                 ReportLine.create(vals)
