@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista de lista de Marcas de Leasing -->
+    <record id="view_leasing_brand_tree" model="ir.ui.view">
+        <field name="name">leasing.brand.list</field>
+        <field name="model">leasing.brand</field>
+        <field name="arch" type="xml">
+            <list string="Marcas de Leasing" decoration-muted="not active">
+                <field name="name"/>
+                <field name="code"/>
+                <field name="contract_count" widget="statinfo" string="Contratos"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Vista de formulario de Marca de Leasing -->
+    <record id="view_leasing_brand_form" model="ir.ui.view">
+        <field name="name">leasing.brand.form</field>
+        <field name="model">leasing.brand</field>
+        <field name="arch" type="xml">
+            <form string="Marca de Leasing">
+                <header>
+                    <button name="action_view_contracts" type="object" string="Ver Contratos" class="oe_stat_button" icon="fa-file-contract">
+                        <field name="contract_count" widget="statinfo" string="Contratos"/>
+                    </button>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="code"/>
+                            <field name="partner_id" options="{'no_create': True}"/>
+                        </group>
+                        <group>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Vista de búsqueda de Marcas de Leasing -->
+    <record id="view_leasing_brand_search" model="ir.ui.view">
+        <field name="name">leasing.brand.search</field>
+        <field name="model">leasing.brand</field>
+        <field name="arch" type="xml">
+            <search string="Marcas de Leasing">
+                <field name="name"/>
+                <field name="code"/>
+                <filter string="Activas" name="active" domain="[('active', '=', True)]"/>
+                <filter string="Inactivas" name="inactive" domain="[('active', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- Acción de Marcas de Leasing -->
+    <record id="action_leasing_brand" model="ir.actions.act_window">
+        <field name="name">Marcas de Leasing</field>
+        <field name="res_model">leasing.brand</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Crea tu primera marca de leasing
+            </p>
+            <p>
+                Las marcas de leasing representan las grandes empresas con las que trabajas
+                en contratos de leasing (ej: HP, Dell, Lenovo, etc.)
+            </p>
+        </field>
+    </record>
+</odoo>
+

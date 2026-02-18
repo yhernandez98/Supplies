@@ -1,0 +1,257 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Vista de lista de Alertas Por Cotización -->
+        <record id="view_purchase_alert_tree" model="ir.ui.view">
+            <field name="name">purchase.alert.list</field>
+            <field name="model">purchase.alert</field>
+            <field name="arch" type="xml">
+                <list string="Alertas Por Cotización">
+                    <field name="name"/>
+                    <field name="partner_id"/>
+                    <field name="lead_id"/>
+                    <field name="product_id"/>
+                    <field name="quantity_requested"/>
+                    <field name="quantity_available"/>
+                    <field name="quantity_missing"/>
+                    <field name="state" widget="badge" 
+                           decoration-danger="state == 'cancelled'"
+                           decoration-success="state == 'sent'"
+                           decoration-info="state == 'purchase_created'"
+                           decoration-warning="state == 'pending'"/>
+                    <field name="validated_by_crm" string="Validada" optional="show"/>
+                    <field name="validated_by_user_id" string="Validada por" optional="hide"/>
+                </list>
+            </field>
+        </record>
+
+        <!-- Vista de formulario de Alertas Por Cotización -->
+        <record id="view_purchase_alert_form" model="ir.ui.view">
+            <field name="name">purchase.alert.form</field>
+            <field name="model">purchase.alert</field>
+            <field name="arch" type="xml">
+                <form string="Alerta de Compra">
+                    <header>
+                        <button name="action_send_to_multiple_vendors" 
+                                string="📤 Crear Cotizaciones" 
+                                type="object" 
+                                class="btn-primary"
+                                invisible="state != 'pending'"
+                                title="Crear cotizaciones de compra para los productos de esta alerta (o crear cotización manual si no hay productos específicos)"/>
+                        <button name="action_view_purchase_orders" 
+                                string="👁️ Ver Cotizaciones" 
+                                type="object" 
+                                class="btn-info"
+                                invisible="not purchase_order_ids"
+                                title="Ver el contenido de las cotizaciones creadas"/>
+                        <button name="action_notify_creator_quotations_ready" 
+                                string="📋 Cotizaciones Listas" 
+                                type="object" 
+                                class="btn-secondary"
+                                invisible="not purchase_order_ids or state == 'cancelled'"
+                                title="Crear una actividad para la persona que generó esta alerta, informándole que las cotizaciones están listas para validar"/>
+                        <button name="action_validate_purchase" 
+                                string="✅ Validar" 
+                                type="object" 
+                                class="btn-success"
+                                invisible="state == 'cancelled' or validated_by_crm or not purchase_order_ids or not user_has_crm_access"
+                                title="Marcar las cotizaciones como validadas por el jefe de CRM"/>
+                        <button name="action_unvalidate_purchase" 
+                                string="↩️ Desvalidar" 
+                                type="object" 
+                                class="btn-warning"
+                                invisible="state == 'cancelled' or not validated_by_crm"
+                                title="Quitar la validación"/>
+                        <button name="action_refresh_component_lines" 
+                                string="🔄 Actualizar Componentes" 
+                                type="object" 
+                                class="btn-secondary"
+                                invisible="1"
+                                title="Actualizar componentes, periféricos y complementos de los productos"/>
+                        <button name="action_cancel" 
+                                string="❌ Cancelar" 
+                                type="object" 
+                                class="btn-secondary"
+                                invisible="state == 'cancelled'"/>
+                        <field name="state" widget="statusbar" statusbar_visible="pending,purchase_created,sent"/>
+                    </header>
+                    <sheet>
+                        <div class="alert alert-info" role="alert" invisible="not has_multiple_products">
+                            <p><strong>📦 Alerta con Múltiples Productos</strong></p>
+                            <p>Esta alerta contiene varios productos que necesitan ser cotizados. Revise la lista de productos a continuación.</p>
+                        </div>
+                        <div class="alert alert-success" role="alert" invisible="not validated_by_crm">
+                            <p><strong>✅ Validado por CRM</strong></p>
+                            <p><strong>Validado por:</strong> <field name="validated_by_user_id" readonly="1" nolabel="1"/></p>
+                            <p><strong>Fecha:</strong> <field name="validated_date" readonly="1" nolabel="1" widget="datetime"/></p>
+                        </div>
+                        <group>
+                            <group>
+                                <field name="name"/>
+                                <field name="sale_order_id"/>
+                                <field name="lead_id"/>
+                                <field name="partner_id"/>
+                                <field name="product_id" invisible="has_multiple_products"/>
+                            </group>
+                            <group>
+                                <field name="quantity_requested"/>
+                                <field name="quantity_available"/>
+                                <field name="quantity_missing"/>
+                                <field name="warehouse_id"/>
+                                <field name="purchase_order_id" readonly="1" invisible="purchase_order_ids"/>
+                                <field name="purchase_order_ids" readonly="1" widget="many2many" 
+                                       options="{'no_create': True, 'no_create_edit': True}">
+                                    <list>
+                                        <field name="name"/>
+                                        <field name="partner_id" string="Proveedor"/>
+                                        <field name="amount_total" string="Total" widget="monetary"/>
+                                        <field name="state"/>
+                                        <field name="approved_by_crm" string="Aprobada" widget="boolean_toggle" 
+                                               readonly="is_alert_validated"
+/>
+                                        <field name="rejected_by_crm" string="Rechazada" widget="boolean_toggle" 
+                                               readonly="is_alert_validated"
+/>
+                                    </list>
+                                </field>
+                            </group>
+                        </group>
+                        <group string="Productos a Cotizar" invisible="not alert_line_ids">
+                            <field name="alert_line_ids" nolabel="1" readonly="1">
+                                <list>
+                                    <field name="product_id"/>
+                                    <field name="quantity_requested"/>
+                                    <field name="quantity_available"/>
+                                    <field name="quantity_missing"/>
+                                </list>
+                            </field>
+                        </group>
+                        <notebook>
+                            <page string="Caracteristicas" name="components" invisible="not alert_line_ids and not product_id">
+                                <div class="alert alert-info" role="alert" invisible="has_multiple_products">
+                                    <p><strong>Producto Principal:</strong> <field name="product_id" readonly="1" nolabel="1"/></p>
+                                    <p>Esta alerta requiere cotizar los siguientes componentes, periféricos y complementos del producto principal:</p>
+                                </div>
+                                <div class="alert alert-info" role="alert" invisible="not has_multiple_products">
+                                    <p><strong>Múltiples Productos:</strong> Esta alerta contiene varios productos. Los componentes, periféricos y complementos mostrados corresponden a todos los productos de la alerta.</p>
+                                </div>
+                                
+                                <group string="Caracteristicas del Producto Principal">
+                                    <field name="all_component_lines" nolabel="1" readonly="1"
+                                           invisible="not component_line_ids and not peripheral_line_ids and not complement_line_ids"
+                                           options="{'no_create': True, 'no_create_edit': True, 'no_open': True}">
+                                        <list create="false" edit="false" delete="false" default_order="parent_product_id, item_type, product_id">
+                                            <field name="item_type" string="Tipo" widget="badge" 
+                                                   decoration-info="item_type == 'component'"
+                                                   decoration-success="item_type == 'peripheral'"
+                                                   decoration-warning="item_type == 'complement'"/>
+                                            <field name="parent_product_id" string="Producto Principal"/>
+                                            <field name="product_id" string="Producto"/>
+                                            <field name="quantity" string="Cantidad"/>
+                                            <field name="uom_id" string="Unidad de Medida"/>
+                                        </list>
+                                    </field>
+                                    <div invisible="component_line_ids or peripheral_line_ids or complement_line_ids" class="text-muted" style="padding: 20px; text-align: center;">
+                                        <p>No hay componentes, periféricos o complementos definidos para los productos de esta alerta.</p>
+                                    </div>
+                                </group>
+                            </page>
+                            <page string="Comunicación y Notas" name="notes">
+                                <div class="alert alert-info" role="alert">
+                                    <p><strong>💬 Sistema de Comunicación:</strong></p>
+                                    <p>Use esta sección para comunicarse entre el equipo de CRM y Compras sobre esta alerta. Los mensajes aparecerán en el historial de la alerta.</p>
+                                </div>
+                                <group>
+                                    <group string="Notas Internas">
+                                        <field name="notes" nolabel="1" 
+                                               placeholder="Escriba aquí notas internas sobre esta alerta (no se notificará a otros usuarios)..."
+                                               widget="text"/>
+                                    </group>
+                                    <group string="Validación por CRM" invisible="not purchase_order_ids">
+                                        <field name="validated_by_crm" readonly="1"/>
+                                        <field name="validated_by_user_id" readonly="1"/>
+                                        <field name="validated_date" readonly="1" widget="datetime"/>
+                                        <field name="validation_notes" 
+                                               placeholder="Comentarios del jefe de CRM sobre la validación de las cotizaciones..."
+                                               invisible="not validated_by_crm"/>
+                                    </group>
+                                </group>
+                                <div class="oe_chatter" invisible="1">
+                                    <field name="message_follower_ids"/>
+                                    <field name="activity_ids"/>
+                                    <field name="message_ids"/>
+                                </div>
+                            </page>
+                        </notebook>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- Vista de búsqueda de Alertas Por Cotización -->
+        <record id="view_purchase_alert_search" model="ir.ui.view">
+            <field name="name">purchase.alert.search</field>
+            <field name="model">purchase.alert</field>
+            <field name="arch" type="xml">
+                <search string="Alertas Por Cotización">
+                    <field name="name"/>
+                    <field name="partner_id"/>
+                    <field name="lead_id"/>
+                    <field name="product_id"/>
+                    <field name="sale_order_id"/>
+                    <filter string="Pendientes" name="pending" domain="[('state', '=', 'pending')]"/>
+                    <filter string="Cotización solicitada" name="purchase_created" domain="[('state', '=', 'purchase_created')]"/>
+                    <filter string="Orden Enviada" name="sent" domain="[('state', '=', 'sent')]"/>
+                    <separator/>
+                    <filter string="Con Cotizaciones" name="with_orders" domain="[('purchase_order_ids', '!=', False)]"/>
+                    <filter string="Sin Cotizaciones" name="without_orders" domain="[('purchase_order_ids', '=', False)]"/>
+                    <filter string="Validadas" name="validated" domain="[('validated_by_crm', '=', True)]"/>
+                    <filter string="Pendientes Validación" name="pending_validation" domain="[('validated_by_crm', '=', False), ('purchase_order_ids', '!=', False)]"/>
+                    <separator/>
+                    <filter string="Canceladas" name="cancelled" domain="[('state', '=', 'cancelled')]"/>
+                </search>
+            </field>
+        </record>
+
+        <!-- Acción para Alertas Por Cotización -->
+        <record id="action_purchase_alert" model="ir.actions.act_window">
+            <field name="name">Alertas Por Cotización</field>
+            <field name="res_model">purchase.alert</field>
+            <field name="view_mode">list,form</field>
+            <field name="domain">[('state', '!=', 'cancelled')]</field>
+            <field name="context">{'default_state': 'pending'}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No hay alertas por cotización pendientes.
+                </p>
+                <p>
+                    Las alertas por cotización se crean automáticamente cuando hay productos sin stock suficiente en una cotización.
+                </p>
+            </field>
+        </record>
+        
+        
+        <!-- Acción específica para CRM: Cotizaciones Solicitadas -->
+        <record id="action_purchase_alert_crm" model="ir.actions.act_window">
+            <field name="name">Cotizaciones Solicitadas</field>
+            <field name="res_model">purchase.alert</field>
+            <field name="view_mode">list,form</field>
+            <field name="view_id" ref="view_purchase_alert_tree"/>
+            <field name="domain">[('state', '!=', 'cancelled')]</field>
+            <field name="context">{
+                'default_state': 'pending',
+                'search_default_pending': 1,
+                'search_default_purchase_created': 1,
+            }</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No hay cotizaciones solicitadas pendientes.
+                </p>
+                <p>
+                    Aquí puedes ver todas las alertas de compra que has generado desde los Leads y el estado de las cotizaciones solicitadas a los proveedores.
+                </p>
+            </field>
+        </record>
+    </data>
+</odoo>
+

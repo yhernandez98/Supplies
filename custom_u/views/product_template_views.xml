@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ===================== -->
+    <!-- FORMULARIO PRODUCTO   -->
+    <!-- ===================== -->
+    <record id="view_product_template_form_inherit_unified" model="ir.ui.view">
+        <field name="name">product.template.form.inherit.unified</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_only_form_view"/>
+        <field name="arch" type="xml">
+
+            <!-- Reemplazar el campo type por tipo_producto -->
+            <xpath expr="//field[@name='type']" position="replace">
+                <field name="tipo_producto" widget="radio" options="{'horizontal': True}"/>
+            </xpath>
+            
+        </field>
+    </record>
+
+    <!-- ===================== -->
+    <!-- VISTA LISTA PRODUCTO  -->
+    <!-- ===================== -->
+    <record id="view_product_template_tree_inherit_unified" model="ir.ui.view">
+        <field name="name">product.template.tree.inherit.unified</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_tree_view"/>
+        <field name="arch" type="xml">
+
+            <!-- Reemplazar columna type por tipo_producto -->
+            <xpath expr="//field[@name='type']" position="replace">
+                <field name="tipo_producto"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- ===================== -->
+    <!-- VISTA DE BUSQUEDA     -->
+    <!-- ===================== -->
+    <record id="view_product_template_search_inherit_unified" model="ir.ui.view">
+        <field name="name">product.template.search.inherit.unified</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_search_view"/>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="tipo_producto"/>
+                <separator/>
+                <filter string="Bienes" name="consu_custom" domain="[('tipo_producto','=','consu')]"/>
+                <filter string="Servicios" name="service_custom" domain="[('tipo_producto','=','service')]"/>
+                <filter string="Producto Facturable" name="factura_custom" domain="[('tipo_producto','=','factura')]"/>
+                <separator/>
+                <filter string="Agrupar por Tipo de Producto" name="group_by_tipo_producto" context="{'group_by':'tipo_producto'}"/>
+            </search>
+        </field>
+    </record>
+
+</odoo>

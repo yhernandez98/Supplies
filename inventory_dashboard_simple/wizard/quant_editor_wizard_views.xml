@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="view_quant_editor_wizard_form" model="ir.ui.view">
+            <field name="name">quant.editor.wizard.form</field>
+            <field name="model">quant.editor.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Actualizar Cantidad de Inventario">
+                    <sheet>
+                        <group>
+                            <group string="Información del Quant">
+                                <field name="location_id" options="{'no_open': True}"/>
+                                <field name="product_id" 
+                                       options="{'no_open': True}"
+                                       required="1"/>
+                                <field name="lot_serial_number" 
+                                       placeholder="Ingrese el número de serie (se creará si no existe)"/>
+                                <field name="inventory_plate" 
+                                       placeholder="Placa de inventario"/>
+                                <field name="security_plate" 
+                                       placeholder="Placa de seguridad"/>
+                                <field name="internal_ref" 
+                                       options="{'no_create': False, 'no_create_edit': False, 'no_open': True}"
+                                       context="{'default_product_id': product_id, 'search_default_product_id': product_id}"
+                                       placeholder="Seleccione o cree una referencia interna"/>
+                                <field name="modelo" 
+                                       placeholder="Modelo (se llena automáticamente)"/>
+                            </group>
+                            <group string="Cantidades">
+                                <field name="current_quantity" readonly="1"/>
+                                <field name="quantity" readonly="1"/>
+                            </group>
+                        </group>
+                    </sheet>
+                    <footer>
+                        <button name="action_update_quantity" 
+                                type="object" 
+                                string="Actualizar" 
+                                class="btn-primary"/>
+                        <button name="action_update_and_create_new" 
+                                type="object" 
+                                string="Actualizar y Crear Nuevo" 
+                                class="btn-secondary"/>
+                        <button string="Cancelar" special="cancel" class="btn-secondary"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+        <record id="action_quant_editor_wizard" model="ir.actions.act_window">
+            <field name="name">Actualizar Cantidad de Inventario</field>
+            <field name="res_model">quant.editor.wizard</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+            <field name="view_id" ref="view_quant_editor_wizard_form"/>
+        </record>
+        
+        <!-- Acción de servidor para abrir wizard desde stock.lot -->
+        <!-- Solo aparece en el menú "Acción" cuando el lote ya está guardado -->
+        <record id="action_open_quant_editor_from_lot" model="ir.actions.server">
+            <field name="name">Actualizar Cantidad de Inventario</field>
+            <field name="model_id" ref="stock.model_stock_lot"/>
+            <field name="binding_model_id" ref="stock.model_stock_lot"/>
+            <field name="binding_view_types">form</field>
+            <field name="state">code</field>
+            <field name="code">
+# Obtener el lote activo
+if context.get('active_ids'):
+    lot_ids = context.get('active_ids')
+else:
+    lot_ids = [context.get('active_id')] if context.get('active_id') else []
+
+if not lot_ids:
+    raise UserError('No se encontró el lote seleccionado.')
+
+lot = env['stock.lot'].browse(lot_ids[0])
+if not lot.exists():
+    raise UserError('El lote seleccionado no existe.')
+
+# Verificar que el lote tenga ID (esté guardado)
+if not lot.id or lot._origin.id == False:
+    raise UserError('Debe guardar el lote primero antes de actualizar la cantidad.')
+
+# Buscar ubicación Supp/Existencias por defecto
+supplies_location = env['stock.location'].search([
+    ('complete_name', 'ilike', 'Supp/Existencias'),
+    ('usage', '=', 'internal'),
+], limit=1)
+
+# Construir contexto con TODA la información necesaria
+wizard_context = {
+    'default_lot_id': lot.id,
+    'default_location_id': supplies_location.id if supplies_location else False,
+    'active_id': lot.id,
+    'active_model': 'stock.lot',
+}
+
+# CRÍTICO: Agregar producto del lote SIEMPRE si existe
+if lot.product_id:
+    wizard_context['default_product_id'] = lot.product_id.id
+
+action = {
+    'type': 'ir.actions.act_window',
+    'name': 'Actualizar Cantidad de Inventario',
+    'res_model': 'quant.editor.wizard',
+    'view_mode': 'form',
+    'target': 'new',
+    'context': wizard_context,
+}
+            </field>
+        </record>
+
+        <!-- Corregir cantidad a 1 (menú Acciones en lista de stock.quant) -->
+        <record id="action_server_correct_quantity_to_one" model="ir.actions.server">
+            <field name="name">Corregir cantidad (poner en 1)</field>
+            <field name="model_id" ref="stock.model_stock_quant"/>
+            <field name="binding_model_id" ref="stock.model_stock_quant"/>
+            <field name="binding_view_types">list</field>
+            <field name="state">code</field>
+            <field name="code">result = records.action_correct_quantity_to_one()</field>
+        </record>
+        
+    </data>
+</odoo>
