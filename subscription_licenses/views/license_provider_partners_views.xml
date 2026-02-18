@@ -168,10 +168,11 @@
                         </page>
                         <page string="Consolidado" name="report_consolidated_page">
                             <div class="mb-3 p-2 bg-light rounded" style="border-radius: 8px;">
-                                <span class="text-muted">Líneas de reporte (se actualizan solas al asignar licencias). Edite <strong>Costo Proveedor</strong> aquí; no se sobrescribirá.</span>
+                                <button name="action_export_consolidated_excel" type="object" string="Exportar Excel" class="btn btn-sm btn-link" icon="fa-file-excel-o"/>
+                                <span class="text-muted ms-2">Líneas de reporte (se actualizan solas al asignar licencias). Edite <strong>Costo Proveedor</strong> aquí; no se sobrescribirá.</span>
                             </div>
                             <field name="report_line_ids" nolabel="1" context="{'default_provider_partner_id': id}">
-                                <list create="1" delete="1" edit="1" editable="bottom">
+                                <list create="1" delete="1" edit="1" editable="bottom" class="o_list_consolidado_top_scroll">
                                     <field name="partner_id" string="Cliente" options="{'no_create': True}"/>
                                     <field name="client_name" optional="hide"/>
                                     <field name="product_name" string="Producto / Oferta"/>

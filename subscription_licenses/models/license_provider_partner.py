@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
+import base64
+import io
+import zipfile
+from datetime import datetime, timezone
 from odoo import api, fields, models, _
+from odoo.exceptions import UserError
 
 
 class LicenseProviderPartner(models.Model):
@@ -129,6 +134,19 @@ class LicenseProviderPartner(models.Model):
             'context': {'default_provider_id': self.partner_id.id},
         }
 
+    def _notify(self, message, notification_type='success'):
+        """Devuelve una acción cliente para mostrar una notificación toast en la interfaz."""
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Aviso'),
+                'message': message,
+                'type': notification_type,
+                'sticky': False,
+            },
+        }
+
     def action_sync_report_groups(self):
         """Sincroniza líneas de reporte desde asignaciones (crea/actualiza sin tocar costo) y luego actualiza la lista de clientes.
         Si no hay asignaciones, elimina líneas huérfanas (asignación pasada a otro proveedor) y actualiza la lista."""
@@ -151,7 +169,7 @@ class LicenseProviderPartner(models.Model):
                 orphans.unlink()
             self.invalidate_recordset(['report_line_ids', 'report_group_ids'])
             self._sync_report_groups()
-            return self._notify(_('No hay asignaciones con este proveedor. Se quitaron los clientes que ya no lo tienen.'))
+            return self._notify(_('No hay asignaciones con este proveedor. Se quitaron los clientes que ya no lo tienen.'), notification_type='warning')
         for assig in assignments:
             self._sync_report_line_for_assignment(assig, sync_groups=False)
         self.invalidate_recordset(['report_line_ids', 'report_group_ids'])
@@ -239,16 +257,119 @@ class LicenseProviderPartner(models.Model):
         if sync_groups:
             self._sync_report_groups()
 
-    def _notify(self, message):
+    def _excel_safe_str(self, val):
+        """Convierte a string seguro para Excel (sin caracteres de control que corrompen el XML)."""
+        if val is None:
+            return ''
+        s = str(val).strip()
+        return ''.join(c for c in s if ord(c) >= 32 or c in '\t\n\r')
+
+    def _make_core_xml_bytes(self):
+        """Genera un docProps/core.xml mínimo y válido (OOXML) para que Excel no repare el archivo."""
+        now = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ').encode('utf-8')
+        return (
+            b'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+            b'<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" '
+            b'xmlns:dc="http://purl.org/dc/elements/1.1/" '
+            b'xmlns:dcterms="http://purl.org/dc/terms/" '
+            b'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
+            b'<dc:creator>Odoo</dc:creator>'
+            b'<cp:lastModifiedBy>Odoo</cp:lastModifiedBy>'
+            b'<dcterms:created xsi:type="dcterms:W3CDTF">' + now + b'</dcterms:created>'
+            b'<dcterms:modified xsi:type="dcterms:W3CDTF">' + now + b'</dcterms:modified>'
+            b'</cp:coreProperties>'
+        )
+
+    def _fix_xlsx_core_xml_for_excel(self, xlsx_bytes):
+        """
+        Sustituye docProps/core.xml por uno válido y quita xml:space="preserve" de todos los XML.
+        Así Excel no detecta errores ni pide reparar el archivo.
+        """
+        try:
+            core_xml = self._make_core_xml_bytes()
+            with zipfile.ZipFile(io.BytesIO(xlsx_bytes), 'r') as zin:
+                out_buf = io.BytesIO()
+                with zipfile.ZipFile(out_buf, 'w', zipfile.ZIP_DEFLATED) as zout:
+                    for name in zin.namelist():
+                        if name == 'docProps/core.xml':
+                            data = core_xml
+                        else:
+                            data = zin.read(name)
+                            if name.endswith('.xml'):
+                                data = data.replace(b' xml:space="preserve"', b'')
+                        zout.writestr(name, data)
+                return out_buf.getvalue()
+        except Exception:
+            return xlsx_bytes
+
+    def action_export_consolidated_excel(self):
+        """Exporta las líneas del Consolidado (report_line_ids) a un archivo Excel."""
+        self.ensure_one()
+        try:
+            import openpyxl
+            from openpyxl.styles import Font, Border, Side
+        except ImportError:
+            raise UserError(_('Instale el paquete Python openpyxl: pip install openpyxl'))
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = 'Consolidado'[:31]
+        headers = [
+            _('Cliente'), _('Producto / Oferta'), _('Fecha Inicio'), _('Fecha Fin'), _('Fecha Corte'),
+            _('Contrato'), _('Cantidad'), _('Costo Proveedor'), _('Costo Total Proveedor'),
+            _('Precio al Cliente'), _('Total Precio Cliente'), _('Ganancia'), _('Ganancia Total'),
+            _('Renov. automática'),
+        ]
+        for col, h in enumerate(headers, 1):
+            ws.cell(row=1, column=col, value=self._excel_safe_str(h))
+        header_font = Font(bold=True)
+        thin = Side(style='thin')
+        for col in range(1, len(headers) + 1):
+            c = ws.cell(row=1, column=col)
+            c.font = header_font
+            c.border = Border(bottom=thin)
+        # Evitar que openpyxl escriba xml:space="preserve" en core.xml (Excel lo rechaza)
+        if hasattr(wb, 'properties') and wb.properties:
+            for prop in ('creator', 'lastModifiedBy'):
+                val = getattr(wb.properties, prop, None)
+                if val is not None and isinstance(val, str):
+                    setattr(wb.properties, prop, val.strip() or 'Odoo')
+        contract_labels = dict(
+            self.env['license.provider.report.line']._fields['contract_type'].selection or []
+        )
+        for row_idx, line in enumerate(self.report_line_ids, 2):
+            client = line.client_name or (line.partner_id.name if line.partner_id else '') or ''
+            contract = contract_labels.get(line.contract_type, '') or (line.contract_type or '')
+            ws.cell(row=row_idx, column=1, value=self._excel_safe_str(client))
+            ws.cell(row=row_idx, column=2, value=self._excel_safe_str(line.product_name))
+            ws.cell(row=row_idx, column=3, value=line.start_date.strftime('%Y-%m-%d') if line.start_date else '')
+            ws.cell(row=row_idx, column=4, value=line.end_date.strftime('%Y-%m-%d') if line.end_date else '')
+            ws.cell(row=row_idx, column=5, value=line.cut_off_date.strftime('%Y-%m-%d') if line.cut_off_date else '')
+            ws.cell(row=row_idx, column=6, value=self._excel_safe_str(contract))
+            ws.cell(row=row_idx, column=7, value=int(line.quantity or 0))
+            ws.cell(row=row_idx, column=8, value=float(line.provider_cost_usd or 0))
+            ws.cell(row=row_idx, column=9, value=float(line.total_provider_cost_usd or 0))
+            ws.cell(row=row_idx, column=10, value=float(line.unit_price_pricelist_usd or 0))
+            ws.cell(row=row_idx, column=11, value=float(line.total_price_pricelist_usd or 0))
+            ws.cell(row=row_idx, column=12, value=float(line.profit_unit_usd or 0))
+            ws.cell(row=row_idx, column=13, value=float(line.profit_total_usd or 0))
+            ws.cell(row=row_idx, column=14, value=self._excel_safe_str(_('Sí') if line.auto_renewal else _('No')))
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        # Corregir docProps/core.xml: Excel espera dcterms:created/modified; openpyxl puede escribir dct:
+        xlsx_bytes = self._fix_xlsx_core_xml_for_excel(buf.getvalue())
+        name = _('Consolidado_%s.xlsx') % (self.partner_id.name or 'proveedor').replace('/', '-').replace('\\', '-')
+        attach = self.env['ir.attachment'].create({
+            'name': name,
+            'type': 'binary',
+            'datas': base64.b64encode(xlsx_bytes).decode('ascii'),
+            'res_model': self._name,
+            'res_id': self.id,
+        })
         return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': _('Reporte / Facturación'),
-                'message': message,
-                'type': 'success',
-                'sticky': False,
-            },
+            'type': 'ir.actions.act_url',
+            'url': '/web/content/%s?download=1' % attach.id,
+            'target': 'self',
         }
 
     _sql_constraints = [

@@ -528,3 +528,28 @@ form.o_subscription_form footer .btn-secondary:hover {
     color: #0f766e !important;
     font-weight: 600 !important;
 }
+
+/* Barra de desplazamiento horizontal arriba en Consolidado (lista con muchas columnas) */
+.o_list_consolidado_top_scroll_bar {
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    height: 14px !important;
+    margin-bottom: 6px !important;
+    max-width: 100% !important;
+    border-radius: 6px !important;
+    background: rgba(15, 118, 110, 0.06) !important;
+}
+.o_list_consolidado_top_scroll_bar::-webkit-scrollbar {
+    height: 8px;
+}
+.o_list_consolidado_top_scroll_bar::-webkit-scrollbar-track {
+    background: rgba(15, 118, 110, 0.08);
+    border-radius: 4px;
+}
+.o_list_consolidado_top_scroll_bar::-webkit-scrollbar-thumb {
+    background: rgba(15, 118, 110, 0.35);
+    border-radius: 4px;
+}
+.o_list_consolidado_top_scroll_bar::-webkit-scrollbar-thumb:hover {
+    background: rgba(15, 118, 110, 0.5);
+}
