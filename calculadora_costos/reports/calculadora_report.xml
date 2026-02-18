@@ -1,7 +1,122 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
-        <!-- Reporte PDF de Calculadora de Costos -->
+        <!-- Reporte PDF Cotización (simplificado: meses y valor por mes) -->
+        <record id="action_report_cotizacion" model="ir.actions.report">
+            <field name="name">Cotización Renting</field>
+            <field name="model">calculadora.costos</field>
+            <field name="report_type">qweb-pdf</field>
+            <field name="report_name">calculadora_costos.report_cotizacion</field>
+            <field name="report_file">calculadora_costos.report_cotizacion</field>
+            <field name="print_report_name">'Cotización - %s' % (object.name or 'Sin Nombre')</field>
+            <field name="binding_model_id" ref="model_calculadora_costos"/>
+            <field name="binding_type">report</field>
+        </record>
+
+        <!-- Plantilla QWeb del Reporte Cotización (solo meses y valor a pagar) -->
+        <template id="report_cotizacion">
+            <t t-call="web.html_container">
+                <t t-foreach="docs" t-as="calc">
+                    <t t-call="web.external_layout">
+                        <div class="page" style="padding: 30px; font-family: 'Arial', sans-serif; color: #2c3e50;">
+                            <!-- Encabezado -->
+                            <div style="text-align: center; margin-bottom: 30px; border-bottom: 3px solid #4a90e2; padding-bottom: 20px;">
+                                <h1 style="color: #4a90e2; margin: 0; font-size: 24px; font-weight: bold;">
+                                    COTIZACIÓN DE RENTING
+                                </h1>
+                                <p style="color: #6c757d; margin: 10px 0 0 0; font-size: 16px; font-weight: bold;">
+                                    <t t-esc="calc.name or 'Sin Nombre'"/>
+                                </p>
+                                <p t-if="calc.partner_id" style="color: #495057; margin: 5px 0 0 0; font-size: 14px;">
+                                    Cliente: <t t-esc="calc.partner_id.display_name"/>
+                                </p>
+                            </div>
+
+                            <!-- Información básica -->
+                            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 25px;">
+                                <p style="margin: 0; font-size: 14px;">
+                                    <strong>Total equipos:</strong> <t t-esc="len(calc.get_report_equipos())"/> — <strong>Valor total (COP):</strong> $<t t-esc="'{:,.0f}'.format(calc.costo_total_cop)"/>
+                                </p>
+                            </div>
+
+                            <t t-set="plazos_lista" t-value="[12, 24, 36, 48, 60]"/>
+                            <!-- Por cada equipo: 4 escenarios -->
+                            <t t-foreach="calc.get_report_equipos()" t-as="bloque">
+                                <div style="margin-bottom: 30px; page-break-inside: avoid;">
+                                    <h2 style="color: #4a90e2; margin: 0 0 15px 0; font-size: 18px; border-bottom: 2px solid #4a90e2; padding-bottom: 8px;">
+                                        <t t-esc="bloque['nombre']"/>
+                                    </h2>
+                                    <t t-set="escenarios" t-value="bloque['escenarios']"/>
+                                    <!-- Escenario 1 -->
+                                    <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 5px solid #28a745;">
+                                        <h3 style="color: #2c3e50; margin: 0 0 12px 0; font-size: 15px;">✅ Escenario 1: <t t-esc="escenarios['escenario_1']['nombre']"/></h3>
+                                        <table style="width: 100%; border-collapse: collapse; background: white;">
+                                            <thead><tr style="background: #28a745; color: white;"><th style="padding: 8px; text-align: left;">Meses</th><th style="padding: 8px; text-align: right;">Valor (COP/mes)</th></tr></thead>
+                                            <tbody>
+                                                <tr t-foreach="plazos_lista" t-as="plazo">
+                                                    <t t-set="valores" t-value="escenarios['escenario_1']['plazos'][plazo]"/>
+                                                    <td style="padding: 6px; border-bottom: 1px solid #dee2e6;"><t t-esc="plazo"/> meses</td>
+                                                    <td style="padding: 6px; border-bottom: 1px solid #dee2e6; text-align: right; font-weight: bold;">$<t t-esc="'{:,.0f}'.format(valores['pago_mensual_total'])"/></td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <!-- Escenario 2 -->
+                                    <div style="background: #fff3e0; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 5px solid #ff9800;">
+                                        <h3 style="color: #2c3e50; margin: 0 0 12px 0; font-size: 15px;">⚠️ Escenario 2: <t t-esc="escenarios['escenario_2']['nombre']"/></h3>
+                                        <table style="width: 100%; border-collapse: collapse; background: white;">
+                                            <thead><tr style="background: #ff9800; color: white;"><th style="padding: 8px; text-align: left;">Meses</th><th style="padding: 8px; text-align: right;">Valor (COP/mes)</th></tr></thead>
+                                            <tbody>
+                                                <tr t-foreach="plazos_lista" t-as="plazo">
+                                                    <t t-set="valores" t-value="escenarios['escenario_2']['plazos'][plazo]"/>
+                                                    <td style="padding: 6px; border-bottom: 1px solid #dee2e6;"><t t-esc="plazo"/> meses</td>
+                                                    <td style="padding: 6px; border-bottom: 1px solid #dee2e6; text-align: right; font-weight: bold;">$<t t-esc="'{:,.0f}'.format(valores['pago_mensual_total'])"/></td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <!-- Escenario 3 -->
+                                    <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 5px solid #2196f3;">
+                                        <h3 style="color: #2c3e50; margin: 0 0 12px 0; font-size: 15px;">🔵 Escenario 3: <t t-esc="escenarios['escenario_3']['nombre']"/></h3>
+                                        <table style="width: 100%; border-collapse: collapse; background: white;">
+                                            <thead><tr style="background: #2196f3; color: white;"><th style="padding: 8px; text-align: left;">Meses</th><th style="padding: 8px; text-align: right;">Valor (COP/mes)</th></tr></thead>
+                                            <tbody>
+                                                <tr t-foreach="plazos_lista" t-as="plazo">
+                                                    <t t-set="valores" t-value="escenarios['escenario_3']['plazos'][plazo]"/>
+                                                    <td style="padding: 6px; border-bottom: 1px solid #dee2e6;"><t t-esc="plazo"/> meses</td>
+                                                    <td style="padding: 6px; border-bottom: 1px solid #dee2e6; text-align: right; font-weight: bold;">$<t t-esc="'{:,.0f}'.format(valores['pago_mensual_total'])"/></td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <!-- Escenario 4 -->
+                                    <div style="background: #fce4ec; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 5px solid #e91e63;">
+                                        <h3 style="color: #2c3e50; margin: 0 0 12px 0; font-size: 15px;">❌ Escenario 4: <t t-esc="escenarios['escenario_4']['nombre']"/></h3>
+                                        <table style="width: 100%; border-collapse: collapse; background: white;">
+                                            <thead><tr style="background: #e91e63; color: white;"><th style="padding: 8px; text-align: left;">Meses</th><th style="padding: 8px; text-align: right;">Valor (COP/mes)</th></tr></thead>
+                                            <tbody>
+                                                <tr t-foreach="plazos_lista" t-as="plazo">
+                                                    <t t-set="valores" t-value="escenarios['escenario_4']['plazos'][plazo]"/>
+                                                    <td style="padding: 6px; border-bottom: 1px solid #dee2e6;"><t t-esc="plazo"/> meses</td>
+                                                    <td style="padding: 6px; border-bottom: 1px solid #dee2e6; text-align: right; font-weight: bold;">$<t t-esc="'{:,.0f}'.format(valores['pago_mensual_total'])"/></td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </t>
+
+                            <!-- Pie -->
+                            <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid #dee2e6; text-align: center; color: #6c757d; font-size: 11px;">
+                                <p style="margin: 0;">Cotización generada por Calculadora de Costos. Valores en COP.</p>
+                            </div>
+                        </div>
+                    </t>
+                </t>
+            </t>
+        </template>
+
+        <!-- Reporte PDF de Calculadora de Costos (completo) -->
         <record id="action_report_calculadora" model="ir.actions.report">
             <field name="name">Reporte de Calculadora de Costos</field>
             <field name="model">calculadora.costos</field>
@@ -43,141 +158,117 @@
                                         <td style="padding: 8px; font-weight: bold; color: #495057;">Tipo de Cálculo:</td>
                                         <td style="padding: 8px; color: #212529;">
                                             <t t-if="calc.tipo_calculo == 'equipo'">Equipo</t>
-                                            <t t-if="calc.tipo_calculo == 'renting'">Renting/Leasing</t>
+                                            <t t-if="calc.tipo_calculo == 'renting'">Renting</t>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 8px; font-weight: bold; color: #495057;">Cotización en:</td>
+                                        <td style="padding: 8px; color: #212529;">
+                                            <t t-if="calc.moneda_cotizacion == 'usd'">USD (valores convertidos a COP)</t>
+                                            <t t-if="calc.moneda_cotizacion == 'cop'">COP (Pesos)</t>
                                         </td>
                                     </tr>
                                     <tr>
                                         <td style="padding: 8px; font-weight: bold; color: #495057;">Valor del Equipo:</td>
-                                        <td style="padding: 8px; color: #212529; font-size: 16px; font-weight: bold;">$<t t-esc="'{:,.0f}'.format(calc.costo_equipo_cop)"/></td>
+                                        <td style="padding: 8px; color: #212529; font-size: 16px; font-weight: bold;">
+                                            $<t t-esc="'{:,.0f}'.format(calc.costo_total_cop)"/>
+                                        </td>
                                     </tr>
-                                    <tr t-if="calc.valor_garantia_usd > 0">
+                                    <tr t-if="(calc.moneda_cotizacion == 'usd' and calc.valor_garantia_usd > 0) or (calc.moneda_cotizacion == 'cop' and calc.valor_garantia_cop > 0)">
                                         <td style="padding: 8px; font-weight: bold; color: #495057;">Garantía Extendida / Seguro:</td>
                                         <td style="padding: 8px; color: #212529; font-size: 16px;">
-                                            <t t-set="garantia_cop" t-value="calc.valor_garantia_usd * calc.trm * (1 + calc.porcentaje_utilidad / 100.0)"/>
+                                            <t t-if="calc.moneda_cotizacion == 'usd'" t-set="garantia_cop" t-value="calc.valor_garantia_usd * calc.trm * (1 + calc.porcentaje_utilidad / 100.0)"/>
+                                            <t t-if="calc.moneda_cotizacion == 'cop'" t-set="garantia_cop" t-value="calc.valor_garantia_cop * (1 + calc.porcentaje_utilidad / 100.0)"/>
                                             $<t t-esc="'{:,.0f}'.format(garantia_cop)"/>
                                         </td>
                                     </tr>
                                     <tr t-if="calc.costo_servicios_completos > 0">
                                         <td style="padding: 8px; font-weight: bold; color: #495057;">Servicio Técnico:</td>
-                                        <td style="padding: 8px; color: #212529;">$<t t-esc="'{:,.0f}'.format(calc.servicio_con_margen)"/></td>
+                                        <td style="padding: 8px; color: #212529; font-size: 16px;">
+                                            $<t t-esc="'{:,.0f}'.format(calc.servicio_con_margen_cop)"/>
+                                        </td>
                                     </tr>
                                 </table>
                             </div>
 
                             <!-- Escenarios -->
-                            <t t-set="escenarios" t-value="calc.get_escenarios_resumen()"/>
-                            
-                            <!-- Escenario 1: Con Seguro y Servicios -->
-                            <div style="background: #e8f5e9; padding: 20px; border-radius: 10px; margin-bottom: 25px; border-left: 5px solid #28a745; page-break-inside: avoid;">
-                                <h2 style="color: #2c3e50; margin-top: 0; margin-bottom: 15px; font-size: 18px; border-bottom: 2px solid #28a745; padding-bottom: 8px;">
-                                    ✅ ESCENARIO 1: <t t-esc="escenarios['escenario_1']['nombre']"/>
-                                </h2>
-                                <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 5px; overflow: hidden;">
-                                    <thead>
-                                        <tr style="background: #28a745; color: white;">
-                                            <th style="padding: 12px; text-align: left; font-weight: bold;">Plazo</th>
-                                            <th style="padding: 12px; text-align: right; font-weight: bold;">Valor Equipo</th>
-                                            <th style="padding: 12px; text-align: right; font-weight: bold;">Seguro/Garantía</th>
-                                            <th style="padding: 12px; text-align: right; font-weight: bold;">Servicio Mensual</th>
-                                            <th style="padding: 12px; text-align: right; font-weight: bold;">Pago Mensual</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr t-foreach="[24, 36, 48]" t-as="plazo">
-                                            <t t-set="valores" t-value="escenarios['escenario_1']['plazos'][plazo]"/>
-                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; font-weight: bold;"><t t-esc="plazo"/> meses</td>
-                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right;">$<t t-esc="'{:,.0f}'.format(valores['costo_equipo_cop'])"/></td>
-                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right;">$<t t-esc="'{:,.0f}'.format(valores.get('garantia_cop', 0))"/></td>
-                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right;">$<t t-esc="'{:,.0f}'.format(valores['servicio_mensual'])"/></td>
-                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right; font-weight: bold; color: #28a745;">$<t t-esc="'{:,.0f}'.format(valores['pago_mensual_total'])"/></td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            <!-- Escenario 2: Sin Seguro pero con Servicios -->
-                            <div style="background: #fff3e0; padding: 20px; border-radius: 10px; margin-bottom: 25px; border-left: 5px solid #ff9800; page-break-inside: avoid;">
-                                <h2 style="color: #2c3e50; margin-top: 0; margin-bottom: 15px; font-size: 18px; border-bottom: 2px solid #ff9800; padding-bottom: 8px;">
-                                    ⚠️ ESCENARIO 2: <t t-esc="escenarios['escenario_2']['nombre']"/>
-                                </h2>
-                                <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 5px; overflow: hidden;">
-                                    <thead>
-                                        <tr style="background: #ff9800; color: white;">
-                                            <th style="padding: 12px; text-align: left; font-weight: bold;">Plazo</th>
-                                            <th style="padding: 12px; text-align: right; font-weight: bold;">Valor Equipo</th>
-                                            <th style="padding: 12px; text-align: right; font-weight: bold;">Seguro/Garantía</th>
-                                            <th style="padding: 12px; text-align: right; font-weight: bold;">Servicio Mensual</th>
-                                            <th style="padding: 12px; text-align: right; font-weight: bold;">Pago Mensual</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr t-foreach="[24, 36, 48]" t-as="plazo">
-                                            <t t-set="valores" t-value="escenarios['escenario_2']['plazos'][plazo]"/>
-                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; font-weight: bold;"><t t-esc="plazo"/> meses</td>
-                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right;">$<t t-esc="'{:,.0f}'.format(valores['costo_equipo_cop'])"/></td>
-                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right;">$<t t-esc="'{:,.0f}'.format(valores.get('garantia_cop', 0))"/></td>
-                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right;">$<t t-esc="'{:,.0f}'.format(valores['servicio_mensual'])"/></td>
-                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right; font-weight: bold; color: #ff9800;">$<t t-esc="'{:,.0f}'.format(valores['pago_mensual_total'])"/></td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            <!-- Escenario 3: Con Seguro pero sin Servicios -->
-                            <div style="background: #e3f2fd; padding: 20px; border-radius: 10px; margin-bottom: 25px; border-left: 5px solid #2196f3; page-break-inside: avoid;">
-                                <h2 style="color: #2c3e50; margin-top: 0; margin-bottom: 15px; font-size: 18px; border-bottom: 2px solid #2196f3; padding-bottom: 8px;">
-                                    🔵 ESCENARIO 3: <t t-esc="escenarios['escenario_3']['nombre']"/>
-                                </h2>
-                                <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 5px; overflow: hidden;">
-                                    <thead>
-                                        <tr style="background: #2196f3; color: white;">
-                                            <th style="padding: 12px; text-align: left; font-weight: bold;">Plazo</th>
-                                            <th style="padding: 12px; text-align: right; font-weight: bold;">Valor Equipo</th>
-                                            <th style="padding: 12px; text-align: right; font-weight: bold;">Seguro/Garantía</th>
-                                            <th style="padding: 12px; text-align: right; font-weight: bold;">Servicio Mensual</th>
-                                            <th style="padding: 12px; text-align: right; font-weight: bold;">Pago Mensual</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr t-foreach="[24, 36, 48]" t-as="plazo">
-                                            <t t-set="valores" t-value="escenarios['escenario_3']['plazos'][plazo]"/>
-                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; font-weight: bold;"><t t-esc="plazo"/> meses</td>
-                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right;">$<t t-esc="'{:,.0f}'.format(valores['costo_equipo_cop'])"/></td>
-                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right;">$<t t-esc="'{:,.0f}'.format(valores.get('garantia_cop', 0))"/></td>
-                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right;">$<t t-esc="'{:,.0f}'.format(valores['servicio_mensual'])"/></td>
-                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right; font-weight: bold; color: #2196f3;">$<t t-esc="'{:,.0f}'.format(valores['pago_mensual_total'])"/></td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            <!-- Escenario 4: Sin Seguro ni Servicios -->
-                            <div style="background: #fce4ec; padding: 20px; border-radius: 10px; margin-bottom: 25px; border-left: 5px solid #e91e63; page-break-inside: avoid;">
-                                <h2 style="color: #2c3e50; margin-top: 0; margin-bottom: 15px; font-size: 18px; border-bottom: 2px solid #e91e63; padding-bottom: 8px;">
-                                    ❌ ESCENARIO 4: <t t-esc="escenarios['escenario_4']['nombre']"/>
-                                </h2>
-                                <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 5px; overflow: hidden;">
-                                    <thead>
-                                        <tr style="background: #e91e63; color: white;">
-                                            <th style="padding: 12px; text-align: left; font-weight: bold;">Plazo</th>
-                                            <th style="padding: 12px; text-align: right; font-weight: bold;">Valor Equipo</th>
-                                            <th style="padding: 12px; text-align: right; font-weight: bold;">Seguro/Garantía</th>
-                                            <th style="padding: 12px; text-align: right; font-weight: bold;">Servicio Mensual</th>
-                                            <th style="padding: 12px; text-align: right; font-weight: bold;">Pago Mensual</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr t-foreach="[24, 36, 48]" t-as="plazo">
-                                            <t t-set="valores" t-value="escenarios['escenario_4']['plazos'][plazo]"/>
-                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; font-weight: bold;"><t t-esc="plazo"/> meses</td>
-                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right;">$<t t-esc="'{:,.0f}'.format(valores['costo_equipo_cop'])"/></td>
-                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right;">$<t t-esc="'{:,.0f}'.format(valores.get('garantia_cop', 0))"/></td>
-                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right;">$<t t-esc="'{:,.0f}'.format(valores['servicio_mensual'])"/></td>
-                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right; font-weight: bold; color: #e91e63;">$<t t-esc="'{:,.0f}'.format(valores['pago_mensual_total'])"/></td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
+                            <!-- Por cada equipo: 4 escenarios (Reporte completo) -->
+                            <t t-foreach="calc.get_report_equipos()" t-as="bloque">
+                                <t t-set="escenarios" t-value="bloque['escenarios']"/>
+                                <div style="margin-bottom: 35px;">
+                                    <h2 style="color: #4a90e2; margin: 0 0 20px 0; font-size: 20px; border-bottom: 2px solid #4a90e2; padding-bottom: 10px;">
+                                        <t t-esc="bloque['nombre']"/>
+                                    </h2>
+                                    <!-- Escenario 1 -->
+                                    <div style="background: #e8f5e9; padding: 20px; border-radius: 10px; margin-bottom: 25px; border-left: 5px solid #28a745; page-break-inside: avoid;">
+                                        <h2 style="color: #2c3e50; margin-top: 0; margin-bottom: 15px; font-size: 18px; border-bottom: 2px solid #28a745; padding-bottom: 8px;">✅ ESCENARIO 1: <t t-esc="escenarios['escenario_1']['nombre']"/></h2>
+                                        <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 5px; overflow: hidden;">
+                                            <thead><tr style="background: #28a745; color: white;"><th style="padding: 12px; text-align: left; font-weight: bold;">Plazo</th><th style="padding: 12px; text-align: right; font-weight: bold;">Valor Equipo</th><th style="padding: 12px; text-align: right; font-weight: bold;">Seguro/Garantía</th><th style="padding: 12px; text-align: right; font-weight: bold;">Servicio Mensual</th><th style="padding: 12px; text-align: right; font-weight: bold;">Pago Mensual</th></tr></thead>
+                                            <tbody>
+                                                <tr t-foreach="[12, 24, 36, 48, 60]" t-as="plazo">
+                                                    <t t-set="valores" t-value="escenarios['escenario_1']['plazos'][plazo]"/>
+                                                    <td style="padding: 10px; border-bottom: 1px solid #dee2e6; font-weight: bold;"><t t-esc="plazo"/> meses</td>
+                                                    <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right;">$<t t-esc="'{:,.0f}'.format(valores.get('valor_equipo_por_mes', 0))"/></td>
+                                                    <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right;">$<t t-esc="'{:,.0f}'.format(valores.get('garantia_por_mes', 0))"/></td>
+                                                    <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right;">$<t t-esc="'{:,.0f}'.format(valores.get('servicio_por_mes', 0))"/></td>
+                                                    <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right; font-weight: bold; color: #28a745;">$<t t-esc="'{:,.0f}'.format(valores['pago_mensual_total'])"/></td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <!-- Escenario 2 -->
+                                    <div style="background: #fff3e0; padding: 20px; border-radius: 10px; margin-bottom: 25px; border-left: 5px solid #ff9800; page-break-inside: avoid;">
+                                        <h2 style="color: #2c3e50; margin-top: 0; margin-bottom: 15px; font-size: 18px; border-bottom: 2px solid #ff9800; padding-bottom: 8px;">⚠️ ESCENARIO 2: <t t-esc="escenarios['escenario_2']['nombre']"/></h2>
+                                        <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 5px; overflow: hidden;">
+                                            <thead><tr style="background: #ff9800; color: white;"><th style="padding: 12px; text-align: left; font-weight: bold;">Plazo</th><th style="padding: 12px; text-align: right; font-weight: bold;">Valor Equipo</th><th style="padding: 12px; text-align: right; font-weight: bold;">Seguro/Garantía</th><th style="padding: 12px; text-align: right; font-weight: bold;">Servicio Mensual</th><th style="padding: 12px; text-align: right; font-weight: bold;">Pago Mensual</th></tr></thead>
+                                            <tbody>
+                                                <tr t-foreach="[12, 24, 36, 48, 60]" t-as="plazo">
+                                                    <t t-set="valores" t-value="escenarios['escenario_2']['plazos'][plazo]"/>
+                                                    <td style="padding: 10px; border-bottom: 1px solid #dee2e6; font-weight: bold;"><t t-esc="plazo"/> meses</td>
+                                                    <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right;">$<t t-esc="'{:,.0f}'.format(valores.get('valor_equipo_por_mes', 0))"/></td>
+                                                    <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right;">$<t t-esc="'{:,.0f}'.format(valores.get('garantia_por_mes', 0))"/></td>
+                                                    <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right;">$<t t-esc="'{:,.0f}'.format(valores.get('servicio_por_mes', 0))"/></td>
+                                                    <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right; font-weight: bold; color: #ff9800;">$<t t-esc="'{:,.0f}'.format(valores['pago_mensual_total'])"/></td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <!-- Escenario 3 -->
+                                    <div style="background: #e3f2fd; padding: 20px; border-radius: 10px; margin-bottom: 25px; border-left: 5px solid #2196f3; page-break-inside: avoid;">
+                                        <h2 style="color: #2c3e50; margin-top: 0; margin-bottom: 15px; font-size: 18px; border-bottom: 2px solid #2196f3; padding-bottom: 8px;">🔵 ESCENARIO 3: <t t-esc="escenarios['escenario_3']['nombre']"/></h2>
+                                        <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 5px; overflow: hidden;">
+                                            <thead><tr style="background: #2196f3; color: white;"><th style="padding: 12px; text-align: left; font-weight: bold;">Plazo</th><th style="padding: 12px; text-align: right; font-weight: bold;">Valor Equipo</th><th style="padding: 12px; text-align: right; font-weight: bold;">Seguro/Garantía</th><th style="padding: 12px; text-align: right; font-weight: bold;">Servicio Mensual</th><th style="padding: 12px; text-align: right; font-weight: bold;">Pago Mensual</th></tr></thead>
+                                            <tbody>
+                                                <tr t-foreach="[12, 24, 36, 48, 60]" t-as="plazo">
+                                                    <t t-set="valores" t-value="escenarios['escenario_3']['plazos'][plazo]"/>
+                                                    <td style="padding: 10px; border-bottom: 1px solid #dee2e6; font-weight: bold;"><t t-esc="plazo"/> meses</td>
+                                                    <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right;">$<t t-esc="'{:,.0f}'.format(valores.get('valor_equipo_por_mes', 0))"/></td>
+                                                    <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right;">$<t t-esc="'{:,.0f}'.format(valores.get('garantia_por_mes', 0))"/></td>
+                                                    <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right;">$<t t-esc="'{:,.0f}'.format(valores.get('servicio_por_mes', 0))"/></td>
+                                                    <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right; font-weight: bold; color: #2196f3;">$<t t-esc="'{:,.0f}'.format(valores['pago_mensual_total'])"/></td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <!-- Escenario 4 -->
+                                    <div style="background: #fce4ec; padding: 20px; border-radius: 10px; margin-bottom: 25px; border-left: 5px solid #e91e63; page-break-inside: avoid;">
+                                        <h2 style="color: #2c3e50; margin-top: 0; margin-bottom: 15px; font-size: 18px; border-bottom: 2px solid #e91e63; padding-bottom: 8px;">❌ ESCENARIO 4: <t t-esc="escenarios['escenario_4']['nombre']"/></h2>
+                                        <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 5px; overflow: hidden;">
+                                            <thead><tr style="background: #e91e63; color: white;"><th style="padding: 12px; text-align: left; font-weight: bold;">Plazo</th><th style="padding: 12px; text-align: right; font-weight: bold;">Valor Equipo</th><th style="padding: 12px; text-align: right; font-weight: bold;">Seguro/Garantía</th><th style="padding: 12px; text-align: right; font-weight: bold;">Servicio Mensual</th><th style="padding: 12px; text-align: right; font-weight: bold;">Pago Mensual</th></tr></thead>
+                                            <tbody>
+                                                <tr t-foreach="[12, 24, 36, 48, 60]" t-as="plazo">
+                                                    <t t-set="valores" t-value="escenarios['escenario_4']['plazos'][plazo]"/>
+                                                    <td style="padding: 10px; border-bottom: 1px solid #dee2e6; font-weight: bold;"><t t-esc="plazo"/> meses</td>
+                                                    <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right;">$<t t-esc="'{:,.0f}'.format(valores.get('valor_equipo_por_mes', 0))"/></td>
+                                                    <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right;">$<t t-esc="'{:,.0f}'.format(valores.get('garantia_por_mes', 0))"/></td>
+                                                    <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right;">$<t t-esc="'{:,.0f}'.format(valores.get('servicio_por_mes', 0))"/></td>
+                                                    <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right; font-weight: bold; color: #e91e63;">$<t t-esc="'{:,.0f}'.format(valores['pago_mensual_total'])"/></td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </t>
 
                             <!-- Explicación para el Cliente -->
                             <div style="margin-top: 40px; padding: 25px; background: #f8f9fa; border-radius: 10px; border-left: 5px solid #4a90e2; page-break-inside: avoid;">
