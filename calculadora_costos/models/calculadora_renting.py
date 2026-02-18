@@ -6,7 +6,7 @@ from odoo.exceptions import UserError
 
 class CalculadoraRenting(models.Model):
     _name = 'calculadora.renting'
-    _description = 'Calculadora de Renting/Leasing'
+    _description = 'Calculadora de Renting'
     _order = 'create_date desc'
 
     name = fields.Char(
@@ -79,11 +79,19 @@ class CalculadoraRenting(models.Model):
         store=True
     )
     
-    plazo_meses = fields.Integer(
+    PLAZOS_MESES = [
+        ('12', '12 meses'),
+        ('24', '24 meses'),
+        ('36', '36 meses'),
+        ('48', '48 meses'),
+        ('60', '60 meses'),
+    ]
+    plazo_meses = fields.Selection(
+        PLAZOS_MESES,
         string='Plazo (Meses)',
-        default=48,
+        default='48',
         required=True,
-        help='Plazo del renting en meses'
+        help='Plazo del renting en meses (12, 24, 36, 48, 60)'
     )
     
     # Opción de Compra
@@ -187,7 +195,8 @@ class CalculadoraRenting(models.Model):
     def _compute_tasa_efectiva_anual(self):
         """Calcula la tasa efectiva anual"""
         for record in self:
-            if record.plazo_meses > 0:
+            plazo = int(record.plazo_meses or 0) if record.plazo_meses else 0
+            if plazo > 0:
                 tasa_mensual_decimal = (record.tasa_nominal / 100.0) / 12.0
                 tasa_efectiva = ((1 + tasa_mensual_decimal) ** 12) - 1
                 record.tasa_efectiva_anual = tasa_efectiva * 100.0
@@ -206,18 +215,19 @@ class CalculadoraRenting(models.Model):
     def _compute_pago_mensual(self):
         """Calcula el pago mensual"""
         for record in self:
-            if record.plazo_meses > 0:
+            plazo = int(record.plazo_meses or 0) if record.plazo_meses else 0
+            if plazo > 0:
                 tasa_mensual_decimal = (record.tasa_nominal / 100.0) / 12.0
                 
                 if tasa_mensual_decimal > 0:
-                    factor = (1 + tasa_mensual_decimal) ** record.plazo_meses
+                    factor = (1 + tasa_mensual_decimal) ** plazo
                     pago_base = (record.costo_total_cop * tasa_mensual_decimal * factor) / (factor - 1)
                     
                     if record.valor_opcion_compra > 0:
                         ajuste_opcion = (record.valor_opcion_compra * tasa_mensual_decimal) / (factor - 1)
                         pago_base = pago_base - ajuste_opcion
                 else:
-                    pago_base = record.costo_total_cop / record.plazo_meses
+                    pago_base = record.costo_total_cop / plazo
                 
                 record.pago_mensual = pago_base + record.servicio_con_margen
             else:

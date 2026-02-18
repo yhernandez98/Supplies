@@ -108,11 +108,19 @@ class CalculadoraEquipo(models.Model):
         help='Tasa efectiva anual calculada'
     )
     
-    plazo_meses = fields.Integer(
+    PLAZOS_MESES = [
+        ('12', '12 meses'),
+        ('24', '24 meses'),
+        ('36', '36 meses'),
+        ('48', '48 meses'),
+        ('60', '60 meses'),
+    ]
+    plazo_meses = fields.Selection(
+        PLAZOS_MESES,
         string='Plazo (Meses)',
-        default=24,
+        default='24',
         required=True,
-        help='Plazo del financiamiento en meses (24, 36, 48)'
+        help='Plazo del financiamiento en meses (12, 24, 36, 48, 60)'
     )
     
     # Opción de Compra
@@ -174,7 +182,8 @@ class CalculadoraEquipo(models.Model):
     def _compute_total_pagar(self):
         """Calcula el total a pagar durante todo el plazo"""
         for record in self:
-            total_cuotas = record.pago_mensual * record.plazo_meses
+            plazo = int(record.plazo_meses or 0) if record.plazo_meses else 0
+            total_cuotas = record.pago_mensual * plazo
             record.total_pagar = total_cuotas + record.valor_opcion_compra
     
     # Métodos de cálculo
@@ -215,7 +224,8 @@ class CalculadoraEquipo(models.Model):
     def _compute_tasa_efectiva_anual(self):
         """Calcula la tasa efectiva anual usando la fórmula EFFECT"""
         for record in self:
-            if record.plazo_meses > 0:
+            plazo = int(record.plazo_meses or 0) if record.plazo_meses else 0
+            if plazo > 0:
                 tasa_mensual_decimal = (record.tasa_nominal / 100.0) / 12.0
                 # Fórmula: (1 + tasa_mensual)^12 - 1
                 tasa_efectiva = ((1 + tasa_mensual_decimal) ** 12) - 1
@@ -235,13 +245,14 @@ class CalculadoraEquipo(models.Model):
     def _compute_pago_mensual(self):
         """Calcula el pago mensual usando la función PMT"""
         for record in self:
-            if record.plazo_meses > 0:
+            plazo = int(record.plazo_meses or 0) if record.plazo_meses else 0
+            if plazo > 0:
                 # Convertir tasa nominal a decimal mensual
                 tasa_mensual_decimal = (record.tasa_nominal / 100.0) / 12.0
                 
                 # Calcular PMT (equivalente a función PMT de Excel)
                 if tasa_mensual_decimal > 0:
-                    factor = (1 + tasa_mensual_decimal) ** record.plazo_meses
+                    factor = (1 + tasa_mensual_decimal) ** plazo
                     pago_base = (record.costo_total_cop * tasa_mensual_decimal * factor) / (factor - 1)
                     
                     # Ajustar por opción de compra (valor futuro)
@@ -250,7 +261,7 @@ class CalculadoraEquipo(models.Model):
                         pago_base = pago_base - ajuste_opcion
                 else:
                     # Si tasa es 0, pago simple
-                    pago_base = record.costo_total_cop / record.plazo_meses
+                    pago_base = record.costo_total_cop / plazo
                 
                 # Sumar servicio con margen
                 record.pago_mensual = pago_base + record.servicio_con_margen

@@ -23,6 +23,7 @@ class ParametrosFinancieros(models.Model):
         string='TRM Actual (COP/USD)',
         default=4000.0,
         required=True,
+        digits=(16, 0),
         help='Tasa Representativa del Mercado actual'
     )
     
@@ -31,6 +32,7 @@ class ParametrosFinancieros(models.Model):
         string='Porcentaje de Utilidad por Defecto (%)',
         default=10.0,
         required=True,
+        digits=(16, 0),
         help='Porcentaje de utilidad aplicado sobre el costo (ej: 10 = 10%, 20 = 20%)'
     )
     
@@ -39,6 +41,7 @@ class ParametrosFinancieros(models.Model):
         string='Tasa Nominal por Defecto (%)',
         default=21.0,
         required=True,
+        digits=(16, 0),
         help='Tasa de interés nominal anual en porcentaje (ej: 21 = 21%)'
     )
     
@@ -47,6 +50,7 @@ class ParametrosFinancieros(models.Model):
         string='Margen de Servicio por Defecto (%)',
         default=15.0,
         required=True,
+        digits=(16, 0),
         help='Margen aplicado a servicios técnicos en porcentaje'
     )
     
@@ -73,11 +77,11 @@ class ParametrosFinancieros(models.Model):
     )
     
     # Parámetros de Depreciación
-    años_depreciacion_vehiculo = fields.Integer(
-        string='Años de Depreciación Vehículo',
+    anos_depreciacion_vehiculo = fields.Integer(
+        string='Años de Depreciación',
         default=7,
         required=True,
-        help='Años de vida útil para depreciación de vehículos'
+        help='Años de vida útil para depreciación'
     )
     
     # Métodos de cálculo

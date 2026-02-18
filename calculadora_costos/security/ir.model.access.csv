@@ -1,5 +1,7 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_calculadora_costos_user,calculadora.costos.user,model_calculadora_costos,base.group_user,1,1,1,1
 access_calculadora_costos_manager,calculadora.costos.manager,model_calculadora_costos,base.group_system,1,1,1,1
+access_calculadora_costos_line_user,calculadora.costos.line.user,model_calculadora_costos_line,base.group_user,1,1,1,1
+access_calculadora_costos_line_manager,calculadora.costos.line.manager,model_calculadora_costos_line,base.group_system,1,1,1,1
 access_parametros_financieros_user,calculadora.parametros.financieros.user,model_calculadora_parametros_financieros,base.group_user,1,0,0,0
 access_parametros_financieros_manager,calculadora.parametros.financieros.manager,model_calculadora_parametros_financieros,base.group_system,1,1,1,1
