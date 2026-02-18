@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_license_add_multiple_warning_wizard_form" model="ir.ui.view">
+        <field name="name">license.add.multiple.warning.wizard.form</field>
+        <field name="model">license.add.multiple.warning.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Advertencia - Añadir equipos o contactos" class="o_subscription_form">
+                <sheet>
+                    <group class="oe_inline">
+                        <field name="assignment_id" invisible="1"/>
+                        <field name="add_type" invisible="1"/>
+                    </group>
+                    <div class="mt-3">
+                        <field name="warning_message" nolabel="1" readonly="1"/>
+                    </div>
+                </sheet>
+                <footer>
+                    <button name="action_accept" string="Entiendo, continuar" type="object" class="btn-primary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

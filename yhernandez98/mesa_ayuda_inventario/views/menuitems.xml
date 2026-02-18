@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- ========================================== -->
+        <!-- MENÚ PRINCIPAL: MESA DE AYUDA -->
+        <!-- ========================================== -->
+        <menuitem id="menu_helpdesk_inventory_root"
+                  name="Mesa de Ayuda"
+                  sequence="100"/>
+        
+        <!-- ========================================== -->
+        <!-- SECCIÓN 1: DASHBOARD Y MÉTRICAS -->
+        <!-- ========================================== -->
+        <menuitem id="menu_dashboard_root"
+                  name="📊 Dashboard"
+                  parent="menu_helpdesk_inventory_root"
+                  sequence="10"/>
+        
+        <menuitem id="menu_maintenance_dashboard"
+                  name="Dashboard Principal"
+                  parent="menu_dashboard_root"
+                  action="action_maintenance_dashboard"
+                  sequence="10"/>
+        
+        <menuitem id="menu_dashboard_visits_metrics"
+                  name="Métricas de Visitas"
+                  parent="menu_dashboard_root"
+                  action="action_maintenance_dashboard_visits"
+                  sequence="20"/>
+        
+        <menuitem id="menu_dashboard_maintenance_metrics"
+                  name="Métricas de Mantenimientos"
+                  parent="menu_dashboard_root"
+                  action="action_maintenance_dashboard_maintenance"
+                  sequence="30"/>
+        
+        <menuitem id="menu_dashboard_technicians_metrics"
+                  name="Estadísticas de Técnicos"
+                  parent="menu_dashboard_root"
+                  action="action_maintenance_dashboard_technicians"
+                  sequence="40"/>
+        
+        <!-- ========================================== -->
+        <!-- SECCIÓN: ALERTAS -->
+        <!-- ========================================== -->
+        <menuitem id="menu_alertas_root"
+                  name="Alertas"
+                  parent="menu_helpdesk_inventory_root"
+                  sequence="15"/>
+        
+        <menuitem id="menu_alertas_renting_por_vencer"
+                  name="Equipos a terminar Renting"
+                  parent="menu_alertas_root"
+                  action="action_alertas_renting_por_vencer"
+                  sequence="10"/>
+        
+        <!-- ========================================== -->
+        <!-- SECCIÓN 2: INVENTARIO -->
+        <!-- ========================================== -->
+        <menuitem id="menu_inventory_root"
+                  name="📦 Inventario"
+                  parent="menu_helpdesk_inventory_root"
+                  sequence="20"/>
+        
+        <menuitem id="menu_customer_inventory"
+                  name="Inventario de Clientes"
+                  parent="menu_inventory_root"
+                  sequence="10"/>
+        
+        <menuitem id="menu_customer_inventory_kanban"
+                  name="Vista de Clientes"
+                  parent="menu_customer_inventory"
+                  action="action_customer_list"
+                  sequence="10"
+                  active="False"/>
+        
+        <!-- Menú para la Vista de Inventario Detallado -->
+        <menuitem id="menu_customer_inventory_detailed"
+                  name="Cliente Supplies"
+                  parent="menu_customer_inventory"
+                  action="action_customer_inventory_detailed"
+                  sequence="15"/>
+        
+        <!-- Menú para Clientes Propios -->
+        <menuitem id="menu_customer_own_inventory"
+                  name="Clientes Propios"
+                  parent="menu_customer_inventory"
+                  action="action_customer_own_inventory_clients"
+                  sequence="20"/>
+        
+        <menuitem id="menu_lot_maintenance"
+                  name="Lotes y Mantenimientos"
+                  parent="menu_inventory_root"
+                  action="action_lot_maintenance"
+                  sequence="20"/>
+        
+        <menuitem id="menu_component_changes"
+                  name="Cambios de Componentes"
+                  parent="menu_inventory_root"
+                  action="action_maintenance_component_change"
+                  sequence="30"/>
+        
+        <!-- ========================================== -->
+        <!-- SECCIÓN 3: ÓRDENES DE SERVICIO -->
+        <!-- ========================================== -->
+        <menuitem id="menu_service_orders_root"
+                  name="🔧 Órdenes de Servicio"
+                  parent="menu_helpdesk_inventory_root"
+                  sequence="30"/>
+        
+        <menuitem id="menu_maintenance_order"
+                  name="Órdenes de Servicio"
+                  parent="menu_service_orders_root"
+                  action="action_maintenance_order"
+                  sequence="10"/>
+        
+        <menuitem id="menu_maintenance_order_calendar"
+                  name="Calendario de Visitas"
+                  parent="menu_service_orders_root"
+                  action="action_maintenance_order_calendar"
+                  sequence="20"
+                  groups="base.group_user"/>
+        
+        <!-- ========================================== -->
+        <!-- SECCIÓN 4: TICKETS Y REPARACIONES -->
+        <!-- ========================================== -->
+        <menuitem id="menu_support_root"
+                  name="🎫 Tickets y Reparaciones"
+                  parent="menu_helpdesk_inventory_root"
+                  sequence="40"/>
+        
+        <menuitem id="menu_mesa_ayuda_ticket"
+                  name="Tickets"
+                  parent="menu_support_root"
+                  action="action_mesa_ayuda_ticket"
+                  sequence="10"/>
+        
+        <menuitem id="menu_repair_order"
+                  name="Reparaciones"
+                  parent="menu_support_root"
+                  action="action_repair_order"
+                  sequence="20"/>
+        
+    </data>
+</odoo>

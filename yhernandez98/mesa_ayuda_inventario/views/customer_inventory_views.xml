@@ -1,0 +1,814 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Vista Kanban agrupada por cliente con diseño moderno -->
+        <record id="view_customer_inventory_lot_kanban" model="ir.ui.view">
+            <field name="name">customer.inventory.lot.kanban</field>
+            <field name="model">stock.lot</field>
+            <field name="arch" type="xml">
+                <kanban default_group_by="customer_id" class="o_kanban_dashboard">
+                    <field name="name"/>
+                    <field name="product_id"/>
+                    <field name="customer_id"/>
+                    <field name="quantity_at_customer"/>
+                    <field name="model_name"/>
+                    <field name="inventory_plate"/>
+                    <field name="security_plate"/>
+                    <field name="billing_code"/>
+                    <field name="customer_location_id"/>
+                    <field name="product_image"/>
+                    <field name="product_id" context="{'bin_size': True}"/>
+                    <progressbar field="quantity_at_customer" colors='{"0": "success", "1": "warning"}'/>
+                    <templates>
+                        <t t-name="kanban-box">
+                            <div class="oe_kanban_card oe_kanban_global_click" style="border-radius: 20px; box-shadow: 0 6px 12px rgba(0,0,0,0.15); margin: 12px; background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%); overflow: hidden; border: 2px solid #e0e6ed; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 16px rgba(0,0,0,0.2)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 6px 12px rgba(0,0,0,0.15)';">
+                                <!-- Header con gradiente empresarial gris oscuro -->
+                                <div style="background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%); padding: 18px; color: white; position: relative; border-bottom: 2px solid #047857;">
+                                    <div style="display: flex; align-items: center; gap: 12px;">
+                                        <!-- Icono del producto -->
+                                        <div style="width: 70px; height: 70px; border-radius: 16px; overflow: hidden; background: rgba(255,255,255,0.2); padding: 6px; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px);">
+                                            <i class="fa fa-cube" style="font-size: 40px; color: white;"/>
+                                        </div>
+                                        <div style="flex: 1;">
+                                            <div style="font-size: 20px; font-weight: bold; margin-bottom: 6px; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                                                <field name="name"/>
+                                            </div>
+                                            <div style="font-size: 14px; opacity: 0.95; font-weight: 500;">
+                                                <field name="product_id"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Contenido principal con fondo de color -->
+                                <div style="padding: 18px; background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);">
+                                    <!-- Cantidad destacada con icono -->
+                                    <div t-if="record.quantity_at_customer.raw_value > 0" style="margin-bottom: 16px; text-align: center; padding: 16px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border-radius: 16px; color: white; box-shadow: 0 4px 8px rgba(17, 153, 142, 0.3);">
+                                        <div style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 8px;">
+                                            <i class="fa fa-cubes" style="font-size: 24px;"/>
+                                            <div style="font-size: 13px; opacity: 0.95; font-weight: 500;">Cantidad Disponible</div>
+                                        </div>
+                                        <div style="font-size: 36px; font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                                            <field name="quantity_at_customer"/>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Información en grid con iconos y colores -->
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                                        <div t-if="record.model_name.raw_value" style="padding: 14px; background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); border-radius: 14px; border: 1px solid #90caf9; box-shadow: 0 2px 4px rgba(25, 118, 210, 0.1);">
+                                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                                                <i class="fa fa-tag" style="color: #1976d2; font-size: 16px;"/>
+                                                <div style="font-size: 11px; color: #555; font-weight: 600;">Modelo</div>
+                                            </div>
+                                            <div style="font-weight: 700; color: #1565c0; font-size: 14px;">
+                                                <field name="model_name"/>
+                                            </div>
+                                        </div>
+                                        
+                                        <div t-if="record.inventory_plate.raw_value" style="padding: 14px; background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); border-radius: 14px; border: 1px solid #ffcc80; box-shadow: 0 2px 4px rgba(245, 124, 0, 0.1);">
+                                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                                                <i class="fa fa-barcode" style="color: #f57c00; font-size: 16px;"/>
+                                                <div style="font-size: 11px; color: #555; font-weight: 600;">Placa Inv</div>
+                                            </div>
+                                            <div style="font-weight: 700; color: #e65100; font-size: 14px;">
+                                                <field name="inventory_plate"/>
+                                            </div>
+                                        </div>
+                                        
+                                        <div t-if="record.security_plate.raw_value" style="padding: 14px; background: linear-gradient(135deg, #fce4ec 0%, #f8bbd0 100%); border-radius: 14px; border: 1px solid #f48fb1; box-shadow: 0 2px 4px rgba(194, 24, 91, 0.1);">
+                                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                                                <i class="fa fa-shield-alt" style="color: #c2185b; font-size: 16px;"/>
+                                                <div style="font-size: 11px; color: #555; font-weight: 600;">Placa Seg</div>
+                                            </div>
+                                            <div style="font-weight: 700; color: #ad1457; font-size: 14px;">
+                                                <field name="security_plate"/>
+                                            </div>
+                                        </div>
+                                        
+                                        <div t-if="record.billing_code.raw_value" style="padding: 14px; background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%); border-radius: 14px; border: 1px solid #ce93d8; box-shadow: 0 2px 4px rgba(123, 31, 162, 0.1);">
+                                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                                                <i class="fa fa-file-invoice-dollar" style="color: #7b1fa2; font-size: 16px;"/>
+                                                <div style="font-size: 11px; color: #555; font-weight: 600;">Código</div>
+                                            </div>
+                                            <div style="font-weight: 700; color: #6a1b9a; font-size: 14px;">
+                                                <field name="billing_code"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Ubicación con icono -->
+                                    <div t-if="record.customer_location_id.raw_value" style="padding: 12px; background: linear-gradient(135deg, #f5f5f5 0%, #eeeeee 100%); border-radius: 12px; font-size: 13px; color: #666; border-left: 4px solid #3b82f6; display: flex; align-items: center; gap: 8px;">
+                                        <i class="fa fa-map-marker-alt" style="color: #3b82f6; font-size: 16px;"/>
+                                        <field name="customer_location_id"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </t>
+                    </templates>
+                </kanban>
+            </field>
+        </record>
+
+        <!-- Vista de lista mejorada para inventario de clientes -->
+        <record id="view_customer_inventory_lot_tree" model="ir.ui.view">
+            <field name="name">customer.inventory.lot.tree</field>
+            <field name="model">stock.lot</field>
+            <field name="arch" type="xml">
+                <list string="Inventario de Clientes" 
+                      default_order="customer_id, name desc"
+                      decoration-muted="quantity_at_customer == 0"
+                      decoration-success="quantity_at_customer > 0">
+                    <field name="product_image" widget="image" string="Imagen" optional="show"/>
+                    <field name="name" string="Número de Serie" required="1"/>
+                    <field name="product_id" string="Producto" required="1"/>
+                    <field name="customer_id" string="Cliente" optional="show"/>
+                    <field name="quantity_at_customer" string="Cantidad" widget="float" optional="show"/>
+                    <field name="model_name" string="Modelo" optional="show"/>
+                    <field name="inventory_plate" string="Placa Inventario" optional="show"/>
+                    <field name="security_plate" string="Placa Seguridad" optional="show"/>
+                    <field name="billing_code" string="Código Facturación" optional="show"/>
+                    <field name="customer_location_id" string="Ubicación" optional="hide"/>
+                </list>
+            </field>
+        </record>
+
+
+        <!-- Vista de búsqueda con filtros personalizados -->
+        <record id="view_customer_inventory_lot_search" model="ir.ui.view">
+            <field name="name">customer.inventory.lot.search</field>
+            <field name="model">stock.lot</field>
+            <field name="arch" type="xml">
+                <search>
+                    <field name="inventory_plate" string="Placa Inventario"/>
+                    <field name="name" string="Número de Serie"/>
+                    <field name="product_id" string="Producto"/>
+                    <field name="model_name" string="Modelo"/>
+                    <field name="security_plate" string="Placa Seguridad"/>
+                    <field name="billing_code" string="Código Facturación"/>
+                    <field name="product_asset_class_id" string="Clase de Activo"/>
+                    <separator/>
+                    <filter string="Productos Principales" name="principal_only" domain="[('is_principal', '=', True)]"/>
+                    <filter string="Con Placa Inventario" name="with_inventory_plate" domain="[('inventory_plate', '!=', False)]"/>
+                    <filter string="Con Placa Seguridad" name="with_security_plate" domain="[('security_plate', '!=', False)]"/>
+                    <group expand="0" string="Agrupar por">
+                        <filter string="Cliente" name="group_customer" context="{'group_by': 'customer_id'}"/>
+                        <filter string="Categoría de Activo" name="group_category" context="{'group_by': 'product_asset_category_id'}"/>
+                        <filter string="Clase de Activo" name="group_class" context="{'group_by': 'product_asset_class_id'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <!-- Vista Kanban de clientes (vista inicial tipo almacenes) - REDISEÑADA -->
+        <!-- Vista Kanban para Vista Clientes (azul) -->
+        <record id="view_customer_kanban" model="ir.ui.view">
+            <field name="name">customer.inventory.kanban</field>
+            <field name="model">res.partner</field>
+            <field name="arch" type="xml">
+                <kanban class="o_kanban_dashboard customer-inventory-kanban" create="0" column_invisible="1">
+                    <field name="name"/>
+                    <field name="product_count"/>
+                    <field name="property_stock_customer"/>
+                    <field name="id"/>
+                    <templates>
+                        <t t-name="kanban-box">
+                            <div class="oe_kanban_card customer-inventory-card" style="border-radius: 16px; box-shadow: 0 2px 12px rgba(148, 163, 184, 0.2); background: linear-gradient(160deg, #f8fafc 0%, #f1f5f9 45%, #e2e8f0 100%); overflow: hidden; border: 1px solid #e2e8f0; transition: transform 0.3s ease, box-shadow 0.3s ease; width: 100%; height: 200px; display: flex; flex-direction: column; position: relative; margin: 0; padding: 0;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 12px 28px rgba(148, 163, 184, 0.25)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 12px rgba(148, 163, 184, 0.2)';">
+                                <div class="customer-inventory-card-inner" style="background: linear-gradient(160deg, #f0f9ff 0%, #e0f2fe 100%); border-bottom: 1px solid #bae6fd; padding: 12px; text-align: center; color: #0f172a; flex: 1; display: flex; flex-direction: column; justify-content: space-between; min-height: 0; position: relative; z-index: 1; border-radius: 16px 16px 0 0;">
+                                    <div style="margin-bottom: 8px; flex-shrink: 0;">
+                                        <i class="fa fa-warehouse" style="font-size: 28px; color: #0ea5e9; opacity: 0.9;"/>
+                                    </div>
+                                    <div style="font-size: 14px; font-weight: bold; margin-bottom: 8px; color: #0f172a; line-height: 1.2; max-height: 48px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; word-wrap: break-word; flex-shrink: 0;">
+                                        <field name="name"/>
+                                    </div>
+                                    <div style="font-size: 12px; padding: 5px; background: rgba(255,255,255,0.8); border-radius: 6px; margin-bottom: 8px; flex-shrink: 0; border: 1px solid #e2e8f0; color: #334155;">
+                                        <i class="fa fa-cubes" style="margin-right: 4px; color: #64748b;"/>
+                                        <strong><field name="product_count"/> Productos</strong>
+                                    </div>
+                                    <div style="flex-shrink: 0; display: flex; flex-direction: column; gap: 6px;">
+                                        <button type="object" name="action_view_customer_inventory" string="Ver Inventario" class="btn-inventory-corporate" style="width: 100% !important; padding: 8px !important; font-size: 12px !important; font-weight: 600 !important; border-radius: 6px !important; background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%) !important; background-color: #0ea5e9 !important; color: white !important; cursor: pointer !important; border: 1px solid #7dd3fc !important; transition: none !important; box-shadow: 0 2px 6px rgba(14, 165, 233, 0.25) !important; outline: none !important;"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </t>
+                    </templates>
+                </kanban>
+            </field>
+        </record>
+
+        <!-- Vista Kanban para Inventario Detallado (morada) -->
+        <record id="view_customer_kanban_detailed" model="ir.ui.view">
+            <field name="name">customer.inventory.kanban.detailed</field>
+            <field name="model">res.partner</field>
+            <field name="arch" type="xml">
+                <kanban class="o_kanban_dashboard customer-inventory-kanban" create="0" column_invisible="1">
+                    <field name="name"/>
+                    <field name="product_count"/>
+                    <field name="property_stock_customer"/>
+                    <field name="id"/>
+                    <templates>
+                        <t t-name="kanban-box">
+                            <div class="oe_kanban_card customer-inventory-card" style="border-radius: 16px; box-shadow: 0 2px 12px rgba(148, 163, 184, 0.2); background: linear-gradient(160deg, #f8fafc 0%, #f1f5f9 45%, #e2e8f0 100%); overflow: hidden; border: 1px solid #e2e8f0; transition: transform 0.3s ease, box-shadow 0.3s ease; width: 100%; height: 200px; display: flex; flex-direction: column; position: relative; margin: 0; padding: 0;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 12px 28px rgba(148, 163, 184, 0.25)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 12px rgba(148, 163, 184, 0.2)';">
+                                <div class="customer-inventory-card-inner" style="background: linear-gradient(160deg, #f0f9ff 0%, #e0f2fe 100%); border-bottom: 1px solid #bae6fd; padding: 12px; text-align: center; color: #0f172a; flex: 1; display: flex; flex-direction: column; justify-content: space-between; min-height: 0; position: relative; z-index: 1; border-radius: 16px 16px 0 0;">
+                                    <div style="margin-bottom: 8px; flex-shrink: 0;">
+                                        <i class="fa fa-warehouse" style="font-size: 28px; color: #0ea5e9; opacity: 0.9;"/>
+                                    </div>
+                                    <div style="font-size: 14px; font-weight: bold; margin-bottom: 8px; color: #0f172a; line-height: 1.2; max-height: 48px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; word-wrap: break-word; flex-shrink: 0;">
+                                        <field name="name"/>
+                                    </div>
+                                    <div style="font-size: 12px; padding: 5px; background: rgba(255,255,255,0.8); border-radius: 6px; margin-bottom: 8px; flex-shrink: 0; border: 1px solid #e2e8f0; color: #334155;">
+                                        <i class="fa fa-cubes" style="margin-right: 4px; color: #64748b;"/>
+                                        <strong><field name="product_count"/> Productos</strong>
+                                    </div>
+                                    <div style="flex-shrink: 0; display: flex; flex-direction: column; gap: 6px;">
+                                        <button type="object" name="action_view_customer_inventory_kanban" string="Ver Inventario" class="btn-inventory-corporate" style="width: 100% !important; padding: 8px !important; font-size: 12px !important; font-weight: 600 !important; border-radius: 6px !important; background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%) !important; background-color: #0ea5e9 !important; color: white !important; cursor: pointer !important; border: 1px solid #7dd3fc !important; transition: none !important; box-shadow: 0 2px 6px rgba(14, 165, 233, 0.25) !important; outline: none !important;"/>
+                                        <button type="object" name="action_generate_all_life_sheets" string="📥 Hojas de Vida PDF" style="width: 100% !important; padding: 8px !important; font-size: 11px !important; font-weight: 600 !important; border-radius: 6px !important; background: linear-gradient(135deg, #0d9488 0%, #2dd4bf 100%) !important; background-color: #0d9488 !important; color: white !important; cursor: pointer !important; border: 1px solid #5eead4 !important; transition: none !important; box-shadow: 0 2px 6px rgba(13, 148, 136, 0.2) !important; outline: none !important;">
+                                            <i class="fa fa-file-pdf" style="margin-right: 4px;"/>
+                                            Descargar PDF
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </t>
+                    </templates>
+                </kanban>
+            </field>
+        </record>
+
+        <!-- Vista de lista simple para clientes -->
+        <record id="view_customer_list" model="ir.ui.view">
+            <field name="name">customer.inventory.list</field>
+            <field name="model">res.partner</field>
+            <field name="arch" type="xml">
+                <list string="Clientes">
+                    <field name="name" string="Nombre"/>
+                    <field name="product_count" string="Productos"/>
+                    <field name="property_stock_customer" string="Ubicación"/>
+                </list>
+            </field>
+        </record>
+
+        <!-- Vista de búsqueda para clientes -->
+        <record id="view_customer_search" model="ir.ui.view">
+            <field name="name">customer.inventory.search</field>
+            <field name="model">res.partner</field>
+            <field name="arch" type="xml">
+                <search string="Buscar Clientes">
+                    <field name="name" string="Nombre" filter_domain="['|', ('name', 'ilike', self), ('display_name', 'ilike', self)]"/>
+                    <field name="display_name"/>
+                    <field name="property_stock_customer"/>
+                    <separator/>
+                    <filter string="Con Ubicación" name="with_location" domain="[('property_stock_customer', '!=', False)]"/>
+                </search>
+            </field>
+        </record>
+
+        <!-- Acción para abrir la vista de clientes (vista inicial) -->
+        <record id="action_customer_list" model="ir.actions.act_window">
+            <field name="name">Almacenes de Clientes</field>
+            <field name="res_model">res.partner</field>
+            <field name="view_mode">kanban,list</field>
+            <field name="view_id" ref="view_customer_kanban"/>
+            <field name="search_view_id" ref="view_customer_search"/>
+            <field name="domain">[('is_company', '=', True), ('property_stock_customer', '!=', False)]</field>
+            <field name="context">{}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    🏢 Selecciona un Cliente para Ver su Inventario
+                </p>
+                <p>
+                    <strong>Instrucciones:</strong><br/>
+                    • Haz clic en cualquier cliente para ver sus productos<br/>
+                    • Cada cliente muestra la cantidad de productos en su inventario<br/>
+                    • Los productos se organizan según la ubicación asignada al cliente
+                </p>
+            </field>
+        </record>
+
+        <!-- Vista Kanban de productos con información detallada (elementos asociados y licencias) -->
+        <record id="view_customer_inventory_lot_kanban_detailed" model="ir.ui.view">
+            <field name="name">customer.inventory.lot.kanban.detailed</field>
+            <field name="model">stock.lot</field>
+            <field name="arch" type="xml">
+                <kanban class="o_kanban_dashboard">
+                    <field name="name"/>
+                    <field name="product_id"/>
+                    <field name="customer_id"/>
+                    <field name="inventory_plate"/>
+                    <field name="security_plate"/>
+                    <field name="billing_code"/>
+                    <field name="related_partner_id"/>
+                    <field name="lot_image"/>
+                    <field name="product_image"/>
+                    <field name="product_id" context="{'bin_size': True}"/>
+                    <field name="assigned_licenses_count"/>
+                    <field name="assigned_licenses_display"/>
+                    <field name="associated_products_count"/>
+                    <field name="associated_products_display"/>
+                                <templates>
+                                    <t t-name="kanban-box">
+                                        <div class="oe_kanban_card oe_kanban_global_click" style="border: 1px solid #d0d7de; border-radius: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.12); margin-bottom: 12px; background: #ffffff; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.18)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 6px rgba(0,0,0,0.12)';">
+                                            <!-- Header corporativo con color azul cielo elegante -->
+                                            <div style="background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%); border-bottom: 2px solid #dbeafe; padding: 14px; border-radius: 20px 20px 0 0;">
+                                                <div style="display: flex; align-items: center; gap: 12px;">
+                                                    <div t-if="record.lot_image.raw_value or record.product_id.raw_value" style="width: 55px; height: 55px; border-radius: 8px; overflow: hidden; background: rgba(255,255,255,0.95); border: 2px solid rgba(255,255,255,0.3); padding: 4px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                                        <t t-if="record.lot_image.raw_value">
+                                                            <img t-att-src="kanban_image('stock.lot', 'lot_image', record.id.raw_value)" 
+                                                                style="max-width: 100%; max-height: 100%; object-fit: contain;"/>
+                                                        </t>
+                                                        <t t-else="">
+                                                            <img t-if="record.product_id.raw_value" 
+                                                                t-att-src="kanban_image('product.product', 'image_1920', record.product_id.raw_value)" 
+                                                                style="max-width: 100%; max-height: 100%; object-fit: contain;"/>
+                                                        </t>
+                                                    </div>
+                                                    <div style="flex: 1;">
+                                                        <div style="font-size: 17px; font-weight: 700; color: #ffffff; margin-bottom: 3px; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">
+                                                            <field name="name"/>
+                                                        </div>
+                                                        <div style="font-size: 13px; color: rgba(255,255,255,0.95); font-weight: 500;">
+                                                            <field name="product_id"/>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Contenido principal -->
+                                            <div style="padding: 14px; background: linear-gradient(to bottom, #fafbfc 0%, #ffffff 100%);">
+                                                <!-- Información en tabla corporativa con colores sutiles -->
+                                                <table style="width: 100%; border-collapse: collapse; margin-bottom: 0;">
+                                                    <tr t-if="record.inventory_plate.raw_value">
+                                                        <td style="padding: 8px 0; font-size: 12px; color: #6c757d; width: 35%; border-bottom: 1px solid #e9ecef; font-weight: 500;">Placa Inv:</td>
+                                                        <td style="padding: 8px 0; font-size: 13px; color: #2c3e50; font-weight: 600; border-bottom: 1px solid #e9ecef;">
+                                                            <field name="inventory_plate"/>
+                                                        </td>
+                                                    </tr>
+                                                    <tr t-if="record.security_plate.raw_value">
+                                                        <td style="padding: 8px 0; font-size: 12px; color: #6c757d; width: 35%; border-bottom: 1px solid #e9ecef; font-weight: 500;">Placa Seg:</td>
+                                                        <td style="padding: 8px 0; font-size: 13px; color: #2c3e50; font-weight: 600; border-bottom: 1px solid #e9ecef;">
+                                                            <field name="security_plate"/>
+                                                        </td>
+                                                    </tr>
+                                                    <tr t-if="record.billing_code.raw_value">
+                                                        <td style="padding: 8px 0; font-size: 12px; color: #6c757d; width: 35%; border-bottom: 1px solid #e9ecef; font-weight: 500;">Código:</td>
+                                                        <td style="padding: 8px 0; font-size: 13px; color: #2c3e50; font-weight: 600; border-bottom: 1px solid #e9ecef;">
+                                                            <field name="billing_code"/>
+                                                        </td>
+                                                    </tr>
+                                                    <tr t-if="record.related_partner_id.raw_value">
+                                                        <td style="padding: 8px 0; font-size: 12px; color: #6c757d; width: 35%; border-bottom: 1px solid #e9ecef; font-weight: 500;">Asignado:</td>
+                                                        <td style="padding: 8px 0; font-size: 13px; color: #2c3e50; font-weight: 600; border-bottom: 1px solid #e9ecef;">
+                                                            <field name="related_partner_id"/>
+                                                        </td>
+                                                    </tr>
+                                                    <tr t-if="record.associated_products_count.raw_value > 0">
+                                                        <td style="padding: 8px 0; font-size: 12px; color: #6c757d; width: 35%; border-bottom: 1px solid #e9ecef; font-weight: 500; vertical-align: top;">Hardware:</td>
+                                                        <td style="padding: 8px 0; font-size: 13px; color: #059669; font-weight: 600; border-bottom: 1px solid #e9ecef;">
+                                                            <div t-if="record.associated_products_display.raw_value" style="font-size: 12px; color: #047857; line-height: 1.8; white-space: pre-line; padding-left: 0;">
+                                                                <t t-esc="record.associated_products_display.raw_value"/>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                    <tr t-if="record.assigned_licenses_count.raw_value > 0">
+                                                        <td style="padding: 8px 0; font-size: 12px; color: #6c757d; width: 35%; border-bottom: 1px solid #e9ecef; font-weight: 500; vertical-align: top;">Licencias:</td>
+                                                        <td style="padding: 8px 0; font-size: 13px; color: #d97706; font-weight: 600; border-bottom: 1px solid #e9ecef;">
+                                                            <div t-if="record.assigned_licenses_display.raw_value" style="font-size: 12px; color: #b45309; line-height: 1.8; white-space: pre-line; padding-left: 0;">
+                                                                <t t-esc="record.assigned_licenses_display.raw_value"/>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </t>
+                                </templates>
+                            </kanban>
+                        </field>
+                    </record>
+
+        <!-- Vista Kanban de productos (diseño original simple) -->
+        <record id="view_customer_inventory_lot_kanban_simple" model="ir.ui.view">
+            <field name="name">customer.inventory.lot.kanban.simple</field>
+            <field name="model">stock.lot</field>
+            <field name="arch" type="xml">
+                <kanban class="o_kanban_dashboard">
+                    <field name="name"/>
+                    <field name="product_id"/>
+                    <field name="customer_id"/>
+                    <field name="inventory_plate"/>
+                    <field name="security_plate"/>
+                    <field name="hostname"/>
+                    <field name="billing_code"/>
+                    <field name="related_partner_id"/>
+                    <field name="related_partner_name_only"/>
+                    <field name="lot_image"/>
+                    <field name="product_image"/>
+                    <field name="product_id" context="{'bin_size': True}"/>
+                    <field name="assigned_licenses_count"/>
+                    <field name="assigned_licenses_display"/>
+                    <field name="associated_products_count"/>
+                    <field name="associated_products_display"/>
+                    <templates>
+                        <t t-name="kanban-box">
+                            <div class="oe_kanban_card oe_kanban_global_click" style="border: 1px solid #d0d7de; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 12px; background: #ffffff; overflow: hidden;">
+                                <!-- Header azul con serial y producto -->
+                                <div style="background: #2563eb; padding: 12px; border-radius: 8px 8px 0 0;">
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <!-- Icono/Imagen del producto -->
+                                        <div t-if="record.lot_image.raw_value or record.product_id.raw_value" style="width: 50px; height: 50px; border-radius: 6px; overflow: hidden; background: rgba(255,255,255,0.95); border: 2px solid rgba(255,255,255,0.3); padding: 3px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                            <t t-if="record.lot_image.raw_value">
+                                                <img t-att-src="kanban_image('stock.lot', 'lot_image', record.id.raw_value)" 
+                                                    style="max-width: 100%; max-height: 100%; object-fit: contain;"/>
+                                            </t>
+                                            <t t-else="">
+                                                <img t-if="record.product_id.raw_value" 
+                                                    t-att-src="kanban_image('product.product', 'image_1920', record.product_id.raw_value)" 
+                                                    style="max-width: 100%; max-height: 100%; object-fit: contain;"/>
+                                            </t>
+                                        </div>
+                                        <!-- Serial y Producto -->
+                                        <div style="flex: 1; min-width: 0;">
+                                            <div style="font-size: 16px; font-weight: 700; color: #ffffff; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                                <field name="name"/>
+                                            </div>
+                                            <div style="font-size: 12px; color: rgba(255,255,255,0.9); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                                <field name="product_id"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Contenido con información -->
+                                <div style="padding: 12px;">
+                                    <table style="width: 100%; border-collapse: collapse;">
+                                        <!-- Mostrar Placas si existen -->
+                                        <tr t-if="record.inventory_plate.raw_value">
+                                            <td style="padding: 6px 0; font-size: 11px; color: #6c757d; width: 40%; font-weight: 500; vertical-align: top;">Placa Inv:</td>
+                                            <td style="padding: 6px 0; font-size: 12px; color: #2c3e50; font-weight: 600;">
+                                                <field name="inventory_plate"/>
+                                            </td>
+                                        </tr>
+                                        <tr t-if="record.security_plate.raw_value">
+                                            <td style="padding: 6px 0; font-size: 11px; color: #6c757d; width: 40%; font-weight: 500; vertical-align: top;">Placa Seg:</td>
+                                            <td style="padding: 6px 0; font-size: 12px; color: #2c3e50; font-weight: 600;">
+                                                <field name="security_plate"/>
+                                            </td>
+                                        </tr>
+                                        <!-- Hostname después de Placa Seg -->
+                                        <tr t-if="record.hostname.raw_value">
+                                            <td style="padding: 6px 0; font-size: 11px; color: #6c757d; width: 40%; font-weight: 500; vertical-align: top;">Hostname:</td>
+                                            <td style="padding: 6px 0; font-size: 12px; color: #2c3e50; font-weight: 600;">
+                                                <field name="hostname"/>
+                                            </td>
+                                        </tr>
+                                        <!-- Mostrar Código si existe -->
+                                        <tr t-if="record.billing_code.raw_value">
+                                            <td style="padding: 6px 0; font-size: 11px; color: #6c757d; width: 40%; font-weight: 500; vertical-align: top;">Código:</td>
+                                            <td style="padding: 6px 0; font-size: 12px; color: #2c3e50; font-weight: 600;">
+                                                <field name="billing_code"/>
+                                            </td>
+                                        </tr>
+                                        <!-- Asignado: solo nombre del contacto, no compañía -->
+                                        <tr t-if="record.related_partner_name_only.raw_value">
+                                            <td style="padding: 6px 0; font-size: 11px; color: #6c757d; width: 40%; font-weight: 500; vertical-align: top;">Asignado:</td>
+                                            <td style="padding: 6px 0; font-size: 12px; color: #2c3e50; font-weight: 600;">
+                                                <field name="related_partner_name_only"/>
+                                            </td>
+                                        </tr>
+                                        <!-- Hardware (elementos asociados) -->
+                                        <tr t-if="record.associated_products_count.raw_value > 0">
+                                            <td style="padding: 6px 0; font-size: 11px; color: #6c757d; width: 40%; font-weight: 500; vertical-align: top;">Hardware:</td>
+                                            <td style="padding: 6px 0; font-size: 12px; color: #059669; font-weight: 600;">
+                                                <div t-if="record.associated_products_display.raw_value" style="font-size: 11px; color: #047857; line-height: 1.6; white-space: pre-line;">
+                                                    <t t-esc="record.associated_products_display.raw_value"/>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <!-- Licencias -->
+                                        <tr t-if="record.assigned_licenses_count.raw_value > 0">
+                                            <td style="padding: 6px 0; font-size: 11px; color: #6c757d; width: 40%; font-weight: 500; vertical-align: top;">Licencias:</td>
+                                            <td style="padding: 6px 0; font-size: 12px; color: #d97706; font-weight: 600;">
+                                                <div t-if="record.assigned_licenses_display.raw_value" style="font-size: 11px; color: #b45309; line-height: 1.6; white-space: pre-line;">
+                                                    <t t-esc="record.assigned_licenses_display.raw_value"/>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </t>
+                    </templates>
+                </kanban>
+            </field>
+        </record>
+
+        <!-- Vista de árbol jerárquica agrupada por Cliente, Categoría y Clase de Activo (BASE) -->
+        <record id="view_stock_lot_tree_hierarchical" model="ir.ui.view">
+            <field name="name">stock.lot.tree.hierarchical</field>
+            <field name="model">stock.lot</field>
+            <field name="arch" type="xml">
+                <list string="Productos Serializados" 
+                      create="0" 
+                      delete="0"
+                      default_order="customer_id, product_asset_category_id, product_asset_class_id, name"
+                      class="customer_inventory_list">
+                    <field name="customer_id" string="Cliente"/>
+                    <field name="product_id" string="Producto"/>
+                    <field name="inventory_plate" string="Placa de Inventario"/>
+                    <field name="assigned_licenses_list_display" string="Licencias" optional="show" widget="text"/>
+                    <field name="associated_products_list_display" string="Componentes" optional="show" widget="text"/>
+                    <field name="associated_products_count" string="Cant. Elementos" widget="integer" optional="hide"/>
+                </list>
+            </field>
+        </record>
+
+        <!-- Acciones completamente separadas para cada vista CON botones siempre visibles -->
+        <record id="action_customer_inventory_kanban_only" model="ir.actions.act_window">
+            <field name="name">Inventario Kanban</field>
+            <field name="res_model">stock.lot</field>
+            <!-- Permitir a todos los usuarios internos (no solo Administración/Ajustes) -->
+            <field name="groups_id" eval="[(6, 0, [ref('base.group_user')])]"/>
+            <!-- IMPORTANTE: Incluimos 'list' para que aparezca el switcher nativo,
+                 pero el contexto fuerza que Kanban NO tenga agrupación -->
+            <field name="view_mode">kanban,list,form</field>
+            <field name="view_id" ref="view_customer_inventory_lot_kanban_simple"/>
+            <field name="view_ids" eval="[(5, 0, 0),
+                (0, 0, {'view_mode': 'kanban', 'view_id': ref('view_customer_inventory_lot_kanban_simple')}),
+                (0, 0, {'view_mode': 'list', 'view_id': ref('view_stock_lot_tree_hierarchical')}),
+                (0, 0, {'view_mode': 'form', 'view_id': ref('stock.view_production_lot_form')})]"/>
+            <field name="search_view_id" ref="view_customer_inventory_lot_search"/>
+            <field name="domain">[]</field>
+            <field name="context">{}</field>
+            <field name="help" type="html">
+                <div style="text-align: center; padding: 15px; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 8px; margin-bottom: 15px;">
+                    <button name="action_switch_to_list_view_server" 
+                            type="action" 
+                            string="📊 Ver Vista Lista" 
+                            class="btn btn-primary"
+                            style="padding: 14px 28px; font-size: 16px; font-weight: 700; border-radius: 8px; background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%); border: none; color: white; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3); cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px;"/>
+                </div>
+            </field>
+        </record>
+
+        <record id="action_customer_inventory_list_only" model="ir.actions.act_window">
+            <field name="name">Inventario Lista</field>
+            <field name="res_model">stock.lot</field>
+            <!-- Permitir a todos los usuarios internos (no solo Administración/Ajustes) -->
+            <field name="groups_id" eval="[(6, 0, [ref('base.group_user')])]"/>
+            <field name="view_mode">list,form</field>
+            <field name="view_id" ref="view_stock_lot_tree_hierarchical"/>
+            <field name="search_view_id" ref="view_customer_inventory_lot_search"/>
+            <field name="domain">[]</field>
+            <field name="context">{}</field>
+            <field name="help" type="html">
+                <div style="text-align: center; padding: 15px; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 8px; margin-bottom: 15px;">
+                    <button name="action_switch_to_kanban_view_server" 
+                            type="action" 
+                            string="📋 Ver Vista Kanban" 
+                            class="btn btn-primary"
+                            style="padding: 14px 28px; font-size: 16px; font-weight: 700; border-radius: 8px; background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%); border: none; color: white; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px;"/>
+                </div>
+            </field>
+        </record>
+
+        <!-- Acción para abrir la vista de inventario de clientes (productos) -->
+        <record id="action_customer_inventory_lot" model="ir.actions.act_window">
+            <field name="name">Inventario de Clientes</field>
+            <field name="res_model">stock.lot</field>
+            <field name="view_mode">kanban,list,form</field>
+            <field name="view_id" ref="view_customer_inventory_lot_kanban_simple"/>
+            <field name="view_ids" eval="[(5, 0, 0),
+                (0, 0, {'view_mode': 'kanban', 'view_id': ref('view_customer_inventory_lot_kanban_simple')}),
+                (0, 0, {'view_mode': 'list', 'view_id': ref('view_stock_lot_tree_hierarchical')}),
+                (0, 0, {'view_mode': 'form', 'view_id': ref('stock.view_production_lot_form')})]"/>
+            <field name="search_view_id" ref="view_customer_inventory_lot_search"/>
+            <field name="domain">[]</field>
+            <field name="context">{}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    📦 Consulta el Inventario Completo de Clientes
+                </p>
+                <p>
+                    <strong>Funcionalidades:</strong><br/>
+                    • Visualiza todos los productos según la ubicación asignada a cada cliente<br/>
+                    • Busca por número de serie, cliente, producto o cualquier campo<br/>
+                    • Vista Kanban moderna con diseño atractivo<br/>
+                    • Consulta información detallada de cada producto<br/>
+                    • Realiza modificaciones con trazabilidad completa
+                </p>
+            </field>
+        </record>
+
+
+        <!-- Acción de servidor para generar todas las hojas de vida -->
+        <record id="action_server_generate_all_life_sheets" model="ir.actions.server">
+            <field name="name">📥 Descargar Todas las Hojas de Vida</field>
+            <field name="model_id" ref="stock.model_stock_lot"/>
+            <field name="binding_model_id" ref="stock.model_stock_lot"/>
+            <field name="binding_view_types">kanban,list</field>
+            <field name="state">code</field>
+            <field name="code">
+# Obtener registros seleccionados o todos los del dominio
+if records:
+    action = records.action_generate_all_life_sheets_for_customer()
+else:
+    # Si no hay registros seleccionados, usar el dominio activo
+    active_ids = context.get('active_ids', [])
+    active_domain = context.get('active_domain', [])
+    
+    if active_ids:
+        records = env['stock.lot'].browse(active_ids)
+        action = records.action_generate_all_life_sheets_for_customer()
+    elif active_domain:
+        records = env['stock.lot'].search(active_domain)
+        action = records.action_generate_all_life_sheets_for_customer()
+    else:
+        raise UserError('No se encontraron registros para generar las hojas de vida.')
+            </field>
+        </record>
+
+        <!-- Vista Form para Inventario Detallado -->
+        <record id="view_customer_inventory_detailed_form" model="ir.ui.view">
+            <field name="name">customer.inventory.detailed.form</field>
+            <field name="model">stock.lot</field>
+            <field name="arch" type="xml">
+                <form string="Inventario Detallado">
+                    <sheet>
+                        <group>
+                            <group string="Producto Principal">
+                                <field name="name" string="Número de Serie"/>
+                                <field name="product_id" string="Producto"/>
+                                <field name="inventory_plate" string="Placa de Inventario"/>
+                                <field name="model_name" string="Modelo"/>
+                                <field name="customer_id" string="Cliente"/>
+                            </group>
+                            <group string="Asignaciones">
+                                <field name="assigned_licenses_count" string="Cantidad de Licencias" readonly="1"/>
+                                <field name="assigned_licenses_display" string="Licencias Asignadas" readonly="1" widget="text"/>
+                            </group>
+                        </group>
+                        
+                        <notebook>
+                            <page string="Productos Asociados" name="associated_products">
+                                <field name="associated_products_count" string="Total Productos Asociados" readonly="1"/>
+                                <field name="associated_products_display" string="Lista de Productos Asociados" readonly="1" widget="text"/>
+                                <field name="lot_supply_line_ids" nolabel="1" readonly="1">
+                                    <list>
+                                        <field name="item_type" string="Tipo"/>
+                                        <field name="product_id" string="Producto"/>
+                                        <field name="quantity" string="Cantidad"/>
+                                        <field name="uom_id" string="Unidad"/>
+                                        <field name="related_lot_id" string="Serial Asociado"/>
+                                    </list>
+                                </field>
+                            </page>
+                            
+                            <page string="Licencias Asignadas" name="assigned_licenses">
+                                <field name="assigned_licenses_count" string="Total Licencias" readonly="1"/>
+                                <field name="assigned_licenses_display" string="Lista de Licencias" readonly="1" widget="text"/>
+                                <button name="action_view_license_equipment" string="Ver Licencias Detalladas" 
+                                        type="object" class="btn-primary" 
+                                        invisible="assigned_licenses_count == 0"/>
+                            </page>
+                        </notebook>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- Acción para la Vista de Inventario Detallado - Muestra tarjetas de clientes -->
+        <record id="action_customer_inventory_detailed" model="ir.actions.act_window">
+            <field name="name">Cliente Supplies</field>
+            <field name="res_model">res.partner</field>
+            <field name="groups_id" eval="[(6, 0, [ref('base.group_user')])]"/>
+            <field name="view_mode">kanban,list</field>
+            <field name="view_id" ref="view_customer_kanban_detailed"/>
+            <field name="view_ids" eval="[(5, 0, 0),
+                (0, 0, {'view_mode': 'kanban', 'view_id': ref('view_customer_kanban_detailed')}),
+                (0, 0, {'view_mode': 'list', 'view_id': ref('view_customer_list')})]"/>
+            <field name="search_view_id" ref="view_customer_search"/>
+            <field name="domain">[('is_company', '=', True), ('property_stock_customer', '!=', False)]</field>
+            <field name="context">{'from_detailed_view': True}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No hay productos en inventario
+                </p>
+                <p>
+                    Esta vista muestra el inventario con información detallada de:
+                    <ul>
+                        <li>Producto principal</li>
+                        <li>Productos asociados (componentes, periféricos, complementos)</li>
+                        <li>Licenciamiento asignado</li>
+                        <li>Contacto asignado</li>
+                    </ul>
+                </p>
+            </field>
+        </record>
+
+        <!-- Nueva vista de lista simple según diseño de la primera imagen -->
+        <record id="view_stock_lot_list_simple" model="ir.ui.view">
+            <field name="name">stock.lot.list.simple</field>
+            <field name="model">stock.lot</field>
+            <field name="arch" type="xml">
+                <list string="Productos Serializados" create="0" delete="0">
+                    <field name="customer_id" string="Supplies de Colombia"/>
+                    <field name="product_asset_category_id" string="Categoria"/>
+                    <field name="product_id" string="producto"/>
+                    <field name="associated_products_count" string="Elementos asociados" widget="integer"/>
+                </list>
+            </field>
+        </record>
+
+        <!-- Acción para la vista jerárquica -->
+        <record id="action_stock_lot_tree_hierarchical" model="ir.actions.act_window">
+            <field name="name">Vista Jerárquica de Productos</field>
+            <field name="res_model">stock.lot</field>
+            <field name="view_mode">list</field>
+            <field name="view_id" ref="view_stock_lot_tree_hierarchical"/>
+            <field name="target">current</field>
+            <field name="context">{'search_default_group_customer': 1, 'search_default_group_category': 1, 'search_default_group_class': 1}</field>
+        </record>
+
+        <!-- Acciones de servidor para cambiar de vista - Aparecen en el menú "Acciones" -->
+        <record id="action_switch_to_kanban_view_server" model="ir.actions.server">
+            <field name="name">📋 Ver Vista Kanban</field>
+            <field name="model_id" ref="stock.model_stock_lot"/>
+            <field name="binding_model_id" ref="stock.model_stock_lot"/>
+            <field name="binding_view_types">list</field>
+            <field name="state">code</field>
+            <field name="code">
+# Obtener el cliente del contexto o de los registros visibles
+customer_id = context.get('active_partner_id') or context.get('default_customer_id')
+
+# Si no está en el contexto, intentar obtenerlo del dominio o de los registros visibles
+if not customer_id:
+    # Buscar en los registros actuales (si hay alguno seleccionado)
+    active_ids = context.get('active_ids', [])
+    if active_ids:
+        lots = env['stock.lot'].browse(active_ids)
+        customers = lots.mapped('customer_id').filtered(lambda c: c)
+        if customers:
+            customer_id = customers[0].id
+
+# Si aún no hay customer_id, intentar obtenerlo del dominio activo
+if not customer_id:
+    # Buscar en el dominio activo de la vista actual
+    active_domain = context.get('active_domain', [])
+    if active_domain:
+        # Buscar customer_id en el dominio activo
+        for condition in active_domain:
+            if isinstance(condition, (list, tuple)) and len(condition) >= 3:
+                if condition[0] == 'customer_id' and condition[1] == '=':
+                    customer_id = condition[2]
+                    break
+
+if not customer_id:
+    raise UserError('No se pudo determinar el cliente para cambiar de vista. Por favor, asegúrate de estar viendo el inventario de un cliente específico.')
+
+customer = env['res.partner'].browse(customer_id)
+action = customer.action_view_customer_inventory_kanban()
+            </field>
+        </record>
+
+        <record id="action_switch_to_list_view_server" model="ir.actions.server">
+            <field name="name">📊 Ver Vista Lista</field>
+            <field name="model_id" ref="stock.model_stock_lot"/>
+            <field name="binding_model_id" ref="stock.model_stock_lot"/>
+            <field name="binding_view_types">kanban</field>
+            <field name="state">code</field>
+            <field name="code">
+# Obtener el cliente del contexto o de los registros visibles
+customer_id = context.get('active_partner_id') or context.get('default_customer_id')
+
+# Si no está en el contexto, intentar obtenerlo del dominio o de los registros visibles
+if not customer_id:
+    # Buscar en los registros actuales (si hay alguno seleccionado)
+    active_ids = context.get('active_ids', [])
+    if active_ids:
+        lots = env['stock.lot'].browse(active_ids)
+        customers = lots.mapped('customer_id').filtered(lambda c: c)
+        if customers:
+            customer_id = customers[0].id
+
+# Si aún no hay customer_id, intentar obtenerlo del dominio activo
+if not customer_id:
+    # Buscar en el dominio activo de la vista actual
+    active_domain = context.get('active_domain', [])
+    if active_domain:
+        # Buscar customer_id en el dominio activo
+        for condition in active_domain:
+            if isinstance(condition, (list, tuple)) and len(condition) >= 3:
+                if condition[0] == 'customer_id' and condition[1] == '=':
+                    customer_id = condition[2]
+                    break
+
+if not customer_id:
+    raise UserError('No se pudo determinar el cliente para cambiar de vista. Por favor, asegúrate de estar viendo el inventario de un cliente específico.')
+
+customer = env['res.partner'].browse(customer_id)
+action = customer.action_view_customer_inventory_list()
+            </field>
+        </record>
+
+    </data>
+</odoo>
+

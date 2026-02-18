@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista heredada de res.partner - Versión MÍNIMA: solo campo booleano -->
+    <record id="view_partner_form_license_provider" model="ir.ui.view">
+        <field name="name">res.partner.form.license.provider</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <!-- Agregar campo is_license_provider después del campo category_id (Etiquetas) -->
+            <xpath expr="//field[@name='category_id']" position="after">
+                <field name="is_license_provider" 
+                       invisible="is_company == False"
+                       help="Marcar si este contacto es un proveedor de licencias"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>
