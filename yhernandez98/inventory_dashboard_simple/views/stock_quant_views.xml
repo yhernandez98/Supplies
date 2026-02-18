@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Heredar vista de lista editable de stock.quant para personalizar campos -->
+        <record id="view_stock_quant_tree_custom" model="ir.ui.view">
+            <field name="name">stock.quant.tree.custom</field>
+            <field name="model">stock.quant</field>
+            <field name="inherit_id" ref="stock.view_stock_quant_tree_editable"/>
+            <field name="arch" type="xml">
+                <!-- Ocultar campos que no se necesitan: Paquete y Propietario -->
+                <xpath expr="//field[@name='package_id']" position="attributes">
+                    <attribute name="invisible">1</attribute>
+                </xpath>
+                <xpath expr="//field[@name='owner_id']" position="attributes">
+                    <attribute name="invisible">1</attribute>
+                </xpath>
+                
+                <!-- Hacer que la columna "Cantidad a la mano" no sea editable -->
+                <!-- El campo en la vista es inventory_quantity_auto_apply según el tooltip -->
+                <xpath expr="//field[@name='inventory_quantity_auto_apply']" position="attributes">
+                    <attribute name="readonly">1</attribute>
+                </xpath>
+                
+                <!-- Ocultar botones de Historial y Reabastecimiento -->
+                <!-- Historial: método action_view_stock_moves -->
+                <xpath expr="//button[@name='action_view_stock_moves']" position="attributes">
+                    <attribute name="invisible">1</attribute>
+                </xpath>
+                <!-- Reabastecimiento: método action_view_orderpoints -->
+                <xpath expr="//button[@name='action_view_orderpoints']" position="attributes">
+                    <attribute name="invisible">1</attribute>
+                </xpath>
+                
+                <!-- Agregar campos de placa de inventario, placa de seguridad y referencia interna después del lote -->
+                <xpath expr="//field[@name='lot_id']" position="after">
+                    <field name="lot_inventory_plate" string="Placa de Inventario"/>
+                    <field name="lot_security_plate" string="Placa de Seguridad"/>
+                    <field name="lot_internal_ref" string="Referencia Interna"/>
+                </xpath>
+            </field>
+        </record>
+
+        <!-- Acción: Productos con cantidad > 1 en todas las ubicaciones -->
+        <record id="action_stock_quant_excess_quantity" model="ir.actions.act_window">
+            <field name="name">Productos con cantidad &gt; 1</field>
+            <field name="res_model">stock.quant</field>
+            <field name="view_mode">list,form</field>
+            <field name="domain">[('quantity', '&gt;', 1)]</field>
+            <field name="context">{'create': False}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No hay registros con cantidad mayor a 1.
+                </p>
+                <p>
+                    Esta lista muestra todos los productos/seriales en todas las ubicaciones
+                    que tienen más de 1 unidad. Útil para detectar errores (p. ej. seriales que deberían tener cantidad 1).
+                </p>
+            </field>
+        </record>
+    </data>
+</odoo>
+

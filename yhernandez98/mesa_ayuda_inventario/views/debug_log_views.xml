@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Vista Formulario para Debug Logs -->
+        <record id="view_debug_log_form" model="ir.ui.view">
+            <field name="name">mesa_ayuda.debug.log.form</field>
+            <field name="model">mesa_ayuda.debug.log</field>
+            <field name="arch" type="xml">
+                <form string="Logs y Debug">
+                    <sheet>
+                        <group>
+                            <field name="log_info" nolabel="1" widget="html"/>
+                        </group>
+                    </sheet>
+                    <footer>
+                        <button string="Actualizar Información" name="action_show_logs" type="object" class="btn-primary"/>
+                        <button string="Cerrar" class="btn-secondary" special="cancel"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+        
+        <!-- Acción para abrir Debug Logs -->
+        <record id="action_debug_log" model="ir.actions.act_window">
+            <field name="name">Ver Logs y Debug</field>
+            <field name="res_model">mesa_ayuda.debug.log</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+            <field name="binding_model_id" ref="base.model_res_users"/>
+            <field name="binding_view_types">list,form</field>
+        </record>
+        
+        <!-- Nota: El menú está definido en menuitems.xml bajo menu_tools_root -->
+    </data>
+</odoo>
+

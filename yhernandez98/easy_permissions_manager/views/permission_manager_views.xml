@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista de lista para líneas de módulos -->
+    <record id="view_permission_manager_module_line_tree" model="ir.ui.view">
+        <field name="name">permission.manager.module.line.tree</field>
+        <field name="model">permission.manager.module.line</field>
+        <field name="arch" type="xml">
+            <list string="Módulos" editable="bottom">
+                <field name="module_display_name" string="Módulo"/>
+                <field name="is_allowed" string="Permitir" widget="boolean_toggle"/>
+                <field name="is_blocked" string="Bloquear" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Vista de lista para líneas de grupos -->
+    <record id="view_permission_manager_group_line_tree" model="ir.ui.view">
+        <field name="name">permission.manager.group.line.tree</field>
+        <field name="model">permission.manager.group.line</field>
+        <field name="arch" type="xml">
+            <list string="Grupos" editable="bottom">
+                <field name="category_name" string="Categoría"/>
+                <field name="group_name" string="Grupo"/>
+                <field name="is_selected" string="Activar" widget="boolean_toggle"/>
+                <field name="is_excluded" string="Excluir" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Vista simplificada del gestor de permisos -->
+    <record id="view_permission_manager_form_simple" model="ir.ui.view">
+        <field name="name">permission.manager.form.simple</field>
+        <field name="model">permission.manager</field>
+        <field name="arch" type="xml">
+            <form string="Gestor de Permisos">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="user_id" options="{'no_create': True}"/>
+                            <field name="copy_from_user_id" 
+                                   options="{'no_create': True}"
+                                   placeholder="Seleccione un usuario para copiar sus permisos"/>
+                        </group>
+                        <group>
+                            <button name="action_copy_permissions" 
+                                    type="object" 
+                                    string="Copiar Permisos" 
+                                    class="btn-secondary"
+                                    invisible="not copy_from_user_id"
+                                    help="Copiar permisos del usuario seleccionado a este usuario"/>
+                            <button name="action_load_modules_groups" 
+                                    type="object" 
+                                    string="Cargar Módulos y Grupos" 
+                                    class="btn-secondary"
+                                    invisible="not user_id"
+                                    help="Cargar lista de módulos y grupos disponibles"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Módulos" invisible="not user_id">
+                            <field name="module_line_ids" nolabel="1" options="{'no_create': True, 'no_create_edit': True}">
+                                <list string="Módulos" editable="bottom" create="0" delete="0">
+                                    <field name="module_display_name" string="Módulo" readonly="1"/>
+                                    <field name="is_allowed" string="Permitir" widget="boolean_toggle"/>
+                                    <field name="is_blocked" string="Bloquear" widget="boolean_toggle"/>
+                                </list>
+                            </field>
+                            <div class="alert alert-info" role="alert">
+                                <p><strong>ℹ️ Instrucciones:</strong></p>
+                                <p>• Marque <strong>"Permitir"</strong> para dar acceso al módulo</p>
+                                <p>• Marque <strong>"Bloquear"</strong> para quitar acceso al módulo</p>
+                                <p>• Los módulos marcados como "Permitir" tendrán acceso, los demás se bloquearán automáticamente</p>
+                                <p>• Haga clic en "Cargar Módulos y Grupos" si la lista está vacía</p>
+                            </div>
+                        </page>
+                        <page string="Grupos" invisible="not user_id">
+                            <field name="group_line_ids" nolabel="1" options="{'no_create': True, 'no_create_edit': True}">
+                                <list string="Grupos" editable="bottom" create="0" delete="0">
+                                    <field name="category_name" string="Categoría" readonly="1"/>
+                                    <field name="group_name" string="Grupo" readonly="1"/>
+                                    <field name="is_selected" string="Activar" widget="boolean_toggle"/>
+                                    <field name="is_excluded" string="Excluir" widget="boolean_toggle"/>
+                                </list>
+                            </field>
+                            <div class="alert alert-info" role="alert">
+                                <p><strong>ℹ️ Instrucciones:</strong></p>
+                                <p>• Marque <strong>"Activar"</strong> para dar este grupo al usuario</p>
+                                <p>• Marque <strong>"Excluir"</strong> para quitar este grupo del usuario</p>
+                                <p>• Haga clic en "Cargar Módulos y Grupos" si la lista está vacía</p>
+                            </div>
+                        </page>
+                    </notebook>
+                </sheet>
+                <footer>
+                    <button name="action_apply_permissions" 
+                            type="object" 
+                            string="Aplicar Permisos" 
+                            class="btn-primary"/>
+                    <button string="Cancelar" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+</odoo>
