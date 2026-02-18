@@ -1,0 +1,258 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Reporte PDF de Hoja de Vida del Producto -->
+        <record id="action_report_stock_lot_life_sheet" model="ir.actions.report">
+            <field name="name">Hoja de Vida del Producto</field>
+            <field name="model">stock.lot</field>
+            <field name="report_type">qweb-pdf</field>
+            <field name="report_name">mesa_ayuda_inventario.report_stock_lot_life_sheet</field>
+            <field name="report_file">mesa_ayuda_inventario.report_stock_lot_life_sheet</field>
+            <field name="print_report_name">'Hoja de Vida - %s' % (object.inventory_plate or object.name)</field>
+            <field name="binding_model_id" ref="stock.model_stock_lot"/>
+            <field name="binding_type">report</field>
+        </record>
+
+        <!-- Plantilla QWeb del Reporte -->
+        <template id="report_stock_lot_life_sheet">
+            <t t-call="web.html_container">
+                <t t-foreach="docs" t-as="lot">
+                    <t t-call="web.external_layout">
+                        <div class="page">
+                            <div class="oe_structure" style="margin-bottom: 30px; padding: 20px;">
+                                <!-- Encabezado -->
+                                <div style="text-align: center; border-bottom: 3px solid #4a90e2; padding-bottom: 15px; margin-bottom: 30px;">
+                                    <h1 style="color: #2c3e50; margin: 0; font-size: 28px; font-weight: bold;">
+                                        HOJA DE VIDA
+                                        <t t-if="lot.inventory_plate">
+                                            - <t t-esc="lot.inventory_plate"/>
+                                        </t>
+                                        <t t-else="">
+                                            - <t t-esc="lot.name or 'N/A'"/>
+                                        </t>
+                                    </h1>
+                                    <p style="color: #6c757d; margin: 5px 0; font-size: 14px;">Información Completa del Equipo</p>
+                                </div>
+
+                                <!-- Información del Equipo -->
+                                <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 25px; border-left: 5px solid #4a90e2;">
+                                    <h2 style="color: #2c3e50; margin-top: 0; margin-bottom: 15px; font-size: 18px; border-bottom: 2px solid #4a90e2; padding-bottom: 8px;">
+                                        INFORMACIÓN DEL EQUIPO
+                                    </h2>
+                                    <table style="width: 100%; border-collapse: collapse;">
+                                        <tr>
+                                            <td style="width: 35%; padding: 8px; font-weight: bold; color: #495057;">Número de Serie:</td>
+                                            <td style="padding: 8px; color: #212529; font-size: 16px;"><strong><t t-esc="lot.name or 'N/A'"/></strong></td>
+                                        </tr>
+                                        <t t-if="lot.customer_id">
+                                            <tr>
+                                                <td style="padding: 8px; font-weight: bold; color: #495057;">Cliente:</td>
+                                                <td style="padding: 8px; color: #212529;"><t t-esc="lot.customer_id.name or 'N/A'"/></td>
+                                            </tr>
+                                        </t>
+                                        <t t-if="lot.related_partner_id">
+                                            <tr>
+                                                <td style="padding: 8px; font-weight: bold; color: #495057;">Asignado a:</td>
+                                                <td style="padding: 8px; color: #212529; font-weight: bold;"><t t-esc="lot.related_partner_id.name or 'N/A'"/></td>
+                                            </tr>
+                                        </t>
+                                        <t t-if="lot.model_name">
+                                            <tr>
+                                                <td style="padding: 8px; font-weight: bold; color: #495057;">Modelo:</td>
+                                                <td style="padding: 8px; color: #212529;"><t t-esc="lot.model_name or 'N/A'"/></td>
+                                            </tr>
+                                        </t>
+                                        <t t-if="lot.hostname">
+                                            <tr>
+                                                <td style="padding: 8px; font-weight: bold; color: #495057;">Hostname:</td>
+                                                <td style="padding: 8px; color: #212529;"><t t-esc="lot.hostname or 'N/A'"/></td>
+                                            </tr>
+                                        </t>
+                                        <t t-if="lot.inventory_plate">
+                                            <tr>
+                                                <td style="padding: 8px; font-weight: bold; color: #495057;">Placa de Inventario:</td>
+                                                <td style="padding: 8px; color: #212529;"><t t-esc="lot.inventory_plate or 'N/A'"/></td>
+                                            </tr>
+                                        </t>
+                                        <t t-if="lot.security_plate">
+                                            <tr>
+                                                <td style="padding: 8px; font-weight: bold; color: #495057;">Placa de Seguridad:</td>
+                                                <td style="padding: 8px; color: #212529;"><t t-esc="lot.security_plate or 'N/A'"/></td>
+                                            </tr>
+                                        </t>
+                                    </table>
+                                </div>
+
+                                <!-- Hardware y Elementos Relacionados -->
+                                <t t-set="supply_lines" t-value="lot.lot_supply_line_ids"/>
+                                <t t-if="supply_lines">
+                                    <div style="background: #e8f5e9; padding: 20px; border-radius: 10px; margin-bottom: 25px; border-left: 5px solid #4caf50;">
+                                        <h2 style="color: #2c3e50; margin-top: 0; margin-bottom: 15px; font-size: 18px; border-bottom: 2px solid #4caf50; padding-bottom: 8px;">
+                                            HARDWARE Y ELEMENTOS RELACIONADOS
+                                        </h2>
+                                        
+                                        <table style="width: 100%; border-collapse: collapse;">
+                                            <thead>
+                                                <tr style="background-color: #4caf50; color: white;">
+                                                    <th style="padding: 10px; text-align: left; border: 1px solid #388e3c;">Tipo</th>
+                                                    <th style="padding: 10px; text-align: left; border: 1px solid #388e3c;">Producto</th>
+                                                    <th style="padding: 10px; text-align: left; border: 1px solid #388e3c;">Número de Serie</th>
+                                                    <th style="padding: 10px; text-align: left; border: 1px solid #388e3c;">Placa de Inventario</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <t t-foreach="supply_lines" t-as="line">
+                                                    <tr>
+                                                        <td style="padding: 8px; border: 1px solid #c8e6c9;">
+                                                            <t t-if="line.item_type == 'component'">Componente</t>
+                                                            <t t-if="line.item_type == 'peripheral'">Periférico</t>
+                                                            <t t-if="line.item_type == 'complement'">Complemento</t>
+                                                            <t t-if="line.item_type == 'monitor'">Monitores</t>
+                                                            <t t-if="line.item_type == 'ups'">UPS</t>
+                                                            <t t-if="not line.item_type">N/A</t>
+                                                        </td>
+                                                        <td style="padding: 8px; border: 1px solid #c8e6c9;">
+                                                            <t t-if="line.product_id"><t t-esc="line.product_id.name or 'N/A'"/></t>
+                                                            <t t-if="not line.product_id">N/A</t>
+                                                        </td>
+                                                        <td style="padding: 8px; border: 1px solid #c8e6c9; font-weight: bold;">
+                                                            <t t-if="line.related_lot_id"><t t-esc="line.related_lot_id.name or 'N/A'"/></t>
+                                                            <t t-if="not line.related_lot_id">N/A</t>
+                                                        </td>
+                                                        <td style="padding: 8px; border: 1px solid #c8e6c9;">
+                                                            <t t-if="line.related_lot_id and line.related_lot_id.inventory_plate">
+                                                                <t t-esc="line.related_lot_id.inventory_plate or 'N/A'"/>
+                                                            </t>
+                                                            <t t-if="not line.related_lot_id or not line.related_lot_id.inventory_plate">N/A</t>
+                                                        </td>
+                                                    </tr>
+                                                </t>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </t>
+
+                                <!-- Licencias Asignadas -->
+                                <t t-if="lot.assigned_licenses_count and lot.assigned_licenses_count > 0">
+                                    <div style="background: #fff3e0; padding: 20px; border-radius: 10px; margin-bottom: 25px; border-left: 5px solid #ff9800;">
+                                        <h2 style="color: #2c3e50; margin-top: 0; margin-bottom: 15px; font-size: 18px; border-bottom: 2px solid #ff9800; padding-bottom: 8px;">
+                                            LICENCIAS ASIGNADAS (<t t-esc="lot.assigned_licenses_count"/>)
+                                        </h2>
+                                        <div style="background: white; padding: 15px; border-radius: 8px;">
+                                            <t t-set="license_equipments" t-value="lot._get_assigned_licenses()"/>
+                                            <table style="width: 100%; border-collapse: collapse;">
+                                                <thead>
+                                                    <tr style="background-color: #ff9800; color: white;">
+                                                        <th style="padding: 10px; text-align: left; border: 1px solid #f57c00;">Licencia</th>
+                                                        <th style="padding: 10px; text-align: left; border: 1px solid #f57c00;">Servicio</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <t t-if="license_equipments">
+                                                        <t t-foreach="license_equipments" t-as="equipment">
+                                                            <tr>
+                                                                <td style="padding: 8px; border: 1px solid #ffe0b2; vertical-align: top;">
+                                                                    <t t-if="equipment.license_id and equipment.license_id.name">
+                                                                        <t t-esc="equipment.license_id.name.name or equipment.license_id.code or 'N/A'"/>
+                                                                    </t>
+                                                                    <t t-if="equipment.license_id and not equipment.license_id.name">
+                                                                        <t t-esc="equipment.license_id.code or 'N/A'"/>
+                                                                    </t>
+                                                                    <t t-if="not equipment.license_id">N/A</t>
+                                                                </td>
+                                                                <td style="padding: 8px; border: 1px solid #ffe0b2; vertical-align: top;">
+                                                                    <t t-if="equipment.service_product_id">
+                                                                        <t t-esc="equipment.service_product_id.name or 'N/A'"/>
+                                                                    </t>
+                                                                    <t t-if="not equipment.service_product_id">N/A</t>
+                                                                </td>
+                                                            </tr>
+                                                        </t>
+                                                    </t>
+                                                    <t t-if="not license_equipments or len(license_equipments) == 0">
+                                                        <tr>
+                                                            <td colspan="2" style="padding: 8px; border: 1px solid #ffe0b2;">No hay licencias asignadas</td>
+                                                        </tr>
+                                                    </t>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </t>
+
+                                <!-- Mantenimientos -->
+                                <t t-set="maint_records" t-value="lot.maintenance_ids"/>
+                                <t t-if="maint_records">
+                                    <div style="background: #e3f2fd; padding: 20px; border-radius: 10px; margin-bottom: 25px; border-left: 5px solid #2196f3;">
+                                        <h2 style="color: #2c3e50; margin-top: 0; margin-bottom: 15px; font-size: 18px; border-bottom: 2px solid #2196f3; padding-bottom: 8px;">
+                                            HISTORIAL DE MANTENIMIENTOS Y REVISIONES
+                                        </h2>
+
+                                        <table style="width: 100%; border-collapse: collapse;">
+                                            <thead>
+                                                <tr style="background-color: #2196f3; color: white;">
+                                                    <th style="padding: 10px; text-align: left; border: 1px solid #1976d2;">Número de Orden</th>
+                                                    <th style="padding: 10px; text-align: left; border: 1px solid #1976d2;">Tipo</th>
+                                                    <th style="padding: 10px; text-align: left; border: 1px solid #1976d2;">Fecha</th>
+                                                    <th style="padding: 10px; text-align: left; border: 1px solid #1976d2;">Técnico</th>
+                                                    <th style="padding: 10px; text-align: left; border: 1px solid #1976d2;">Estado</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <t t-foreach="maint_records" t-as="maint">
+                                                    <tr>
+                                                        <td style="padding: 8px; border: 1px solid #bbdefb; text-align: left; vertical-align: top; font-weight: bold; color: #1976d2;">
+                                                            <t t-esc="maint.name or 'N/A'"/>
+                                                        </td>
+                                                        <td style="padding: 8px; border: 1px solid #bbdefb; text-align: left; vertical-align: top;">
+                                                            <t t-if="maint.maintenance_type == 'preventive'">Mantenimiento Preventivo</t>
+                                                            <t t-if="maint.maintenance_type == 'corrective'">Mantenimiento Correctivo</t>
+                                                            <t t-if="maint.maintenance_type == 'remote_support'">Soporte Técnico Remoto</t>
+                                                            <t t-if="maint.maintenance_type == 'onsite_support'">Soporte Técnico en Sitio</t>
+                                                            <t t-if="maint.maintenance_type == 'diagnosis'">Diagnóstico y Evaluación</t>
+                                                            <t t-if="maint.maintenance_type == 'installation'">Instalación y Configuración</t>
+                                                            <t t-if="maint.maintenance_type == 'server_implementation'">Implementación de Servidores</t>
+                                                            <t t-if="maint.maintenance_type == 'server_migration'">Migración de Servidores</t>
+                                                            <t t-if="maint.maintenance_type == 'backup_recovery'">Backup y Recuperación</t>
+                                                            <t t-if="maint.maintenance_type == 'firewall_vpn'">Configuración de Firewall/VPN</t>
+                                                            <t t-if="maint.maintenance_type == 'licensing_m365'">Gestión de Licenciamiento M365</t>
+                                                            <t t-if="maint.maintenance_type == 'admin_m365'">Administración de M365 / SharePoint</t>
+                                                            <t t-if="maint.maintenance_type == 'upgrade'">Actualización / Mejora</t>
+                                                            <t t-if="maint.maintenance_type == 'other'">Otro</t>
+                                                            <t t-if="not maint.maintenance_type">N/A</t>
+                                                        </td>
+                                                        <td style="padding: 8px; border: 1px solid #bbdefb; text-align: left; vertical-align: top;">
+                                                            <t t-if="maint.maintenance_date"><t t-esc="maint.maintenance_date"/></t>
+                                                            <t t-if="not maint.maintenance_date">N/A</t>
+                                                        </td>
+                                                        <td style="padding: 8px; border: 1px solid #bbdefb; text-align: left; vertical-align: top;">
+                                                            <t t-if="maint.technician_id"><t t-esc="maint.technician_id.name or 'N/A'"/></t>
+                                                            <t t-if="not maint.technician_id">N/A</t>
+                                                        </td>
+                                                        <td style="padding: 8px; border: 1px solid #bbdefb; text-align: left; vertical-align: top;">
+                                                            <t t-if="maint.status == 'completed'">Completado</t>
+                                                            <t t-if="maint.status == 'pending'">Pendiente</t>
+                                                            <t t-if="maint.status == 'cancelled'">Cancelado</t>
+                                                            <t t-if="not maint.status">N/A</t>
+                                                        </td>
+                                                    </tr>
+                                                </t>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </t>
+
+                                <!-- Pie de página -->
+                                <div style="background-color: #f5f5f5; padding: 15px; border-radius: 10px; margin-top: 30px; border-top: 3px solid #4a90e2; text-align: center;">
+                                    <p style="margin: 5px 0; color: #6c757d; font-size: 12px;">
+                                        Reporte de Hoja de Vida - Mesa de Ayuda
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </t>
+            </t>
+        </template>
+    </data>
+</odoo>

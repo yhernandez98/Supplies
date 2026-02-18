@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista de formulario unificada -->
+    <record id="res_partner_form_view_inherit_unified" model="ir.ui.view">
+        <field name="name">res.partner.form.inherit.unified</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <!-- Agregar campo tipo_contacto debajo del nombre -->
+            <xpath expr="//field[@name='name']" position="after">
+                <field name="tipo_contacto" 
+                       widget="radio" 
+                       options="{'horizontal': True}"
+                       invisible="not is_company"
+                       class="oe_radio_small"/>
+            </xpath>
+            
+            <!-- Agregar página de configuración de contacto automático -->
+            <xpath expr="//notebook" position="inside">
+                <page string="Contacto Automático" 
+                      name="auto_contact_page"
+                      invisible="not is_company">
+                    <group>
+                        <group string="Configuración">
+                            <field name="auto_create_contact" widget="boolean_toggle"/>
+                            <field name="contact_name_template" 
+                                   invisible="not auto_create_contact"/>
+                            <field name="contact_email_template" 
+                                   invisible="not auto_create_contact"/>
+                        </group>
+                        <group string="Contacto Creado">
+                            <field name="auto_created_contact_id" readonly="1"/>
+                            <div class="oe_button_box" name="button_box">
+                                <button name="action_view_auto_contact" 
+                                        type="object" 
+                                        string="Ver Contacto" 
+                                        class="oe_stat_button"
+                                        icon="fa-user"
+                                        invisible="not auto_created_contact_id"/>
+                                <button name="action_recreate_auto_contact" 
+                                        type="object" 
+                                        string="Recrear Contacto" 
+                                        class="oe_stat_button"
+                                        icon="fa-refresh"
+                                        invisible="not auto_create_contact"/>
+                            </div>
+                        </group>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

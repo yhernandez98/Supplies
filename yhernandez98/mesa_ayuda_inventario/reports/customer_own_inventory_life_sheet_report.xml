@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="action_report_customer_own_inventory_life_sheet" model="ir.actions.report">
+            <field name="name">Hoja de Vida (Inventario Propio)</field>
+            <field name="model">customer.own.inventory</field>
+            <field name="report_type">qweb-pdf</field>
+            <field name="report_name">mesa_ayuda_inventario.report_customer_own_inventory_life_sheet</field>
+            <field name="report_file">mesa_ayuda_inventario.report_customer_own_inventory_life_sheet</field>
+            <field name="print_report_name">'Hoja de Vida - %s' % (object.serial_number or object.display_name or 'N/A')</field>
+            <field name="binding_model_id" ref="mesa_ayuda_inventario.model_customer_own_inventory"/>
+            <field name="binding_type">report</field>
+        </record>
+
+        <template id="report_customer_own_inventory_life_sheet">
+            <t t-call="web.html_container">
+                <t t-foreach="docs" t-as="rec">
+                    <t t-call="web.external_layout">
+                        <div class="page">
+                            <div class="oe_structure" style="margin-bottom: 30px; padding: 20px;">
+                                <div style="text-align: center; border-bottom: 3px solid #4a90e2; padding-bottom: 15px; margin-bottom: 30px;">
+                                    <h1 style="color: #2c3e50; margin: 0; font-size: 28px; font-weight: bold;">
+                                        HOJA DE VIDA - INVENTARIO PROPIO
+                                        <t t-if="rec.serial_number">
+                                            - <t t-esc="rec.serial_number"/>
+                                        </t>
+                                        <t t-else="">
+                                            - <t t-esc="rec.display_name or 'N/A'"/>
+                                        </t>
+                                    </h1>
+                                    <p style="color: #6c757d; margin: 5px 0; font-size: 14px;">Información del equipo propio del cliente</p>
+                                </div>
+
+                                <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 25px; border-left: 5px solid #4a90e2;">
+                                    <h2 style="color: #2c3e50; margin-top: 0; margin-bottom: 15px; font-size: 18px; border-bottom: 2px solid #4a90e2; padding-bottom: 8px;">
+                                        INFORMACIÓN DEL EQUIPO
+                                    </h2>
+                                    <table style="width: 100%; border-collapse: collapse;">
+                                        <tr>
+                                            <td style="width: 35%; padding: 8px; font-weight: bold; color: #495057;">Cliente:</td>
+                                            <td style="padding: 8px; color: #212529;"><t t-esc="rec.partner_id.name or 'N/A'"/></td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding: 8px; font-weight: bold; color: #495057;">Producto:</td>
+                                            <td style="padding: 8px; color: #212529;"><t t-esc="rec.product_id.name or 'N/A'"/></td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding: 8px; font-weight: bold; color: #495057;">Número de Serie:</td>
+                                            <td style="padding: 8px; color: #212529;"><strong><t t-esc="rec.serial_number or 'N/A'"/></strong></td>
+                                        </tr>
+                                        <t t-if="rec.model">
+                                            <tr>
+                                                <td style="padding: 8px; font-weight: bold; color: #495057;">Modelo:</td>
+                                                <td style="padding: 8px; color: #212529;"><t t-esc="rec.model"/></td>
+                                            </tr>
+                                        </t>
+                                        <t t-if="rec.brand">
+                                            <tr>
+                                                <td style="padding: 8px; font-weight: bold; color: #495057;">Marca:</td>
+                                                <td style="padding: 8px; color: #212529;"><t t-esc="rec.brand"/></td>
+                                            </tr>
+                                        </t>
+                                        <t t-if="rec.location">
+                                            <tr>
+                                                <td style="padding: 8px; font-weight: bold; color: #495057;">Ubicación:</td>
+                                                <td style="padding: 8px; color: #212529;"><t t-esc="rec.location"/></td>
+                                            </tr>
+                                        </t>
+                                        <tr>
+                                            <td style="padding: 8px; font-weight: bold; color: #495057;">Estado:</td>
+                                            <td style="padding: 8px; color: #212529;">
+                                                <t t-if="rec.status == 'active'">Activo</t>
+                                                <t t-if="rec.status == 'inactive'">Inactivo</t>
+                                                <t t-if="rec.status == 'maintenance'">En Mantenimiento</t>
+                                                <t t-if="rec.status == 'repair'">En Reparación</t>
+                                                <t t-if="rec.status == 'disposed'">Desechado</t>
+                                                <t t-if="rec.status == 'sold'">Vendido</t>
+                                                <t t-if="not rec.status">N/A</t>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding: 8px; font-weight: bold; color: #495057;">Garantía:</td>
+                                            <td style="padding: 8px; color: #212529;">
+                                                <t t-if="rec.warranty_status == 'active'">En Garantía</t>
+                                                <t t-if="rec.warranty_status == 'expired'">Garantía Vencida</t>
+                                                <t t-if="rec.warranty_status == 'no_warranty'">Sin Garantía</t>
+                                                <t t-if="not rec.warranty_status">N/A</t>
+                                            </td>
+                                        </tr>
+                                        <t t-if="rec.purchase_date">
+                                            <tr>
+                                                <td style="padding: 8px; font-weight: bold; color: #495057;">Fecha de Compra:</td>
+                                                <td style="padding: 8px; color: #212529;"><t t-esc="rec.purchase_date"/></td>
+                                            </tr>
+                                        </t>
+                                        <t t-if="rec.warranty_end_date">
+                                            <tr>
+                                                <td style="padding: 8px; font-weight: bold; color: #495057;">Fin de Garantía:</td>
+                                                <td style="padding: 8px; color: #212529;"><t t-esc="rec.warranty_end_date"/></td>
+                                            </tr>
+                                        </t>
+                                    </table>
+                                </div>
+
+                                <t t-set="assoc_lines" t-value="rec.own_inventory_line_ids"/>
+                                <t t-if="assoc_lines">
+                                    <div style="background: #e8f5e9; padding: 20px; border-radius: 10px; margin-bottom: 25px; border-left: 5px solid #4caf50;">
+                                        <h2 style="color: #2c3e50; margin-top: 0; margin-bottom: 15px; font-size: 18px; border-bottom: 2px solid #4caf50; padding-bottom: 8px;">
+                                            PRODUCTOS ASOCIADOS
+                                        </h2>
+                                        <table style="width: 100%; border-collapse: collapse;">
+                                            <thead>
+                                                <tr style="background-color: #4caf50; color: white;">
+                                                    <th style="padding: 10px; text-align: left; border: 1px solid #388e3c;">Tipo</th>
+                                                    <th style="padding: 10px; text-align: left; border: 1px solid #388e3c;">Producto</th>
+                                                    <th style="padding: 10px; text-align: left; border: 1px solid #388e3c;">Número de Serie</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <t t-foreach="assoc_lines" t-as="line">
+                                                    <tr>
+                                                        <td style="padding: 8px; border: 1px solid #c8e6c9;">
+                                                            <t t-if="line.item_type == 'component'">Componente</t>
+                                                            <t t-if="line.item_type == 'peripheral'">Periférico</t>
+                                                            <t t-if="line.item_type == 'complement'">Complemento</t>
+                                                        </td>
+                                                        <td style="padding: 8px; border: 1px solid #c8e6c9;">
+                                                            <t t-if="line.product_id"><t t-esc="line.product_id.name or 'N/A'"/></t>
+                                                            <t t-if="not line.product_id">N/A</t>
+                                                        </td>
+                                                        <td style="padding: 8px; border: 1px solid #c8e6c9;">
+                                                            <t t-if="line.serial_number"><t t-esc="line.serial_number"/></t>
+                                                            <t t-if="not line.serial_number">-</t>
+                                                        </td>
+                                                    </tr>
+                                                </t>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </t>
+
+                                <t t-set="maint_records" t-value="rec.maintenance_ids"/>
+                                <t t-if="maint_records">
+                                    <div style="background: #e3f2fd; padding: 20px; border-radius: 10px; margin-bottom: 25px; border-left: 5px solid #2196f3;">
+                                        <h2 style="color: #2c3e50; margin-top: 0; margin-bottom: 15px; font-size: 18px; border-bottom: 2px solid #2196f3; padding-bottom: 8px;">
+                                            HISTORIAL DE MANTENIMIENTOS
+                                        </h2>
+                                        <table style="width: 100%; border-collapse: collapse;">
+                                            <thead>
+                                                <tr style="background-color: #2196f3; color: white;">
+                                                    <th style="padding: 10px; text-align: left; border: 1px solid #1976d2;">Orden</th>
+                                                    <th style="padding: 10px; text-align: left; border: 1px solid #1976d2;">Tipo</th>
+                                                    <th style="padding: 10px; text-align: left; border: 1px solid #1976d2;">Fecha</th>
+                                                    <th style="padding: 10px; text-align: left; border: 1px solid #1976d2;">Técnico</th>
+                                                    <th style="padding: 10px; text-align: left; border: 1px solid #1976d2;">Estado</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <t t-foreach="maint_records" t-as="maint">
+                                                    <tr>
+                                                        <td style="padding: 8px; border: 1px solid #bbdefb;"><t t-esc="maint.name or 'N/A'"/></td>
+                                                        <td style="padding: 8px; border: 1px solid #bbdefb;">
+                                                            <t t-if="maint.maintenance_type == 'preventive'">Mantenimiento Preventivo</t>
+                                                            <t t-if="maint.maintenance_type == 'corrective'">Mantenimiento Correctivo</t>
+                                                            <t t-if="maint.maintenance_type == 'remote_support'">Soporte Técnico Remoto</t>
+                                                            <t t-if="maint.maintenance_type == 'onsite_support'">Soporte Técnico en Sitio</t>
+                                                            <t t-if="maint.maintenance_type == 'diagnosis'">Diagnóstico y Evaluación</t>
+                                                            <t t-if="maint.maintenance_type == 'installation'">Instalación y Configuración</t>
+                                                            <t t-if="maint.maintenance_type == 'other'">Otro</t>
+                                                            <t t-if="not maint.maintenance_type">N/A</t>
+                                                        </td>
+                                                        <td style="padding: 8px; border: 1px solid #bbdefb;"><t t-esc="maint.maintenance_date or 'N/A'"/></td>
+                                                        <td style="padding: 8px; border: 1px solid #bbdefb;"><t t-esc="maint.technician_id.name if maint.technician_id else 'N/A'"/></td>
+                                                        <td style="padding: 8px; border: 1px solid #bbdefb;">
+                                                            <t t-if="maint.status == 'completed'">Completado</t>
+                                                            <t t-if="maint.status == 'pending'">Pendiente</t>
+                                                            <t t-if="maint.status == 'cancelled'">Cancelado</t>
+                                                            <t t-if="not maint.status">N/A</t>
+                                                        </td>
+                                                    </tr>
+                                                </t>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </t>
+
+                                <div style="background-color: #f5f5f5; padding: 15px; border-radius: 10px; margin-top: 30px; border-top: 3px solid #4a90e2; text-align: center;">
+                                    <p style="margin: 5px 0; color: #6c757d; font-size: 12px;">
+                                        Hoja de Vida - Inventario Propio - Mesa de Ayuda
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </t>
+            </t>
+        </template>
+    </data>
+</odoo>

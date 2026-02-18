@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+  <record id="view_order_form_inherit_renting" model="ir.ui.view">
+    <field name="name">sale.order.form.renting.inherit</field>
+    <field name="model">sale.order</field>
+    <field name="inherit_id" ref="sale.view_order_form" />
+    <field name="arch" type="xml">
+      <xpath expr="//form[1]/field[1]" position="inside">
+        <field name="renting_is_generated" invisible="1" />
+
+      </xpath>
+      <xpath expr="//field[@name='order_line']/list/field[@name='price_unit']" position="after">
+        <field name="renting_applies_to_tmpl_id" string="Aplica a (Renting)" />
+        <field name="renting_is_generated" column_invisible="True" />
+        <field name="is_renting_product" column_invisible="True" />
+        <field name="product_tmpl_id_rel" column_invisible="True" />
+      </xpath>
+
+      <xpath expr="//field[@name='order_line']/list" position="inside">
+        <button name="%(action_sale_renting_apply_wizard)d" type="action" string="Aplicar Renting" icon="fa-external-link" class="btn-link" invisible="not (is_renting_product and not renting_applies_to_tmpl_id)" context="{'default_order_id': parent.id,
+                    'default_order_line_id': id,
+                    'default_renting_src_tmpl_id': product_tmpl_id_rel and product_tmpl_id_rel.id or False}" />
+      </xpath>
+      <xpath expr="//field[@name='order_line']/form//field[@name='price_unit']" position="after">
+        <field name="renting_applies_to_tmpl_id" string="Aplica a (Renting)" invisible="not is_renting_product" />
+
+      </xpath>
+      <!-- <xpath expr="//field[@name='order_line']" position="attributes">
+        <attribute name="domain">[('renting_is_generated','=',False)]</attribute>
+      </xpath> -->
+
+      <xpath expr="//sheet/notebook" position="inside">
+        <page string="Líneas de Renting" name="renting_lines_page">
+          <field name="renting_line_ids" context="{'default_is_auto': False}">
+            <list editable="bottom">
+              <field name="line_type" />
+              <field name="is_auto" readonly="1" />
+              <field name="billable" invisible="is_auto" />
+              <field name="product_id" />
+              <field name="name" />
+              <field name="product_uom_qty" />
+              <field name="product_uom" />
+              <field name="price_unit" readonly="is_auto" />
+              <field name="sale_line_id" readonly="1" />
+            </list>
+          </field>
+          <div class="text-muted mt-2">
+            <p> • Las líneas generadas por el wizard se crean aquí con <b>precio 0</b> y <b>no
+              facturables</b>.              <br />
+ • Para facturar un extra, agregue una línea manual, marque <b>
+              Facturable</b> y asigne <b>Precio</b> &gt; 0. </p>
+          </div>
+        </page>
+      </xpath>
+
+    </field>
+  </record>
+</odoo>

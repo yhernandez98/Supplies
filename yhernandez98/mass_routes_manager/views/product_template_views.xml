@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    
+    <!-- Acción 1: Seleccionar TODAS las rutas (masivamente) -->
+    <record id="action_mass_select_all_routes" model="ir.actions.server">
+        <field name="name">🔧 Seleccionar TODAS las Rutas</field>
+        <field name="model_id" ref="product.model_product_template"/>
+        <field name="binding_model_id" ref="product.model_product_template"/>
+        <field name="binding_view_types">list</field>
+        <field name="state">code</field>
+        <field name="code">
+if records:
+    action = records.action_mass_select_routes()
+        </field>
+    </record>
+
+    <!-- Acción 2: Quitar TODAS las rutas (masivamente) -->
+    <record id="action_mass_deselect_all_routes" model="ir.actions.server">
+        <field name="name">🔧 Quitar TODAS las Rutas</field>
+        <field name="model_id" ref="product.model_product_template"/>
+        <field name="binding_model_id" ref="product.model_product_template"/>
+        <field name="binding_view_types">list</field>
+        <field name="state">code</field>
+        <field name="code">
+if records:
+    action = records.action_mass_deselect_routes()
+        </field>
+    </record>
+
+</odoo>

@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Vista Form para búsqueda -->
+        <record id="view_product_relation_search_form" model="ir.ui.view">
+            <field name="name">product.relation.search.form</field>
+            <field name="model">product.relation.search</field>
+            <field name="arch" type="xml">
+                <form string="Búsqueda de Relaciones de Productos" create="1" edit="1">
+                    <sheet>
+                        <group>
+                            <group string="Criterios de Búsqueda">
+                                <field name="search_plate" placeholder="Ej: PLACA-001" required="0"/>
+                                <field name="search_serial" placeholder="Ej: SN123456" required="0"/>
+                                <field name="search_product_name" placeholder="Ej: Laptop" required="0"/>
+                            </group>
+                        </group>
+                        <group invisible="not element_lot_id">
+                            <group string="Información del Elemento">
+                                <field name="element_lot_id" options="{'no_create': True, 'no_open': True}" invisible="1"/>
+                                <field name="element_name" readonly="1"/>
+                                <field name="element_plate" readonly="1"/>
+                                <field name="element_serial" readonly="1"/>
+                                <field name="element_product_id" options="{'no_create': True}" readonly="1"/>
+                                <field name="element_type" readonly="1"/>
+                            </group>
+                            <group string="Información del Producto Principal">
+                                <field name="main_lot_id" options="{'no_create': True, 'no_open': True}" invisible="1"/>
+                                <field name="main_product_id" options="{'no_create': True}" readonly="1"/>
+                                <field name="main_product_name" readonly="1"/>
+                                <field name="main_plate" readonly="1"/>
+                                <field name="main_serial" readonly="1"/>
+                                <field name="relation_type" readonly="1"/>
+                            </group>
+                        </group>
+                        <group invisible="element_lot_id">
+                            <div class="alert alert-info" role="alert">
+                                <p><strong>Instrucciones:</strong></p>
+                                <ul>
+                                    <li>Puede buscar por <strong>Placa de Inventario</strong>, <strong>Número de Serie</strong> o <strong>Nombre del Producto</strong></li>
+                                    <li>Puede usar uno o más criterios de búsqueda</li>
+                                    <li>La búsqueda mostrará el elemento encontrado y el producto principal al que pertenece</li>
+                                </ul>
+                            </div>
+                        </group>
+                    </sheet>
+                    <footer>
+                        <button name="action_search" string="Buscar" type="object" class="btn-primary" invisible="element_lot_id"/>
+                        <button name="action_clear_search" string="Limpiar" type="object" class="btn-secondary" invisible="element_lot_id"/>
+                        <button string="Cerrar" class="btn-secondary" special="cancel"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+        <!-- Vista List para resultados -->
+        <record id="view_product_relation_search_tree" model="ir.ui.view">
+            <field name="name">product.relation.search.tree</field>
+            <field name="model">product.relation.search</field>
+            <field name="arch" type="xml">
+                <list string="Resultados de Búsqueda" 
+                      decoration-info="element_type == 'main'" 
+                      decoration-muted="not main_product_id"
+                      default_order="main_product_name, element_type"
+                      create="0"
+                      edit="0">
+                    <field name="element_name" string="Elemento"/>
+                    <field name="element_plate" string="Placa Elemento"/>
+                    <field name="element_serial" string="Serial Elemento"/>
+                    <field name="element_product_id" string="Producto Elemento"/>
+                    <field name="element_type" string="Tipo Elemento"/>
+                    <field name="main_product_name" string="Producto Principal"/>
+                    <field name="main_plate" string="Placa Principal"/>
+                    <field name="main_serial" string="Serial Principal"/>
+                    <field name="relation_type" string="Tipo de Relación"/>
+                    <button name="action_open_lot_from_line" 
+                            string="Ver" 
+                            type="object" 
+                            icon="fa-eye"
+                            class="btn-primary"
+                            title="Ver producto principal relacionado"/>
+                </list>
+            </field>
+        </record>
+
+        <!-- Vista Form para detalles -->
+        <record id="view_product_relation_search_detail_form" model="ir.ui.view">
+            <field name="name">product.relation.search.detail.form</field>
+            <field name="model">product.relation.search</field>
+            <field name="arch" type="xml">
+                <form string="Detalle de Relación">
+                    <sheet>
+                        <group>
+                            <group string="Información del Elemento">
+                                <field name="element_lot_id" options="{'no_create': True, 'no_open': True}"/>
+                                <field name="element_name"/>
+                                <field name="element_plate"/>
+                                <field name="element_serial"/>
+                                <field name="element_product_id" options="{'no_create': True}"/>
+                                <field name="element_type"/>
+                            </group>
+                            <group string="Información del Producto Principal">
+                                <field name="main_lot_id" options="{'no_create': True, 'no_open': True}"/>
+                                <field name="main_product_id" options="{'no_create': True}"/>
+                                <field name="main_product_name"/>
+                                <field name="main_plate"/>
+                                <field name="main_serial"/>
+                                <field name="relation_type"/>
+                            </group>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- Acción para búsqueda -->
+        <record id="action_product_relation_search" model="ir.actions.act_window">
+            <field name="name">Búsqueda de Relaciones de Productos</field>
+            <field name="res_model">product.relation.search</field>
+            <field name="view_mode">form</field>
+            <field name="view_id" ref="view_product_relation_search_form"/>
+            <field name="target">new</field>
+            <field name="context">{'default_search_plate': False, 'default_search_serial': False, 'default_search_product_name': False}</field>
+        </record>
+
+        <!-- Acción para resultados (usada después de buscar) -->
+        <record id="action_product_relation_search_results" model="ir.actions.act_window">
+            <field name="name">Resultados - Relaciones de Productos</field>
+            <field name="res_model">product.relation.search</field>
+            <field name="view_mode">list,form</field>
+            <field name="view_id" ref="view_product_relation_search_tree"/>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No hay resultados de búsqueda.
+                </p>
+                <p>
+                    Use la acción "Búsqueda de Relaciones de Productos" para buscar elementos por placa, serial o nombre.
+                </p>
+            </field>
+        </record>
+    </data>
+</odoo>
