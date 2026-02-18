@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Eliminado - ya no se usa Recalcular TRM -->
-<!-- Los costos ahora se calculan desde la lista de precios en subscription_nocount -->
-<odoo>
-</odoo>
-
