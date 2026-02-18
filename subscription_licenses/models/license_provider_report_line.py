@@ -74,7 +74,7 @@ class LicenseProviderReportLine(models.Model):
     provider_cost_usd = fields.Float(
         string='Costo Proveedor',
         digits=(16, 2),
-        help='Costo que paga al proveedor (se rellena desde la asignación al usar Rellenar desde asignaciones).',
+        help='Costo que paga al proveedor. Defínalo aquí o en Ver licencias contratadas; no se sobrescribe con cero.',
     )
     # Precio a cliente desde lista de precios (misma lógica que suscripción/asignación)
     unit_price_pricelist_usd = fields.Float(
@@ -223,16 +223,37 @@ class LicenseProviderReportLine(models.Model):
     auto_renewal = fields.Boolean(
         string='Renovación automática',
         default=False,
-        help='Sí/No. Se rellena desde la asignación al usar Rellenar desde asignaciones. Si lo edita aquí, se actualiza también en la asignación.',
+        help='Si lo edita aquí, se actualiza también en la asignación.',
     )
     notes = fields.Char(string='Notas')
 
     def write(self, vals):
+        # Nunca sobrescribir el Costo proveedor con 0: si en vals viene 0 (o vacío), no escribir este campo.
+        if 'provider_cost_usd' in vals:
+            incoming = vals.get('provider_cost_usd')
+            is_zero = False
+            if incoming is None or incoming is False:
+                is_zero = True
+            else:
+                try:
+                    is_zero = float(incoming) == 0.0
+                except (TypeError, ValueError):
+                    if isinstance(incoming, str) and not (incoming or '').strip():
+                        is_zero = True
+                    else:
+                        is_zero = True  # valor no numérico: no sobrescribir con esto
+            if is_zero:
+                vals = dict(vals)
+                vals.pop('provider_cost_usd', None)
+                if not vals:
+                    return True
         res = super().write(vals)
         if 'auto_renewal' in vals and vals.get('auto_renewal') is not None:
             for rec in self:
                 if rec.assignment_id:
-                    rec.assignment_id.auto_renewal = rec.auto_renewal
+                    rec.assignment_id.with_context(skip_sync_provider_report=True).write({
+                        'auto_renewal': rec.auto_renewal,
+                    })
         return res
 
     def name_get(self):

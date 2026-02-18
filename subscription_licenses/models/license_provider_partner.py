@@ -130,17 +130,43 @@ class LicenseProviderPartner(models.Model):
         }
 
     def action_sync_report_groups(self):
-        """Actualiza la lista de clientes a partir de las líneas de reporte (útil si añadió líneas a mano)."""
+        """Sincroniza líneas de reporte desde asignaciones (crea/actualiza sin tocar costo) y luego actualiza la lista de clientes.
+        Si no hay asignaciones, elimina líneas huérfanas (asignación pasada a otro proveedor) y actualiza la lista."""
         self.ensure_one()
+        ReportLine = self.env['license.provider.report.line']
+        Assignment = self.env['license.assignment']
+        assignments = Assignment.search([
+            ('license_provider_id', '=', self.partner_id.id),
+            ('state', 'in', ['draft', 'active']),
+        ])
+        if not assignments:
+            lines_with_assignment = ReportLine.search([
+                ('provider_partner_id', '=', self.id),
+                ('assignment_id', '!=', False),
+            ])
+            orphans = lines_with_assignment.filtered(
+                lambda l: l.assignment_id.license_provider_id != self.partner_id
+            )
+            if orphans:
+                orphans.unlink()
+            self.invalidate_recordset(['report_line_ids', 'report_group_ids'])
+            self._sync_report_groups()
+            return self._notify(_('No hay asignaciones con este proveedor. Se quitaron los clientes que ya no lo tienen.'))
+        for assig in assignments:
+            self._sync_report_line_for_assignment(assig, sync_groups=False)
+        self.invalidate_recordset(['report_line_ids', 'report_group_ids'])
         self._sync_report_groups()
-        return self._notify(_('Lista de clientes actualizada.'))
+        return self._notify(_('Lista actualizada: %s asignación(es) sincronizada(s).') % len(assignments))
 
     def _sync_report_groups(self):
-        """Crea o actualiza un registro por cliente en report_group_ids a partir de report_line_ids."""
+        """Crea o actualiza un registro por cliente en report_group_ids a partir de report_line_ids.
+        Solo se cuentan líneas cuya asignación (si tiene) sigue teniendo este proveedor."""
         self.ensure_one()
         Group = self.env['license.provider.report.group']
         partners_with_lines = set()
         for line in self.report_line_ids:
+            if line.assignment_id and line.assignment_id.license_provider_id != self.partner_id:
+                continue
             if not line.partner_id:
                 continue
             if line.partner_id.id in partners_with_lines:
@@ -164,60 +190,54 @@ class LicenseProviderPartner(models.Model):
             if group.partner_id.id not in partners_with_lines:
                 group.unlink()
 
-    def action_fill_report_from_assignments(self):
-        """Rellena o actualiza las líneas de Reporte / Facturación a partir de las asignaciones de este proveedor."""
+    def _map_contracting(self, ct):
+        if not ct:
+            return 'monthly_monthly', 'Mensual'
+        if ct == 'annual':
+            return 'annual', 'Anual'
+        if ct == 'annual_monthly_commitment':
+            return 'annual_monthly_commitment', 'Anual Compromiso Mensual'
+        return 'monthly_monthly', 'Mensual'
+
+    def _report_line_vals_for_assignment(self, assig):
+        """Construye vals para crear/actualizar una línea de reporte a partir de una asignación."""
+        contract_type, billing_cycle = self._map_contracting(assig.contracting_type)
+        unit_usd = (assig.total_cost_usd / assig.quantity) if assig.quantity else (assig.total_cost_usd or 0.0)
+        return {
+            'provider_partner_id': self.id,
+            'partner_id': assig.partner_id.id if assig.partner_id else False,
+            'client_name': assig.partner_id.name if assig.partner_id else '',
+            'product_id': assig.license_id.product_id.id if assig.license_id and assig.license_id.product_id else False,
+            'product_name': assig.license_id.product_id.name if assig.license_id and assig.license_id.product_id else (assig.license_display_name or ''),
+            'quantity': assig.quantity,
+            'start_date': assig.start_date,
+            'end_date': assig.end_date,
+            'cut_off_date': assig.end_date or assig.start_date,
+            'contract_type': contract_type,
+            'billing_cycle': billing_cycle,
+            'unit_price_usd': unit_usd,
+            'total_price_usd': assig.total_cost_usd or 0.0,
+            'assignment_id': assig.id,
+            'auto_renewal': assig.auto_renewal,
+        }
+
+    def _sync_report_line_for_assignment(self, assig, sync_groups=True):
+        """Crea o actualiza una sola línea de reporte para la asignación. Al actualizar nunca escribe provider_cost_usd."""
         self.ensure_one()
         ReportLine = self.env['license.provider.report.line']
-        assignments = self.assignment_ids
-        if not assignments:
-            return self._notify(_('No hay asignaciones para este proveedor. Cree asignaciones en Licenciamientos → Asignaciones y asígneles este proveedor.'))
-        # Mapeo tipo contratación (3 modelos) -> contract_type y billing_cycle
-        def _map_contracting(ct):
-            if not ct:
-                return 'monthly_monthly', 'Mensual'
-            if ct == 'annual':
-                return 'annual', 'Anual'
-            if ct == 'annual_monthly_commitment':
-                return 'annual_monthly_commitment', 'Anual Compromiso Mensual'
-            return 'monthly_monthly', 'Mensual'
-        created = updated = 0
-        for assig in assignments:
-            contract_type, billing_cycle = _map_contracting(assig.contracting_type)
-            unit_usd = (assig.total_cost_usd / assig.quantity) if assig.quantity else (assig.total_cost_usd or 0.0)
-            vals = {
-                'provider_partner_id': self.id,
-                'partner_id': assig.partner_id.id,
-                'client_name': assig.partner_id.name if assig.partner_id else '',
-                'product_id': assig.license_id.product_id.id if assig.license_id and assig.license_id.product_id else False,
-                'product_name': assig.license_id.product_id.name if assig.license_id and assig.license_id.product_id else (assig.license_display_name or ''),
-                'quantity': assig.quantity,
-                'start_date': assig.start_date,
-                'end_date': assig.end_date,
-                'cut_off_date': assig.end_date or assig.start_date,
-                'contract_type': contract_type,
-                'billing_cycle': billing_cycle,
-                'unit_price_usd': unit_usd,
-                'total_price_usd': assig.total_cost_usd or 0.0,
-                'provider_cost_usd': assig.provider_cost_usd or 0.0,
-                'assignment_id': assig.id,
-                'auto_renewal': assig.auto_renewal,
-            }
-            existing = ReportLine.search([
-                ('provider_partner_id', '=', self.id),
-                ('assignment_id', '=', assig.id),
-            ], limit=1)
-            if existing:
-                # No sobrescribir Costo Proveedor en líneas existentes: el usuario puede haberlo editado
-                # en «Ver licencias contratadas»; la asignación trae valor calculado desde stock (a veces 0).
-                update_vals = {k: v for k, v in vals.items() if k != 'provider_cost_usd'}
-                existing.write(update_vals)
-                updated += 1
-            else:
-                ReportLine.create(vals)
-                created += 1
-        self._sync_report_groups()
-        msg = _('Listo: %s línea(s) creada(s), %s actualizada(s). Use «Ver licencias contratadas» en cada cliente para ver el detalle.') % (created, updated)
-        return self._notify(msg)
+        existing = ReportLine.search([
+            ('provider_partner_id', '=', self.id),
+            ('assignment_id', '=', assig.id),
+        ], limit=1)
+        vals = self._report_line_vals_for_assignment(assig)
+        if existing:
+            update_vals = {k: v for k, v in vals.items() if k != 'provider_cost_usd'}
+            existing.write(update_vals)
+        else:
+            vals['provider_cost_usd'] = 0.0
+            ReportLine.create(vals)
+        if sync_groups:
+            self._sync_report_groups()
 
     def _notify(self, message):
         return {
