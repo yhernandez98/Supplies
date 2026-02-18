@@ -1,0 +1,4 @@
+[submodule "yhernandez98/Supplies"]
+	path = yhernandez98/Supplies
+	url = git@github.com:yhernandez98/Supplies.git
+	branch = Desarrollo
