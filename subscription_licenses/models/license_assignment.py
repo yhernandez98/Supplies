@@ -634,18 +634,17 @@ class LicenseAssignment(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
-        """Sobrescribe create para cargar automáticamente la licencia si hay producto seleccionado"""
+        """Sobrescribe create para cargar automáticamente la licencia si hay producto seleccionado."""
         for vals in vals_list:
             if vals.get('selected_product_id') and not vals.get('license_id'):
-                # Buscar la licencia asociada al producto
                 license_template = self.env['license.template'].search([
                     ('product_id', '=', vals['selected_product_id'])
                 ], limit=1)
-                
                 if license_template:
                     vals['license_id'] = license_template.id
-        
-        return super().create(vals_list)
+        records = super().create(vals_list)
+        records._sync_to_provider_report()
+        return records
 
     @api.constrains('selected_product_id', 'license_id')
     def _check_license_from_product(self):
@@ -711,7 +710,29 @@ class LicenseAssignment(models.Model):
         for rec in self:
             if rec.quantity <= 0:
                 raise ValidationError(_('La cantidad debe ser mayor a cero.'))
-    
+
+    def _sync_to_provider_report(self):
+        """Crea o actualiza la línea de reporte del proveedor para cada asignación (sin tocar Costo proveedor)."""
+        ProviderPartner = self.env['license.provider.partner']
+        for rec in self:
+            if not rec.license_provider_id:
+                continue
+            partner = ProviderPartner.search([
+                ('partner_id', '=', rec.license_provider_id.id),
+            ], limit=1)
+            if partner:
+                partner._sync_report_line_for_assignment(rec)
+
+    def unlink(self):
+        """Elimina las líneas de reporte asociadas antes de borrar la asignación."""
+        ReportLine = self.env['license.provider.report.line']
+        lines = ReportLine.search([('assignment_id', 'in', self.ids)])
+        providers = lines.mapped('provider_partner_id')
+        lines.unlink()
+        for partner in providers:
+            partner._sync_report_groups()
+        return super().unlink()
+
     def write(self, vals):
         """Sobrescribe write para validar que no se reduzca la cantidad en contratos anuales y calcular fecha de fin."""
         # Validar reducción de cantidad antes de escribir
@@ -744,8 +765,11 @@ class LicenseAssignment(models.Model):
                     # Calcular fecha de fin: 12 meses después de la fecha de inicio
                     end_date = start_date + relativedelta(months=12) - relativedelta(days=1)
                     vals['end_date'] = fields.Date.to_string(end_date)
-        
-        return super().write(vals)
+
+        res = super().write(vals)
+        if not self.env.context.get('skip_sync_provider_report'):
+            self._sync_to_provider_report()
+        return res
 
     @api.constrains('start_date', 'end_date', 'contracting_type')
     def _check_dates(self):

@@ -150,7 +150,7 @@
                         </group>
                     </group>
                     <notebook>
-                        <page string="Licencias y costos" name="provider_stock_page">
+                        <page string="Licencias" name="provider_stock_page">
                             <div class="mb-3 p-2 bg-light rounded" style="border-radius: 8px;">
                                 <button name="action_sync_stock_from_provider" type="object" string="Traer licencias por este proveedor" class="btn-link" icon="fa-refresh"/>
                                 <span class="text-muted ms-1">Si añadió licencias desde otro menú con este proveedor, pulse para que aparezcan aquí.</span>
@@ -166,11 +166,34 @@
                                 </list>
                             </field>
                         </page>
-                        <page string="Reporte / Facturación" name="report_lines_page">
+                        <page string="Consolidado" name="report_consolidated_page">
                             <div class="mb-3 p-2 bg-light rounded" style="border-radius: 8px;">
-                                <button name="action_fill_report_from_assignments" type="object" string="Rellenar desde asignaciones" class="btn-primary" icon="fa-refresh"/>
-                                <button name="action_sync_report_groups" type="object" string="Actualizar lista de clientes" class="btn-link" icon="fa-refresh"/>
-                                <span class="text-muted ms-2">Rellene la tabla con las asignaciones activas. En cada cliente use «Ver licencias contratadas» para el detalle (producto, fechas, costos, precios).</span>
+                                <span class="text-muted">Líneas de reporte (se actualizan solas al asignar licencias). Edite <strong>Costo Proveedor</strong> aquí; no se sobrescribirá.</span>
+                            </div>
+                            <field name="report_line_ids" nolabel="1" context="{'default_provider_partner_id': id}">
+                                <list create="1" delete="1" edit="1" editable="bottom">
+                                    <field name="partner_id" string="Cliente" options="{'no_create': True}"/>
+                                    <field name="client_name" optional="hide"/>
+                                    <field name="product_name" string="Producto / Oferta"/>
+                                    <field name="start_date" string="Fecha Inicio"/>
+                                    <field name="end_date" string="Fecha Fin"/>
+                                    <field name="cut_off_date" string="Fecha Corte" optional="show"/>
+                                    <field name="contract_type" string="Contrato"/>
+                                    <field name="quantity" string="Cantidad"/>
+                                    <field name="provider_cost_usd" string="Costo Proveedor" sum="Total" options="{'type': 'number'}"/>
+                                    <field name="total_provider_cost_usd" string="Costo Total Proveedor" sum="Total"/>
+                                    <field name="unit_price_pricelist_usd" string="Precio al Cliente" sum="Total"/>
+                                    <field name="total_price_pricelist_usd" string="Total Precio Cliente" sum="Total"/>
+                                    <field name="profit_unit_usd" string="Ganancia" sum="Total"/>
+                                    <field name="profit_total_usd" string="Ganancia Total" sum="Total"/>
+                                    <field name="auto_renewal" string="Renovación automática" optional="show"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Resumen por cliente" name="report_lines_page">
+                            <div class="mb-3 p-2 bg-light rounded" style="border-radius: 8px;">
+                                <button name="action_sync_report_groups" type="object" string="Actualizar lista de clientes" class="btn-primary" icon="fa-refresh"/>
+                                <span class="text-muted ms-2">Si agregó una asignación y no aparece aquí, pulse <strong>Actualizar lista de clientes</strong>. Defina el Costo proveedor en Consolidado o en «Ver licencias contratadas»; no se sobrescribirá.</span>
                             </div>
                             <field name="report_group_ids" nolabel="1">
                                 <list create="0" delete="0" edit="0" string="Clientes en reporte">
