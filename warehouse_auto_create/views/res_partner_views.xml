@@ -45,6 +45,13 @@
                                 class="btn-secondary"
                                 invisible="not is_company or tipo_contacto not in ['cliente', 'ambos']"
                                 icon="fa-road"/>
+                        <button name="action_mark_routes_on_all_products"
+                                string="Marcar rutas"
+                                type="object"
+                                class="btn-secondary"
+                                invisible="not is_company or tipo_contacto not in ['cliente', 'ambos']"
+                                icon="fa-check-square-o"
+                                title="Selecciona todas las rutas en todos los productos (igual que en Inventario → Productos → Acciones)"/>
                     </div>
                 </xpath>
             </field>
