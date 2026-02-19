@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <!-- 
+    Nota: Los modelos TransientModel normalmente se registran automáticamente por Odoo.
+    Este registro explícito asegura que el modelo esté disponible cuando se procese el CSV de seguridad.
+    Se usa noupdate="1" para evitar sobrescribir el registro si ya existe.
+    -->
+    <record id="model_subscription_equipment_change_wizard" model="ir.model">
+        <field name="name">subscription.equipment.change.wizard</field>
+        <field name="model">subscription.equipment.change.wizard</field>
+        <field name="info">Wizard para cambio de equipo en suscripción</field>
+    </record>
+    
+    <record id="model_subscription_equipment_change_history" model="ir.model">
+        <field name="name">subscription.equipment.change.history</field>
+        <field name="model">subscription.equipment.change.history</field>
+        <field name="info">Historial de cambios de equipo en suscripciones</field>
+    </record>
+</odoo>
+

@@ -1,0 +1,214 @@
+/* Suscripciones: tonos pastel azules y efecto reflejo al pasar el ratón
+   Usamos :has() para aplicar estilos a toda la vista (control panel + sheet) cuando el form tiene la clase. */
+
+/* ---- Variables de color pastel azul ---- */
+.o_form_view:has(form.o_subscription_form),
+.o_subscription_form {
+    --pastel-blue-50: #e8f4f8;
+    --pastel-blue-100: #c5e3ee;
+    --pastel-blue-200: #a8d4e6;
+    --pastel-blue-300: #7ec8e3;
+    --pastel-blue-400: #5eb5d9;
+    --pastel-blue-500: #4aa3c9;
+    --pastel-blue-600: #3a8fb5;
+    --pastel-reflejo: rgba(255, 255, 255, 0.5);
+    --pastel-sombra: rgba(74, 163, 201, 0.25);
+}
+
+/* ---- Botones del header (Cancelar, Generar Proforma, Actualizar, etc.) ---- */
+/* Contenedor real en Odoo: .o_statusbar_buttons; otros por compatibilidad */
+.o_form_view:has(form.o_subscription_form) .o_statusbar_buttons .btn-secondary,
+.o_form_view:has(form.o_subscription_form) .o_control_panel .o_cp_buttons .btn-secondary,
+.o_form_view:has(form.o_subscription_form) .o_control_panel .btn-secondary,
+.o_form_view:has(form.o_subscription_form) .o_form_buttons .btn-secondary,
+.o_form_view:has(form.o_subscription_form) header .btn-secondary,
+.o_subscription_form .o_statusbar_buttons .btn-secondary,
+.o_subscription_form .o_control_panel .btn-secondary,
+.o_subscription_form .o_form_buttons .btn-secondary,
+.o_subscription_form header .btn-secondary {
+    background: linear-gradient(180deg, var(--pastel-blue-100) 0%, var(--pastel-blue-200) 50%, var(--pastel-blue-300) 100%) !important;
+    color: var(--pastel-blue-600) !important;
+    border: 1px solid var(--pastel-blue-400) !important;
+    border-radius: 6px !important;
+    box-shadow: 0 1px 3px var(--pastel-sombra), inset 0 1px 0 var(--pastel-reflejo) !important;
+    position: relative;
+    overflow: hidden;
+    transition: box-shadow 0.2s ease, transform 0.15s ease;
+}
+.o_form_view:has(form.o_subscription_form) .o_statusbar_buttons .btn-secondary:hover,
+.o_form_view:has(form.o_subscription_form) .o_control_panel .btn-secondary:hover,
+.o_form_view:has(form.o_subscription_form) .o_form_buttons .btn-secondary:hover,
+.o_form_view:has(form.o_subscription_form) header .btn-secondary:hover,
+.o_subscription_form .o_statusbar_buttons .btn-secondary:hover,
+.o_subscription_form .o_control_panel .btn-secondary:hover,
+.o_subscription_form .o_form_buttons .btn-secondary:hover,
+.o_subscription_form header .btn-secondary:hover {
+    background: linear-gradient(180deg, var(--pastel-blue-200) 0%, var(--pastel-blue-300) 50%, var(--pastel-blue-400) 100%) !important;
+    color: #2d6a8a !important;
+    box-shadow: 0 2px 8px var(--pastel-sombra), inset 0 2px 12px var(--pastel-reflejo) !important;
+    transform: translateY(-1px);
+}
+.o_form_view:has(form.o_subscription_form) .o_statusbar_buttons .btn-secondary::after,
+.o_form_view:has(form.o_subscription_form) .o_control_panel .btn-secondary::after,
+.o_form_view:has(form.o_subscription_form) .o_form_buttons .btn-secondary::after,
+.o_form_view:has(form.o_subscription_form) header .btn-secondary::after,
+.o_subscription_form .o_statusbar_buttons .btn-secondary::after,
+.o_subscription_form .o_control_panel .btn-secondary::after,
+.o_subscription_form .o_form_buttons .btn-secondary::after,
+.o_subscription_form header .btn-secondary::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 60%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, var(--pastel-reflejo), transparent);
+    transition: left 0.4s ease;
+    pointer-events: none;
+}
+.o_form_view:has(form.o_subscription_form) .o_statusbar_buttons .btn-secondary:hover::after,
+.o_form_view:has(form.o_subscription_form) .o_control_panel .btn-secondary:hover::after,
+.o_form_view:has(form.o_subscription_form) .o_form_buttons .btn-secondary:hover::after,
+.o_form_view:has(form.o_subscription_form) header .btn-secondary:hover::after,
+.o_subscription_form .o_statusbar_buttons .btn-secondary:hover::after,
+.o_subscription_form .o_control_panel .btn-secondary:hover::after,
+.o_subscription_form .o_form_buttons .btn-secondary:hover::after,
+.o_subscription_form header .btn-secondary:hover::after {
+    left: 100%;
+}
+
+/* ---- Botón link del header (Consultar Facturable) ---- */
+.o_form_view:has(form.o_subscription_form) .o_statusbar_buttons .btn-link,
+.o_form_view:has(form.o_subscription_form) .o_control_panel .btn-link,
+.o_form_view:has(form.o_subscription_form) .o_form_buttons .btn-link,
+.o_form_view:has(form.o_subscription_form) header .btn-link,
+.o_subscription_form .o_statusbar_buttons .btn-link,
+.o_subscription_form .o_control_panel .btn-link,
+.o_subscription_form .o_form_buttons .btn-link,
+.o_subscription_form header .btn-link {
+    color: var(--pastel-blue-500) !important;
+    border-radius: 4px !important;
+    transition: color 0.2s ease, box-shadow 0.2s ease;
+}
+.o_form_view:has(form.o_subscription_form) .o_statusbar_buttons .btn-link:hover,
+.o_form_view:has(form.o_subscription_form) .o_control_panel .btn-link:hover,
+.o_form_view:has(form.o_subscription_form) .o_form_buttons .btn-link:hover,
+.o_form_view:has(form.o_subscription_form) header .btn-link:hover,
+.o_subscription_form .o_statusbar_buttons .btn-link:hover,
+.o_subscription_form .o_control_panel .btn-link:hover,
+.o_subscription_form .o_form_buttons .btn-link:hover,
+.o_subscription_form header .btn-link:hover {
+    color: var(--pastel-blue-600) !important;
+    box-shadow: inset 0 -2px 0 var(--pastel-blue-300) !important;
+}
+
+/* ---- Statusbar (Borrador, Activa, Cancelada): pastel + reflejo ---- */
+.o_form_view:has(form.o_subscription_form) .o_subscription_statusbar .o_statusbar_status .o_selection,
+.o_subscription_form .o_subscription_statusbar .o_statusbar_status .o_selection,
+.o_subscription_form .o_subscription_statusbar .o_statusbar_status .o_arrow_button.btn-primary.disabled,
+.o_subscription_form .o_subscription_statusbar .o_statusbar_status button.btn-primary,
+.o_form_view:has(form.o_subscription_form) .o_subscription_statusbar .o_statusbar_status .o_arrow_button.disabled,
+.o_subscription_form .o_subscription_statusbar .o_statusbar_status .o_arrow_button.disabled {
+    background: linear-gradient(180deg, var(--pastel-blue-200) 0%, var(--pastel-blue-400) 40%, var(--pastel-blue-300) 100%) !important;
+    color: #2d6a8a !important;
+    border: 2px solid var(--pastel-blue-500) !important;
+    box-shadow: 0 2px 6px var(--pastel-sombra), inset 0 1px 0 var(--pastel-reflejo) !important;
+}
+.o_form_view:has(form.o_subscription_form) .o_subscription_statusbar .o_statusbar_status button.o_selection:hover,
+.o_form_view:has(form.o_subscription_form) .o_subscription_statusbar .o_statusbar_status .o_arrow_button.disabled:hover,
+.o_subscription_form .o_subscription_statusbar .o_statusbar_status button.o_selection:hover,
+.o_subscription_form .o_subscription_statusbar .o_statusbar_status .o_arrow_button.disabled:hover {
+    box-shadow: 0 3px 10px var(--pastel-sombra), inset 0 2px 14px var(--pastel-reflejo) !important;
+}
+.o_form_view:has(form.o_subscription_form) .o_subscription_statusbar .o_statusbar_status .o_arrow_button:not(.disabled):not(.o_selection):not(.btn-primary),
+.o_subscription_form .o_subscription_statusbar .o_statusbar_status .o_arrow_button:not(.disabled):not(.o_selection):not(.btn-primary) {
+    background: linear-gradient(180deg, var(--pastel-blue-50) 0%, var(--pastel-blue-100) 100%) !important;
+    color: var(--pastel-blue-500) !important;
+    border-color: var(--pastel-blue-200) !important;
+}
+
+/* ---- Pestañas del notebook (Facturable, Producto Principal, etc.): mismo efecto que los botones ---- */
+.o_form_view:has(form.o_subscription_form) .nav-tabs .nav-link,
+.o_subscription_form .nav-tabs .nav-link {
+    background: linear-gradient(180deg, var(--pastel-blue-100) 0%, var(--pastel-blue-200) 50%, var(--pastel-blue-300) 100%) !important;
+    color: var(--pastel-blue-600) !important;
+    border: 1px solid var(--pastel-blue-400) !important;
+    border-radius: 6px 6px 0 0 !important;
+    margin-right: 2px;
+    box-shadow: 0 1px 3px var(--pastel-sombra), inset 0 1px 0 var(--pastel-reflejo) !important;
+    position: relative;
+    overflow: hidden;
+    transition: box-shadow 0.2s ease, transform 0.15s ease, background 0.2s ease;
+}
+.o_form_view:has(form.o_subscription_form) .nav-tabs .nav-link::after,
+.o_subscription_form .nav-tabs .nav-link::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 60%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, var(--pastel-reflejo), transparent);
+    transition: left 0.4s ease;
+    pointer-events: none;
+}
+.o_form_view:has(form.o_subscription_form) .nav-tabs .nav-link:hover,
+.o_subscription_form .nav-tabs .nav-link:hover {
+    background: linear-gradient(180deg, var(--pastel-blue-200) 0%, var(--pastel-blue-300) 50%, var(--pastel-blue-400) 100%) !important;
+    color: #2d6a8a !important;
+    box-shadow: 0 2px 8px var(--pastel-sombra), inset 0 2px 12px var(--pastel-reflejo) !important;
+    transform: translateY(-1px);
+}
+.o_form_view:has(form.o_subscription_form) .nav-tabs .nav-link:hover::after,
+.o_subscription_form .nav-tabs .nav-link:hover::after {
+    left: 100%;
+}
+.o_form_view:has(form.o_subscription_form) .nav-tabs .nav-link.active,
+.o_subscription_form .nav-tabs .nav-link.active {
+    background: linear-gradient(180deg, #fff 0%, var(--pastel-blue-100) 50%, var(--pastel-blue-200) 100%) !important;
+    color: var(--pastel-blue-600) !important;
+    border: 1px solid var(--pastel-blue-400) !important;
+    border-bottom-color: transparent !important;
+    box-shadow: 0 -2px 6px var(--pastel-sombra), inset 0 1px 0 var(--pastel-reflejo) !important;
+}
+.o_form_view:has(form.o_subscription_form) .nav-tabs .nav-link.active:hover,
+.o_subscription_form .nav-tabs .nav-link.active:hover {
+    background: linear-gradient(180deg, var(--pastel-blue-50) 0%, var(--pastel-blue-200) 100%) !important;
+    box-shadow: 0 -2px 8px var(--pastel-sombra), inset 0 2px 12px var(--pastel-reflejo) !important;
+}
+
+/* ---- Botón "Ver Detalles" en la lista de productos agrupados ---- */
+.o_form_view:has(form.o_subscription_form) .o_list_view .o_list_button .btn-link,
+.o_form_view:has(form.o_subscription_form) .o_list_view a.btn-link,
+.o_subscription_form .o_list_view .o_list_button .btn-link,
+.o_subscription_form .o_list_view a.btn-link {
+    color: var(--pastel-blue-500) !important;
+    border-radius: 4px !important;
+    padding: 2px 6px !important;
+    transition: color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+.o_form_view:has(form.o_subscription_form) .o_list_view .o_list_button .btn-link:hover,
+.o_form_view:has(form.o_subscription_form) .o_list_view a.btn-link:hover,
+.o_subscription_form .o_list_view .o_list_button .btn-link:hover,
+.o_subscription_form .o_list_view a.btn-link:hover {
+    color: var(--pastel-blue-600) !important;
+    background: var(--pastel-blue-50) !important;
+    box-shadow: inset 0 0 12px var(--pastel-reflejo) !important;
+}
+
+/* ---- Modal "Productos Agrupados" (subscription.product.grouped): colores normales, sin verde ---- */
+.o_form_view:has(form.o_grouped_products_normal_form) .o_field_widget,
+.o_form_view:has(form.o_grouped_products_normal_form) .o_field_widget a,
+.o_form_view:has(form.o_grouped_products_normal_form) .o_list_view .o_data_cell,
+.o_form_view:has(form.o_grouped_products_normal_form) .o_list_view .o_data_cell a,
+.o_grouped_products_normal_form .o_field_widget,
+.o_grouped_products_normal_form .o_field_widget a,
+.o_grouped_products_normal_form .o_list_view .o_data_cell,
+.o_grouped_products_normal_form .o_list_view .o_data_cell a {
+    color: inherit !important;
+}
+.o_form_view:has(form.o_grouped_products_normal_form) .o_list_view .o_optional_columns .dropdown-item.bg-success,
+.o_grouped_products_normal_form .o_list_view .o_optional_columns .dropdown-item.bg-success {
+    background-color: transparent !important;
+    color: inherit !important;
+}
