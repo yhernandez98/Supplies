@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista eliminada: La pestaña "Licencias" ya no es necesaria -->
+    <!-- Las licencias ahora se muestran automáticamente en la pestaña "Facturable" -->
+    <!-- basándose en license.assignment (partner_id y location_id) -->
+    
+    <!-- Desactivar la vista anterior si existe en la base de datos -->
+    <record id="view_subscription_subscription_form_license_integration" model="ir.ui.view">
+        <field name="name">subscription.subscription.form.license.integration</field>
+        <field name="model">subscription.subscription</field>
+        <field name="active" eval="False"/>
+        <field name="arch" type="xml">
+            <form/>
+        </field>
+    </record>
+
+    <!-- ========== Tema visual igual que Licencias (formulario tipo dashboard, listas tipo tarjeta) ========== -->
+    <record id="view_subscription_subscription_form_theme" model="ir.ui.view">
+        <field name="name">subscription.subscription.form.theme</field>
+        <field name="model">subscription.subscription</field>
+        <field name="inherit_id" ref="subscription_nocount.view_subscription_subscription_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="attributes">
+                <attribute name="class" add="o_license_module_form" separator=" "/>
+            </xpath>
+        </field>
+    </record>
+    <record id="view_subscription_subscription_list_theme" model="ir.ui.view">
+        <field name="name">subscription.subscription.list.theme</field>
+        <field name="model">subscription.subscription</field>
+        <field name="inherit_id" ref="subscription_nocount.view_subscription_subscription_list"/>
+        <field name="arch" type="xml">
+            <xpath expr="//list" position="attributes">
+                <attribute name="class">o_license_module_list</attribute>
+            </xpath>
+        </field>
+    </record>
+    <!-- Facturables mensuales: mismo tema -->
+    <record id="view_subscription_monthly_billable_form_theme" model="ir.ui.view">
+        <field name="name">subscription.monthly.billable.form.theme</field>
+        <field name="model">subscription.monthly.billable</field>
+        <field name="inherit_id" ref="subscription_nocount.view_subscription_monthly_billable_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="attributes">
+                <attribute name="class">o_subscription_form o_license_module_form</attribute>
+            </xpath>
+        </field>
+    </record>
+    <record id="view_subscription_monthly_billable_list_theme" model="ir.ui.view">
+        <field name="name">subscription.monthly.billable.list.theme</field>
+        <field name="model">subscription.monthly.billable</field>
+        <field name="inherit_id" ref="subscription_nocount.view_subscription_monthly_billable_list"/>
+        <field name="arch" type="xml">
+            <xpath expr="//list" position="attributes">
+                <attribute name="class">o_license_module_list</attribute>
+            </xpath>
+        </field>
+    </record>
+    <!-- Historial de cambios de equipo: mismo tema -->
+    <record id="view_equipment_change_history_form_theme" model="ir.ui.view">
+        <field name="name">subscription.equipment.change.history.form.theme</field>
+        <field name="model">subscription.equipment.change.history</field>
+        <field name="inherit_id" ref="subscription_nocount.view_equipment_change_history_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="attributes">
+                <attribute name="class">o_subscription_form o_license_module_form</attribute>
+            </xpath>
+        </field>
+    </record>
+    <record id="view_equipment_change_history_list_theme" model="ir.ui.view">
+        <field name="name">subscription.equipment.change.history.list.theme</field>
+        <field name="model">subscription.equipment.change.history</field>
+        <field name="inherit_id" ref="subscription_nocount.view_equipment_change_history_list"/>
+        <field name="arch" type="xml">
+            <xpath expr="//list" position="attributes">
+                <attribute name="class">o_license_module_list</attribute>
+            </xpath>
+        </field>
+    </record>
+    <!-- Histórico de devoluciones (usage) -->
+    <record id="view_subscription_usage_list_theme" model="ir.ui.view">
+        <field name="name">subscription.usage.list.theme</field>
+        <field name="model">subscription.subscription.usage</field>
+        <field name="inherit_id" ref="subscription_nocount.view_subscription_usage_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//list" position="attributes">
+                <attribute name="class">o_license_module_list</attribute>
+            </xpath>
+        </field>
+    </record>
+    <!-- Productos agrupados (form): añadir tema pastel sin quitar clase existente -->
+    <record id="view_subscription_product_grouped_form_theme" model="ir.ui.view">
+        <field name="name">subscription.product.grouped.form.theme</field>
+        <field name="model">subscription.product.grouped</field>
+        <field name="inherit_id" ref="subscription_nocount.view_subscription_product_grouped_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="attributes">
+                <attribute name="class" add="o_subscription_form o_license_module_form" separator=" "/>
+            </xpath>
+        </field>
+    </record>
+    <!-- Wizards de suscripción: botones pastel en modal -->
+    <record id="view_subscription_cancel_wizard_form_theme" model="ir.ui.view">
+        <field name="name">subscription.cancel.wizard.form.theme</field>
+        <field name="model">subscription.cancel.wizard</field>
+        <field name="inherit_id" ref="subscription_nocount.view_subscription_cancel_wizard_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="attributes">
+                <attribute name="class">o_subscription_form</attribute>
+            </xpath>
+        </field>
+    </record>
+    <record id="view_subscription_monthly_billable_wizard_form_theme" model="ir.ui.view">
+        <field name="name">subscription.monthly.billable.wizard.form.theme</field>
+        <field name="model">subscription.monthly.billable.wizard</field>
+        <field name="inherit_id" ref="subscription_nocount.view_subscription_monthly_billable_wizard_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="attributes">
+                <attribute name="class">o_subscription_form</attribute>
+            </xpath>
+        </field>
+    </record>
+    <record id="view_equipment_change_wizard_form_theme" model="ir.ui.view">
+        <field name="name">subscription.equipment.change.wizard.form.theme</field>
+        <field name="model">subscription.equipment.change.wizard</field>
+        <field name="inherit_id" ref="subscription_nocount.view_equipment_change_wizard_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="attributes">
+                <attribute name="class">o_subscription_form</attribute>
+            </xpath>
+        </field>
+    </record>
+    <record id="view_subscription_usage_proforma_wizard_theme" model="ir.ui.view">
+        <field name="name">subscription.usage.proforma.wizard.form.theme</field>
+        <field name="model">subscription.usage.proforma.wizard</field>
+        <field name="inherit_id" ref="subscription_nocount.view_subscription_usage_proforma_wizard"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="attributes">
+                <attribute name="class">o_subscription_form</attribute>
+            </xpath>
+        </field>
+    </record>
+</odoo>
+

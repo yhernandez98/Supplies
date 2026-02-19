@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Reporte por Cliente -->
+    <record id="report_license_by_partner" model="ir.actions.report">
+        <field name="name">Reporte de Licencias por Cliente</field>
+        <field name="model">license.report.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">subscription_licenses.report_license_by_partner_template</field>
+        <field name="report_file">subscription_licenses.report_license_by_partner_template</field>
+        <field name="print_report_name">'Reporte_Licencias_Cliente'</field>
+    </record>
+
+    <!-- Reporte por Tipo de Licencia -->
+    <record id="report_license_by_type" model="ir.actions.report">
+        <field name="name">Reporte de Licencias por Tipo</field>
+        <field name="model">license.report.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">subscription_licenses.report_license_by_type_template</field>
+        <field name="report_file">subscription_licenses.report_license_by_type_template</field>
+        <field name="print_report_name">'Reporte_Licencias_Tipo'</field>
+    </record>
+
+    <!-- Reporte de Costos -->
+    <record id="report_license_costs" model="ir.actions.report">
+        <field name="name">Reporte de Costos de Licencias</field>
+        <field name="model">license.report.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">subscription_licenses.report_license_costs_template</field>
+        <field name="report_file">subscription_licenses.report_license_costs_template</field>
+        <field name="print_report_name">'Reporte_Costos_Licencias'</field>
+    </record>
+
+    <!-- Reporte de Vencidas -->
+    <record id="report_license_expiring" model="ir.actions.report">
+        <field name="name">Reporte de Licencias Vencidas</field>
+        <field name="model">license.report.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">subscription_licenses.report_license_expiring_template</field>
+        <field name="report_file">subscription_licenses.report_license_expiring_template</field>
+        <field name="print_report_name">'Reporte_Licencias_Vencidas'</field>
+    </record>
+</odoo>
+
