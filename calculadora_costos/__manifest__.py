@@ -1,7 +1,7 @@
 {
     'name': 'Calculadora de Costos y Renting',
     'version': '18.0.1.0.1',
-    'author': 'Felipe Valbuena',
+    'author': 'Supplies De Colombia SAS',
     'category': 'Sales/Finance',
     'summary': 'Calculadora financiera para costeo de equipos, renting y servicios técnicos',
     'description': """

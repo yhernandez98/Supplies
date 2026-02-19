@@ -22,7 +22,7 @@
         2. Selecciona los productos deseados (o ninguno para aplicar a todos)
         3. Click en "Acción" → Elegir opción de rutas
     """,
-    'author': 'Supplies de Colombia',
+    'author': 'Supplies De Colombia SAS',
     'depends': ['stock'],
     'data': [
         'views/product_template_views.xml',

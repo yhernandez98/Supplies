@@ -7,7 +7,7 @@
         (Recibidos, Traslados, Órdenes de entrega, etc.) en lugar de por cliente/empresa,
         facilitando la navegación para el personal de inventario.
     ''',
-    'author': 'Supplies de Colombia',
+    'author': 'Supplies De Colombia SAS',
     'category': 'Inventory/Inventory',
     'version': '18.0.0.0.2',
     'depends': [

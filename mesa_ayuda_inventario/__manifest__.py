@@ -9,7 +9,7 @@
         - Realizar modificaciones con trazabilidad completa
         - Registrar quién realiza cada modificación
     ''',
-    'author': 'Supplies de Colombia',
+    'author': 'Supplies De Colombia SAS',
     'category': 'Inventory/Helpdesk',
     'version': '18.0.1.0.5',
     'depends': [
@@ -67,6 +67,5 @@
     'application': True,
     'license': 'LGPL-3',
     'installable': True,
-    'icon': 'static/description/icon.png',
 }
 

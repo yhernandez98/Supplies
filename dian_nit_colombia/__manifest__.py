@@ -2,7 +2,7 @@
 {
     'name': 'DIAN NIT Colombia',
     'version': '18.0.1.0.0',
-    'author': 'Felipe Valbuena',
+    'author': 'Supplies De Colombia SAS',
     'website': 'https://www.example.com',
     'category': 'Localization/Colombia',
     'summary': 'Gestion completa de NIT colombiano con algoritmo DIAN para facturacion',

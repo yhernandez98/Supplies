@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="subscription_dashboard_page" name="Dashboard de Suscripciones">
+        <html>
+                <head>
+                    <meta charset="utf-8"/>
+                    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+                    <title>Dashboard de Suscripciones</title>
+                    <style>
+                        * { box-sizing: border-box; }
+                        body { margin: 0; font-family: "Inter", "Segoe UI", system-ui, sans-serif; min-height: 100vh; color: #1e293b; background: #f1f5f9; }
+                        .ld_header { background: linear-gradient(180deg, #1e40af 0%, #2563eb 22%, #0ea5e9 45%, #06b6d4 70%, #0d9488 100%); color: #fff; padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; box-shadow: 0 4px 24px rgba(30,64,175,0.3); }
+                        .ld_header h1 { margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; }
+                        .ld_header_links { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+                        .ld_header_links a { color: rgba(255,255,255,0.95); text-decoration: none; padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.9rem; font-weight: 500; transition: background 0.2s; }
+                        .ld_header_links a:hover { background: rgba(255,255,255,0.2); }
+                        .ld_container { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
+                        .ld_kpi_row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.25rem; margin-bottom: 2rem; }
+                        .ld_kpi_card { background: #fff; border-radius: 16px; padding: 1.5rem; box-shadow: 0 4px 24px rgba(0,0,0,0.06); border: 1px solid rgba(0,0,0,0.06); transition: transform 0.2s, box-shadow 0.2s; }
+                        .ld_kpi_card:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(0,0,0,0.08); }
+                        .ld_kpi_card.primary { background: linear-gradient(145deg, #0d9488 0%, #0f766e 100%); color: #fff; }
+                        .ld_kpi_card.success { background: linear-gradient(145deg, #059669 0%, #047857 100%); color: #fff; }
+                        .ld_kpi_card.accent { background: linear-gradient(145deg, #7c3aed 0%, #5b21b6 100%); color: #fff; }
+                        .ld_kpi_card.orange { background: linear-gradient(145deg, #ea580c 0%, #c2410c 100%); color: #fff; }
+                        .ld_kpi_card.gray { background: linear-gradient(145deg, #475569 0%, #334155 100%); color: #fff; }
+                        .ld_kpi_label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.9; margin-bottom: 0.35rem; }
+                        .ld_kpi_value { font-size: 2.25rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; }
+                        .ld_section { background: #fff; border-radius: 16px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 4px 24px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; }
+                        .ld_section_title { font-size: 1.1rem; font-weight: 700; color: #334155; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #c4b5fd; }
+                        .ld_table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+                        .ld_table th { text-align: left; padding: 0.75rem 1rem; color: #475569; font-weight: 600; }
+                        .ld_table td { padding: 0.75rem 1rem; border-top: 1px solid #f1f5f9; }
+                        .ld_table tr:hover td { background: #f8fafc; }
+                        .ld_table .num { text-align: right; font-weight: 600; }
+                        .ld_cta { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1.2rem; background: linear-gradient(135deg, #0d9488, #0f766e); color: #fff; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 0.9rem; margin-top: 0.75rem; transition: opacity 0.2s; }
+                        .ld_cta:hover { opacity: 0.9; color: #fff; }
+                        .ld_bar_wrap { margin-bottom: 0.75rem; }
+                        .ld_bar_label { display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.25rem; color: #475569; }
+                        .ld_bar { height: 24px; background: #f1f5f9; border-radius: 8px; overflow: hidden; }
+                        .ld_bar_fill { height: 100%; border-radius: 8px; background: linear-gradient(90deg, #0d9488, #14b8a6); transition: width 0.3s; }
+                        .ld_bar_fill.orange { background: linear-gradient(90deg, #ea580c, #f97316); }
+                        .ld_bar_fill.green { background: linear-gradient(90deg, #059669, #10b981); }
+                        .ld_bar_fill.gray { background: linear-gradient(90deg, #475569, #64748b); }
+                        .ld_bar_fill.violet { background: linear-gradient(90deg, #7c3aed, #8b5cf6); }
+                    </style>
+                </head>
+                <body>
+                    <header class="ld_header">
+                        <h1>📊 Dashboard de Suscripciones</h1>
+                        <div class="ld_header_links">
+                            <a t-attf-href="#{url_back}">← Volver</a>
+                            <a t-attf-href="#{url_list}">Ver listado</a>
+                        </div>
+                    </header>
+                    <div class="ld_container">
+                        <div class="ld_kpi_row">
+                            <div class="ld_kpi_card primary">
+                                <div class="ld_kpi_label">Total suscripciones</div>
+                                <div class="ld_kpi_value" t-esc="total_subscriptions"/>
+                            </div>
+                            <div class="ld_kpi_card success">
+                                <div class="ld_kpi_label">Activas</div>
+                                <div class="ld_kpi_value" t-esc="total_active"/>
+                            </div>
+                            <div class="ld_kpi_card accent">
+                                <div class="ld_kpi_label">Borrador</div>
+                                <div class="ld_kpi_value" t-esc="total_draft"/>
+                            </div>
+                            <div class="ld_kpi_card gray">
+                                <div class="ld_kpi_label">Canceladas</div>
+                                <div class="ld_kpi_value" t-esc="total_cancelled"/>
+                            </div>
+                        </div>
+                        <div class="ld_section">
+                            <div class="ld_section_title">Por estado</div>
+                            <t t-if="by_state">
+                                <t t-foreach="by_state" t-as="row">
+                                    <div class="ld_bar_wrap">
+                                        <div class="ld_bar_label">
+                                            <span t-esc="row['name']"/>
+                                            <span t-esc="row['count']"/>
+                                        </div>
+                                        <div class="ld_bar">
+                                            <div t-attf-class="ld_bar_fill #{row['bar_class']}" t-att-style="row['bar_style']"/>
+                                        </div>
+                                    </div>
+                                </t>
+                            </t>
+                            <t t-else="">
+                                <p style="color: #64748b; margin: 0;">No hay suscripciones.</p>
+                            </t>
+                            <a t-attf-href="#{url_list}" class="ld_cta">Ver listado completo →</a>
+                        </div>
+                        <div class="ld_section">
+                            <div class="ld_section_title">Suscripciones recientes</div>
+                            <t t-if="recent_list">
+                                <table class="ld_table">
+                                    <thead>
+                                        <tr>
+                                            <th>Referencia</th>
+                                            <th>Cliente</th>
+                                            <th>Estado</th>
+                                            <th class="num">Total mensual</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <t t-foreach="recent_list" t-as="row">
+                                            <tr>
+                                                <td t-esc="row['name']"/>
+                                                <td t-esc="row['partner']"/>
+                                                <td t-esc="row['state_label']"/>
+                                                <td class="num" t-esc="row['monthly_amount']"/>
+                                            </tr>
+                                        </t>
+                                    </tbody>
+                                </table>
+                            </t>
+                            <t t-else="">
+                                <p style="color: #64748b; margin: 0;">No hay suscripciones recientes.</p>
+                            </t>
+                            <a t-attf-href="#{url_list}" class="ld_cta">Ver suscripciones →</a>
+                        </div>
+                        <div class="ld_section">
+                            <div class="ld_section_title">Clientes con más suscripciones</div>
+                            <t t-if="top_partners">
+                                <t t-foreach="top_partners" t-as="item">
+                                    <div class="ld_bar_wrap">
+                                        <div class="ld_bar_label">
+                                            <span t-esc="item['name']"/>
+                                            <span t-esc="item['count']"/>
+                                        </div>
+                                        <div class="ld_bar">
+                                            <div class="ld_bar_fill violet" t-att-style="item['bar_style']"/>
+                                        </div>
+                                    </div>
+                                </t>
+                            </t>
+                            <t t-else="">
+                                <p style="color: #64748b; margin: 0;">No hay datos por cliente.</p>
+                            </t>
+                            <a t-attf-href="#{url_list}" class="ld_cta">Ver listado →</a>
+                        </div>
+                    </div>
+                </body>
+            </html>
+    </template>
+
+    <record id="action_subscription_dashboard" model="ir.actions.act_url">
+        <field name="name">Dashboard de Suscripciones</field>
+        <field name="url">/subscription_nocount/dashboard</field>
+        <field name="target">self</field>
+    </record>
+
+    <menuitem id="menu_subscription_dashboard"
+              name="Dashboard"
+              parent="menu_subscription_root"
+              action="action_subscription_dashboard"
+              sequence="0"/>
+</odoo>

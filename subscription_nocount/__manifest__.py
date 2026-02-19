@@ -1,7 +1,7 @@
 {
     'name': 'Subscription No Accounting',
     'version': '18.0.1.0.6',
-    'author': 'Supplies de Colombia',
+    'author': 'Supplies De Colombia SAS',
     'category': 'Sales/Subscriptions',
     'depends': ['mail', 'sale_subscription', 'stock', 'account', 'product_suppiles'],
     'assets': {
@@ -15,6 +15,7 @@
         'security/ir.model.access.csv',
         'data/subscription_journal.xml',
         'data/subscription_cron.xml',
+        'views/subscription_dashboard_templates.xml',
         'views/subscription_views.xml',
         'views/product_views.xml',
         'views/pricelist_views.xml',

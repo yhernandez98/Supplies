@@ -1,7 +1,7 @@
 {
     'name': 'Subscription Licenses',
     'version': '18.0.1.0.1',
-    'author': 'Supplies de Colombia',
+    'author': 'Supplies De Colombia SAS',
     'category': 'Sales/Subscriptions',
     'depends': ['sale', 'stock', 'account', 'product', 'base', 'web', 'product_suppiles', 'subscription_nocount'],
     'external_dependencies': {'python': ['openpyxl']},
@@ -43,7 +43,6 @@
     'application': True,
     'license': 'LGPL-3',
     'installable': True,
-    'icon': 'static/description/icon.png',
     'pre_init_hook': 'pre_init_hook',
     'post_init_hook': 'post_init_hook',
 }

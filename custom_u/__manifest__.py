@@ -40,7 +40,7 @@
         - Herramientas de utilidad para mantenimiento
         - Documentación completa y ejemplos de uso
     """,
-    'author': 'Supplies de Colombia',
+    'author': 'Supplies De Colombia SAS',
     'category': 'Productivity/Productivity',
     'depends': [
         'base',

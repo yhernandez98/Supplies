@@ -6,8 +6,8 @@
         Caracteristicas:
         - Componentes en productos
     ''',
-    'author': 'Supplies de Colombia',
-    'contributors': ['Supplies de Colombia'],
+    'author': 'Supplies De Colombia SAS',
+    'contributors': ['Supplies De Colombia SAS'],
     'website': 'https://www.supplies.com',
     'license': 'LGPL-3',
     'category': 'Inventory/Inventory',

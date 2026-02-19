@@ -19,7 +19,7 @@ Características:
 * Actualizar los quants de stock
 * Mantener el historial de los seriales transferidos
     """,
-    'author': 'Supplies de Colombia',
+    'author': 'Supplies De Colombia SAS',
     'website': 'https://www.suppliesdecolombia.com',
     'depends': [
         'base',

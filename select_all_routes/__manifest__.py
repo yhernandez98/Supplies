@@ -4,7 +4,7 @@
     'summary': 'Adds buttons to quickly select and deselect all available stock routes on a product.',
     'version': '18.0.1.0.0',
     'category': 'Inventory/Stock',
-    'author': 'Supplies de Colombia',
+    'author': 'Supplies De Colombia SAS',
     'license': 'AGPL-3',
     'depends': [
         'product', 

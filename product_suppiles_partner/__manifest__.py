@@ -10,7 +10,7 @@
         - Ver desde el serial a qué contacto está asignado
         - Relación bidireccional completa
     ''',
-    'author': 'Supplies de Colombia',
+    'author': 'Supplies De Colombia SAS',
     'website': 'https://www.supplies.com',
     'license': 'LGPL-3',
     'category': 'Inventory',
