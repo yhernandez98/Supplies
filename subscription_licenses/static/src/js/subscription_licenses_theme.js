@@ -17,6 +17,16 @@
         'license.add.multiple.warning.wizard',
         'license.equipment.add.multiple.wizard',
         'license.provider.delete.wizard',
+        /* Módulo Suscripciones (subscription_nocount): mismo tema visual */
+        'subscription.subscription',
+        'subscription.monthly.billable',
+        'subscription.equipment.change.wizard',
+        'subscription.cancel.wizard',
+        'subscription.usage.proforma.wizard',
+        'subscription.monthly.billable.wizard',
+        'subscription.equipment.cost.detail.wizard',
+        'subscription.subscription.usage',
+        'subscription.equipment.change.history',
     ];
 
     function getHashParams() {
