@@ -655,15 +655,15 @@ class ResPartner(models.Model):
     
     def _get_picking_types_for_return_rules(self, company):
         """
-        Busca los tipos de operación de la ruta de devolución solo del almacén
-        principal Supp (SUPPLIES DE COLOMBIA SAS), no de B&S ni otros clientes.
-        Retorna: transporte, devoluciones_transporte (para regla Transporte→Devolución),
-                 devolucion, verificacion.
+        Busca los tipos de operación de la ruta de devolución. Primero intenta
+        por almacén principal Supp; si no los encuentra, busca por compañía y nombre
+        (por si los tipos están en otro almacén de la misma compañía).
+        Retorna: transporte, devoluciones_transporte, devolucion, verificacion.
         """
         main_wh = self._get_main_supp_warehouse(company)
         if not main_wh:
             raise UserError(_('No se encontró el almacén principal de Supp (sin partner).'))
-        _logger.info(f"Tipos de operación para ruta de devolución: solo almacén Supp '%s' (ID: %s)", main_wh.name, main_wh.id)
+        _logger.info(f"Tipos de operación para ruta de devolución: almacén Supp '%s' (ID: %s)", main_wh.name, main_wh.id)
         result = {'transporte': False, 'devoluciones_transporte': False, 'devolucion': False, 'verificacion': False}
         for key, term in [
             ('transporte', 'Transporte'),
@@ -671,11 +671,25 @@ class ResPartner(models.Model):
             ('devolucion', 'Devolución'),
             ('verificacion', 'Verificación'),
         ]:
+            # 1) Buscar en el almacén principal Supp
             pt = self.env['stock.picking.type'].sudo().search([
                 ('company_id', '=', company.id),
                 ('warehouse_id', '=', main_wh.id),
                 ('name', 'ilike', term),
             ], limit=1)
+            # 2) Si no hay, buscar por compañía y nombre (cualquier almacén de la compañía)
+            if not pt:
+                candidates = self.env['stock.picking.type'].sudo().search([
+                    ('company_id', '=', company.id),
+                    ('name', 'ilike', term),
+                ])
+                # Preferir el del almacén principal; si no, el primero sin partner o el primero
+                if candidates:
+                    pt = candidates.filtered(lambda p: p.warehouse_id == main_wh)[:1]
+                    if not pt:
+                        pt = candidates.filtered(lambda p: p.warehouse_id and not p.warehouse_id.partner_id)[:1]
+                    if not pt:
+                        pt = candidates[:1]
             result[key] = pt
             _logger.info(f"Tipo '{term}': {'OK' if pt else 'NO ENCONTRADO'} - {pt.name if pt else 'N/A'}")
         # Fallback: si no existe "Devoluciones en Transporte", usar "Transporte" para la 2ª regla
@@ -823,7 +837,53 @@ class ResPartner(models.Model):
         "Crear Todas las Rutas y Reglas" (acción masiva).
         """
         return self.env['res.partner'].action_create_all_routes()
-    
+
+    def action_mark_routes_on_all_products(self):
+        """
+        Marca todas las rutas seleccionables en todos los productos (misma lógica
+        que "Seleccionar TODAS las Rutas" desde Inventario → Productos → Acciones).
+        """
+        ProductTemplate = self.env['product.template'].sudo()
+        all_routes = self.env['stock.route'].search([
+            '|',
+            ('product_selectable', '=', True),
+            ('product_categ_selectable', '=', True),
+        ])
+        if not all_routes:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Aviso'),
+                    'message': _('No se encontraron rutas seleccionables en el sistema.'),
+                    'type': 'warning',
+                    'sticky': False,
+                },
+            }
+        products = ProductTemplate.search([])
+        if not products:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Aviso'),
+                    'message': _('No hay productos en el sistema.'),
+                    'type': 'warning',
+                    'sticky': False,
+                },
+            }
+        products.write({'route_ids': [(6, 0, all_routes.ids)]})
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Rutas marcadas'),
+                'message': _('Se marcaron %s ruta(s) en %s producto(s).') % (len(all_routes), len(products)),
+                'type': 'success',
+                'sticky': False,
+            },
+        }
+
     @api.model
     def action_fix_return_route_operation_types(self):
         """
