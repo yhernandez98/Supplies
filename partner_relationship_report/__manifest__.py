@@ -6,7 +6,7 @@
         Caracteristicas:
         - Reporte de relaciones de contacto con productos y seriales
     ''',
-    'author': 'Sebastian Cogollo',
+    'author': 'Supplies De Colombia SAS',
     'contributors': ['Sebastian Cogollo, correocogollo@gmail.com'],
     'website': 'https://www.supplies.com',
     'license': 'LGPL-3',

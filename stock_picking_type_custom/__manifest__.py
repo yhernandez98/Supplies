@@ -18,7 +18,7 @@ Características:
 * Actualización masiva de tipos de operación existentes
 * Actualización automática al crear nuevos tipos de operación
     """,
-    'author': 'Supplies de Colombia',
+    'author': 'Supplies De Colombia SAS',
     'website': 'https://www.suppliesdecolombia.com',
     'depends': [
         'base',

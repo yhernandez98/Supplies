@@ -13,7 +13,7 @@
         - Wizard para asignar permisos rápidamente
         - Vista de módulos y modelos disponibles
     """,
-    'author': 'Supplies de Colombia',
+    'author': 'Supplies De Colombia SAS',
     'website': '',
     'depends': ['base', 'stock', 'purchase', 'sale'],
     'data': [

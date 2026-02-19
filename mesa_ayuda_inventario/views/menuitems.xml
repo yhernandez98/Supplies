@@ -6,7 +6,8 @@
         <!-- ========================================== -->
         <menuitem id="menu_helpdesk_inventory_root"
                   name="Mesa de Ayuda"
-                  sequence="100"/>
+                  sequence="100"
+                  web_icon="mesa_ayuda_inventario,static/description/icon.png"/>
         
         <!-- ========================================== -->
         <!-- SECCIÓN 1: DASHBOARD Y MÉTRICAS -->

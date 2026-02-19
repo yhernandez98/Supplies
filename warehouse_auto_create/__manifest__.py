@@ -20,7 +20,7 @@ Características:
 * Asignación automática de compañía y partner
 * Configuración de pasos de recepción y entrega
     """,
-    'author': 'Supplies de Colombia',
+    'author': 'Supplies De Colombia SAS',
     'website': 'https://www.suppliesdecolombia.com',
     'depends': [
         'base',

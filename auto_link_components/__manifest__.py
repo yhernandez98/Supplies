@@ -1,6 +1,7 @@
 {
     'name': 'Product Supplies Auto Relations',
     'version': '1.0',
+    'author': 'Supplies De Colombia SAS',
     'category': 'Inventory',
     'summary': 'Automatiza la creación de relaciones entre componentes basándose en el número de lote',
     'description': """

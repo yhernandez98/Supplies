@@ -82,6 +82,10 @@
             var tab = document.querySelector('[data-tab-name="report_consolidated_page"], .tab-pane[id*="report_consolidated"]');
             if (tab) listRoot = tab.querySelector('.o_list_view');
         }
+        if (!listRoot) {
+            var subForm = document.querySelector('form.o_license_module_form');
+            if (subForm) listRoot = subForm.querySelector('.o_list_view');
+        }
         if (!listRoot || listRoot.dataset.topScrollbar === '1') return;
         var scrollable = findScrollable(listRoot);
         if (!scrollable) return;
