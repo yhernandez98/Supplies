@@ -38,3 +38,5 @@ access_customer_own_inventory_line_user,customer.own.inventory.line - Usuario Me
 access_customer_own_inventory_line_manager,customer.own.inventory.line - Administrador Mesa de Ayuda,mesa_ayuda_inventario.model_customer_own_inventory_line,stock.group_stock_manager,1,1,1,1
 access_helpdesk_ticket_user,helpdesk.ticket - Usuario Mesa de Ayuda,helpdesk.model_helpdesk_ticket,base.group_user,1,1,1,0
 access_repair_order_user,repair.order - Usuario Mesa de Ayuda,repair.model_repair_order,base.group_user,1,1,1,0
+access_product_asset_category_read,product.asset.category - Lectura Inventario Clientes,product_suppiles.model_product_asset_category,base.group_user,1,0,0,0
+access_product_asset_class_read,product.asset.class - Lectura Inventario Clientes,product_suppiles.model_product_asset_class,base.group_user,1,0,0,0

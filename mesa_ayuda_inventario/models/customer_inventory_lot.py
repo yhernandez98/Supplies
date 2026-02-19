@@ -303,12 +303,14 @@ class StockLotCustomerInventory(models.Model):
             if not lot.id or lot.assigned_licenses_count == 0:
                 continue
             
-            # Verificar que el producto tenga categoría de activo "COMPUTO"
-            if not lot.product_id or not lot.product_id.asset_category_id:
+            # Verificar que el producto tenga categoría de activo "COMPUTO" (acceso seguro por permisos)
+            try:
+                cat = lot.product_id.asset_category_id if lot.product_id else None
+            except Exception:
+                cat = None
+            if not lot.product_id or not cat:
                 continue
-            
-            # Solo mostrar licencias si el producto es de categoría COMPUTO
-            if lot.product_id.asset_category_id.name != 'COMPUTO':
+            if cat.name != 'COMPUTO':
                 continue
             
             # Obtener las licencias asignadas
@@ -518,12 +520,12 @@ class StockLotCustomerInventory(models.Model):
             if not lot.id:
                 continue
             
-            # Verificar que el producto tenga categoría de activo "COMPUTO"
-            if not lot.product_id or not lot.product_id.asset_category_id:
-                continue
-            
-            # Solo mostrar licencias si el producto es de categoría COMPUTO
-            if lot.product_id.asset_category_id.name != 'COMPUTO':
+            # Verificar que el producto tenga categoría de activo "COMPUTO" (acceso seguro por permisos)
+            try:
+                cat = lot.product_id.asset_category_id if lot.product_id else None
+            except Exception:
+                cat = None
+            if not lot.product_id or not cat or cat.name != 'COMPUTO':
                 continue
             
             try:
