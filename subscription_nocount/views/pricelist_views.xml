@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista de lista para sale.subscription.pricing con columna de moneda -->
+    <!-- Esta vista reemplazará la vista estándar para mostrar la columna de moneda -->
+    <record id="view_subscription_pricing_tree_currency" model="ir.ui.view">
+        <field name="name">sale.subscription.pricing.tree.currency</field>
+        <field name="model">sale.subscription.pricing</field>
+        <field name="priority" eval="20"/>
+        <field name="arch" type="xml">
+            <list string="Precios Recurrentes" editable="bottom">
+                <field name="product_template_id" string="Productos"/>
+                <field name="plan_id" string="Plan recurrente"/>
+                <field name="price" string="Precio recurrente"/>
+                <field name="currency_id" string="Moneda" 
+                       domain="[('name', 'in', ['COP', 'USD'])]"
+                       context="{'default_currency_id': parent.currency_id}" 
+                       options="{'no_create': True}"/>
+            </list>
+        </field>
+    </record>
+    
+    <!-- Heredar la vista de pricelist para usar nuestra vista personalizada -->
+    <record id="view_pricelist_form_inherit_currency" model="ir.ui.view">
+        <field name="name">product.pricelist.form.currency.inherit</field>
+        <field name="model">product.pricelist</field>
+        <field name="inherit_id" ref="product.product_pricelist_view"/>
+        <field name="priority" eval="20"/>
+        <field name="arch" type="xml">
+            <!-- Buscar cualquier campo que muestre sale.subscription.pricing y agregar la columna de moneda -->
+            <!-- Intentar encontrar la tabla de precios recurrentes -->
+            <xpath expr="//list[.//field[@name='product_template_id']]//field[@name='price']" position="after">
+                <field name="currency_id" string="Moneda" 
+                       domain="[('name', 'in', ['COP', 'USD'])]"
+                       context="{'default_currency_id': parent.currency_id}" 
+                       options="{'no_create': True}"/>
+            </xpath>
+            <!-- Asegurar que la lista sea editable -->
+            <xpath expr="//list[.//field[@name='product_template_id']]" position="attributes">
+                <attribute name="editable">bottom</attribute>
+            </xpath>
+        </field>
+    </record>
+</odoo>
