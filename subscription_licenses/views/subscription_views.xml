@@ -30,7 +30,7 @@
         <field name="model">subscription.subscription</field>
         <field name="inherit_id" ref="subscription_nocount.view_subscription_subscription_list"/>
         <field name="arch" type="xml">
-            <xpath expr="//list[@string='Suscripciones']" position="attributes">
+            <xpath expr="//list" position="attributes">
                 <attribute name="class">o_license_module_list</attribute>
             </xpath>
         </field>
@@ -51,7 +51,7 @@
         <field name="model">subscription.monthly.billable</field>
         <field name="inherit_id" ref="subscription_nocount.view_subscription_monthly_billable_list"/>
         <field name="arch" type="xml">
-            <xpath expr="//list[@string='Facturables mensuales']" position="attributes">
+            <xpath expr="//list" position="attributes">
                 <attribute name="class">o_license_module_list</attribute>
             </xpath>
         </field>
@@ -72,7 +72,7 @@
         <field name="model">subscription.equipment.change.history</field>
         <field name="inherit_id" ref="subscription_nocount.view_equipment_change_history_list"/>
         <field name="arch" type="xml">
-            <xpath expr="//list[@string='Historial de Cambios de Equipo']" position="attributes">
+            <xpath expr="//list" position="attributes">
                 <attribute name="class">o_license_module_list</attribute>
             </xpath>
         </field>
@@ -83,7 +83,7 @@
         <field name="model">subscription.subscription.usage</field>
         <field name="inherit_id" ref="subscription_nocount.view_subscription_usage_tree"/>
         <field name="arch" type="xml">
-            <xpath expr="//list[@string='Histórico de devoluciones']" position="attributes">
+            <xpath expr="//list" position="attributes">
                 <attribute name="class">o_license_module_list</attribute>
             </xpath>
         </field>
