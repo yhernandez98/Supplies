@@ -7,25 +7,30 @@
             <field name="model">stock.lot</field>
             <field name="inherit_id" ref="stock.view_production_lot_form"/>
             <field name="arch" type="xml">
-                <!-- Agregar imagen y botón después del campo name -->
-                <xpath expr="//field[@name='name']" position="after">
-                    <div style="float: right; margin: 10px; max-width: 200px;">
+                <!-- Clase en columna derecha para estilos -->
+                <xpath expr="//group[@name='main_group']/group[2]" position="attributes">
+                    <attribute name="class" add="o_lot_right_col" separator=" "/>
+                </xpath>
+                <!-- Hacer visible company_currency_id: cuando está invisible rompe el layout de Valor total, Costo -->
+                <xpath expr="//field[@name='company_currency_id']" position="attributes">
+                    <attribute name="invisible">0</attribute>
+                </xpath>
+                <!-- Imagen + botón arriba de Valor total, Costo promedio, Costo (columna derecha área blanca) -->
+                <xpath expr="//group[@name='main_group']/group[2]/*[1]" position="before">
+                    <div class="o_lot_photo_block o_lot_photo_below_costo">
                         <field name="lot_image" widget="image" 
-                               options="{'preview_image': 'lot_image', 'size': [200, 200]}" 
-                               style="width: 100%; max-width: 200px; max-height: 200px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); margin-bottom: 10px;"/>
-                        <div style="width: 100%;">
-                            <button name="action_generate_life_sheet" 
-                                    type="object" 
-                                    string="📄 Generar Hoja de Vida" 
-                                    class="btn-secondary"
-                                    style="width: 100%;"
-                                    icon="fa-file-pdf"
-                                    title="Generar PDF con la hoja de vida completa del equipo"/>
-                        </div>
+                               options="{'preview_image': 'lot_image', 'size': [140, 140]}"/>
+                        <button name="action_generate_life_sheet" 
+                                type="object" 
+                                string="Generar Hoja de Vida" 
+                                class="btn btn-primary"
+                                style="width: 100%; margin-top: 8px;"
+                                icon="fa-file-pdf"
+                                title="Generar PDF con la hoja de vida completa del equipo"/>
                     </div>
                 </xpath>
                 
-                <!-- Agregar pestaña de mantenimientos -->
+                <!-- Agregar pestañas de mantenimientos e historial (nivel principal) -->
                 <xpath expr="//sheet/notebook" position="inside">
                     <page string="Mantenimientos y Revisiones" name="maintenance_history">
                         <field name="maintenance_ids" nolabel="1" context="{'default_lot_id': id}"/>

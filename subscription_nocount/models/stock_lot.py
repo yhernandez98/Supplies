@@ -175,7 +175,7 @@ class StockLot(models.Model):
             except Exception:
                 lot.cost_to_date_current = 0.0
 
-    @api.depends('quant_ids', 'quant_ids.location_id', 'quant_ids.quantity', 'location_partner_id', 'customer_id', 'customer_location_id')
+    @api.depends('quant_ids', 'quant_ids.location_id', 'quant_ids.quantity', 'location_partner_id')
     def _compute_available_subscription_ids(self):
         """Calcular suscripciones disponibles según el cliente de la ubicación del lote."""
         for lot in self:

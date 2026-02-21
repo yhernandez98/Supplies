@@ -19,6 +19,7 @@
         'base',
         'stock',
         'product',
+        'product_suppiles',
         'report_xlsx',
     ],
     'data': [
