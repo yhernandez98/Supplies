@@ -31,15 +31,11 @@
                 <xpath expr="//field[@name='team_id']" position="attributes">
                     <attribute name="help">Equipo de soporte (ej. Nivel 1, Nivel 2). Configurar en: Mesa de Ayuda → Configuración → Equipos.</attribute>
                 </xpath>
-                <xpath expr="//sheet" position="inside">
-                    <div class="oe_button_box" name="button_box">
-                        <button name="action_escalate_ticket" type="object" class="oe_stat_button" icon="fa-level-up" string="Escalar" help="Escalar a otro equipo o responsable (ej. Nivel 2)"/>
-                    </div>
-                </xpath>
                 <xpath expr="//field[@name='partner_id']" position="after">
                     <field name="category_id"/>
                     <field name="values_from_category" invisible="1"/>
                     <field name="maintenance_order_id" readonly="1"/>
+                    <button name="action_escalate_ticket" type="object" string="Escalar a otro equipo / responsable" class="btn-secondary" icon="fa-level-up" help="Cambiar equipo (ej. Nivel 2) o asignar a otra persona"/>
                     <field name="urgency" readonly="1"/>
                     <field name="impact" readonly="1"/>
                     <field name="location_site" placeholder="Sede o ubicación"/>
@@ -77,6 +73,18 @@
             <field name="view_mode">list,form</field>
             <field name="view_id" ref="view_helpdesk_ticket_list"/>
             <field name="search_view_id" ref="view_helpdesk_ticket_search_mesa"/>
+        </record>
+
+        <!-- Acción para configurar equipos de soporte (Nivel 1, Nivel 2, etc.) -->
+        <record id="action_mesa_ayuda_teams" model="ir.actions.act_window">
+            <field name="name">Equipos de soporte</field>
+            <field name="res_model">helpdesk.team</field>
+            <field name="view_mode">list,form</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Crear equipos (ej. Nivel 1, Nivel 2, Atención al cliente) y asignar miembros. El campo "Equipo de soporte al cliente" del ticket usa estos equipos.
+                </p>
+            </field>
         </record>
     </data>
 </odoo>

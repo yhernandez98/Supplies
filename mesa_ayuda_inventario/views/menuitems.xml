@@ -138,6 +138,19 @@
                   parent="menu_support_root"
                   action="action_repair_order"
                   sequence="20"/>
+
+        <!-- ========================================== -->
+        <!-- CONFIGURACIÓN: EQUIPOS DE SOPORTE -->
+        <!-- ========================================== -->
+        <menuitem id="menu_mesa_ayuda_config"
+                  name="Configuración"
+                  parent="menu_helpdesk_inventory_root"
+                  sequence="90"/>
+        <menuitem id="menu_mesa_ayuda_teams"
+                  name="Equipos de soporte"
+                  parent="menu_mesa_ayuda_config"
+                  action="action_mesa_ayuda_teams"
+                  sequence="10"/>
         
     </data>
 </odoo>
