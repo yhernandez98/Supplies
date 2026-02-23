@@ -32,10 +32,9 @@ access_maintenance_problematic_equipment_user,maintenance.problematic.equipment 
 access_maintenance_visit_by_technician_user,maintenance.visit.by.technician - Usuario Mesa de Ayuda,mesa_ayuda_inventario.model_maintenance_visit_by_technician,base.group_user,1,1,1,1
 access_maintenance_visit_by_type_user,maintenance.visit.by.type - Usuario Mesa de Ayuda,mesa_ayuda_inventario.model_maintenance_visit_by_type,base.group_user,1,1,1,1
 access_maintenance_visit_monthly_trend_user,maintenance.visit.monthly.trend - Usuario Mesa de Ayuda,mesa_ayuda_inventario.model_maintenance_visit_monthly_trend,base.group_user,1,1,1,1
-access_customer_own_inventory_user,customer.own.inventory - Usuario Mesa de Ayuda,mesa_ayuda_inventario.model_customer_own_inventory,base.group_user,1,1,1,1
-access_customer_own_inventory_manager,customer.own.inventory - Administrador Mesa de Ayuda,mesa_ayuda_inventario.model_customer_own_inventory,stock.group_stock_manager,1,1,1,1
-access_customer_own_inventory_line_user,customer.own.inventory.line - Usuario Mesa de Ayuda,mesa_ayuda_inventario.model_customer_own_inventory_line,base.group_user,1,1,1,1
-access_customer_own_inventory_line_manager,customer.own.inventory.line - Administrador Mesa de Ayuda,mesa_ayuda_inventario.model_customer_own_inventory_line,stock.group_stock_manager,1,1,1,1
+access_helpdesk_ticket_category_user,helpdesk.ticket.category - Usuario,mesa_ayuda_inventario.model_helpdesk_ticket_category,base.group_user,1,1,1,0
+access_helpdesk_ticket_category_manager,helpdesk.ticket.category - Administrador,mesa_ayuda_inventario.model_helpdesk_ticket_category,stock.group_stock_manager,1,1,1,1
+access_helpdesk_ticket_escalate_wizard,helpdesk.ticket.escalate.wizard - Usuario,mesa_ayuda_inventario.model_helpdesk_ticket_escalate_wizard,base.group_user,1,1,1,1
 access_helpdesk_ticket_user,helpdesk.ticket - Usuario Mesa de Ayuda,helpdesk.model_helpdesk_ticket,base.group_user,1,1,1,0
 access_repair_order_user,repair.order - Usuario Mesa de Ayuda,repair.model_repair_order,base.group_user,1,1,1,0
 access_product_asset_category_read,product.asset.category - Lectura Inventario Clientes,product_suppiles.model_product_asset_category,base.group_user,1,0,0,0

@@ -152,6 +152,7 @@
                     <filter string="Con Placa Seguridad" name="with_security_plate" domain="[('security_plate', '!=', False)]"/>
                     <group expand="0" string="Agrupar por">
                         <filter string="Cliente" name="group_customer" context="{'group_by': 'customer_id'}"/>
+                        <filter string="Servicio" name="group_subscription_service" context="{'group_by': 'subscription_service_product_id'}"/>
                         <filter string="Código de Facturación" name="group_billing_code" context="{'group_by': 'billing_code'}"/>
                         <filter string="Categoría de Activo" name="group_category" context="{'group_by': 'product_asset_category_id'}"/>
                         <filter string="Clase de Activo" name="group_class" context="{'group_by': 'product_asset_class_id'}"/>

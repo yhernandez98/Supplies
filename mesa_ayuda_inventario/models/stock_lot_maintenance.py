@@ -19,36 +19,10 @@ class StockLotMaintenance(models.Model):
     lot_id = fields.Many2one(
         'stock.lot',
         string='Número de Serie',
-        required=False,
+        required=True,
         ondelete='cascade',
         index=True,
         help='Producto serializado al que se le realizó el mantenimiento'
-    )
-    
-    own_inventory_id = fields.Many2one(
-        'customer.own.inventory',
-        string='Producto Propio del Cliente',
-        required=False,
-        ondelete='cascade',
-        index=True,
-        help='Producto propio del cliente al que se le realizó el mantenimiento'
-    )
-    
-    # Campos relacionados cuando se usa own_inventory_id
-    own_inventory_product_id = fields.Many2one(
-        'product.product',
-        related='own_inventory_id.product_id',
-        string='Producto (Propio)',
-        store=True,
-        readonly=True
-    )
-    
-    own_inventory_customer_id = fields.Many2one(
-        'res.partner',
-        related='own_inventory_id.partner_id',
-        string='Cliente (Propio)',
-        store=True,
-        readonly=True
     )
     
     product_id = fields.Many2one(
@@ -67,16 +41,13 @@ class StockLotMaintenance(models.Model):
         readonly=True
     )
     
-    @api.depends('lot_id.product_id', 'lot_id.customer_id', 'own_inventory_id.product_id', 'own_inventory_id.partner_id')
+    @api.depends('lot_id.product_id', 'lot_id.customer_id')
     def _compute_product_customer(self):
-        """Obtener producto y cliente de lot_id o own_inventory_id."""
+        """Obtener producto y cliente del lote."""
         for record in self:
             if record.lot_id:
                 record.product_id = record.lot_id.product_id
                 record.customer_id = record.lot_id.customer_id
-            elif record.own_inventory_id:
-                record.product_id = record.own_inventory_id.product_id
-                record.customer_id = record.own_inventory_id.partner_id
             else:
                 record.product_id = False
                 record.customer_id = False
@@ -333,16 +304,14 @@ class StockLotMaintenance(models.Model):
             if not self.customer_signed_date:
                 self.customer_signed_date = fields.Datetime.now()
     
-    @api.constrains('lot_id', 'own_inventory_id')
-    def _check_lot_or_own_inventory(self):
-        """Validar que al menos uno de los campos esté presente."""
+    @api.constrains('lot_id')
+    def _check_lot_id(self):
+        """Validar que el lote (equipo) esté presente."""
         for record in self:
-            if not record.lot_id and not record.own_inventory_id:
-                raise UserError(_(
-                    'Debe especificar un Número de Serie (stock.lot) o un Producto Propio del Cliente.'
-                ))
+            if not record.lot_id:
+                raise UserError(_('Debe especificar un Número de Serie (equipo).'))
     
-    @api.depends('lot_id.name', 'own_inventory_id.serial_number', 'maintenance_date', 'maintenance_type')
+    @api.depends('lot_id.name', 'maintenance_date', 'maintenance_type')
     def _compute_name(self):
         """Generar referencia única para cada mantenimiento."""
         for record in self:
@@ -354,13 +323,7 @@ class StockLotMaintenance(models.Model):
                 date_str = maintenance_dt.strftime('%Y%m%d')
                 type_label = dict(record._fields['maintenance_type'].selection).get(record.maintenance_type, '')
                 
-                # Usar lot_id si existe, sino usar own_inventory_id
-                if record.lot_id:
-                    identifier = record.lot_id.name or 'LOT'
-                elif record.own_inventory_id:
-                    identifier = record.own_inventory_id.serial_number or record.own_inventory_id.product_id.name or 'OWN'
-                else:
-                    identifier = 'NEW'
+                identifier = record.lot_id.name if record.lot_id else 'NEW'
                 
                 record.name = "%s-%s-%s" % (identifier, date_str, type_label[:3].upper())
             else:

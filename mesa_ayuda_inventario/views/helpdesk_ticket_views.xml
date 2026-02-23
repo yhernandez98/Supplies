@@ -9,19 +9,74 @@
                 <list string="Tickets">
                     <field name="name"/>
                     <field name="partner_id"/>
+                    <field name="category_id" optional="show"/>
+                    <field name="maintenance_order_id" optional="hide" string="Orden servicio"/>
+                    <field name="urgency" optional="hide"/>
+                    <field name="impact" optional="hide"/>
                     <field name="stage_id"/>
                     <field name="user_id"/>
                     <field name="priority"/>
                 </list>
             </field>
         </record>
-        
+
+        <record id="view_helpdesk_ticket_form_inherit_category" model="ir.ui.view">
+            <field name="name">helpdesk.ticket.form.inherit.category</field>
+            <field name="model">helpdesk.ticket</field>
+            <field name="inherit_id" ref="helpdesk.helpdesk_ticket_view_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='user_id']" position="attributes">
+                    <attribute name="required">1</attribute>
+                </xpath>
+                <xpath expr="//field[@name='team_id']" position="attributes">
+                    <attribute name="help">Equipo de soporte (ej. Nivel 1, Nivel 2). Configurar en: Mesa de Ayuda → Configuración → Equipos.</attribute>
+                </xpath>
+                <xpath expr="//sheet" position="inside">
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_escalate_ticket" type="object" class="oe_stat_button" icon="fa-level-up" string="Escalar" help="Escalar a otro equipo o responsable (ej. Nivel 2)"/>
+                    </div>
+                </xpath>
+                <xpath expr="//field[@name='partner_id']" position="after">
+                    <field name="category_id"/>
+                    <field name="values_from_category" invisible="1"/>
+                    <field name="maintenance_order_id" readonly="1"/>
+                    <field name="urgency" readonly="1"/>
+                    <field name="impact" readonly="1"/>
+                    <field name="location_site" placeholder="Sede o ubicación"/>
+                    <field name="date_deadline_response" readonly="1"/>
+                    <field name="date_deadline_resolution" readonly="1"/>
+                </xpath>
+                <xpath expr="//field[@name='priority']" position="attributes">
+                    <attribute name="readonly">1</attribute>
+                </xpath>
+            </field>
+        </record>
+
+        <!-- Vista de búsqueda propia (sin heredar: el xml_id del helpdesk puede cambiar por versión) -->
+        <record id="view_helpdesk_ticket_search_mesa" model="ir.ui.view">
+            <field name="name">helpdesk.ticket.search.mesa</field>
+            <field name="model">helpdesk.ticket</field>
+            <field name="arch" type="xml">
+                <search string="Buscar tickets">
+                    <field name="name"/>
+                    <field name="partner_id"/>
+                    <field name="category_id"/>
+                    <field name="user_id"/>
+                    <filter name="filter_my_category" string="Con categoría" domain="[('category_id', '!=', False)]"/>
+                    <separator/>
+                    <filter name="group_category" string="Por Categoría" context="{'group_by': 'category_id'}"/>
+                    <filter name="group_user" string="Por Asignado" context="{'group_by': 'user_id'}"/>
+                </search>
+            </field>
+        </record>
+
         <!-- Acción para ver tickets -->
         <record id="action_mesa_ayuda_ticket" model="ir.actions.act_window">
             <field name="name">Tickets</field>
             <field name="res_model">helpdesk.ticket</field>
             <field name="view_mode">list,form</field>
             <field name="view_id" ref="view_helpdesk_ticket_list"/>
+            <field name="search_view_id" ref="view_helpdesk_ticket_search_mesa"/>
         </record>
     </data>
 </odoo>

@@ -82,13 +82,6 @@
                   action="action_customer_inventory_detailed"
                   sequence="15"/>
         
-        <!-- Menú para Clientes Propios -->
-        <menuitem id="menu_customer_own_inventory"
-                  name="Clientes Propios"
-                  parent="menu_customer_inventory"
-                  action="action_customer_own_inventory_clients"
-                  sequence="20"/>
-        
         <menuitem id="menu_lot_maintenance"
                   name="Lotes y Mantenimientos"
                   parent="menu_inventory_root"
@@ -135,7 +128,11 @@
                   parent="menu_support_root"
                   action="action_mesa_ayuda_ticket"
                   sequence="10"/>
-        
+        <menuitem id="menu_helpdesk_ticket_category"
+                  name="Categorías"
+                  parent="menu_support_root"
+                  action="action_helpdesk_ticket_category"
+                  sequence="5"/>
         <menuitem id="menu_repair_order"
                   name="Reparaciones"
                   parent="menu_support_root"

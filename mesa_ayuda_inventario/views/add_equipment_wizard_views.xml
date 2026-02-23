@@ -15,34 +15,19 @@
                                 <field name="maintenance_type" required="1"/>
                             </group>
                         </group>
-                        <notebook>
-                            <page string="Equipos de la Empresa" name="company_equipment">
-                                <group>
-                                    <field name="equipment_ids" widget="many2many" nolabel="1" 
-                                           domain="[('customer_id', '=', partner_id), ('is_main_product', '=', True)]"
-                                           context="{
-                                               'default_customer_id': partner_id, 
-                                               'default_is_main_product': True
-                                           }"
-                                           options="{'no_create': True, 'no_open': True}">
-                                        <list>
-                                            <field name="inventory_plate" string="Placa de Inventario"/>
-                                            <field name="name" string="Número de Serie"/>
-                                            <field name="product_id" string="Producto"/>
-                                            <field name="customer_id" string="Cliente"/>
-                                        </list>
-                                    </field>
-                                </group>
-                            </page>
-                            <page string="Equipos Propios del Cliente" name="own_equipment">
-                                <group>
-                                    <field name="own_equipment_ids" widget="many2many" nolabel="1" 
-                                           domain="[('partner_id', '=', partner_id), ('status', 'in', ['active', 'maintenance'])]"
-                                           context="{'default_partner_id': partner_id}"
-                                           options="{'no_create': True, 'no_open': True}"/>
-                                </group>
-                            </page>
-                        </notebook>
+                        <group>
+                            <field name="equipment_ids" widget="many2many" nolabel="1" 
+                                   domain="[('customer_id', '=', partner_id), ('is_main_product', '=', True)]"
+                                   context="{'default_customer_id': partner_id, 'default_is_main_product': True}"
+                                   options="{'no_create': True, 'no_open': True}">
+                                <list>
+                                    <field name="inventory_plate" string="Placa"/>
+                                    <field name="name" string="Número de Serie"/>
+                                    <field name="product_id" string="Producto"/>
+                                    <field name="customer_id" string="Cliente"/>
+                                </list>
+                            </field>
+                        </group>
                     </sheet>
                     <footer>
                         <button string="Agregar Equipos" name="action_add_equipment" type="object" class="btn-primary"/>

@@ -11,7 +11,7 @@
     ''',
     'author': 'Supplies De Colombia SAS',
     'category': 'Inventory/Helpdesk',
-    'version': '18.0.1.0.5',
+    'version': '18.0.1.0.6',
     'depends': [
         'stock',
         'product_suppiles',
@@ -33,7 +33,6 @@
         # 'data/sequences.xml',
         'views/stock_lot_maintenance_views.xml',
         'views/customer_inventory_views.xml',
-        'views/customer_own_inventory_views.xml',
         'views/stock_lot_form_views.xml',
         'views/component_change_views.xml',  # ✅ Vistas para cambios de componentes
         'views/maintenance_order_views.xml',
@@ -45,14 +44,15 @@
         'wizard/equipment_change_wizard_views.xml',  # ✅ Wizard para cambio de equipo
         'wizard/request_element_wizard_views.xml',  # ✅ Wizard para solicitar elemento/componente
         'wizard/activity_assignment_wizard_views.xml',  # ✅ Wizard para asignar actividades
+        'wizard/escalate_ticket_wizard_views.xml',  # Escalar ticket a otro equipo/responsable
         'views/maintenance_dashboard_views.xml',  # ✅ Dashboard de Mantenimientos
         'views/alertas_renting_views.xml',  # Alertas > Equipos a terminar Renting (por fecha finalización)
+        'views/helpdesk_ticket_category_views.xml',
         'views/helpdesk_ticket_views.xml',  # ✅ Activado - Vistas y acción de tickets
         'views/repair_order_views.xml',  # ✅ Activado - Vistas de reparaciones
         'views/menuitems.xml',  # ✅ Cargar menús antes de debug_log_views
         'views/debug_log_views.xml',  # ✅ Herramienta de debug (después de menuitems para que el menú padre exista)
         'reports/stock_lot_life_sheet_report.xml',
-        'reports/customer_own_inventory_life_sheet_report.xml',
         'reports/stock_lot_maintenance_report.xml',
         'reports/maintenance_order_report.xml',  # ✅ Reporte de orden completa
         'reports/maintenance_dashboard_report.xml',  # ✅ Reporte PDF del dashboard
