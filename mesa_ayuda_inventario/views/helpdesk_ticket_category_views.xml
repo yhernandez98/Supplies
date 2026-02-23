@@ -51,6 +51,13 @@
                                 <group>
                                     <field name="auto_create_maintenance_order"/>
                                 </group>
+                                <div class="alert alert-info" role="alert" style="margin-top: 12px;">
+                                    <strong>Control del tiempo registrado:</strong> define cómo se comporta el tiempo en las hojas de horas de los tickets de esta categoría. "Usar tiempo real del cronómetro" obliga a que el tiempo guardado sea el del temporizador; "Tiempo mínimo por registro" exige un mínimo de horas por cada línea.
+                                </div>
+                                <group string="Control tiempo en hojas de horas">
+                                    <field name="control_tiempo_registro"/>
+                                    <field name="tiempo_minimo_horas" invisible="control_tiempo_registro != 'minimo_horas'"/>
+                                </group>
                             </page>
                         </notebook>
                     </sheet>

@@ -84,7 +84,6 @@
 .o_form_view:has(form.o_stock_lot_pastel_form) .o_form_sheet .o_group .o_td_value,
 .o_stock_lot_pastel_form .o_form_sheet .o_group .o_td_value {
     min-width: 200px !important;
-    max-width: 100% !important;
     overflow: hidden !important;
     vertical-align: top !important;
 }
@@ -138,9 +137,54 @@
     padding-left: 2rem !important;
     vertical-align: top !important;
 }
-.o_form_view:has(form.o_stock_lot_pastel_form) .o_form_sheet .o_group .o_td_value,
-.o_stock_lot_pastel_form .o_form_sheet .o_group .o_td_value {
+
+/* ---- Alineación uniforme: TODOS los cuadritos del sheet con el mismo ancho (300px) ---- */
+/* Todas las celdas de valor en el formulario (izq y der) mismo ancho fijo */
+.o_stock_lot_pastel_form .o_form_sheet .o_group .o_td_value,
+.o_form_view:has(form.o_stock_lot_pastel_form) .o_form_sheet .o_group .o_td_value {
+    width: 300px !important;
     min-width: 300px !important;
+    max-width: 300px !important;
+    box-sizing: border-box !important;
+}
+/* Que TODOS los widgets llenen el 100% de la celda (texto, Many2one, número, moneda, fecha) */
+.o_stock_lot_pastel_form .o_form_sheet .o_group .o_td_value .o_field_widget,
+.o_form_view:has(form.o_stock_lot_pastel_form) .o_form_sheet .o_group .o_td_value .o_field_widget {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+}
+.o_stock_lot_pastel_form .o_form_sheet .o_group .o_td_value .o_field_widget .o_input,
+.o_stock_lot_pastel_form .o_form_sheet .o_group .o_td_value .o_field_selector,
+.o_stock_lot_pastel_form .o_form_sheet .o_group .o_td_value .o_field_selector input,
+.o_stock_lot_pastel_form .o_form_sheet .o_group .o_td_value input,
+.o_form_view:has(form.o_stock_lot_pastel_form) .o_form_sheet .o_group .o_td_value .o_field_widget .o_input,
+.o_form_view:has(form.o_stock_lot_pastel_form) .o_form_sheet .o_group .o_td_value .o_field_selector,
+.o_form_view:has(form.o_stock_lot_pastel_form) .o_form_sheet .o_group .o_td_value input {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+}
+/* Campos numéricos y moneda (Cantidad, Costo): forzar ancho completo */
+.o_stock_lot_pastel_form .o_form_sheet .o_group .o_td_value .o_field_float,
+.o_stock_lot_pastel_form .o_form_sheet .o_group .o_td_value .o_field_integer,
+.o_stock_lot_pastel_form .o_form_sheet .o_group .o_td_value .o_field_monetary,
+.o_form_view:has(form.o_stock_lot_pastel_form) .o_form_sheet .o_group .o_td_value .o_field_float,
+.o_form_view:has(form.o_stock_lot_pastel_form) .o_form_sheet .o_group .o_td_value .o_field_integer,
+.o_form_view:has(form.o_stock_lot_pastel_form) .o_form_sheet .o_group .o_td_value .o_field_monetary {
+    width: 100% !important;
+    max-width: 100% !important;
+}
+.o_stock_lot_pastel_form .o_form_sheet .o_group .o_td_value .o_field_float input,
+.o_stock_lot_pastel_form .o_form_sheet .o_group .o_td_value .o_field_integer input,
+.o_stock_lot_pastel_form .o_form_sheet .o_group .o_td_value .o_field_monetary input,
+.o_form_view:has(form.o_stock_lot_pastel_form) .o_form_sheet .o_group .o_td_value .o_field_float input,
+.o_form_view:has(form.o_stock_lot_pastel_form) .o_form_sheet .o_group .o_td_value .o_field_integer input,
+.o_form_view:has(form.o_stock_lot_pastel_form) .o_form_sheet .o_group .o_td_value .o_field_monetary input {
+    width: 100% !important;
+    box-sizing: border-box !important;
 }
 
 /* ---- Bloques Número de serie, Placas, Hostname: mismo tamaño que Producto, Cantidad, etc. ---- */
@@ -181,10 +225,12 @@
 }
 .o_lot_right_col .o_td_value,
 .o_lot_right_col .o_group .o_td_value {
-    min-width: 180px !important;
-    max-width: 100% !important;
+    width: 300px !important;
+    min-width: 300px !important;
+    max-width: 300px !important;
     vertical-align: top !important;
     display: table-cell !important;
+    box-sizing: border-box !important;
 }
 
 /* Foto en columna derecha */

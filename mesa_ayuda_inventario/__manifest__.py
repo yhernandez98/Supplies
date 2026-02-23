@@ -22,6 +22,8 @@
         'helpdesk',  # ✅ Módulo nativo - Para integrar tickets
         'repair',  # ✅ Módulo nativo - Para reparaciones
         'calendar',  # ✅ Para calendario de visitas y mantenimientos programados
+        'account',  # Para account.analytic.line (líneas de hoja de horas / timer)
+        'hr_timesheet',  # Proporciona action_timer_stop en account.analytic.line (timer en tickets)
         # Módulos nativos opcionales (recomendados instalar):
         # 'knowledge', # Para base de conocimiento
     ],
@@ -45,22 +47,22 @@
         'wizard/request_element_wizard_views.xml',  # ✅ Wizard para solicitar elemento/componente
         'wizard/activity_assignment_wizard_views.xml',  # ✅ Wizard para asignar actividades
         'wizard/escalate_ticket_wizard_views.xml',  # Escalar ticket a otro equipo/responsable
-        'views/maintenance_dashboard_views.xml',  # ✅ Dashboard de Mantenimientos
         'views/alertas_renting_views.xml',  # Alertas > Equipos a terminar Renting (por fecha finalización)
         'views/helpdesk_ticket_category_views.xml',
         'views/helpdesk_ticket_views.xml',  # ✅ Activado - Vistas y acción de tickets
+        'views/helpdesk_ticket_template_views.xml',
+        'views/helpdesk_timer_pause_request_views.xml',
+        'views/helpdesk_ticket_pause_request_views.xml',
         'views/repair_order_views.xml',  # ✅ Activado - Vistas de reparaciones
         'views/menuitems.xml',  # ✅ Cargar menús antes de debug_log_views
         'views/debug_log_views.xml',  # ✅ Herramienta de debug (después de menuitems para que el menú padre exista)
         'reports/stock_lot_life_sheet_report.xml',
         'reports/stock_lot_maintenance_report.xml',
         'reports/maintenance_order_report.xml',  # ✅ Reporte de orden completa
-        'reports/maintenance_dashboard_report.xml',  # ✅ Reporte PDF del dashboard
     ],
     'assets': {
         'web.assets_backend': [
             'mesa_ayuda_inventario/static/src/css/customer_inventory.css',
-            'mesa_ayuda_inventario/static/src/js/dashboard_charts.js',
             'mesa_ayuda_inventario/static/src/js/view_switcher.js',
         ],
     },

@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 
-from odoo import api, fields, models
+from odoo import api, fields, models, _
+from odoo.exceptions import ValidationError
 
 
 class HelpdeskTicketCategory(models.Model):
     """Categorías de ticket (jerárquicas), misma lógica que categorías de producto en inventario.
-    La categoría define prioridad, SLA y si se crea orden de servicio automáticamente al crear el ticket."""
+    La categoría define prioridad, SLA, control de tiempo registrado y si se crea orden de servicio."""
     _name = 'helpdesk.ticket.category'
     _description = 'Categoría de ticket'
     _rec_name = 'complete_name'  # En desplegables se ve la ruta completa (padre / hijo), no solo el nombre
@@ -68,6 +69,25 @@ class HelpdeskTicketCategory(models.Model):
         default=False,
         help='Si está activo, al crear un ticket con esta categoría se crea una orden de mantenimiento enlazada.'
     )
+
+    # ---------- Control del tiempo registrado (hojas de horas / temporizador) ----------
+    control_tiempo_registro = fields.Selection([
+        ('libre', 'Libre (el técnico puede editar el tiempo)'),
+        ('exigir_tiempo_real', 'Usar tiempo real del cronómetro'),
+        ('minimo_horas', 'Tiempo mínimo por registro'),
+    ], string='Control tiempo registrado', default='libre',
+       help='Define cómo se controla el tiempo en las hojas de horas de los tickets de esta categoría.')
+    tiempo_minimo_horas = fields.Float(
+        string='Mínimo horas por registro',
+        default=0,
+        help='Cuando "Control tiempo registrado" es "Tiempo mínimo por registro", cada línea de hoja de horas debe tener al menos estas horas (ej. 0.25 = 15 min).'
+    )
+
+    @api.constrains('control_tiempo_registro', 'tiempo_minimo_horas')
+    def _check_tiempo_minimo(self):
+        for cat in self:
+            if cat.control_tiempo_registro == 'minimo_horas' and (cat.tiempo_minimo_horas or 0) < 0:
+                raise ValidationError(_('El tiempo mínimo por registro no puede ser negativo.'))
 
     @api.depends('name', 'parent_id.complete_name')
     def _compute_complete_name(self):

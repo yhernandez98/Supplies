@@ -23,6 +23,13 @@
       <xpath expr="//form" position="attributes">
         <attribute name="class" add="o_stock_lot_pastel_form" separator=" "/>
       </xpath>
+      <!-- Clases para alinear cuadritos: columna izquierda y derecha mismo ancho de campos -->
+      <xpath expr="//group[@name='main_group']/group[1]" position="attributes">
+        <attribute name="class" add="o_stock_lot_left_col" separator=" "/>
+      </xpath>
+      <xpath expr="//group[@name='main_group']/group[2]" position="attributes">
+        <attribute name="class" add="o_stock_lot_right_col" separator=" "/>
+      </xpath>
 
       <!-- Cambiar etiqueta del campo name (solo Número de serie en header) -->
       <xpath expr="//sheet//field[@name='name'][not(ancestor::notebook)]" position="attributes">

@@ -41,6 +41,17 @@
                     <field name="location_site" placeholder="Sede o ubicación"/>
                     <field name="date_deadline_response" readonly="1"/>
                     <field name="date_deadline_resolution" readonly="1"/>
+                    <div class="alert alert-info" role="alert" style="margin-top: 8px;">
+                        Al cerrar el ticket puede enviarse una encuesta de satisfacción al cliente (app Rating / Valoración de Odoo).
+                    </div>
+                </xpath>
+                <xpath expr="//field[@name='stage_id']" position="after">
+                    <group string="Tiempo" name="custom_timer_group">
+                        <field name="custom_timer_display" readonly="1" nolabel="1" class="fw-bold"/>
+                        <field name="custom_timer_start" invisible="1"/>
+                        <field name="custom_timer_accumulated_hours" invisible="1"/>
+                        <field name="custom_timer_can_stop" invisible="1"/>
+                    </group>
                 </xpath>
                 <xpath expr="//field[@name='priority']" position="attributes">
                     <attribute name="readonly">1</attribute>
@@ -86,5 +97,8 @@
                 </p>
             </field>
         </record>
+        <!-- Políticas SLA y Base de conocimiento: no se definen aquí para evitar ParseError
+             cuando helpdesk_sla o knowledge no están instalados. Si los tienes instalados,
+             puedes acceder a Políticas SLA desde Helpdesk nativo y a Knowledge desde su app. -->
     </data>
 </odoo>
