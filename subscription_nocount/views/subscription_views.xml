@@ -71,7 +71,8 @@
                 <field name="product_id"/>
                 <field name="lot_id"/>
                 <field name="license_service_name"/>
-                <group expand="0" string="Agrupar por">
+                <separator string="Agrupar por"/>
+                <group>
                     <filter string="Por tipo de licencia" name="group_by_license_type" context="{'group_by': 'license_service_name'}"/>
                     <filter string="Licencias asignadas / No asignadas" name="group_assignment" context="{'group_by': 'assignment_group'}"/>
                 </group>
@@ -527,7 +528,8 @@
                 <field name="subscription_id"/>
                 <filter name="filter_active" string="En curso" domain="[('date_end', '=', False)]"/>
                 <filter name="filter_completed" string="Finalizadas" domain="[('date_end', '!=', False)]"/>
-                <group expand="0" string="Agrupar">
+                <separator string="Agrupar"/>
+                <group>
                     <filter name="group_by_month" string="Por mes" context="{'group_by': 'date_start:month'}"/>
                     <filter name="group_by_subscription" string="Por suscripción" context="{'group_by': 'subscription_id'}"/>
                 </group>
@@ -622,7 +624,8 @@
                 <field name="new_equipment_inventory_plate"/>
                 <field name="new_equipment_name"/>
                 <field name="change_date"/>
-                <group expand="0" string="Agrupar">
+                <separator string="Agrupar"/>
+                <group>
                     <filter name="group_by_subscription" string="Por Suscripción" context="{'group_by': 'subscription_id'}"/>
                     <filter name="group_by_user" string="Por Usuario" context="{'group_by': 'user_id'}"/>
                     <filter name="group_by_date" string="Por Fecha" context="{'group_by': 'change_date:day'}"/>
