@@ -229,7 +229,7 @@ class LicenseTemplate(models.Model):
                         'license_product_id': rec.product_id.id,
                     })
 
-    @api.depends('product_id', 'provider_stock_ids', 'provider_stock_ids.quantity', 'provider_stock_ids.is_unlimited')
+    @api.depends('product_id')
     def _compute_provider_stock_info(self):
         for rec in self:
             lines = rec.provider_stock_ids

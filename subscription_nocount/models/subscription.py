@@ -325,7 +325,7 @@ class SubscriptionSubscription(models.Model):
                     _logger.warning('⚠️ Error eliminando columna equipment_change_count: %s', str(e))
         return res
 
-    @api.depends('line_ids', 'line_ids.subtotal_monthly', 'location_id', 'grouped_product_ids', 'grouped_product_ids.cost', 'grouped_product_ids.cost_currency_id', 'grouped_product_ids.quantity')
+    @api.depends('line_ids', 'line_ids.subtotal_monthly', 'location_id')
     def _compute_monthly_amount(self):
         """Calcula el total mensual sumando solo los costos en COP (facturable en vivo).
         Se excluyen costos en USD (ej. licencias sin TRM del mes siguiente) para no sumar dólares como pesos."""
@@ -361,7 +361,7 @@ class SubscriptionSubscription(models.Model):
             val = rec.monthly_amount_usd or 0.0
             rec.monthly_amount_usd_display = '$ %s' % formatLang(self.env, val, digits=2)
 
-    @api.depends('grouped_product_ids', 'grouped_product_ids.product_id', 'grouped_product_ids.quantity', 'grouped_product_ids.proyectado')
+    @api.depends('id')
     def _compute_total_esperado_y_mes_anterior(self):
         """Total esperado = suma de la columna Proyectado de Productos Agrupados. Total mes anterior = del facturable guardado."""
         for subscription in self:
@@ -3909,7 +3909,23 @@ class SubscriptionProductGrouped(models.Model):
     # license_type_id se define en subscription_licenses (product.license.type existe ahí) para evitar carga circular.
     # Campo computed para mostrar el nombre correcto (producto o licencia)
     product_display_name = fields.Char(string='Producto', compute='_compute_product_display_name', store=False, help='Nombre del producto o licencia para mostrar')
-    
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        recs = super().create(vals_list)
+        subs = recs.mapped('subscription_id')
+        if subs:
+            subs.invalidate_recordset(['monthly_amount', 'monthly_amount_usd', 'total_esperado', 'total_mes_anterior'])
+        return recs
+
+    def write(self, vals):
+        res = super().write(vals)
+        if self:
+            subs = self.mapped('subscription_id')
+            if subs:
+                subs.invalidate_recordset(['monthly_amount', 'monthly_amount_usd', 'total_esperado', 'total_mes_anterior'])
+        return res
+
     @api.depends('product_id', 'is_license', 'license_name', 'license_category')
     def _compute_product_display_name(self):
         """Calcula el nombre a mostrar: producto si existe, o categoría de licencia si es licencia."""
