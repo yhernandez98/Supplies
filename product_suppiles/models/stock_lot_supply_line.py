@@ -288,7 +288,7 @@ class StockLotSupplyLine(models.Model):
 
     @api.model
     def create(self, vals):
-        ctx = self._context or {}
+        ctx = self.env.context or {}
         if not vals.get("lot_id") and ctx.get("default_lot_id"):
             vals["lot_id"] = ctx["default_lot_id"]
         if not vals.get("item_type") and ctx.get("default_item_type"):

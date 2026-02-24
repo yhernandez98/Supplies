@@ -168,7 +168,7 @@ class StockQuant(models.Model):
                 quant.related_products_ids = self.env['product.product']
     
     @api.model
-    def _search(self, domain, offset=0, limit=None, order=None, access_rights_uid=None, **kwargs):
+    def _search(self, domain, offset=0, limit=None, order=None, **kwargs):
         """Extender búsqueda para filtrar por producto principal o por características de componentes.
         Excluye automáticamente componentes, periféricos y complementos asociados a productos principales.
         IMPORTANTE: Solo aplica el filtro en la vista de inventario, NO durante validaciones."""

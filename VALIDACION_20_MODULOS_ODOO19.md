@@ -152,9 +152,13 @@ Resumen de la revisión de **todos** los módulos en la carpeta "Modulos Odoo 19
 | 4 | auto_link_components | Uso de getattr/or para move_ids en stock_picking |
 | 15 | stock_product_transfer | Uso de getattr/or para move_line_ids en wizard (varios puntos) |
 | 18 | stock_picking_type_custom | _get_moves_without_package() y uso en todo el módulo |
-| 3 | product_suppiles | stock_move_line y sale.py con getattr; vista con xpath move_ids |
-| 16 | crm_sales_supplies | purchase_alert._search con **kwargs |
+| 3 | product_suppiles | stock_move_line y sale.py con getattr; vista con xpath move_ids; **self._context → self.env.context** en lot_supply_editor_wizard.py y stock_lot_supply_line.py |
+| 16 | crm_sales_supplies | purchase_alert._search con **kwargs; stock_quant._search sin access_rights_uid; self._context → self.env.context en stock_quant.py |
 | 12 | custom_u | Descripción manifest "Odoo 18.0" → "Odoo 19.0" |
+| 20 | mesa_ayuda_inventario | **expression.AND → fields.Domain** en read_group y _search (customer_inventory_lot.py); eliminado import odoo.osv.expression |
+| 11 | inventory_dashboard_simple | display_location_id/display_contact_id: mismo store=True y compute_sudo=False; product.relation.search _order='id'; vista default_order="id" en product_relation_search_views.xml |
+| 2 | subscription_nocount | daily_rate store=True; campos computados consistentes |
+| 6 | subscription_licenses | license_display_name como related de license_display_name_stored; compute_sudo/store consistente |
 
 ---
 

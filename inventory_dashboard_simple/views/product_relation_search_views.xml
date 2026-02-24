@@ -61,7 +61,7 @@
                 <list string="Resultados de Búsqueda" 
                       decoration-info="element_type == 'main'" 
                       decoration-muted="not main_product_id"
-                      default_order="main_product_name, element_type"
+                      default_order="id"
                       create="0"
                       edit="0">
                     <field name="element_name" string="Elemento"/>
