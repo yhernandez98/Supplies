@@ -162,7 +162,8 @@
                 <filter string="36 Meses" name="plazo_36" domain="[('plazo_meses', '=', '36')]"/>
                 <filter string="48 Meses" name="plazo_48" domain="[('plazo_meses', '=', '48')]"/>
                 <filter string="60 Meses" name="plazo_60" domain="[('plazo_meses', '=', '60')]"/>
-                <group expand="0" string="Agrupar por">
+                <separator string="Agrupar por"/>
+                <group>
                     <filter string="Cliente" name="group_partner" context="{'group_by': 'partner_id'}"/>
                     <filter string="Plazo" name="group_plazo" context="{'group_by': 'plazo_meses'}"/>
                 </group>

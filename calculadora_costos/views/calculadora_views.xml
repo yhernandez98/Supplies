@@ -399,7 +399,8 @@
                 <separator/>
                 <filter string="Activos" name="filter_active" domain="[('active', '=', True)]"/>
                 <filter string="Inactivos" name="filter_inactive" domain="[('active', '=', False)]"/>
-                <group expand="0" string="Agrupar por">
+                <separator string="Agrupar por"/>
+                <group>
                     <filter string="Cliente" name="group_partner" context="{'group_by': 'partner_id'}"/>
                     <filter string="Plazo" name="group_plazo" context="{'group_by': 'plazo_meses'}"/>
                 </group>

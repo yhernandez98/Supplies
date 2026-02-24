@@ -129,7 +129,8 @@
                 <separator/>
                 <filter string="Con Asignaciones" name="with_assignments" domain="[('assignment_ids', '!=', False)]"/>
                 <filter string="Sin Asignaciones" name="no_assignments" domain="[('assignment_ids', '=', False)]"/>
-                <group expand="0" string="Agrupar por">
+                <separator string="Agrupar por"/>
+                <group>
                     <filter string="Categoría" name="group_category" context="{'group_by': 'name'}"/>
                     <filter string="Producto" name="group_product" context="{'group_by': 'product_id'}"/>
                     <filter string="Estado" name="group_active" context="{'group_by': 'active'}"/>
