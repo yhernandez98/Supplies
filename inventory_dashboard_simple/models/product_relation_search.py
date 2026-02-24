@@ -32,7 +32,8 @@ class ProductRelationSearch(models.TransientModel):
         string='Elemento',
         readonly=True,
         compute='_compute_element_info',
-        store=True
+        store=True,
+        compute_sudo=True,
     )
     element_product_id = fields.Many2one(
         'product.product',
@@ -51,7 +52,8 @@ class ProductRelationSearch(models.TransientModel):
         string='Tipo de Elemento',
         readonly=True,
         compute='_compute_element_info',
-        store=True
+        store=True,
+        compute_sudo=True,
     )
     element_plate = fields.Char(
         string='Placa del Elemento',
@@ -66,44 +68,50 @@ class ProductRelationSearch(models.TransientModel):
         store=False
     )
 
-    # Información del producto principal
+    # Información del producto principal (todos store=False y compute_sudo=True para consistencia Odoo 19)
     main_lot_id = fields.Many2one(
         'stock.lot',
         string='Lote/Serie Principal',
         readonly=True,
         compute='_compute_main_product_info',
-        store=False
+        store=False,
+        compute_sudo=True,
     )
     main_product_id = fields.Many2one(
         'product.product',
         string='Producto Principal',
         readonly=True,
         compute='_compute_main_product_info',
-        store=False
+        store=False,
+        compute_sudo=True,
     )
     main_product_name = fields.Char(
         string='Nombre Producto Principal',
         readonly=True,
         compute='_compute_main_product_info',
-        store=True
+        store=False,
+        compute_sudo=True,
     )
     main_plate = fields.Char(
         string='Placa Principal',
         readonly=True,
         compute='_compute_main_product_info',
-        store=False
+        store=False,
+        compute_sudo=True,
     )
     main_serial = fields.Char(
         string='Serial Principal',
         readonly=True,
         compute='_compute_main_product_info',
-        store=False
+        store=False,
+        compute_sudo=True,
     )
     relation_type = fields.Char(
         string='Tipo de Relación',
         readonly=True,
         compute='_compute_main_product_info',
-        store=True
+        store=False,
+        compute_sudo=True,
     )
 
     @api.depends('element_lot_id')
