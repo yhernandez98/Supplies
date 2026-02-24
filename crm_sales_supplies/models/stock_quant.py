@@ -181,7 +181,7 @@ class StockQuant(models.Model):
             is_inventory_view = False
             
             # Verificar el contexto - solo aplicar si está explícitamente marcado
-            if self._context.get('filter_associated_items', False):
+            if self.env.context.get('filter_associated_items', False):
                 # Verificar que NO es una validación o constraint
                 # Las validaciones normalmente buscan un lote específico
                 if domain:
@@ -375,9 +375,9 @@ class StockQuant(models.Model):
         # Verificar si hay contexto específico que requiera nuestra lógica personalizada
         try:
             has_custom_context = bool(
-                self._context.get('parent_product_id') or
-                self._context.get('supplies_filter') or
-                self._context.get('search_supplies_products')
+                self.env.context.get('parent_product_id') or
+                self.env.context.get('supplies_filter') or
+                self.env.context.get('search_supplies_products')
             )
         except Exception:
             # Si hay error al verificar el contexto, delegar a Odoo
@@ -389,8 +389,8 @@ class StockQuant(models.Model):
         has_custom_domain = False
         
         # Buscar en el contexto
-        if self._context.get('parent_product_id'):
-            parent_product_id = self._context.get('parent_product_id')
+        if self.env.context.get('parent_product_id'):
+            parent_product_id = self.env.context.get('parent_product_id')
             has_custom_domain = True
         
         # Buscar en el dominio cualquier término de búsqueda de texto

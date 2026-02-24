@@ -3781,7 +3781,7 @@ class SubscriptionSubscriptionUsage(models.Model):
     amount = fields.Monetary(string='Importe calculado', currency_field='currency_id', digits=(16, 0))
     price_monthly_snapshot = fields.Monetary(string='Precio mensual usado', currency_field='currency_id', digits=(16, 0))
     currency_id = fields.Many2one(related='line_id.currency_id', store=True, readonly=True)
-    daily_rate = fields.Monetary(string='Tarifa diaria', currency_field='currency_id', compute='_compute_usage_metrics', store=False, digits=(16, 0))
+    daily_rate = fields.Monetary(string='Tarifa diaria', currency_field='currency_id', compute='_compute_usage_metrics', store=True, digits=(16, 0))
     component_item_type = fields.Selection(
         related='line_id.component_item_type',
         string='Tipo componente',

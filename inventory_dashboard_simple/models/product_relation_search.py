@@ -6,7 +6,8 @@ from odoo.exceptions import UserError
 class ProductRelationSearch(models.TransientModel):
     _name = 'product.relation.search'
     _description = 'Búsqueda de Relaciones de Productos'
-    _order = 'main_product_name, element_type, element_name'
+    # Solo campos almacenados en BD (main_product_name es compute store=False; orden por id para transient)
+    _order = 'id'
 
     # Campos de búsqueda
     search_plate = fields.Char(
