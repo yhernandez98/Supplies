@@ -150,7 +150,8 @@
                     <filter string="Productos Principales" name="principal_only" domain="[('is_principal', '=', True)]"/>
                     <filter string="Con Placa Inventario" name="with_inventory_plate" domain="[('inventory_plate', '!=', False)]"/>
                     <filter string="Con Placa Seguridad" name="with_security_plate" domain="[('security_plate', '!=', False)]"/>
-                    <group expand="0" string="Agrupar por">
+                    <separator string="Agrupar por"/>
+                    <group>
                         <filter string="Cliente" name="group_customer" context="{'group_by': 'customer_id'}"/>
                         <filter string="Servicio" name="group_subscription_service" context="{'group_by': 'subscription_service_product_id'}"/>
                         <filter string="Código de Facturación" name="group_billing_code" context="{'group_by': 'billing_code'}"/>
