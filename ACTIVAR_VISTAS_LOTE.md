@@ -45,7 +45,7 @@ Si después de actualizar sigue sin verse nada:
 
 1. Revisa el **log del servidor** (terminal o logs de Odoo.sh) al abrir un lote/serial.
 2. Busca líneas con "Error", "View", "inherit" o "xpath". Un error en una vista heredada puede hacer que no se aplique.
-3. Si tienes **stock_account** instalado, la vista `stock_account.view_production_lot_form_stock_account` debe existir; si no, puede fallar la herencia de product_suppiles que la usa.
+3. **product_suppiles** ya no depende de la vista de stock_account: la herencia que podía fallar se eliminó para que la vista `production.lot.form.supplies.inherit` cargue siempre.
 
 ### 5. Caché del navegador
 

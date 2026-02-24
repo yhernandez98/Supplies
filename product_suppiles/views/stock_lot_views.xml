@@ -1,18 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-  <!-- Heredar de stock_account: hacer visible company_currency_id para que columnas derecho alineen -->
-  <record id="view_production_lot_form_inherit_stock_account_currency" model="ir.ui.view">
-    <field name="name">stock.lot.form.stock_account.currency.visible</field>
-    <field name="model">stock.lot</field>
-    <field name="inherit_id" ref="stock_account.view_production_lot_form_stock_account"/>
-    <field name="arch" type="xml">
-      <xpath expr="//field[@name='company_currency_id']" position="attributes">
-        <attribute name="invisible">0</attribute>
-      </xpath>
-    </field>
-  </record>
-
+  <!-- Vista principal: hereda de stock (no de stock_account) para que cargue aunque stock_account no exista o cambie -->
   <record id="view_production_lot_form_inherit_supplies" model="ir.ui.view">
     <field name="name">production.lot.form.supplies.inherit</field>
     <field name="model">stock.lot</field>
@@ -22,6 +11,10 @@
       <!-- Clase para estilos pastel + reflejo (igual que suscripciones) -->
       <xpath expr="//form" position="attributes">
         <attribute name="class" add="o_stock_lot_pastel_form" separator=" "/>
+      </xpath>
+      <!-- Si existe company_currency_id (stock_account), hacerlo visible para alinear columnas -->
+      <xpath expr="//field[@name='company_currency_id']" position="attributes">
+        <attribute name="invisible">0</attribute>
       </xpath>
       <!-- Clases para alinear: Odoo 19 mantiene main_group; fallback por si cambia -->
       <xpath expr="//group[@name='main_group']/group[1]" position="attributes">

@@ -11,7 +11,7 @@
     'website': 'https://www.supplies.com',
     'license': 'LGPL-3',
     'category': 'Inventory/Inventory',
-    'version': '19.0.0.0.1',
+    'version': '19.0.0.0.2',
     'installable': True,
     'depends': [
         'purchase',

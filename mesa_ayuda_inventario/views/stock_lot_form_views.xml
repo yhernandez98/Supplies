@@ -14,10 +14,6 @@
                 <xpath expr="//group[.//field[@name='quantity'] or .//field[@name='product_qty']]" position="attributes">
                     <attribute name="class" add="o_lot_right_col" separator=" "/>
                 </xpath>
-                <!-- Hacer visible company_currency_id cuando existe (stock_account); si no existe el nodo, este xpath se ignora -->
-                <xpath expr="//field[@name='company_currency_id']" position="attributes">
-                    <attribute name="invisible">0</attribute>
-                </xpath>
                 <!-- Imagen + botón Hoja de Vida: Odoo 19 tiene group name="inventory_group"; insertar antes del primer hijo -->
                 <xpath expr="//group[@name='inventory_group']/*[1]" position="before">
                     <div class="o_lot_photo_block o_lot_photo_below_costo" style="margin-bottom: 12px;">
