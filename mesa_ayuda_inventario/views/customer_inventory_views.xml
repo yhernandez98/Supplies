@@ -524,8 +524,7 @@
         <record id="action_customer_inventory_kanban_only" model="ir.actions.act_window">
             <field name="name">Inventario Kanban</field>
             <field name="res_model">stock.lot</field>
-            <!-- Permitir a todos los usuarios internos (no solo Administración/Ajustes) -->
-            <field name="groups_id" eval="[(6, 0, [ref('base.group_user')])]"/>
+            <!-- Odoo 19: groups_id ya no existe en ir.actions.act_window; visibilidad por menú/grupos del menú -->
             <!-- IMPORTANTE: Incluimos 'list' para que aparezca el switcher nativo,
                  pero el contexto fuerza que Kanban NO tenga agrupación -->
             <field name="view_mode">kanban,list,form</field>
@@ -551,8 +550,6 @@
         <record id="action_customer_inventory_list_only" model="ir.actions.act_window">
             <field name="name">Inventario Lista</field>
             <field name="res_model">stock.lot</field>
-            <!-- Permitir a todos los usuarios internos (no solo Administración/Ajustes) -->
-            <field name="groups_id" eval="[(6, 0, [ref('base.group_user')])]"/>
             <field name="view_mode">list,form</field>
             <field name="view_id" ref="view_stock_lot_tree_hierarchical"/>
             <field name="search_view_id" ref="view_customer_inventory_lot_search"/>
@@ -678,7 +675,6 @@ else:
         <record id="action_customer_inventory_detailed" model="ir.actions.act_window">
             <field name="name">Cliente Supplies</field>
             <field name="res_model">res.partner</field>
-            <field name="groups_id" eval="[(6, 0, [ref('base.group_user')])]"/>
             <field name="view_mode">kanban,list</field>
             <field name="view_id" ref="view_customer_kanban_detailed"/>
             <field name="view_ids" eval="[(5, 0, 0),
