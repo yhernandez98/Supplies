@@ -1,5 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <!-- Campo license_type_id en subscription.product.grouped (comodel product.license.type está en este módulo) -->
+    <record id="view_subscription_product_grouped_form_license_type" model="ir.ui.view">
+        <field name="name">subscription.product.grouped.form.license.type</field>
+        <field name="model">subscription.product.grouped</field>
+        <field name="inherit_id" ref="subscription_nocount.view_subscription_product_grouped_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='license_name']" position="after">
+                <field name="license_type_id" options="{'no_open': True}"/>
+            </xpath>
+        </field>
+    </record>
+
     <!-- Vista eliminada: La pestaña "Licencias" ya no es necesaria -->
     <!-- Las licencias ahora se muestran automáticamente en la pestaña "Facturable" -->
     <!-- basándose en license.assignment (partner_id y location_id) -->

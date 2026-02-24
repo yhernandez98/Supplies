@@ -219,7 +219,7 @@
                         </group>
                         <group>
                             <field name="license_name"/>
-                            <field name="license_type_id" options="{'no_open': True}"/>
+                            <!-- license_type_id se muestra en subscription_licenses (vista heredada) -->
                             <field name="license_category"/>
                             <field name="business_line_id" options="{'no_open': True}"/>
                             <field name="business_line_name" column_invisible="1"/>
