@@ -18,9 +18,8 @@
         'stock',
         'stock_account',
         'purchase_stock',
-        'sale_stock', 
+        'sale_stock',
         'product',
-        'uom',
         'mail',
     ],
     'data': [
