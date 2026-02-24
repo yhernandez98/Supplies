@@ -14,15 +14,12 @@
     'website': 'https://www.supplies.com',
     'license': 'LGPL-3',
     'category': 'Inventory',
-    'version': '18.0.1.0.0',
+    'version': '19.0.1.0.0',
     'depends': [
         'base',
         'stock',
         'product',
-<<<<<<< HEAD
-=======
         'product_suppiles',
->>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
         'report_xlsx',
     ],
     'data': [

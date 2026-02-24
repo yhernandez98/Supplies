@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 /* Estilos para el botón "Crear Almacén" */
 button[name="create_partner_warehouse"] {
     background-color: #0052B6 !important;
@@ -19,25 +18,3 @@ button[name="create_partner_warehouse"]:focus {
     box-shadow: 0 0 0 0.2rem rgba(0, 82, 182, 0.25) !important;
 }
 
-=======
-/* Estilos para el botón "Crear Almacén" */
-button[name="create_partner_warehouse"] {
-    background-color: #0052B6 !important;
-    border-color: #0052B6 !important;
-    color: white !important;
-}
-
-button[name="create_partner_warehouse"]:hover {
-    background-color: #004399 !important;
-    border-color: #004399 !important;
-    color: white !important;
-}
-
-button[name="create_partner_warehouse"]:focus {
-    background-color: #0052B6 !important;
-    border-color: #0052B6 !important;
-    color: white !important;
-    box-shadow: 0 0 0 0.2rem rgba(0, 82, 182, 0.25) !important;
-}
-
->>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2

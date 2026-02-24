@@ -9,22 +9,16 @@
                 <list string="Tickets">
                     <field name="name"/>
                     <field name="partner_id"/>
-<<<<<<< HEAD
-=======
                     <field name="category_id" optional="show"/>
                     <field name="maintenance_order_id" optional="hide" string="Orden servicio"/>
                     <field name="urgency" optional="hide"/>
                     <field name="impact" optional="hide"/>
->>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
                     <field name="stage_id"/>
                     <field name="user_id"/>
                     <field name="priority"/>
                 </list>
             </field>
         </record>
-<<<<<<< HEAD
-        
-=======
 
         <record id="view_helpdesk_ticket_form_inherit_category" model="ir.ui.view">
             <field name="name">helpdesk.ticket.form.inherit.category</field>
@@ -83,16 +77,12 @@
             </field>
         </record>
 
->>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
         <!-- Acción para ver tickets -->
         <record id="action_mesa_ayuda_ticket" model="ir.actions.act_window">
             <field name="name">Tickets</field>
             <field name="res_model">helpdesk.ticket</field>
             <field name="view_mode">list,form</field>
             <field name="view_id" ref="view_helpdesk_ticket_list"/>
-<<<<<<< HEAD
-        </record>
-=======
             <field name="search_view_id" ref="view_helpdesk_ticket_search_mesa"/>
         </record>
 
@@ -110,6 +100,5 @@
         <!-- Políticas SLA y Base de conocimiento: no se definen aquí para evitar ParseError
              cuando helpdesk_sla o knowledge no están instalados. Si los tienes instalados,
              puedes acceder a Políticas SLA desde Helpdesk nativo y a Knowledge desde su app. -->
->>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
     </data>
 </odoo>

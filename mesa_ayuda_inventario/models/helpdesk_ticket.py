@@ -2,20 +2,11 @@
 
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError
-<<<<<<< HEAD
-=======
 from datetime import datetime, timedelta
->>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
 import logging
 
 _logger = logging.getLogger(__name__)
 
-<<<<<<< HEAD
-
-class HelpdeskTicket(models.Model):
-    """Extensión del módulo nativo helpdesk.ticket para agregar campos de mantenimiento."""
-    _inherit = 'helpdesk.ticket'  # ✅ Extendiendo el modelo nativo
-=======
 # Nombres de etapa que se consideran "En espera" (pausa = solicitud de aprobación)
 STAGE_NAMES_EN_ESPERA = ('en espera', 'espera', 'on hold', 'pausa', 'waiting')
 # Solo en "En progreso" se puede iniciar o continuar el cronómetro
@@ -51,7 +42,6 @@ class HelpdeskTicket(models.Model):
         for ticket in self:
             if not ticket.user_id:
                 raise UserError(_('El ticket debe tener un responsable asignado (Asignada a).'))
->>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
     
     # Campos adicionales para integración con mantenimientos
     lot_id = fields.Many2one(
@@ -66,11 +56,7 @@ class HelpdeskTicket(models.Model):
         'maintenance.order',
         string='Orden de Mantenimiento',
         tracking=True,
-<<<<<<< HEAD
-        help='Orden de mantenimiento relacionada'
-=======
         help='Orden de mantenimiento relacionada (creada automáticamente por categoría o manualmente)'
->>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
     )
     
     maintenance_id = fields.Many2one(
@@ -80,8 +66,6 @@ class HelpdeskTicket(models.Model):
         help='Mantenimiento relacionado'
     )
     
-<<<<<<< HEAD
-=======
     category_id = fields.Many2one(
         'helpdesk.ticket.category',
         string='Categoría',
@@ -112,7 +96,6 @@ class HelpdeskTicket(models.Model):
         help='Cuando está activo, Prioridad, Urgencia, Impacto y fechas SLA son solo lectura (definidos por la categoría).'
     )
 
->>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
     # Categoría personalizada para distinguir tickets de mantenimiento
     maintenance_category = fields.Selection([
         ('maintenance', 'Mantenimiento'),
@@ -121,17 +104,6 @@ class HelpdeskTicket(models.Model):
         ('change', 'Cambio de Equipo'),
         ('other', 'Otro'),
     ], string='Categoría Mantenimiento', tracking=True)
-<<<<<<< HEAD
-    
-    def action_convert_to_maintenance_order(self):
-        """Convertir ticket en orden de mantenimiento."""
-        self.ensure_one()
-        # Crear orden de mantenimiento directamente
-        maintenance_order = self.env['maintenance.order'].create({
-            'partner_id': self.partner_id.id if self.partner_id else False,
-            'description': (self.name or '') + '\n\n' + (self.description or ''),
-        })
-=======
 
     # ---------- Cronómetro propio (no usa el timer de Odoo). Pausa = estado "En espera" ----------
     custom_timer_start = fields.Datetime(
@@ -432,7 +404,6 @@ class HelpdeskTicket(models.Model):
         if self.user_id:
             order_vals['technician_ids'] = [(6, 0, [self.user_id.id])]
         maintenance_order = self.env['maintenance.order'].create(order_vals)
->>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
         self.maintenance_order_id = maintenance_order.id
         self.message_post(body=_('Se creó una orden de mantenimiento: %s') % maintenance_order.name)
         return {
@@ -443,8 +414,6 @@ class HelpdeskTicket(models.Model):
             'view_mode': 'form',
             'target': 'current',
         }
-<<<<<<< HEAD
-=======
 
     def action_escalate_ticket(self):
         """Abrir wizard para escalar el ticket a otro equipo o responsable (ej. Nivel 2)."""
@@ -457,4 +426,3 @@ class HelpdeskTicket(models.Model):
             'target': 'new',
             'context': {'active_id': self.id, 'default_ticket_id': self.id},
         }
->>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2

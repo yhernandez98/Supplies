@@ -1,14 +1,9 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-<<<<<<< HEAD
-access_subscription_subscription_manager,subscription.subscription.manager,model_subscription_subscription,sales_team.group_sale_manager,1,1,1,1
-access_subscription_line_manager,subscription.subscription.line.manager,model_subscription_subscription_line,sales_team.group_sale_manager,1,1,1,1
-=======
 access_subscription_subscription_user,subscription.subscription.user.read,model_subscription_subscription,base.group_user,1,0,0,0
 access_subscription_subscription_manager,subscription.subscription.manager,model_subscription_subscription,sales_team.group_sale_manager,1,1,1,1
 access_subscription_line_user,subscription.subscription.line.user.read,model_subscription_subscription_line,base.group_user,1,0,0,0
 access_subscription_line_manager,subscription.subscription.line.manager,model_subscription_subscription_line,sales_team.group_sale_manager,1,1,1,1
 access_subscription_usage_user,subscription.subscription.usage.user.read,model_subscription_subscription_usage,base.group_user,1,0,0,0
->>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
 access_subscription_usage_manager,subscription.subscription.usage.manager,model_subscription_subscription_usage,sales_team.group_sale_manager,1,1,1,1
 access_subscription_usage_proforma_wizard_user,subscription.usage.proforma.wizard.user,model_subscription_usage_proforma_wizard,base.group_user,1,1,1,1
 access_subscription_usage_proforma_wizard_line_user,subscription.usage.proforma.wizard.line.user,model_subscription_usage_proforma_wizard_line,base.group_user,1,1,1,1

@@ -10,41 +10,6 @@
                   web_icon="mesa_ayuda_inventario,static/description/icon.png"/>
         
         <!-- ========================================== -->
-<<<<<<< HEAD
-        <!-- SECCIÓN 1: DASHBOARD Y MÉTRICAS -->
-        <!-- ========================================== -->
-        <menuitem id="menu_dashboard_root"
-                  name="📊 Dashboard"
-                  parent="menu_helpdesk_inventory_root"
-                  sequence="10"/>
-        
-        <menuitem id="menu_maintenance_dashboard"
-                  name="Dashboard Principal"
-                  parent="menu_dashboard_root"
-                  action="action_maintenance_dashboard"
-                  sequence="10"/>
-        
-        <menuitem id="menu_dashboard_visits_metrics"
-                  name="Métricas de Visitas"
-                  parent="menu_dashboard_root"
-                  action="action_maintenance_dashboard_visits"
-                  sequence="20"/>
-        
-        <menuitem id="menu_dashboard_maintenance_metrics"
-                  name="Métricas de Mantenimientos"
-                  parent="menu_dashboard_root"
-                  action="action_maintenance_dashboard_maintenance"
-                  sequence="30"/>
-        
-        <menuitem id="menu_dashboard_technicians_metrics"
-                  name="Estadísticas de Técnicos"
-                  parent="menu_dashboard_root"
-                  action="action_maintenance_dashboard_technicians"
-                  sequence="40"/>
-        
-        <!-- ========================================== -->
-=======
->>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
         <!-- SECCIÓN: ALERTAS -->
         <!-- ========================================== -->
         <menuitem id="menu_alertas_root"
@@ -85,16 +50,6 @@
                   action="action_customer_inventory_detailed"
                   sequence="15"/>
         
-<<<<<<< HEAD
-        <!-- Menú para Clientes Propios -->
-        <menuitem id="menu_customer_own_inventory"
-                  name="Clientes Propios"
-                  parent="menu_customer_inventory"
-                  action="action_customer_own_inventory_clients"
-                  sequence="20"/>
-        
-=======
->>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
         <menuitem id="menu_lot_maintenance"
                   name="Lotes y Mantenimientos"
                   parent="menu_inventory_root"
@@ -141,22 +96,16 @@
                   parent="menu_support_root"
                   action="action_mesa_ayuda_ticket"
                   sequence="10"/>
-<<<<<<< HEAD
-        
-=======
         <menuitem id="menu_helpdesk_ticket_category"
                   name="Categorías"
                   parent="menu_support_root"
                   action="action_helpdesk_ticket_category"
                   sequence="5"/>
->>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
         <menuitem id="menu_repair_order"
                   name="Reparaciones"
                   parent="menu_support_root"
                   action="action_repair_order"
                   sequence="20"/>
-<<<<<<< HEAD
-=======
 
         <!-- ========================================== -->
         <!-- CONFIGURACIÓN -->
@@ -187,7 +136,6 @@
                   action="action_helpdesk_ticket_template"
                   sequence="20"/>
         <!-- Menú Base de conocimiento omitido: requiere app Knowledge (modelo knowledge.article) -->
->>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
         
     </data>
 </odoo>

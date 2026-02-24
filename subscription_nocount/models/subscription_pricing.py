@@ -3,11 +3,6 @@ from odoo import api, fields, models, _
 
 
 class SaleSubscriptionPricing(models.Model):
-<<<<<<< HEAD
-    """Extiende sale.subscription.pricing para agregar campo de moneda."""
-    _inherit = 'sale.subscription.pricing'
-    
-=======
     """Extiende sale.subscription.pricing para agregar campo de moneda y cantidad por cliente."""
     _inherit = 'sale.subscription.pricing'
     
@@ -18,7 +13,6 @@ class SaleSubscriptionPricing(models.Model):
         help='Cantidad total de este producto/servicio en suscripciones de clientes que usan esta lista de precios (entero).'
     )
     
->>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
     currency_id = fields.Many2one(
         'res.currency',
         string='Moneda',
@@ -28,8 +22,6 @@ class SaleSubscriptionPricing(models.Model):
         readonly=False
     )
     
-<<<<<<< HEAD
-=======
     def _compute_client_quantity(self):
         """Cantidad por cliente que usa esta pricelist.
         - Productos bienes (type product/consu): cantidad desde stock del cliente (lotes/seriales).
@@ -178,19 +170,14 @@ class SaleSubscriptionPricing(models.Model):
         ])
         return int(sum(grouped.mapped('quantity')))
     
->>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
     @api.model
     def _get_default_currency(self):
         """Obtiene la moneda por defecto desde la pricelist o la compañía."""
         # Si estamos en un contexto de creación desde pricelist
         if self.env.context.get('default_pricelist_id'):
-<<<<<<< HEAD
-            pricelist = self.env['product.pricelist'].browse(self.env.context['default_pricelist_id'])
-=======
             pricelist = self.env['product.pricelist'].browse(
                 self.env.context['default_pricelist_id']
             )
->>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
             if pricelist and pricelist.currency_id:
                 return pricelist.currency_id.id
         # Si ya tenemos pricelist_id asignado

@@ -1,13 +1,5 @@
-<<<<<<< HEAD
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_res_partner_warehouse_auto_create,res.partner.warehouse.auto.create,base.model_res_partner,base.group_user,1,1,1,1
 access_stock_warehouse_warehouse_auto_create,stock.warehouse.warehouse.auto.create,stock.model_stock_warehouse,stock.group_stock_manager,1,1,1,1
 access_cleanup_routes_wizard,cleanup.routes.wizard,warehouse_auto_create.model_cleanup_routes_wizard,stock.group_stock_manager,1,1,1,1
 
-=======
-id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_res_partner_warehouse_auto_create,res.partner.warehouse.auto.create,base.model_res_partner,base.group_user,1,1,1,1
-access_stock_warehouse_warehouse_auto_create,stock.warehouse.warehouse.auto.create,stock.model_stock_warehouse,stock.group_stock_manager,1,1,1,1
-access_cleanup_routes_wizard,cleanup.routes.wizard,warehouse_auto_create.model_cleanup_routes_wizard,stock.group_stock_manager,1,1,1,1
-
->>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2

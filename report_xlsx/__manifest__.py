@@ -6,7 +6,7 @@
     "author": "Supplies De Colombia SAS",
     "website": "https://github.com/OCA/reporting-engine",
     "category": "Reporting",
-    "version": "18.0.1.0.1",
+    "version": "19.0.1.0.1",
     "development_status": "Mature",
     "license": "AGPL-3",
     "external_dependencies": {"python": ["xlsxwriter", "xlrd"]},

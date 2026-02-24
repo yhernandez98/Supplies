@@ -640,17 +640,6 @@ class MaintenanceOrder(models.Model):
                 equipment_type = _('Empresa')
                 
                 equipment_rows.append(f'<tr><td>{serial}</td><td>{plate}</td><td>{product}</td><td>{equipment_type}</td></tr>')
-<<<<<<< HEAD
-            elif maintenance.own_inventory_id:
-                # Equipo propio del cliente (customer.own.inventory)
-                serial = maintenance.own_inventory_id.serial_number or _('N/A')
-                product = maintenance.own_inventory_id.product_id.name if maintenance.own_inventory_id.product_id else _('N/A')
-                plate = _('N/A')
-                equipment_type = _('Propio del Cliente')
-                
-                equipment_rows.append(f'<tr><td>{serial}</td><td>{plate}</td><td>{product}</td><td>{equipment_type}</td></tr>')
-=======
->>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
         
         if equipment_rows:
             equipment_section = f'''
@@ -876,14 +865,6 @@ class MaintenanceOrder(models.Model):
                     plate = maintenance.inventory_plate or _('Sin placa')
                     serial = maintenance.lot_id.name or _('N/A')
                     product = maintenance.lot_id.product_id.name if maintenance.lot_id.product_id else _('N/A')
-<<<<<<< HEAD
-                elif maintenance.own_inventory_id:
-                    # Equipo propio del cliente
-                    plate = _('N/A')
-                    serial = maintenance.own_inventory_id.serial_number or _('N/A')
-                    product = maintenance.own_inventory_id.product_id.name if maintenance.own_inventory_id.product_id else _('N/A')
-=======
->>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
                 else:
                     plate = _('N/A')
                     serial = _('N/A')

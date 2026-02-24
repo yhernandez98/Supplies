@@ -15,8 +15,6 @@
             <field name="fold">False</field>
             <field name="closed">False</field>
         </record>
-<<<<<<< HEAD
-=======
 
         <record id="helpdesk_stage_en_espera" model="helpdesk.ticket.stage">
             <field name="name">En espera</field>
@@ -24,7 +22,6 @@
             <field name="fold">False</field>
             <field name="closed">False</field>
         </record>
->>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
         
         <record id="helpdesk_stage_resolved" model="helpdesk.ticket.stage">
             <field name="name">Resuelto</field>

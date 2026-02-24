@@ -15,24 +15,6 @@
                 </list>
             </field>
         </record>
-<<<<<<< HEAD
-        
-        <!-- Vista list simple para customer.own.inventory en el wizard de agregar equipos -->
-        <record id="view_customer_own_inventory_tree_simple_wizard" model="ir.ui.view">
-            <field name="name">customer.own.inventory.tree.simple.wizard</field>
-            <field name="model">customer.own.inventory</field>
-            <field name="type">list</field>
-            <field name="arch" type="xml">
-                <list string="Equipos Propios del Cliente">
-                    <field name="product_id" string="Producto"/>
-                    <field name="serial_number" string="Número de Serie"/>
-                    <field name="model" string="Modelo"/>
-                    <field name="brand" string="Marca"/>
-                </list>
-            </field>
-        </record>
-=======
->>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
     </data>
 </odoo>
 

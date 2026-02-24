@@ -9,12 +9,7 @@
             <field name="arch" type="xml">
                 <list string="Mantenimientos" decoration-muted="status == 'cancelled'" decoration-success="status == 'completed'" decoration-info="status == 'draft'">
                     <field name="maintenance_order_id" string="Orden"/>
-<<<<<<< HEAD
-                    <field name="lot_id" string="Número de Serie (Empresa)"/>
-                    <field name="own_inventory_id" string="Equipo Propio"/>
-=======
                     <field name="lot_id" string="Número de Serie"/>
->>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
                     <field name="inventory_plate" string="Placa Inventario" optional="hide"/>
                     <field name="maintenance_date" string="Fecha"/>
                     <field name="maintenance_type" string="Tipo"/>
@@ -65,16 +60,7 @@
                         <group>
                             <group>
                                 <field name="maintenance_order_id" options="{'no_create': True}" readonly="is_signed"/>
-<<<<<<< HEAD
-                                <field name="lot_id" options="{'no_open': True}" readonly="is_signed" 
-                                       invisible="own_inventory_id" 
-                                       required="not own_inventory_id"/>
-                                <field name="own_inventory_id" options="{'no_open': True}" readonly="is_signed" 
-                                       invisible="lot_id" 
-                                       required="not lot_id"/>
-=======
                                 <field name="lot_id" options="{'no_open': True}" readonly="is_signed" required="1"/>
->>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
                                 <field name="inventory_plate" readonly="1"/>
                                 <field name="product_id" readonly="1"/>
                                 <field name="customer_id" readonly="1"/>

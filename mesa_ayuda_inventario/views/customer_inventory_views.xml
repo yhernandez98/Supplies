@@ -152,11 +152,8 @@
                     <filter string="Con Placa Seguridad" name="with_security_plate" domain="[('security_plate', '!=', False)]"/>
                     <group expand="0" string="Agrupar por">
                         <filter string="Cliente" name="group_customer" context="{'group_by': 'customer_id'}"/>
-<<<<<<< HEAD
-=======
                         <filter string="Servicio" name="group_subscription_service" context="{'group_by': 'subscription_service_product_id'}"/>
                         <filter string="Código de Facturación" name="group_billing_code" context="{'group_by': 'billing_code'}"/>
->>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
                         <filter string="Categoría de Activo" name="group_category" context="{'group_by': 'product_asset_category_id'}"/>
                         <filter string="Clase de Activo" name="group_class" context="{'group_by': 'product_asset_class_id'}"/>
                     </group>
@@ -224,17 +221,8 @@
                                         <i class="fa fa-cubes" style="margin-right: 4px; color: #64748b;"/>
                                         <strong><field name="product_count"/> Productos</strong>
                                     </div>
-<<<<<<< HEAD
-                                    <div style="flex-shrink: 0; display: flex; flex-direction: column; gap: 6px;">
-                                        <button type="object" name="action_view_customer_inventory_kanban" string="Ver Inventario" class="btn-inventory-corporate" style="width: 100% !important; padding: 8px !important; font-size: 12px !important; font-weight: 600 !important; border-radius: 6px !important; background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%) !important; background-color: #0ea5e9 !important; color: white !important; cursor: pointer !important; border: 1px solid #7dd3fc !important; transition: none !important; box-shadow: 0 2px 6px rgba(14, 165, 233, 0.25) !important; outline: none !important;"/>
-                                        <button type="object" name="action_generate_all_life_sheets" string="📥 Hojas de Vida PDF" style="width: 100% !important; padding: 8px !important; font-size: 11px !important; font-weight: 600 !important; border-radius: 6px !important; background: linear-gradient(135deg, #0d9488 0%, #2dd4bf 100%) !important; background-color: #0d9488 !important; color: white !important; cursor: pointer !important; border: 1px solid #5eead4 !important; transition: none !important; box-shadow: 0 2px 6px rgba(13, 148, 136, 0.2) !important; outline: none !important;">
-                                            <i class="fa fa-file-pdf" style="margin-right: 4px;"/>
-                                            Descargar PDF
-                                        </button>
-=======
                                     <div style="flex-shrink: 0;">
                                         <button type="object" name="action_view_customer_inventory_kanban" string="Ver Inventario" class="btn-inventory-corporate" style="width: 100% !important; padding: 8px !important; font-size: 12px !important; font-weight: 600 !important; border-radius: 6px !important; background: linear-gradient(135deg, #8b9aad 0%, #a8b8c8 100%) !important; background-color: #8b9aad !important; color: white !important; cursor: pointer !important; border: 1px solid #c5d1de !important; transition: none !important; box-shadow: 0 2px 6px rgba(139, 154, 173, 0.25) !important; outline: none !important;"/>
->>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
                                     </div>
                                 </div>
                             </div>
@@ -318,15 +306,9 @@
                                     <t t-name="kanban-box">
                                         <div class="oe_kanban_card oe_kanban_global_click" style="border: 1px solid #d0d7de; border-radius: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.12); margin-bottom: 12px; background: #ffffff; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.18)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 6px rgba(0,0,0,0.12)';">
                                             <!-- Header corporativo con color azul cielo elegante -->
-<<<<<<< HEAD
-                                            <div style="background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%); border-bottom: 2px solid #dbeafe; padding: 14px; border-radius: 20px 20px 0 0;">
-                                                <div style="display: flex; align-items: center; gap: 12px;">
-                                                    <div t-if="record.lot_image.raw_value or record.product_id.raw_value" style="width: 55px; height: 55px; border-radius: 8px; overflow: hidden; background: rgba(255,255,255,0.95); border: 2px solid rgba(255,255,255,0.3); padding: 4px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-=======
                                             <div style="background: linear-gradient(160deg, #f0f9ff 0%, #e0f2fe 100%); border-bottom: 2px solid #bae6fd; padding: 14px; border-radius: 20px 20px 0 0;">
                                                 <div style="display: flex; align-items: center; gap: 12px;">
                                                     <div t-if="record.lot_image.raw_value or record.product_id.raw_value" style="width: 55px; height: 55px; border-radius: 8px; overflow: hidden; background: rgba(255,255,255,0.95); border: 2px solid rgba(203,213,225,0.8); padding: 4px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.06);">
->>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
                                                         <t t-if="record.lot_image.raw_value">
                                                             <img t-att-src="kanban_image('stock.lot', 'lot_image', record.id.raw_value)" 
                                                                 style="max-width: 100%; max-height: 100%; object-fit: contain;"/>
@@ -338,17 +320,10 @@
                                                         </t>
                                                     </div>
                                                     <div style="flex: 1;">
-<<<<<<< HEAD
-                                                        <div style="font-size: 17px; font-weight: 700; color: #ffffff; margin-bottom: 3px; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">
-                                                            <field name="name"/>
-                                                        </div>
-                                                        <div style="font-size: 13px; color: rgba(255,255,255,0.95); font-weight: 500;">
-=======
                                                         <div style="font-size: 17px; font-weight: 700; color: #0f172a; margin-bottom: 3px;">
                                                             <field name="name"/>
                                                         </div>
                                                         <div style="font-size: 13px; color: #334155; font-weight: 500;">
->>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
                                                             <field name="product_id"/>
                                                         </div>
                                                     </div>
@@ -434,17 +409,10 @@
                         <t t-name="kanban-box">
                             <div class="oe_kanban_card oe_kanban_global_click" style="border: 1px solid #d0d7de; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 12px; background: #ffffff; overflow: hidden;">
                                 <!-- Header azul con serial y producto -->
-<<<<<<< HEAD
-                                <div style="background: #2563eb; padding: 12px; border-radius: 8px 8px 0 0;">
-                                    <div style="display: flex; align-items: center; gap: 10px;">
-                                        <!-- Icono/Imagen del producto -->
-                                        <div t-if="record.lot_image.raw_value or record.product_id.raw_value" style="width: 50px; height: 50px; border-radius: 6px; overflow: hidden; background: rgba(255,255,255,0.95); border: 2px solid rgba(255,255,255,0.3); padding: 3px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-=======
                                 <div style="background: linear-gradient(160deg, #f0f9ff 0%, #e0f2fe 100%); border-bottom: 2px solid #bae6fd; padding: 12px; border-radius: 8px 8px 0 0;">
                                     <div style="display: flex; align-items: center; gap: 10px;">
                                         <!-- Icono/Imagen del producto -->
                                         <div t-if="record.lot_image.raw_value or record.product_id.raw_value" style="width: 50px; height: 50px; border-radius: 6px; overflow: hidden; background: rgba(255,255,255,0.95); border: 2px solid rgba(203,213,225,0.8); padding: 3px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
->>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
                                             <t t-if="record.lot_image.raw_value">
                                                 <img t-att-src="kanban_image('stock.lot', 'lot_image', record.id.raw_value)" 
                                                     style="max-width: 100%; max-height: 100%; object-fit: contain;"/>
@@ -457,17 +425,10 @@
                                         </div>
                                         <!-- Serial y Producto -->
                                         <div style="flex: 1; min-width: 0;">
-<<<<<<< HEAD
-                                            <div style="font-size: 16px; font-weight: 700; color: #ffffff; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                                                <field name="name"/>
-                                            </div>
-                                            <div style="font-size: 12px; color: rgba(255,255,255,0.9); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-=======
                                             <div style="font-size: 16px; font-weight: 700; color: #0f172a; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                                                 <field name="name"/>
                                             </div>
                                             <div style="font-size: 12px; color: #334155; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
->>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
                                                 <field name="product_id"/>
                                             </div>
                                         </div>

@@ -1,15 +1,6 @@
 /* Vista formulario stock.lot (serial/lote): mismo efecto pastel azul + reflejo que en Suscripciones
    Aplica a botones, pestañas y subpestañas (Descripción, Elementos Asociados, Elementos Sin Costo, etc.) */
 
-<<<<<<< HEAD
-/* ---- Variables de color pastel azul ---- */
-.o_form_view:has(form.o_stock_lot_pastel_form),
-.o_stock_lot_pastel_form {
-    --pastel-blue-50: #e8f4f8;
-    --pastel-blue-100: #c5e3ee;
-    --pastel-blue-200: #a8d4e6;
-    --pastel-blue-300: #7ec8e3;
-=======
 /* ---- Variables de color pastel suave (unificado, sin verde fuerte) ---- */
 .o_form_view:has(form.o_stock_lot_pastel_form),
 .o_stock_lot_pastel_form {
@@ -17,14 +8,10 @@
     --pastel-blue-100: #d9ecf3;
     --pastel-blue-200: #b8dceb;
     --pastel-blue-300: #8ec8df;
->>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
     --pastel-blue-400: #5eb5d9;
     --pastel-blue-500: #4aa3c9;
     --pastel-blue-600: #3a8fb5;
     --pastel-reflejo: rgba(255, 255, 255, 0.5);
-<<<<<<< HEAD
-    --pastel-sombra: rgba(74, 163, 201, 0.25);
-=======
     --pastel-sombra: rgba(74, 163, 201, 0.15);
 }
 
@@ -303,7 +290,6 @@
 .o_form_view:has(form.o_stock_lot_pastel_form) .o_form_sheet .o_group:nth-of-type(even),
 .o_stock_lot_pastel_form .o_form_sheet .o_group:nth-of-type(even) {
     border-left: 4px solid var(--pastel-blue-200) !important;
->>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
 }
 
 /* ---- Botones (Generar Hoja de Vida, Ver Historial, etc.): secundarios y primarios ---- */
@@ -544,8 +530,6 @@
 }
 
 /* ---- Enlaces / botones en listas dentro del formulario ---- */
-<<<<<<< HEAD
-=======
 /* ---- Tablas tipo licencias: thead verde, filas alternadas, sticky ---- */
 .o_form_view:has(form.o_stock_lot_pastel_form) .o_form_sheet .o_list_view,
 .o_stock_lot_pastel_form .o_form_sheet .o_list_view {
@@ -599,7 +583,6 @@
     background: #fff !important;
 }
 
->>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
 .o_form_view:has(form.o_stock_lot_pastel_form) .o_list_view .btn-link,
 .o_form_view:has(form.o_stock_lot_pastel_form) .o_list_view a.btn-link,
 .o_stock_lot_pastel_form .o_list_view .btn-link,
