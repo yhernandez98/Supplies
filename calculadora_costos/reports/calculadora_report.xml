@@ -19,10 +19,11 @@
                 <t t-foreach="docs" t-as="calc">
                     <t t-call="web.external_layout">
                         <div class="page" style="padding: 30px; font-family: 'Arial', sans-serif; color: #2c3e50;">
-                            <!-- Encabezado -->
+                            <!-- Encabezado: título según tipo de operación -->
                             <div style="text-align: center; margin-bottom: 30px; border-bottom: 3px solid #4a90e2; padding-bottom: 20px;">
                                 <h1 style="color: #4a90e2; margin: 0; font-size: 24px; font-weight: bold;">
-                                    COTIZACIÓN DE RENTING
+                                    <t t-if="calc.tipo_operacion == 'venta'">COTIZACIÓN DE VENTA</t>
+                                    <t t-if="calc.tipo_operacion == 'renting'">COTIZACIÓN DE RENTING</t>
                                 </h1>
                                 <p style="color: #6c757d; margin: 10px 0 0 0; font-size: 16px; font-weight: bold;">
                                     <t t-esc="calc.name or 'Sin Nombre'"/>
@@ -32,16 +33,35 @@
                                 </p>
                             </div>
 
-                            <!-- Información básica -->
-                            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 25px;">
-                                <p style="margin: 0; font-size: 14px;">
-                                    <strong>Total equipos:</strong> <t t-esc="len(calc.get_report_equipos())"/> — <strong>Valor total (COP):</strong> $<t t-esc="'{:,.0f}'.format(calc.costo_total_cop)"/>
-                                </p>
-                            </div>
+                            <!-- VENTA: solo valor del producto con utilidad por equipo y total -->
+                            <t t-if="calc.tipo_operacion == 'venta'">
+                                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 25px;">
+                                    <p style="margin: 0 0 15px 0; font-size: 14px;"><strong>Valor con utilidad (COP) por ítem:</strong></p>
+                                    <table style="width: 100%; border-collapse: collapse; background: white;">
+                                        <thead><tr style="background: #4a90e2; color: white;"><th style="padding: 10px; text-align: left;">Equipo / Ítem</th><th style="padding: 10px; text-align: right;">Valor con utilidad (COP)</th></tr></thead>
+                                        <tbody>
+                                            <t t-foreach="calc.get_report_equipos()" t-as="bloque">
+                                                <tr>
+                                                    <td style="padding: 8px; border-bottom: 1px solid #dee2e6;"><t t-esc="bloque['nombre']"/></td>
+                                                    <td style="padding: 8px; border-bottom: 1px solid #dee2e6; text-align: right; font-weight: bold;">$<t t-esc="'{:,.0f}'.format(bloque['linea'].costo_total_cop if bloque['linea']._name == 'calculadora.costos.line' else calc.costo_total_cop)"/></td>
+                                                </tr>
+                                            </t>
+                                        </tbody>
+                                        <tfoot><tr style="background: #e9ecef; font-weight: bold;"><td style="padding: 10px;">Total</td><td style="padding: 10px; text-align: right;">$<t t-esc="'{:,.0f}'.format(calc.costo_total_cop)"/></td></tr></tfoot>
+                                    </table>
+                                </div>
+                            </t>
 
-                            <t t-set="plazos_lista" t-value="[12, 24, 36, 48, 60]"/>
-                            <!-- Por cada equipo: 4 escenarios -->
-                            <t t-foreach="calc.get_report_equipos()" t-as="bloque">
+                            <!-- RENTING: información básica y 4 escenarios por equipo -->
+                            <t t-if="calc.tipo_operacion == 'renting'">
+                                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 25px;">
+                                    <p style="margin: 0; font-size: 14px;">
+                                        <strong>Total equipos:</strong> <t t-esc="len(calc.get_report_equipos())"/> — <strong>Valor total (COP):</strong> $<t t-esc="'{:,.0f}'.format(calc.costo_total_cop)"/>
+                                    </p>
+                                </div>
+
+                                <t t-set="plazos_lista" t-value="[12, 24, 36, 48, 60]"/>
+                                <t t-foreach="calc.get_report_equipos()" t-as="bloque">
                                 <div style="margin-bottom: 30px; page-break-inside: avoid;">
                                     <h2 style="color: #4a90e2; margin: 0 0 15px 0; font-size: 18px; border-bottom: 2px solid #4a90e2; padding-bottom: 8px;">
                                         <t t-esc="bloque['nombre']"/>
@@ -105,6 +125,7 @@
                                     </div>
                                 </div>
                             </t>
+                            </t>
 
                             <!-- Pie -->
                             <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid #dee2e6; text-align: center; color: #6c757d; font-size: 11px;">
@@ -137,7 +158,8 @@
                             <!-- Encabezado -->
                             <div style="text-align: center; margin-bottom: 30px; border-bottom: 3px solid #4a90e2; padding-bottom: 20px;">
                                 <h1 style="color: #4a90e2; margin: 0; font-size: 28px; font-weight: bold;">
-                                    REPORTE DE CALCULADORA DE COSTOS
+                                    <t t-if="calc.tipo_operacion == 'venta'">REPORTE DE COTIZACIÓN DE VENTA</t>
+                                    <t t-if="calc.tipo_operacion == 'renting'">REPORTE DE CALCULADORA DE COSTOS</t>
                                 </h1>
                                 <p style="color: #6c757d; margin: 10px 0 0 0; font-size: 16px; font-weight: bold;">
                                     <t t-esc="calc.name or 'Sin Nombre'"/>
@@ -150,16 +172,13 @@
                                     📋 INFORMACIÓN GENERAL
                                 </h2>
                                 <table style="width: 100%; border-collapse: collapse;">
-                                    <tr t-if="calc.partner_id">
-                                        <td style="width: 35%; padding: 8px; font-weight: bold; color: #495057;">Cliente:</td>
-                                        <td style="padding: 8px; color: #212529; font-size: 16px;"><strong><t t-esc="calc.partner_id.display_name"/></strong></td>
-                                    </tr>
                                     <tr>
-                                        <td style="padding: 8px; font-weight: bold; color: #495057;">Tipo de Cálculo:</td>
-                                        <td style="padding: 8px; color: #212529;">
-                                            <t t-if="calc.tipo_calculo == 'equipo'">Equipo</t>
-                                            <t t-if="calc.tipo_calculo == 'renting'">Renting</t>
-                                        </td>
+                                        <td style="width: 35%; padding: 8px; font-weight: bold; color: #495057;">Tipo de operación:</td>
+                                        <td style="padding: 8px; color: #212529;"><t t-if="calc.tipo_operacion == 'venta'">Venta</t><t t-if="calc.tipo_operacion == 'renting'">Renting</t></td>
+                                    </tr>
+                                    <tr t-if="calc.partner_id">
+                                        <td style="padding: 8px; font-weight: bold; color: #495057;">Cliente:</td>
+                                        <td style="padding: 8px; color: #212529; font-size: 16px;"><strong><t t-esc="calc.partner_id.display_name"/></strong></td>
                                     </tr>
                                     <tr>
                                         <td style="padding: 8px; font-weight: bold; color: #495057;">Cotización en:</td>
@@ -169,12 +188,12 @@
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td style="padding: 8px; font-weight: bold; color: #495057;">Valor del Equipo:</td>
+                                        <td style="padding: 8px; font-weight: bold; color: #495057;">Valor total con utilidad (COP):</td>
                                         <td style="padding: 8px; color: #212529; font-size: 16px; font-weight: bold;">
                                             $<t t-esc="'{:,.0f}'.format(calc.costo_total_cop)"/>
                                         </td>
                                     </tr>
-                                    <tr t-if="(calc.moneda_cotizacion == 'usd' and calc.valor_garantia_usd > 0) or (calc.moneda_cotizacion == 'cop' and calc.valor_garantia_cop > 0)">
+                                    <tr t-if="calc.tipo_operacion == 'renting' and ((calc.moneda_cotizacion == 'usd' and calc.valor_garantia_usd > 0) or (calc.moneda_cotizacion == 'cop' and calc.valor_garantia_cop > 0))">
                                         <td style="padding: 8px; font-weight: bold; color: #495057;">Garantía Extendida / Seguro:</td>
                                         <td style="padding: 8px; color: #212529; font-size: 16px;">
                                             <t t-if="calc.moneda_cotizacion == 'usd'" t-set="garantia_cop" t-value="calc.valor_garantia_usd * calc.trm * (1 + calc.porcentaje_utilidad / 100.0)"/>
@@ -182,7 +201,7 @@
                                             $<t t-esc="'{:,.0f}'.format(garantia_cop)"/>
                                         </td>
                                     </tr>
-                                    <tr t-if="calc.costo_servicios_completos > 0">
+                                    <tr t-if="calc.tipo_operacion == 'renting' and calc.costo_servicios_completos > 0">
                                         <td style="padding: 8px; font-weight: bold; color: #495057;">Servicio Técnico:</td>
                                         <td style="padding: 8px; color: #212529; font-size: 16px;">
                                             $<t t-esc="'{:,.0f}'.format(calc.servicio_con_margen_cop)"/>
@@ -191,8 +210,27 @@
                                 </table>
                             </div>
 
-                            <!-- Escenarios -->
-                            <!-- Por cada equipo: 4 escenarios (Reporte completo) -->
+                            <!-- VENTA: tabla valor con utilidad por equipo -->
+                            <t t-if="calc.tipo_operacion == 'venta'">
+                                <div style="margin-bottom: 25px;">
+                                    <h2 style="color: #4a90e2; margin: 0 0 15px 0; font-size: 18px; border-bottom: 2px solid #4a90e2; padding-bottom: 8px;">Valor con utilidad por ítem (COP)</h2>
+                                    <table style="width: 100%; border-collapse: collapse; background: white;">
+                                        <thead><tr style="background: #4a90e2; color: white;"><th style="padding: 10px; text-align: left;">Equipo / Ítem</th><th style="padding: 10px; text-align: right;">Valor con utilidad (COP)</th></tr></thead>
+                                        <tbody>
+                                            <t t-foreach="calc.get_report_equipos()" t-as="bloque">
+                                                <tr>
+                                                    <td style="padding: 8px; border-bottom: 1px solid #dee2e6;"><t t-esc="bloque['nombre']"/></td>
+                                                    <td style="padding: 8px; border-bottom: 1px solid #dee2e6; text-align: right; font-weight: bold;">$<t t-esc="'{:,.0f}'.format(bloque['linea'].costo_total_cop if bloque['linea']._name == 'calculadora.costos.line' else calc.costo_total_cop)"/></td>
+                                                </tr>
+                                            </t>
+                                        </tbody>
+                                        <tfoot><tr style="background: #e9ecef; font-weight: bold;"><td style="padding: 10px;">Total</td><td style="padding: 10px; text-align: right;">$<t t-esc="'{:,.0f}'.format(calc.costo_total_cop)"/></td></tr></tfoot>
+                                    </table>
+                                </div>
+                            </t>
+
+                            <!-- RENTING: Escenarios por cada equipo (4 escenarios) -->
+                            <t t-if="calc.tipo_operacion == 'renting'">
                             <t t-foreach="calc.get_report_equipos()" t-as="bloque">
                                 <t t-set="escenarios" t-value="bloque['escenarios']"/>
                                 <div style="margin-bottom: 35px;">
@@ -490,10 +528,12 @@
                                     </p>
                                 </div>
                             </div>
-                            
+                            </t>
+
                             <!-- Pie de Página -->
                             <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #dee2e6; text-align: center; color: #6c757d; font-size: 12px;">
-                                <p>Este reporte muestra diferentes escenarios de financiamiento para comparación.</p>
+                                <p t-if="calc.tipo_operacion == 'renting'">Este reporte muestra diferentes escenarios de financiamiento para comparación.</p>
+                                <p t-if="calc.tipo_operacion == 'venta'">Cotización de venta: valores con utilidad aplicada (COP).</p>
                                 <p style="margin-top: 5px; font-size: 10px;">Los valores mostrados son estimaciones basadas en los parámetros ingresados.</p>
                             </div>
                         </div>
