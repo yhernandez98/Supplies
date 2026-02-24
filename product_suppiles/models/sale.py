@@ -222,6 +222,7 @@ class SaleOrderLine(models.Model):
     )
     product_tmpl_id_rel = fields.Many2one(
         "product.template",
+        string="Plantilla producto (renting)",
         related="product_id.product_tmpl_id",
         store=False,
     )

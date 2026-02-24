@@ -8,20 +8,20 @@ class StockQuant(models.Model):
 
     parent_product_id = fields.Many2one(
         'product.product',
-        string='Producto Principal',
+        string='Producto Principal (filtro)',
         help='Filtrar componentes, periféricos y complementos relacionados a este producto principal',
         store=False,
     )
     
     inventory_plate = fields.Char(
-        string='Placa de Inventario',
+        string='Placa de Inventario (quant)',
         related='lot_id.inventory_plate',
         readonly=True,
         store=False,
     )
     
     related_products_display = fields.Char(
-        string='Hardware Asociado',
+        string='Hardware Asociado (resumen)',
         compute='_compute_related_products_display',
         store=False,
         help='Componentes, periféricos y complementos asociados a este producto principal'
@@ -29,7 +29,7 @@ class StockQuant(models.Model):
     
     related_products_ids = fields.Many2many(
         'product.product',
-        string='Hardware Asociado',
+        string='Hardware Asociado (lista)',
         compute='_compute_related_products_display',
         store=False,
     )
