@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_parametros_financieros_form" model="ir.ui.view">
+        <field name="name">calculadora.parametros.financieros.form</field>
+        <field name="model">calculadora.parametros.financieros</field>
+        <field name="arch" type="xml">
+            <form string="Parámetros Financieros">
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                    </group>
+                    <notebook>
+                        <page string="Parámetros de Moneda">
+                            <group>
+                                <group>
+                                    <field name="trm_actual" options="{'digits': [16, 0]}"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Parámetros de Utilidad">
+                            <group>
+                                <group>
+                                    <field name="porcentaje_utilidad_default" options="{'digits': [16, 0]}"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Parámetros de Interés">
+                            <group>
+                                <group>
+                                    <field name="tasa_nominal_default" options="{'digits': [16, 0]}"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Parámetros de Servicios">
+                            <group>
+                                <group>
+                                    <field name="margen_servicio_default" options="{'digits': [16, 0]}"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Parámetros de Trabajo">
+                            <group>
+                                <group>
+                                    <field name="horas_trabajo_mes_default"/>
+                                    <field name="dias_trabajo_mes_default"/>
+                                    <field name="horas_trabajo_dia_default"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Parámetros de Depreciación">
+                            <group>
+                                <group>
+                                    <field name="anos_depreciacion_vehiculo"/>
+                                </group>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_parametros_financieros_list" model="ir.ui.view">
+        <field name="name">calculadora.parametros.financieros.list</field>
+        <field name="model">calculadora.parametros.financieros</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="trm_actual" options="{'digits': [16, 0]}"/>
+                <field name="tasa_nominal_default" options="{'digits': [16, 0]}"/>
+                <field name="porcentaje_utilidad_default" options="{'digits': [16, 0]}"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_parametros_financieros" model="ir.actions.act_window">
+        <field name="name">Parámetros Financieros</field>
+        <field name="res_model">calculadora.parametros.financieros</field>
+        <field name="view_mode">list,form</field>
+        <field name="target">current</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Configura los parámetros financieros globales
+            </p>
+            <p>
+                Define los valores por defecto para TRM, tasas de interés, 
+                factores de utilidad y otros parámetros utilizados en los cálculos.
+            </p>
+        </field>
+    </record>
+</odoo>
