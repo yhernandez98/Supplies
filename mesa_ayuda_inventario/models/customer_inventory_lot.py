@@ -2,7 +2,6 @@
 
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError
-from odoo.osv import expression
 import logging
 
 _logger = logging.getLogger(__name__)
@@ -88,7 +87,7 @@ class StockLotCustomerInventory(models.Model):
         allowed_ids = self.env.context.get('customer_inventory_allowed_lot_ids')
         if allowed_ids is not None and not self.env.context.get('skip_customer_inventory_scope'):
             scope = [('id', 'in', allowed_ids)] if allowed_ids else [('id', '=', False)]
-            domain = expression.AND([domain or [], scope])
+            domain = (fields.Domain(domain or []) & fields.Domain(scope))
         if isinstance(groupby, str):
             groupby = [g.strip() for g in groupby.split(',') if g.strip()]
         elif isinstance(groupby, (list, tuple)):
@@ -1065,7 +1064,7 @@ class StockLotCustomerInventory(models.Model):
         allowed_ids = self.env.context.get('customer_inventory_allowed_lot_ids')
         if allowed_ids is not None and not self.env.context.get('skip_customer_inventory_scope'):
             scope = [('id', 'in', allowed_ids)] if allowed_ids else [('id', '=', False)]
-            domain = expression.AND([domain or [], scope])
+            domain = (fields.Domain(domain or []) & fields.Domain(scope))
 
         # Evitar procesar cuando se está en contexto de propagación para evitar recursión
         # También evitar si el dominio es muy simple (búsquedas internas del sistema)
