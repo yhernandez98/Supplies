@@ -361,7 +361,7 @@ class SubscriptionSubscription(models.Model):
             val = rec.monthly_amount_usd or 0.0
             rec.monthly_amount_usd_display = '$ %s' % formatLang(self.env, val, digits=2)
 
-    @api.depends('id')
+    @api.depends()
     def _compute_total_esperado_y_mes_anterior(self):
         """Total esperado = suma de la columna Proyectado de Productos Agrupados. Total mes anterior = del facturable guardado."""
         for subscription in self:
