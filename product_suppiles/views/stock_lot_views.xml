@@ -59,8 +59,8 @@
         <field name="reining_plazo_custom_months" string="Meses (personalizado)" invisible="reining_plazo != 'custom'" optional="show"/>
       </xpath>
 
-      <!-- Odoo 19: vista base no tiene notebook; insertarlo después del grupo Description para que las pestañas se vean -->
-      <xpath expr="//group[@name='description']" position="after">
+      <!-- Odoo 19: vista base no tiene notebook; insertarlo después del último group del sheet (funciona con o sin group description) -->
+      <xpath expr="//sheet/group[last()]" position="after">
         <notebook/>
       </xpath>
       <xpath expr="//sheet/notebook" position="inside">
