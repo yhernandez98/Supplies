@@ -4,7 +4,7 @@
     'version': '19.0.3.1',
     'summary': 'Módulo unificado completo con gestión de contactos, productos, productos serializados y reportes',
     'description': """
-        Módulo unificado para Odoo 18.0 que combina todas las funcionalidades personalizadas:
+        Módulo unificado para Odoo 19.0 que combina todas las funcionalidades personalizadas:
         
         ========================================
         FUNCIONALIDADES DE CONTACTOS
@@ -33,7 +33,7 @@
         ========================================
         CARACTERÍSTICAS TÉCNICAS
         ========================================
-        - Compatibilidad completa con Odoo 18.0
+        - Compatibilidad completa con Odoo 19.0
         - Sincronización automática entre campos nativos y personalizados
         - Interfaz unificada y consistente
         - Validaciones robustas para integridad de datos

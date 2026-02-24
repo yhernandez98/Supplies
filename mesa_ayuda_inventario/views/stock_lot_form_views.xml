@@ -7,16 +7,16 @@
             <field name="model">stock.lot</field>
             <field name="inherit_id" ref="stock.view_production_lot_form"/>
             <field name="arch" type="xml">
-                <!-- Clase en columna derecha para estilos -->
-                <xpath expr="//group[@name='main_group']/group[2]" position="attributes">
+                <!-- Columna derecha (inventario): Odoo 19 puede no tener main_group; usar grupo que contiene quantity -->
+                <xpath expr="//group[.//field[@name='quantity']]" position="attributes">
                     <attribute name="class" add="o_lot_right_col" separator=" "/>
                 </xpath>
-                <!-- Hacer visible company_currency_id: cuando está invisible rompe el layout de Valor total, Costo -->
+                <!-- Hacer visible company_currency_id cuando existe (stock_account) -->
                 <xpath expr="//field[@name='company_currency_id']" position="attributes">
                     <attribute name="invisible">0</attribute>
                 </xpath>
-                <!-- Imagen + botón arriba de Valor total, Costo promedio, Costo (columna derecha área blanca) -->
-                <xpath expr="//group[@name='main_group']/group[2]/*[1]" position="before">
+                <!-- Imagen + botón Hoja de Vida al inicio de la columna de inventario -->
+                <xpath expr="//group[.//field[@name='quantity']]/*[1]" position="before">
                     <div class="o_lot_photo_block o_lot_photo_below_costo">
                         <field name="lot_image" widget="image" 
                                options="{'preview_image': 'lot_image', 'size': [140, 140]}"/>
@@ -30,7 +30,7 @@
                     </div>
                 </xpath>
                 
-                <!-- Agregar pestañas de mantenimientos e historial (nivel principal) -->
+                <!-- Pestañas: en Odoo 18 suele existir //sheet/notebook; en 19 a veces no -->
                 <xpath expr="//sheet/notebook" position="inside">
                     <page string="Mantenimientos y Revisiones" name="maintenance_history">
                         <field name="maintenance_ids" nolabel="1" context="{'default_lot_id': id}"/>
@@ -50,6 +50,38 @@
                             <p>Para ver el historial completo de cambios de componentes, haz clic en el botón arriba.</p>
                         </div>
                     </page>
+                </xpath>
+            </field>
+        </record>
+
+        <!-- Odoo 19: si la vista base no tiene notebook, añadirlo con las mismas pestañas -->
+        <record id="view_production_lot_form_inherit_maintenance_no_notebook" model="ir.ui.view">
+            <field name="name">production.lot.form.maintenance.notebook.fallback</field>
+            <field name="model">stock.lot</field>
+            <field name="inherit_id" ref="stock.view_production_lot_form"/>
+            <field name="priority">20</field>
+            <field name="arch" type="xml">
+                <xpath expr="//sheet[not(notebook)]" position="inside">
+                    <notebook>
+                        <page string="Mantenimientos y Revisiones" name="maintenance_history">
+                            <field name="maintenance_ids" nolabel="1" context="{'default_lot_id': id}"/>
+                        </page>
+                        <page string="Historial de Componentes" name="component_change_history">
+                            <div class="alert alert-info" role="alert" style="margin-bottom: 15px; padding: 10px 15px; background-color: #d1ecf1; border: 1px solid #0c5460; border-radius: 4px;">
+                                <strong>📋 Historial de Cambios de Componentes:</strong> Esta pestaña muestra todos los cambios de componentes registrados en los mantenimientos de este equipo, incluyendo componentes retirados e instalados.
+                            </div>
+                            <group>
+                                <button name="action_view_component_changes" 
+                                        type="object" 
+                                        string="Ver Historial Completo de Cambios de Componentes" 
+                                        class="btn-primary"
+                                        icon="fa-list"/>
+                            </group>
+                            <div style="margin-top: 20px;">
+                                <p>Para ver el historial completo de cambios de componentes, haz clic en el botón arriba.</p>
+                            </div>
+                        </page>
+                    </notebook>
                 </xpath>
             </field>
         </record>
