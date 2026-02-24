@@ -59,6 +59,7 @@ class LicenseTemplate(models.Model):
         string='Cantidad por proveedor',
         compute='_compute_provider_stock_ids',
         inverse='_inverse_provider_stock_ids',
+        search='_search_provider_stock_ids',
         help='Proveedores y cantidades (o Ilimitado) para esta licencia.',
     )
     provider_stock_count = fields.Integer(
@@ -190,6 +191,24 @@ class LicenseTemplate(models.Model):
     def _compute_assignment_count(self):
         for rec in self:
             rec.assignment_count = len(rec.assignment_ids)
+
+    def _search_provider_stock_ids(self, operator, value):
+        """Permite que Odoo determine qué plantillas recomputar cuando se modifica license.provider.stock (Odoo 19)."""
+        if operator in ('in', '='):
+            ids = value if isinstance(value, (list, tuple)) else ([value] if value else [])
+            if not ids:
+                return [('id', 'in', [])]
+            stocks = self.env['license.provider.stock'].browse(ids)
+            template_ids = stocks.mapped('license_template_id').ids
+            return [('id', 'in', template_ids)]
+        if operator in ('not in', '!='):
+            ids = value if isinstance(value, (list, tuple)) else ([value] if value else [])
+            if not ids:
+                return []
+            stocks = self.env['license.provider.stock'].browse(ids)
+            template_ids = stocks.mapped('license_template_id').ids
+            return [('id', 'not in', template_ids)]
+        return []
 
     @api.depends('product_id')
     def _compute_provider_stock_ids(self):

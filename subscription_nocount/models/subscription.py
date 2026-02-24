@@ -147,6 +147,7 @@ class SubscriptionSubscription(models.Model):
         'subscription_id',
         string='Productos Agrupados',
         compute='_compute_grouped_products',
+        search='_search_grouped_product_ids',
         store=False,
         help='Productos agrupados por cantidad de seriales.',
     )
@@ -477,6 +478,24 @@ class SubscriptionSubscription(models.Model):
             subscription.other_quant_ids = quants.filtered(
                 lambda q: q.product_id.product_tmpl_id.classification not in ('component', 'peripheral', 'complement') if hasattr(q.product_id.product_tmpl_id, 'classification') else True
             ) if quants else Quant.browse([])
+
+    def _search_grouped_product_ids(self, operator, value):
+        """Permite que Odoo determine qué suscripciones recomputar cuando se modifica subscription.product.grouped (Odoo 19)."""
+        if operator in ('in', '='):
+            ids = value if isinstance(value, (list, tuple)) else ([value] if value else [])
+            if not ids:
+                return [('id', 'in', [])]
+            grouped = self.env['subscription.product.grouped'].browse(ids)
+            subscription_ids = grouped.mapped('subscription_id').ids
+            return [('id', 'in', subscription_ids)]
+        if operator in ('not in', '!='):
+            ids = value if isinstance(value, (list, tuple)) else ([value] if value else [])
+            if not ids:
+                return []
+            grouped = self.env['subscription.product.grouped'].browse(ids)
+            subscription_ids = grouped.mapped('subscription_id').ids
+            return [('id', 'not in', subscription_ids)]
+        return []
 
     @api.depends('location_id', 'other_quant_ids', 'usage_ids', 'usage_ids.lot_id', 'reference_year', 'reference_month',
                  'partner_id', 'partner_id.property_product_pricelist', 'plan_id')
