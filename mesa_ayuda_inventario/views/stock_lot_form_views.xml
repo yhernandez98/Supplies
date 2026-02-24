@@ -7,16 +7,16 @@
             <field name="model">stock.lot</field>
             <field name="inherit_id" ref="stock.view_production_lot_form"/>
             <field name="arch" type="xml">
-                <!-- Columna derecha (inventario): Odoo 19 puede no tener main_group; usar grupo que contiene quantity -->
-                <xpath expr="//group[.//field[@name='quantity']]" position="attributes">
+                <!-- Columna derecha (inventario): Odoo 18 quantity; Odoo 19 product_qty; main_group puede no existir -->
+                <xpath expr="//group[.//field[@name='quantity'] or .//field[@name='product_qty']]" position="attributes">
                     <attribute name="class" add="o_lot_right_col" separator=" "/>
                 </xpath>
                 <!-- Hacer visible company_currency_id cuando existe (stock_account) -->
                 <xpath expr="//field[@name='company_currency_id']" position="attributes">
                     <attribute name="invisible">0</attribute>
                 </xpath>
-                <!-- Imagen + botón Hoja de Vida al inicio de la columna de inventario -->
-                <xpath expr="//group[.//field[@name='quantity']]/*[1]" position="before">
+                <!-- Imagen + botón Hoja de Vida al inicio de la columna de inventario (Odoo 18: quantity; Odoo 19: product_qty) -->
+                <xpath expr="//group[.//field[@name='quantity'] or .//field[@name='product_qty']]/*[1]" position="before">
                     <div class="o_lot_photo_block o_lot_photo_below_costo">
                         <field name="lot_image" widget="image" 
                                options="{'preview_image': 'lot_image', 'size': [140, 140]}"/>

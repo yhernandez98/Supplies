@@ -169,3 +169,28 @@ por
 
 **Fecha de validación:** 2025  
 **Módulos revisados:** 20/20
+
+---
+
+## Comparación completa v18 vs v19 (todos los módulos)
+
+Se comparó la estructura de los 20 módulos entre:
+- **v18:** `C:\Users\yhernandez.SUPPLIESDC\Music\Modulos Odoo`
+- **v19:** `C:\Users\yhernandez.SUPPLIESDC\Music\Modulos Odoo 19`
+
+### Resultado de la comparación
+- **Manifests (data, depends):** Iguales en los 20 módulos salvo diferencias ya aplicadas (uom en product_suppiles, subscription_pricing/pricelist en subscription_nocount, subscription_product_grouped en subscription_licenses).
+- **models/__init__.py:** Misma lista de modelos en todos; v19 tiene subscription_pricing comentado en subscription_nocount y añade subscription_product_grouped en subscription_licenses.
+- **Vistas y funcionalidad:** Las mismas vistas y datos existen en v19. Las diferencias son de **compatibilidad con la estructura de vistas de Odoo 19**, no de contenido faltante.
+
+### Ajustes aplicados para igualar funcionalidad en v19
+
+1. **mesa_ayuda_inventario (formulario de lote)**  
+   - Imagen del lote y botón "Generar Hoja de Vida" no se mostraban porque en Odoo 19 la vista base usa `product_qty` en lugar de `quantity`.  
+   - **Cambio:** xpath actualizados a `//group[.//field[@name='quantity'] or .//field[@name='product_qty']]` para la columna derecha y el bloque de imagen/botón.
+
+2. **product_suppiles (formulario de lote)**  
+   - En Odoo 19 la vista estándar de lote no incluye `<notebook>`, por lo que el xpath `//sheet/notebook` no aplicaba y no se veían las pestañas Información, Elementos Asociados, etc.  
+   - **Cambio:** Añadido xpath `//sheet[not(notebook)]` que inserta `<notebook/>` cuando no existe, para que el siguiente xpath `//sheet/notebook` inserte las pestañas de product_suppiles. Añadido también xpath de respaldo para `//group[@name='inventory_group']` (clase columna derecha).
+
+Con estos cambios, el formulario de número de serie/lote en v19 debe mostrar las mismas funcionalidades y campos que en v18: imagen del lote, botón "Generar Hoja de Vida", pestañas de product_suppiles (Información, Elementos Asociados, etc.) y pestañas de mesa_ayuda (Mantenimientos y Revisiones, Historial de Componentes).

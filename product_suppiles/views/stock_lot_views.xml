@@ -23,11 +23,14 @@
       <xpath expr="//form" position="attributes">
         <attribute name="class" add="o_stock_lot_pastel_form" separator=" "/>
       </xpath>
-      <!-- Clases para alinear cuadritos: columna izquierda y derecha mismo ancho de campos -->
+      <!-- Clases para alinear: Odoo 19 mantiene main_group; fallback por si cambia -->
       <xpath expr="//group[@name='main_group']/group[1]" position="attributes">
         <attribute name="class" add="o_stock_lot_left_col" separator=" "/>
       </xpath>
       <xpath expr="//group[@name='main_group']/group[2]" position="attributes">
+        <attribute name="class" add="o_stock_lot_right_col" separator=" "/>
+      </xpath>
+      <xpath expr="//group[@name='inventory_group']" position="attributes">
         <attribute name="class" add="o_stock_lot_right_col" separator=" "/>
       </xpath>
 
@@ -63,6 +66,10 @@
         <field name="reining_plazo_custom_months" string="Meses (personalizado)" invisible="reining_plazo != 'custom'" optional="show"/>
       </xpath>
 
+      <!-- Odoo 19: la vista base puede no tener notebook; crearlo para que las pestañas se inserten -->
+      <xpath expr="//sheet[not(notebook)]" position="inside">
+        <notebook/>
+      </xpath>
       <xpath expr="//sheet/notebook" position="inside">
 
         <!-- Pestaña Información: agrupa Información de Asociación, Elementos Asociados, etc. como subpestañas -->
