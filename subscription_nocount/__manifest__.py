@@ -18,7 +18,8 @@
         'views/subscription_dashboard_templates.xml',
         'views/subscription_views.xml',
         'views/product_views.xml',
-        'views/pricelist_views.xml',
+        # Odoo 19: vista de sale.subscription.pricing desactivada (modelo no existe en registro).
+        # 'views/pricelist_views.xml',
     ],
     'application': True,
     'license': 'LGPL-3',
