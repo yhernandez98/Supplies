@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <record id="view_cleanup_routes_wizard_form" model="ir.ui.view">
@@ -77,3 +78,84 @@
               sequence="100"/>
 </odoo>
 
+=======
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_cleanup_routes_wizard_form" model="ir.ui.view">
+        <field name="name">cleanup.routes.wizard.form</field>
+        <field name="model">cleanup.routes.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Limpieza de Rutas y Reglas No Utilizadas">
+                <sheet>
+                    <group>
+                        <group string="Filtros">
+                            <field name="company_id"/>
+                            <field name="route_name_pattern" placeholder="SUPP_ALISTAMIENTO_SALIDA_TRANSPORTE_%"/>
+                            <field name="only_inactive"/>
+                        </group>
+                        <group string="Opciones de Verificación">
+                            <field name="check_product_usage"/>
+                            <field name="check_sale_usage"/>
+                            <field name="check_warehouse_usage"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Modo de Acción">
+                        <field name="action_mode" widget="radio" options="{'horizontal': true}"/>
+                    </group>
+                    
+                    <group string="Resultados del Análisis" col="3">
+                        <field name="route_count" readonly="1"/>
+                        <field name="rule_count" readonly="1"/>
+                        <field name="picking_type_count" readonly="1"/>
+                    </group>
+                    
+                    <notebook>
+                        <page string="Rutas" name="routes">
+                            <group>
+                                <field name="route_count" readonly="1" string="Total Rutas"/>
+                            </group>
+                            <field name="route_ids" readonly="1" 
+                                   options="{'no_create': True, 'no_create_edit': True, 'no_open': False}"/>
+                        </page>
+                        <page string="Reglas" name="rules">
+                            <group>
+                                <field name="rule_count" readonly="1" string="Total Reglas"/>
+                            </group>
+                            <field name="rule_ids" readonly="1" 
+                                   options="{'no_create': True, 'no_create_edit': True, 'no_open': False}"/>
+                        </page>
+                        <page string="Tipos de Operación" name="picking_types">
+                            <group>
+                                <field name="picking_type_count" readonly="1" string="Total Tipos"/>
+                            </group>
+                            <field name="picking_type_ids" readonly="1" 
+                                   options="{'no_create': True, 'no_create_edit': True, 'no_open': False}"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <footer>
+                    <button name="action_analyze" string="Analizar" type="object" class="btn-primary"/>
+                    <button name="action_execute_cleanup" string="Ejecutar Limpieza" type="object" 
+                            class="btn-danger"
+                            invisible="route_count == 0 and rule_count == 0 and picking_type_count == 0"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+    
+    <record id="action_cleanup_routes_wizard" model="ir.actions.act_window">
+        <field name="name">Limpieza de Rutas y Reglas</field>
+        <field name="res_model">cleanup.routes.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+    
+    <menuitem id="menu_cleanup_routes"
+              name="Limpieza de Rutas y Reglas"
+              parent="stock.menu_warehouse_config"
+              action="action_cleanup_routes_wizard"
+              sequence="100"/>
+</odoo>
+
+>>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2

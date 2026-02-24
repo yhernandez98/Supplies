@@ -31,6 +31,7 @@ class AddEquipmentWizard(models.TransientModel):
         'add_equipment_wizard_lot_rel',
         'wizard_id',
         'lot_id',
+<<<<<<< HEAD
         string='Equipos de la Empresa',
         domain="[('customer_id', '=', partner_id), ('is_main_product', '=', True)]",
         help='Equipos de la empresa ubicados en el cliente (stock.lot)'
@@ -44,6 +45,11 @@ class AddEquipmentWizard(models.TransientModel):
         string='Equipos Propios del Cliente',
         domain="[('partner_id', '=', partner_id)]",
         help='Equipos que son propiedad del cliente (customer.own.inventory)'
+=======
+        string='Equipos',
+        domain="[('customer_id', '=', partner_id), ('is_main_product', '=', True)]",
+        help='Equipos del cliente (inventario de clientes)'
+>>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
     )
     
     maintenance_type = fields.Selection([
@@ -69,6 +75,7 @@ class AddEquipmentWizard(models.TransientModel):
             order = self.env['maintenance.order'].browse(res['maintenance_order_id'])
             if order.partner_id:
                 res['partner_id'] = order.partner_id.id
+<<<<<<< HEAD
                 # Cargar equipos disponibles
                 available_lots, available_own = self._get_available_equipment(order)
                 if available_lots:
@@ -84,10 +91,23 @@ class AddEquipmentWizard(models.TransientModel):
         
         try:
             # Buscar lotes del cliente que sean productos principales
+=======
+                available_lots = self._get_available_equipment(order)
+                if available_lots:
+                    res['equipment_ids'] = [(6, 0, available_lots.ids)]
+        return res
+    
+    def _get_available_equipment(self, order):
+        """Obtener equipos disponibles del cliente (stock.lot) para la orden."""
+        if not order or not order.partner_id:
+            return self.env['stock.lot']
+        try:
+>>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
             lots = self.env['stock.lot'].search([
                 ('customer_id', '=', order.partner_id.id),
                 ('is_main_product', '=', True),
             ])
+<<<<<<< HEAD
             
             # Filtrar solo productos "computo" (no componentes/periféricos/complementos)
             computo_lots = lots.filtered(
@@ -149,6 +169,40 @@ class AddEquipmentWizard(models.TransientModel):
                 maintenance_vals.append({
                     'lot_id': lot.id,
                     'own_inventory_id': False,
+=======
+            computo_lots = lots.filtered(
+                lambda l: l.product_id and (
+                    not l.product_id.classification or
+                    l.product_id.classification not in ('component', 'peripheral', 'complement')
+                )
+            )
+            existing_lot_ids = order.maintenance_ids.mapped('lot_id').ids
+            return computo_lots.filtered(lambda l: l.id not in existing_lot_ids)
+        except Exception as e:
+            _logger.error("Error al obtener equipos disponibles: %s", str(e))
+            return self.env['stock.lot']
+    
+    @api.onchange('partner_id')
+    def _onchange_partner_id_load_equipment(self):
+        if self.partner_id and self.maintenance_order_id:
+            self.equipment_ids = [(6, 0, self._get_available_equipment(self.maintenance_order_id).ids)]
+    
+    def action_add_equipment(self):
+        """Agregar los equipos seleccionados a la orden de mantenimiento."""
+        if not self.equipment_ids:
+            raise UserError(_('Debe seleccionar al menos un equipo para agregar a la orden.'))
+        
+        maintenance_vals = []
+        for lot in self.equipment_ids:
+            existing = self.env['stock.lot.maintenance'].search([
+                ('maintenance_order_id', '=', self.maintenance_order_id.id),
+                ('lot_id', '=', lot.id),
+            ], limit=1)
+            if not existing:
+                technician_id = self.maintenance_order_id.technician_ids[0].id if self.maintenance_order_id.technician_ids else self.env.user.id
+                maintenance_vals.append({
+                    'lot_id': lot.id,
+>>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
                     'maintenance_order_id': self.maintenance_order_id.id,
                     'maintenance_date': self.maintenance_order_id.scheduled_date,
                     'maintenance_type': self.maintenance_type,
@@ -157,6 +211,7 @@ class AddEquipmentWizard(models.TransientModel):
                     'description': _('Mantenimiento programado desde orden %s') % self.maintenance_order_id.name,
                 })
         
+<<<<<<< HEAD
         # Agregar equipos propios del cliente (customer.own.inventory)
         for own_product in self.own_equipment_ids:
             # Verificar que no exista ya un mantenimiento para este producto propio en esta orden
@@ -179,6 +234,8 @@ class AddEquipmentWizard(models.TransientModel):
                     'description': _('Mantenimiento programado desde orden %s - Equipo Propio del Cliente') % self.maintenance_order_id.name,
                 })
         
+=======
+>>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
         if maintenance_vals:
             self.env['stock.lot.maintenance'].create(maintenance_vals)
             # ✅ Actualizar el ticket con los nuevos equipos

@@ -1,6 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
+<<<<<<< HEAD
+=======
+  <!-- Heredar de stock_account: hacer visible company_currency_id para que columnas derecho alineen -->
+  <record id="view_production_lot_form_inherit_stock_account_currency" model="ir.ui.view">
+    <field name="name">stock.lot.form.stock_account.currency.visible</field>
+    <field name="model">stock.lot</field>
+    <field name="inherit_id" ref="stock_account.view_production_lot_form_stock_account"/>
+    <field name="arch" type="xml">
+      <xpath expr="//field[@name='company_currency_id']" position="attributes">
+        <attribute name="invisible">0</attribute>
+      </xpath>
+    </field>
+  </record>
+
+>>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
   <record id="view_production_lot_form_inherit_supplies" model="ir.ui.view">
     <field name="name">production.lot.form.supplies.inherit</field>
     <field name="model">stock.lot</field>
@@ -11,13 +26,26 @@
       <xpath expr="//form" position="attributes">
         <attribute name="class" add="o_stock_lot_pastel_form" separator=" "/>
       </xpath>
+<<<<<<< HEAD
 
       <!-- Cambiar la etiqueta del campo name a "Número de serie" -->
+=======
+      <!-- Clases para alinear cuadritos: columna izquierda y derecha mismo ancho de campos -->
+      <xpath expr="//group[@name='main_group']/group[1]" position="attributes">
+        <attribute name="class" add="o_stock_lot_left_col" separator=" "/>
+      </xpath>
+      <xpath expr="//group[@name='main_group']/group[2]" position="attributes">
+        <attribute name="class" add="o_stock_lot_right_col" separator=" "/>
+      </xpath>
+
+      <!-- Cambiar etiqueta del campo name (solo Número de serie en header) -->
+>>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
       <xpath expr="//sheet//field[@name='name'][not(ancestor::notebook)]" position="attributes">
         <attribute name="string">Número de serie</attribute>
         <attribute name="placeholder">Ingrese el número de serie</attribute>
       </xpath>
       
+<<<<<<< HEAD
       <!-- Agregar inventory_plate, security_plate y hostname justo después del campo name con etiquetas visibles -->
       <xpath expr="//sheet//field[@name='name'][not(ancestor::notebook)]" position="after">
         <group>
@@ -35,6 +63,13 @@
         <field name="hostname" 
                string="Hostname" 
                placeholder="Ingrese el hostname del equipo"/>
+=======
+      <!-- Placa de Inventario, Placa de Seguridad, Hostname en formulario blanco (columna izquierda, antes de Producto) -->
+      <xpath expr="//group[1]/group[1]/*[1]" position="before">
+        <field name="inventory_plate" string="Placa de Inventario" placeholder="Ingrese la placa de inventario"/>
+        <field name="security_plate" string="Placa de Seguridad" placeholder="Ingrese la placa de seguridad"/>
+        <field name="hostname" string="Hostname" placeholder="Ingrese el hostname del equipo"/>
+>>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
       </xpath>
       
       <!-- Mantener los otros campos en su ubicación original -->
@@ -48,12 +83,20 @@
         <field name="entry_date_display" string="Fecha activación (visible en suscripción)" invisible="1" help="Lo que se muestra en la suscripción: igual que arriba si hay fecha; si la borraste, aquí sigue la última guardada."/>
         <field name="exit_date" string="Fecha Finalizacion Renting" help="Fecha en que el producto salió del cliente (para cobro por días)"/>
         <field name="exit_date_display" string="Fecha finalización (visible en suscripción)" invisible="1" help="Lo que se muestra en la suscripción: igual que arriba si hay fecha; si la borraste, aquí sigue la última guardada hasta la limpieza."/>
+<<<<<<< HEAD
+=======
+      </xpath>
+      
+      <!-- Plazo Renting en columna derecha (acorta la lista izquierda) -->
+      <xpath expr="//group[@name='main_group']/group[2]" position="inside">
+>>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
         <field name="reining_plazo" string="Plazo Renting" help="Plazo en meses o fecha personalizada"/>
         <field name="reining_plazo_custom_months" string="Meses (personalizado)" invisible="reining_plazo != 'custom'" optional="show"/>
       </xpath>
 
       <xpath expr="//sheet/notebook" position="inside">
 
+<<<<<<< HEAD
             <!-- Sección que solo se muestra si este lote está asociado como elemento a otro producto principal -->
             <page string="Información de Asociación" name="associated_element_info" class="page-associated-info-red" invisible="not is_associated_element">
           <field name="is_associated_element" invisible="1"/>
@@ -82,6 +125,39 @@
         </page>
 
         <page string="Elementos Asociados" name="supplies_components">
+=======
+        <!-- Pestaña Información: agrupa Información de Asociación, Elementos Asociados, etc. como subpestañas -->
+        <page string="Información" name="info_group">
+          <notebook>
+            <!-- Sección que solo se muestra si este lote está asociado como elemento a otro producto principal -->
+            <page string="Información de Asociación" name="associated_element_info" class="page-associated-info-red" invisible="not is_associated_element">
+              <field name="is_associated_element" invisible="1"/>
+              <group string="Este producto está asociado como elemento a otro producto principal">
+                <div class="alert alert-info" role="alert" style="margin-bottom: 15px;">
+                  <strong>ℹ️ Información:</strong> Este serial está asociado como 
+                  <field name="associated_item_type" readonly="1"/>
+                  a otro producto principal.
+                </div>
+                <group>
+                  <field name="associated_to_principal_product_id" string="Producto Principal" readonly="1" options="{'no_open': False}"/>
+                  <field name="associated_to_principal_lot_id" string="Serial Principal" readonly="1" options="{'no_open': False}"/>
+                  <field name="associated_to_principal_inventory_plate" string="Placa de Inventario Principal" readonly="1"/>
+                  <field name="associated_item_type" string="Tipo de Asociación" readonly="1"/>
+                </group>
+              </group>
+            </page>
+
+            <page string="Recepción / Enlace principal" name="supplies_link">
+              <group>
+                <field name="is_principal" readonly="1"/>
+                <field name="principal_product_id" options="{'no_open': False}"/>
+                <field name="principal_lot_id" options="{'no_open': False}"/>
+                <field name="purchase_tracking_ref" readonly="1"/>
+              </group>
+            </page>
+
+            <page string="Elementos Asociados" name="supplies_components">
+>>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
           <notebook>
             <page string="Elementos Sin Costo" name="supplies_components_no_cost">
               <field name="lot_supply_line_sin_costo_ids" nolabel="1" context="{'default_has_cost': False}">
@@ -167,6 +243,11 @@
             </page>
           </notebook>
         </page>
+<<<<<<< HEAD
+=======
+          </notebook>
+        </page>
+>>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
       </xpath>
     </field>
   </record>

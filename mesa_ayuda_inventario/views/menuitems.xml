@@ -10,6 +10,7 @@
                   web_icon="mesa_ayuda_inventario,static/description/icon.png"/>
         
         <!-- ========================================== -->
+<<<<<<< HEAD
         <!-- SECCIÓN 1: DASHBOARD Y MÉTRICAS -->
         <!-- ========================================== -->
         <menuitem id="menu_dashboard_root"
@@ -42,6 +43,8 @@
                   sequence="40"/>
         
         <!-- ========================================== -->
+=======
+>>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
         <!-- SECCIÓN: ALERTAS -->
         <!-- ========================================== -->
         <menuitem id="menu_alertas_root"
@@ -82,6 +85,7 @@
                   action="action_customer_inventory_detailed"
                   sequence="15"/>
         
+<<<<<<< HEAD
         <!-- Menú para Clientes Propios -->
         <menuitem id="menu_customer_own_inventory"
                   name="Clientes Propios"
@@ -89,6 +93,8 @@
                   action="action_customer_own_inventory_clients"
                   sequence="20"/>
         
+=======
+>>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
         <menuitem id="menu_lot_maintenance"
                   name="Lotes y Mantenimientos"
                   parent="menu_inventory_root"
@@ -135,12 +141,53 @@
                   parent="menu_support_root"
                   action="action_mesa_ayuda_ticket"
                   sequence="10"/>
+<<<<<<< HEAD
         
+=======
+        <menuitem id="menu_helpdesk_ticket_category"
+                  name="Categorías"
+                  parent="menu_support_root"
+                  action="action_helpdesk_ticket_category"
+                  sequence="5"/>
+>>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
         <menuitem id="menu_repair_order"
                   name="Reparaciones"
                   parent="menu_support_root"
                   action="action_repair_order"
                   sequence="20"/>
+<<<<<<< HEAD
+=======
+
+        <!-- ========================================== -->
+        <!-- CONFIGURACIÓN -->
+        <!-- ========================================== -->
+        <menuitem id="menu_mesa_ayuda_config"
+                  name="Configuración"
+                  parent="menu_helpdesk_inventory_root"
+                  sequence="90"/>
+        <menuitem id="menu_mesa_ayuda_teams"
+                  name="Equipos de soporte"
+                  parent="menu_mesa_ayuda_config"
+                  action="action_mesa_ayuda_teams"
+                  sequence="10"/>
+        <menuitem id="menu_helpdesk_timer_pause_request"
+                  name="Solicitudes de pausa (temporizador)"
+                  parent="menu_mesa_ayuda_config"
+                  action="action_helpdesk_timer_pause_request"
+                  sequence="14"/>
+        <menuitem id="menu_helpdesk_ticket_pause_request"
+                  name="Solicitudes de pausa (tickets)"
+                  parent="menu_mesa_ayuda_config"
+                  action="action_helpdesk_ticket_pause_request"
+                  sequence="15"/>
+        <!-- Menú Políticas SLA omitido: requiere módulo helpdesk_sla (modelo helpdesk.sla.policy) -->
+        <menuitem id="menu_mesa_ayuda_ticket_templates"
+                  name="Plantillas de ticket"
+                  parent="menu_mesa_ayuda_config"
+                  action="action_helpdesk_ticket_template"
+                  sequence="20"/>
+        <!-- Menú Base de conocimiento omitido: requiere app Knowledge (modelo knowledge.article) -->
+>>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
         
     </data>
 </odoo>

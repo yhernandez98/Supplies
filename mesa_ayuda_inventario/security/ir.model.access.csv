@@ -21,6 +21,7 @@ access_maintenance_component_change_manager,maintenance.component.change - Admin
 access_equipment_change_wizard_user,equipment.change.wizard - Usuario Mesa de Ayuda,mesa_ayuda_inventario.model_equipment_change_wizard,base.group_user,1,1,1,1
 access_request_element_wizard_user,request.element.wizard - Usuario Mesa de Ayuda,mesa_ayuda_inventario.model_request_element_wizard,base.group_user,1,1,1,1
 access_activity_assignment_wizard_user,activity.assignment.wizard - Usuario Mesa de Ayuda,mesa_ayuda_inventario.model_activity_assignment_wizard,base.group_user,1,1,1,1
+<<<<<<< HEAD
 access_maintenance_dashboard_user,maintenance.dashboard - Usuario Mesa de Ayuda,mesa_ayuda_inventario.model_maintenance_dashboard,base.group_user,1,1,1,1
 access_maintenance_technician_performance_user,maintenance.technician.performance - Usuario Mesa de Ayuda,mesa_ayuda_inventario.model_maintenance_technician_performance,base.group_user,1,1,1,1
 access_maintenance_client_summary_user,maintenance.client.summary - Usuario Mesa de Ayuda,mesa_ayuda_inventario.model_maintenance_client_summary,base.group_user,1,1,1,1
@@ -38,3 +39,17 @@ access_customer_own_inventory_line_user,customer.own.inventory.line - Usuario Me
 access_customer_own_inventory_line_manager,customer.own.inventory.line - Administrador Mesa de Ayuda,mesa_ayuda_inventario.model_customer_own_inventory_line,stock.group_stock_manager,1,1,1,1
 access_helpdesk_ticket_user,helpdesk.ticket - Usuario Mesa de Ayuda,helpdesk.model_helpdesk_ticket,base.group_user,1,1,1,0
 access_repair_order_user,repair.order - Usuario Mesa de Ayuda,repair.model_repair_order,base.group_user,1,1,1,0
+=======
+access_helpdesk_ticket_category_user,helpdesk.ticket.category - Usuario,mesa_ayuda_inventario.model_helpdesk_ticket_category,base.group_user,1,1,1,0
+access_helpdesk_ticket_category_manager,helpdesk.ticket.category - Administrador,mesa_ayuda_inventario.model_helpdesk_ticket_category,stock.group_stock_manager,1,1,1,1
+access_helpdesk_ticket_escalate_wizard,helpdesk.ticket.escalate.wizard - Usuario,mesa_ayuda_inventario.model_helpdesk_ticket_escalate_wizard,base.group_user,1,1,1,1
+access_helpdesk_ticket_template_user,helpdesk.ticket.template - Usuario,mesa_ayuda_inventario.model_helpdesk_ticket_template,base.group_user,1,1,1,1
+access_helpdesk_timer_pause_request_user,helpdesk.timer.pause.request - Usuario,mesa_ayuda_inventario.model_helpdesk_timer_pause_request,base.group_user,1,1,1,0
+access_helpdesk_timer_pause_request_manager,helpdesk.timer.pause.request - Manager,mesa_ayuda_inventario.model_helpdesk_timer_pause_request,stock.group_stock_manager,1,1,1,1
+access_helpdesk_ticket_pause_request_user,helpdesk.ticket.pause.request - Usuario,mesa_ayuda_inventario.model_helpdesk_ticket_pause_request,base.group_user,1,1,1,0
+access_helpdesk_ticket_pause_request_manager,helpdesk.ticket.pause.request - Manager,mesa_ayuda_inventario.model_helpdesk_ticket_pause_request,stock.group_stock_manager,1,1,1,1
+access_helpdesk_ticket_user,helpdesk.ticket - Usuario Mesa de Ayuda,helpdesk.model_helpdesk_ticket,base.group_user,1,1,1,0
+access_repair_order_user,repair.order - Usuario Mesa de Ayuda,repair.model_repair_order,base.group_user,1,1,1,0
+access_product_asset_category_read,product.asset.category - Lectura Inventario Clientes,product_suppiles.model_product_asset_category,base.group_user,1,0,0,0
+access_product_asset_class_read,product.asset.class - Lectura Inventario Clientes,product_suppiles.model_product_asset_class,base.group_user,1,0,0,0
+>>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2

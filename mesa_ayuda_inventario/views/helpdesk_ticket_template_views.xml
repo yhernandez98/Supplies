@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="view_helpdesk_ticket_template_tree" model="ir.ui.view">
+            <field name="name">helpdesk.ticket.template.tree</field>
+            <field name="model">helpdesk.ticket.template</field>
+            <field name="arch" type="xml">
+                <list string="Plantillas de ticket">
+                    <field name="name"/>
+                    <field name="category_id"/>
+                    <field name="team_id"/>
+                    <field name="priority"/>
+                    <button name="action_create_ticket" type="object" string="Crear ticket" icon="fa-ticket" class="btn-primary"/>
+                </list>
+            </field>
+        </record>
+        <record id="view_helpdesk_ticket_template_form" model="ir.ui.view">
+            <field name="name">helpdesk.ticket.template.form</field>
+            <field name="model">helpdesk.ticket.template</field>
+            <field name="arch" type="xml">
+                <form string="Plantilla de ticket">
+                    <sheet>
+                        <group>
+                            <field name="name" placeholder="Ej. Solicitud de equipo nuevo"/>
+                            <field name="category_id"/>
+                            <field name="team_id"/>
+                            <field name="priority"/>
+                        </group>
+                        <group>
+                            <field name="description" placeholder="Descripción que se copiará al crear el ticket..."/>
+                        </group>
+                        <footer>
+                            <button name="action_create_ticket" string="Crear ticket desde esta plantilla" type="object" class="btn-primary"/>
+                        </footer>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+        <record id="action_helpdesk_ticket_template" model="ir.actions.act_window">
+            <field name="name">Plantillas de ticket</field>
+            <field name="res_model">helpdesk.ticket.template</field>
+            <field name="view_mode">list,form</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Cree plantillas para abrir tickets con categoría, equipo y descripción por defecto.
+                </p>
+            </field>
+        </record>
+    </data>
+</odoo>

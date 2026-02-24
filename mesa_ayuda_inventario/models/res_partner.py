@@ -26,6 +26,7 @@ class ResPartner(models.Model):
         help='Cantidad de productos en inventario de este cliente'
     )
     
+<<<<<<< HEAD
     own_inventory_count = fields.Integer(
         string='Cantidad de Productos Propios',
         compute='_compute_own_inventory_count',
@@ -33,6 +34,8 @@ class ResPartner(models.Model):
         help='Cantidad de productos propios del cliente (no de la empresa)'
     )
 
+=======
+>>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
     @api.depends('property_stock_customer')
     def _compute_product_count(self):
         """Calcular cantidad de productos en inventario del cliente.
@@ -121,6 +124,7 @@ class ResPartner(models.Model):
             
             partner.product_count = len(partner_lot_ids)
     
+<<<<<<< HEAD
     def _compute_own_inventory_count(self):
         """Calcular cantidad de productos propios del cliente."""
         if 'customer.own.inventory' not in self.env:
@@ -134,6 +138,8 @@ class ResPartner(models.Model):
                 ('partner_id', '=', partner.id)
             ])
 
+=======
+>>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
     def action_view_customer_inventory(self):
         """Abrir vista de inventario de productos de este cliente.
         OPTIMIZADO: Reduce consultas y elimina código de debug.
@@ -351,6 +357,7 @@ class ResPartner(models.Model):
         # Por defecto abre kanban, pero mantiene compatibilidad
         return self.action_view_customer_inventory_kanban()
     
+<<<<<<< HEAD
     def action_view_own_inventory(self):
         """Abrir vista de inventario propio del cliente."""
         self.ensure_one()
@@ -383,6 +390,8 @@ class ResPartner(models.Model):
             'target': 'current',
         }
     
+=======
+>>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
     def action_debug_customer_inventory(self):
         """Botón temporal de debug para validar qué está pasando con el filtro."""
         self.ensure_one()

@@ -10,6 +10,10 @@
             <list string="Precios Recurrentes" editable="bottom">
                 <field name="product_template_id" string="Productos"/>
                 <field name="plan_id" string="Plan recurrente"/>
+<<<<<<< HEAD
+=======
+                <field name="client_quantity" string="Cantidad" readonly="1"/>
+>>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
                 <field name="price" string="Precio recurrente"/>
                 <field name="currency_id" string="Moneda" 
                        domain="[('name', 'in', ['COP', 'USD'])]"
@@ -27,7 +31,19 @@
         <field name="priority" eval="20"/>
         <field name="arch" type="xml">
             <!-- Buscar cualquier campo que muestre sale.subscription.pricing y agregar la columna de moneda -->
+<<<<<<< HEAD
             <!-- Intentar encontrar la tabla de precios recurrentes -->
+=======
+            <!-- Ocultar columna Variantes de producto -->
+            <xpath expr="//list[.//field[@name='product_template_id']]//field[@name='product_variant_ids']" position="attributes">
+                <attribute name="column_invisible">1</attribute>
+            </xpath>
+            <!-- Agregar columna Cantidad antes del precio -->
+            <xpath expr="//list[.//field[@name='product_template_id']]//field[@name='plan_id']" position="after">
+                <field name="client_quantity" string="Cantidad" readonly="1"/>
+            </xpath>
+            <!-- Moneda después del precio -->
+>>>>>>> fb2d0eddb44261c7833d37e32b0869ec9bdb22c2
             <xpath expr="//list[.//field[@name='product_template_id']]//field[@name='price']" position="after">
                 <field name="currency_id" string="Moneda" 
                        domain="[('name', 'in', ['COP', 'USD'])]"
