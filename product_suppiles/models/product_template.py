@@ -31,16 +31,16 @@ class ProductTemplate(models.Model):
     )
 
     is_composite = fields.Boolean(
-        string="Componentes",
+        string="Usar componentes",
         help="Si está activo, el producto se explota en componentes en recepciones."
     )
 
     use_peripherals = fields.Boolean(
-        string="Periféricos",
+        string="Usar periféricos",
         help="Si está activo, el producto maneja líneas de periféricos"
     )
     use_complements = fields.Boolean(
-        string="Complementos",
+        string="Usar complementos",
         help="Si está activo, el producto maneja líneas de complementos"
     )
 

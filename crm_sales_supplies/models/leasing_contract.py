@@ -120,7 +120,7 @@ class LeasingContract(models.Model):
         string='Órdenes de Compra'
     )
     purchase_order_count = fields.Integer(
-        string='Órdenes de Compra',
+        string='Nº Órdenes de Compra',
         compute='_compute_purchase_order_count'
     )
 

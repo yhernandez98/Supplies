@@ -188,10 +188,22 @@ class LicenseEquipment(models.Model):
         'unique(assignment_id, lot_id, state)',
         'Este equipo ya está asignado a esta licencia. Solo puede haber una asignación activa por equipo.',
     )
-    _unique_contact_license_assigned = models.Constraint(
-        "unique(contact_id, license_id) WHERE state = 'assigned'",
-        'Este contacto ya tiene una asignación activa de este tipo de licencia. No se puede duplicar.',
-    )
+
+    @api.constrains('contact_id', 'license_id', 'state')
+    def _check_unique_contact_license_assigned(self):
+        """Un contacto no puede tener dos asignaciones activas del mismo tipo de licencia."""
+        for rec in self:
+            if rec.state == 'assigned' and rec.contact_id and rec.license_id:
+                other = self.search([
+                    ('contact_id', '=', rec.contact_id.id),
+                    ('license_id', '=', rec.license_id.id),
+                    ('state', '=', 'assigned'),
+                    ('id', '!=', rec.id),
+                ], limit=1)
+                if other:
+                    raise ValidationError(
+                        _('Este contacto ya tiene una asignación activa de este tipo de licencia. No se puede duplicar.')
+                    )
 
     @api.depends('location_id')
     def _compute_available_lot_ids(self):
