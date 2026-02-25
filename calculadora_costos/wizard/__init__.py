@@ -1,1 +1,0 @@
-# Wizards para cálculos interactivos
