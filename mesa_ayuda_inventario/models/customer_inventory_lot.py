@@ -1057,10 +1057,11 @@ class StockLotCustomerInventory(models.Model):
         return result
 
     @api.model
-    def _search(self, domain, offset=0, limit=None, order=None):
+    def _search(self, domain, offset=0, limit=None, order=None, **kwargs):
         """Sobrescribe la búsqueda para que cuando se busque por 'name' (número de serie),
         también busque automáticamente en 'inventory_plate' (placa de inventario).
-        También excluye automáticamente los componentes asociados a productos principales."""
+        También excluye automáticamente los componentes asociados a productos principales.
+        kwargs: bypass_access, etc. (Odoo 19)."""
         # Blindaje de alcance por cliente (evita que filtros con OR rompan el dominio)
         allowed_ids = self.env.context.get('customer_inventory_allowed_lot_ids')
         if allowed_ids is not None and not self.env.context.get('skip_customer_inventory_scope'):
@@ -1072,7 +1073,7 @@ class StockLotCustomerInventory(models.Model):
         if (self.env.context.get('skip_search_enhancement', False) or 
             self.env.context.get('skip_tracking', False) or
             self.env.context.get('active_test', False)):
-            return super()._search(domain, offset=offset, limit=limit, order=order)
+            return super()._search(domain, offset=offset, limit=limit, order=order, **kwargs)
         
         # Si el dominio solo contiene condiciones simples (no búsquedas de texto),
         # no procesar para evitar problemas con búsquedas internas
@@ -1086,7 +1087,7 @@ class StockLotCustomerInventory(models.Model):
             if len(domain) == 1 and isinstance(domain[0], (list, tuple)) and len(domain[0]) >= 2:
                 field = domain[0][0]
                 if field in ('id', 'principal_lot_id') and domain[0][1] in ('=', 'in'):
-                    return super()._search(domain, offset=offset, limit=limit, order=order)
+                    return super()._search(domain, offset=offset, limit=limit, order=order, **kwargs)
             
             # Crear una copia del dominio para no modificar el original
             domain_copy = list(domain)
@@ -1143,11 +1144,11 @@ class StockLotCustomerInventory(models.Model):
             # Llamar al método padre con el dominio modificado
             # Usar un modelo base sin nuestras mejoras para evitar recursión
             StockLotBase = self.env['stock.lot'].with_context(skip_search_enhancement=True)
-            return StockLotBase._search(domain_copy, offset=offset, limit=limit, order=order)
+            return StockLotBase._search(domain_copy, offset=offset, limit=limit, order=order, **kwargs)
         except Exception as e:
             # Si hay algún error, usar el dominio original con contexto de skip
             _logger.warning("Error en _search de stock.lot: %s", str(e))
-            return super()._search(domain, offset=offset, limit=limit, order=order)
+            return super()._search(domain, offset=offset, limit=limit, order=order, **kwargs)
 
     @api.model
     def _name_search(self, name='', args=None, operator='ilike', limit=100, order=None):
