@@ -7,8 +7,8 @@
             <field name="model">stock.lot</field>
             <field name="inherit_id" ref="stock.view_production_lot_form"/>
             <field name="arch" type="xml">
-                <!-- Clase en columna derecha (Odoo 19: sheet/group[1]/group[2]) -->
-                <xpath expr="//sheet/group[1]/group[2]" position="attributes">
+                <!-- Columna derecha: Odoo 19 base usa group name="inventory_group" -->
+                <xpath expr="//group[@name='inventory_group']" position="attributes">
                     <attribute name="class" add="o_lot_right_col" separator=" "/>
                 </xpath>
                 <!-- Hacer visible company_currency_id: cuando está invisible rompe el layout de Valor total, Costo -->
@@ -16,7 +16,7 @@
                     <attribute name="invisible">0</attribute>
                 </xpath>
                 <!-- Imagen + botón Generar Hoja de Vida (columna derecha, antes del primer campo) -->
-                <xpath expr="//sheet/group[1]/group[2]/*[1]" position="before">
+                <xpath expr="//group[@name='inventory_group']/*[1]" position="before">
                     <div class="o_lot_photo_block o_lot_photo_below_costo">
                         <field name="lot_image" widget="image" 
                                options="{'preview_image': 'lot_image', 'size': [140, 140]}"/>
