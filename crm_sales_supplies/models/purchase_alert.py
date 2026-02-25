@@ -297,9 +297,9 @@ class PurchaseAlert(models.Model):
             # NO invalidar cache aquí para evitar bucles infinitos
     
     @api.model
-    def _search(self, domain, offset=0, limit=None, order=None):
+    def _search(self, domain, offset=0, limit=None, order=None, **kwargs):
         """Sobrescribir search - NO crear líneas automáticamente para evitar duplicados."""
-        result = super()._search(domain, offset=offset, limit=limit, order=order)
+        result = super()._search(domain, offset=offset, limit=limit, order=order, **kwargs)
         # NO crear líneas automáticamente aquí - solo se crearán en create() o write()
         # Esto evita duplicados cuando se valida o se accede a una alerta existente
         return result

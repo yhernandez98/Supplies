@@ -111,7 +111,8 @@
                 <filter string="Desasignados" name="unassigned" domain="[('state', '=', 'unassigned')]"/>
                 <filter string="Solo Usuarios" name="with_user" domain="[('contact_id', '!=', False)]"/>
                 <filter string="Solo Equipos" name="with_equipment" domain="[('lot_id', '!=', False), ('contact_id', '=', False)]"/>
-                <group expand="0" string="Agrupar por">
+                <separator string="Agrupar por"/>
+                <group>
                     <filter string="Licencia" name="group_license" context="{'group_by': 'license_id'}"/>
                     <filter string="Cliente" name="group_partner" context="{'group_by': 'partner_id'}"/>
                     <filter string="Usuario" name="group_contact" context="{'group_by': 'contact_id'}"/>

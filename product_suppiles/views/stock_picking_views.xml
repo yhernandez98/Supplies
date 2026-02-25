@@ -15,8 +15,11 @@
         <button name="action_assign_supplies_relations" type="object" string="Asignar relaciones" class="btn-secondary" invisible="1"/>
       </xpath>
 
-      <!-- Reemplazar move_ids_without_package con move_ids_main_only para mostrar solo líneas principales -->
+      <!-- Reemplazar con move_ids_main_only: Odoo 18 move_ids_without_package; Odoo 19 move_ids -->
       <xpath expr="//page[@name='operations']//field[@name='move_ids_without_package']" position="attributes">
+        <attribute name="name">move_ids_main_only</attribute>
+      </xpath>
+      <xpath expr="//page[@name='operations']//field[@name='move_ids']" position="attributes">
         <attribute name="name">move_ids_main_only</attribute>
       </xpath>
 

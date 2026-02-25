@@ -13,7 +13,7 @@
     'author': 'Supplies De Colombia SAS',
     'license': 'LGPL-3',
     'category': 'Inventory/Reports',
-    'version': '18.0.0.0.1',
+    'version': '19.0.0.0.1',
     'depends': [
         'stock',
         'product',

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Personalización de Tipos de Operación de Stock',
-    'version': '18.0.1.0.0',
+    'version': '19.0.1.0.0',
     'category': 'Warehouse',
     'summary': 'Personaliza los nombres de los tipos de operación de entrega',
     'description': """

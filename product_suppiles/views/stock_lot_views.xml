@@ -1,18 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-  <!-- Heredar de stock_account: hacer visible company_currency_id para que columnas derecho alineen -->
-  <record id="view_production_lot_form_inherit_stock_account_currency" model="ir.ui.view">
-    <field name="name">stock.lot.form.stock_account.currency.visible</field>
-    <field name="model">stock.lot</field>
-    <field name="inherit_id" ref="stock_account.view_production_lot_form_stock_account"/>
-    <field name="arch" type="xml">
-      <xpath expr="//field[@name='company_currency_id']" position="attributes">
-        <attribute name="invisible">0</attribute>
-      </xpath>
-    </field>
-  </record>
-
+  <!-- Vista principal: hereda de stock (no de stock_account) para que cargue aunque stock_account no exista o cambie -->
   <record id="view_production_lot_form_inherit_supplies" model="ir.ui.view">
     <field name="name">production.lot.form.supplies.inherit</field>
     <field name="model">stock.lot</field>
@@ -23,11 +12,18 @@
       <xpath expr="//form" position="attributes">
         <attribute name="class" add="o_stock_lot_pastel_form" separator=" "/>
       </xpath>
-      <!-- Clases para alinear cuadritos: columna izquierda y derecha mismo ancho de campos -->
+      <!-- Si existe company_currency_id (stock_account), hacerlo visible para alinear columnas -->
+      <xpath expr="//field[@name='company_currency_id']" position="attributes">
+        <attribute name="invisible">0</attribute>
+      </xpath>
+      <!-- Clases para alinear: Odoo 19 mantiene main_group; fallback por si cambia -->
       <xpath expr="//group[@name='main_group']/group[1]" position="attributes">
         <attribute name="class" add="o_stock_lot_left_col" separator=" "/>
       </xpath>
       <xpath expr="//group[@name='main_group']/group[2]" position="attributes">
+        <attribute name="class" add="o_stock_lot_right_col" separator=" "/>
+      </xpath>
+      <xpath expr="//group[@name='inventory_group']" position="attributes">
         <attribute name="class" add="o_stock_lot_right_col" separator=" "/>
       </xpath>
 
@@ -63,6 +59,10 @@
         <field name="reining_plazo_custom_months" string="Meses (personalizado)" invisible="reining_plazo != 'custom'" optional="show"/>
       </xpath>
 
+      <!-- Odoo 19: vista base no tiene notebook; crearlo siempre al final del sheet para que las pestañas se vean -->
+      <xpath expr="//sheet[not(notebook)]" position="inside">
+        <notebook/>
+      </xpath>
       <xpath expr="//sheet/notebook" position="inside">
 
         <!-- Pestaña Información: agrupa Información de Asociación, Elementos Asociados, etc. como subpestañas -->

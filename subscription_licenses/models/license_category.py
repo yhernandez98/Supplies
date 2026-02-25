@@ -13,7 +13,6 @@ class LicenseCategory(models.Model):
     name = fields.Char(
         string='Categoría',
         required=True,
-        tracking=True,
         help='Nombre de la categoría de licencia (ej: Office 365, Google Workspace, Adobe Creative Cloud)',
         index=True
     )
@@ -23,7 +22,7 @@ class LicenseCategory(models.Model):
         index=True
     )
     description = fields.Text(string='Descripción')
-    active = fields.Boolean(string='Activo', default=True, tracking=True)
+    active = fields.Boolean(string='Activo', default=True)
     
     # Contador de licencias en esta categoría
     license_count = fields.Integer(string='Total Licencias', compute='_compute_license_count', store=False)

@@ -249,7 +249,8 @@
                         domain="[('equipment_ids', '=', False)]"/>
                 <filter string="Con equipos asignados" name="with_equipment" 
                         domain="[('equipment_ids', '!=', False)]"/>
-                <group expand="0" string="Agrupar por">
+                <separator string="Agrupar por"/>
+                <group>
                     <filter string="Tipo de Licencia" name="group_license_display" context="{'group_by': 'license_display_name_stored'}"/>
                     <filter string="Por categoría (Licencia)" name="group_license" context="{'group_by': 'license_id'}"/>
                     <filter string="Cliente" name="group_partner" context="{'group_by': 'partner_id'}"/>

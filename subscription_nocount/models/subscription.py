@@ -51,7 +51,7 @@ class SubscriptionSubscription(models.Model):
     )
     reference_year = fields.Integer(string='Año consulta', help='Para consultar o guardar el facturable de un mes concreto (ej. facturación mes vencido).')
     reference_month = fields.Integer(string='Mes consulta', help='Mes (1-12) para consultar o guardar el facturable.')
-    monthly_amount = fields.Monetary(string='Total Mensual', compute='_compute_monthly_amount', store=True, currency_field='currency_id', digits=(16, 0))
+    monthly_amount = fields.Monetary(string='Total Mensual', compute='_compute_monthly_amount', store=True, currency_field='currency_id')
     monthly_amount_usd = fields.Float(
         string='Total Mensual USD',
         compute='_compute_monthly_amount',
@@ -69,7 +69,6 @@ class SubscriptionSubscription(models.Model):
         compute='_compute_total_esperado_y_mes_anterior',
         store=False,
         currency_field='currency_id',
-        digits=(16, 2),
         help='Total como si fueran los días completos del mes (cuánto esperas recibir en el mes).',
     )
     total_mes_anterior = fields.Monetary(
@@ -77,7 +76,6 @@ class SubscriptionSubscription(models.Model):
         compute='_compute_total_esperado_y_mes_anterior',
         store=False,
         currency_field='currency_id',
-        digits=(16, 2),
         help='Total del facturable guardado del mes anterior (si existe).',
     )
     generate_accounting = fields.Boolean(string='Generar contabilidad', default=False, tracking=True)
@@ -147,6 +145,7 @@ class SubscriptionSubscription(models.Model):
         'subscription_id',
         string='Productos Agrupados',
         compute='_compute_grouped_products',
+        search='_search_grouped_product_ids',
         store=False,
         help='Productos agrupados por cantidad de seriales.',
     )
@@ -324,7 +323,7 @@ class SubscriptionSubscription(models.Model):
                     _logger.warning('⚠️ Error eliminando columna equipment_change_count: %s', str(e))
         return res
 
-    @api.depends('line_ids', 'line_ids.subtotal_monthly', 'location_id', 'grouped_product_ids', 'grouped_product_ids.cost', 'grouped_product_ids.cost_currency_id', 'grouped_product_ids.quantity')
+    @api.depends('line_ids', 'line_ids.subtotal_monthly', 'location_id')
     def _compute_monthly_amount(self):
         """Calcula el total mensual sumando solo los costos en COP (facturable en vivo).
         Se excluyen costos en USD (ej. licencias sin TRM del mes siguiente) para no sumar dólares como pesos."""
@@ -360,7 +359,7 @@ class SubscriptionSubscription(models.Model):
             val = rec.monthly_amount_usd or 0.0
             rec.monthly_amount_usd_display = '$ %s' % formatLang(self.env, val, digits=2)
 
-    @api.depends('grouped_product_ids', 'grouped_product_ids.product_id', 'grouped_product_ids.quantity', 'grouped_product_ids.proyectado')
+    @api.depends()
     def _compute_total_esperado_y_mes_anterior(self):
         """Total esperado = suma de la columna Proyectado de Productos Agrupados. Total mes anterior = del facturable guardado."""
         for subscription in self:
@@ -477,6 +476,24 @@ class SubscriptionSubscription(models.Model):
             subscription.other_quant_ids = quants.filtered(
                 lambda q: q.product_id.product_tmpl_id.classification not in ('component', 'peripheral', 'complement') if hasattr(q.product_id.product_tmpl_id, 'classification') else True
             ) if quants else Quant.browse([])
+
+    def _search_grouped_product_ids(self, operator, value):
+        """Permite que Odoo determine qué suscripciones recomputar cuando se modifica subscription.product.grouped (Odoo 19)."""
+        if operator in ('in', '='):
+            ids = value if isinstance(value, (list, tuple)) else ([value] if value else [])
+            if not ids:
+                return [('id', 'in', [])]
+            grouped = self.env['subscription.product.grouped'].browse(ids)
+            subscription_ids = grouped.mapped('subscription_id').ids
+            return [('id', 'in', subscription_ids)]
+        if operator in ('not in', '!='):
+            ids = value if isinstance(value, (list, tuple)) else ([value] if value else [])
+            if not ids:
+                return []
+            grouped = self.env['subscription.product.grouped'].browse(ids)
+            subscription_ids = grouped.mapped('subscription_id').ids
+            return [('id', 'not in', subscription_ids)]
+        return []
 
     @api.depends('location_id', 'other_quant_ids', 'usage_ids', 'usage_ids.lot_id', 'reference_year', 'reference_month',
                  'partner_id', 'partner_id.property_product_pricelist', 'plan_id')
@@ -3323,8 +3340,8 @@ class SubscriptionSubscriptionLine(models.Model):
             else:
                 line.business_line_id = False
     quantity = fields.Float(string='Cantidad', default=1.0)
-    price_monthly = fields.Monetary(string='Precio mensual', currency_field='currency_id', digits=(16, 0))
-    subtotal_monthly = fields.Monetary(string='Subtotal Mensual', compute='_compute_subtotal_monthly', store=True, currency_field='currency_id', digits=(16, 0))
+    price_monthly = fields.Monetary(string='Precio mensual', currency_field='currency_id')
+    subtotal_monthly = fields.Monetary(string='Subtotal Mensual', compute='_compute_subtotal_monthly', store=True, currency_field='currency_id')
     currency_id = fields.Many2one(related='subscription_id.currency_id', store=True, readonly=True)
     location_id = fields.Many2one('stock.location', string='Ubicación específica')
     usage_ids = fields.One2many('subscription.subscription.usage', 'line_id', string='Usos')
@@ -3350,8 +3367,8 @@ class SubscriptionSubscriptionLine(models.Model):
     component_date_start = fields.Datetime(string='Fecha inicio componente', readonly=True)
     component_date_end = fields.Datetime(string='Fecha fin componente', readonly=True)
     component_days_active = fields.Integer(string='Días activos comp.', readonly=True)
-    component_daily_rate = fields.Monetary(string='Tarifa diaria comp.', currency_field='currency_id', readonly=True, digits=(16, 0))
-    component_amount = fields.Monetary(string='Importe comp.', currency_field='currency_id', readonly=True, digits=(16, 0))
+    component_daily_rate = fields.Monetary(string='Tarifa diaria comp.', currency_field='currency_id', readonly=True)
+    component_amount = fields.Monetary(string='Importe comp.', currency_field='currency_id', readonly=True)
 
     @api.onchange('product_id')
     def _onchange_product_id(self):
@@ -3778,10 +3795,10 @@ class SubscriptionSubscriptionUsage(models.Model):
     quantity = fields.Float(string='Cantidad', default=1.0)
     invoiced = fields.Boolean(string='Facturado', default=False)
     days_open = fields.Integer(string='Días activos', compute='_compute_usage_metrics', store=True)
-    amount = fields.Monetary(string='Importe calculado', currency_field='currency_id', digits=(16, 0))
-    price_monthly_snapshot = fields.Monetary(string='Precio mensual usado', currency_field='currency_id', digits=(16, 0))
+    amount = fields.Monetary(string='Importe calculado', currency_field='currency_id')
+    price_monthly_snapshot = fields.Monetary(string='Precio mensual usado', currency_field='currency_id')
     currency_id = fields.Many2one(related='line_id.currency_id', store=True, readonly=True)
-    daily_rate = fields.Monetary(string='Tarifa diaria', currency_field='currency_id', compute='_compute_usage_metrics', store=False, digits=(16, 0))
+    daily_rate = fields.Monetary(string='Tarifa diaria', currency_field='currency_id', compute='_compute_usage_metrics', store=True)
     component_item_type = fields.Selection(
         related='line_id.component_item_type',
         string='Tipo componente',
@@ -3887,10 +3904,26 @@ class SubscriptionProductGrouped(models.Model):
     is_license = fields.Boolean(string='Es Licencia', readonly=True, default=False, help='Indica si este registro representa una licencia')
     license_name = fields.Char(string='Nombre de Licencia', readonly=True, help='Nombre de la licencia cuando is_license=True')
     license_category = fields.Char(string='Categoría de Licencia', readonly=True, help='Categoría para agrupar licencias (ej: Office 365, Google Workspace)')
-    license_type_id = fields.Many2one('product.license.type', string='Tipo de Licencia', readonly=True, help='Tipo de licencia asociado')
+    # license_type_id se define en subscription_licenses (product.license.type existe ahí) para evitar carga circular.
     # Campo computed para mostrar el nombre correcto (producto o licencia)
     product_display_name = fields.Char(string='Producto', compute='_compute_product_display_name', store=False, help='Nombre del producto o licencia para mostrar')
-    
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        recs = super().create(vals_list)
+        subs = recs.mapped('subscription_id')
+        if subs:
+            subs.invalidate_recordset(['monthly_amount', 'monthly_amount_usd', 'total_esperado', 'total_mes_anterior'])
+        return recs
+
+    def write(self, vals):
+        res = super().write(vals)
+        if self:
+            subs = self.mapped('subscription_id')
+            if subs:
+                subs.invalidate_recordset(['monthly_amount', 'monthly_amount_usd', 'total_esperado', 'total_mes_anterior'])
+        return res
+
     @api.depends('product_id', 'is_license', 'license_name', 'license_category')
     def _compute_product_display_name(self):
         """Calcula el nombre a mostrar: producto si existe, o categoría de licencia si es licencia."""
@@ -4005,7 +4038,6 @@ class SubscriptionProductGrouped(models.Model):
         store=True,
         readonly=True,
         currency_field='cost_currency_id',
-        digits=(16, 2),
         help='Costo total (en COP o USD según corresponda; solo COP se suma en Total Mensual)'
     )
     cost_currency_id = fields.Many2one(
@@ -4022,7 +4054,6 @@ class SubscriptionProductGrouped(models.Model):
         store=False,
         readonly=True,
         currency_field='currency_id',
-        digits=(16, 2),
         help='Total proyectado por línea: licencias con TRM del mes en curso; servicios/equipos igual al Costo.'
     )
     currency_id = fields.Many2one(
@@ -4034,12 +4065,13 @@ class SubscriptionProductGrouped(models.Model):
     )
     location_id = fields.Many2one('stock.location', string='Ubicación', readonly=True)
 
-    @api.depends('product_id', 'product_id.business_line_id', 'product_id.product_tmpl_id.business_line_id', 'is_license', 'license_type_id')
+    @api.depends('product_id', 'product_id.business_line_id', 'product_id.product_tmpl_id.business_line_id', 'is_license')
     def _compute_business_line_id(self):
         """Calcula la línea de negocio desde el product_id (servicio o producto físico) o desde la licencia."""
         for record in self:
-            # Si es una licencia, intentar obtener la línea de negocio
-            if record.is_license and record.license_type_id:
+            # Si es una licencia, intentar obtener la línea de negocio (license_type_id lo añade subscription_licenses)
+            license_type = getattr(record, 'license_type_id', None)
+            if record.is_license and license_type:
                 # Si la licencia tiene un product_id asociado (buscado por nombre), usar su línea de negocio
                 if record.product_id:
                     if 'product.business.line' in self.env:
@@ -4106,7 +4138,7 @@ class SubscriptionProductGrouped(models.Model):
             else:
                 record.pricelist_id = False
 
-    @api.depends('subscription_id', 'product_id', 'quantity', 'lot_id', 'lot_id.entry_date', 'lot_id.exit_date', 'lot_id.lot_supply_line_ids', 'lot_id.lot_supply_line_ids.has_cost', 'lot_id.lot_supply_line_ids.cost', 'lot_ids', 'lot_ids.entry_date', 'lot_ids.exit_date', 'lot_ids.lot_supply_line_ids', 'lot_ids.lot_supply_line_ids.has_cost', 'lot_ids.lot_supply_line_ids.cost', 'subscription_id.partner_id', 'subscription_id.partner_id.property_product_pricelist', 'subscription_id.plan_id', 'pricelist_id', 'has_subscription', 'is_license', 'license_type_id', 'license_category', 'subscription_id.location_id', 'subscription_id.reference_year', 'subscription_id.reference_month')
+    @api.depends('subscription_id', 'product_id', 'quantity', 'lot_id', 'lot_id.entry_date', 'lot_id.exit_date', 'lot_id.lot_supply_line_ids', 'lot_id.lot_supply_line_ids.has_cost', 'lot_id.lot_supply_line_ids.cost', 'lot_ids', 'lot_ids.entry_date', 'lot_ids.exit_date', 'lot_ids.lot_supply_line_ids', 'lot_ids.lot_supply_line_ids.has_cost', 'lot_ids.lot_supply_line_ids.cost', 'subscription_id.partner_id', 'subscription_id.partner_id.property_product_pricelist', 'subscription_id.plan_id', 'pricelist_id', 'has_subscription', 'is_license', 'license_category', 'subscription_id.location_id', 'subscription_id.reference_year', 'subscription_id.reference_month')
     def _compute_cost(self):
         """Calcula el costo basado en la lista de precios del cliente y la cantidad.
         Solo busca precios recurrentes si el producto tiene una suscripción asignada (has_subscription=True).
@@ -4710,11 +4742,10 @@ class SubscriptionEquipmentSerialLine(models.TransientModel):
     product_name = fields.Char(string='Producto', readonly=True)
     inventory_plate = fields.Char(string='Placa de Inventario', readonly=True)
     lot_name = fields.Char(string='Número de serie/lote', readonly=True)
-    cost_renting = fields.Monetary(string='Costo Renting', currency_field='currency_id', readonly=True, digits=(16, 2))
+    cost_renting = fields.Monetary(string='Costo Renting', currency_field='currency_id', readonly=True)
     cost_additional = fields.Monetary(
         string='Costo Adicional',
         currency_field='currency_id',
-        digits=(16, 2),
         readonly=True,
         compute='_compute_cost_additional',
         help='Suma de los costos de los elementos asociados con costo (Elementos Con Costo del serial).',
@@ -4722,7 +4753,6 @@ class SubscriptionEquipmentSerialLine(models.TransientModel):
     cost_renting_total = fields.Monetary(
         string='Costo Renting (total)',
         currency_field='currency_id',
-        digits=(16, 2),
         readonly=True,
         compute='_compute_cost_additional',
         help='Costo Renting base + Costo adicional.',
@@ -4745,8 +4775,8 @@ class SubscriptionEquipmentSerialLine(models.TransientModel):
         compute='_compute_tiempo_displays',
         help='Tiempo restante hasta fecha finalización en "X meses y Y días".',
     )
-    cost_daily = fields.Monetary(string='Costo Diario', currency_field='currency_id', readonly=True, digits=(16, 2))
-    cost_to_date = fields.Monetary(string='Costo Días En Servicio', currency_field='currency_id', readonly=True, digits=(16, 2))
+    cost_daily = fields.Monetary(string='Costo Diario', currency_field='currency_id', readonly=True)
+    cost_to_date = fields.Monetary(string='Costo Días En Servicio', currency_field='currency_id', readonly=True)
     currency_id = fields.Many2one('res.currency', string='Moneda', readonly=True)
 
     @api.depends('lot_id', 'lot_id.lot_supply_line_ids', 'lot_id.lot_supply_line_ids.has_cost', 'lot_id.lot_supply_line_ids.cost')

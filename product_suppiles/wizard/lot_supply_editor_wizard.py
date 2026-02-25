@@ -65,7 +65,7 @@ class LotSupplyEditorWizard(models.TransientModel):
         res = super().default_get(fields_list)
         
         # Solo procesar si tenemos lot_id en el contexto
-        lot_id = self._context.get('default_lot_id') or self._context.get('active_id')
+        lot_id = self.env.context.get('default_lot_id') or self.env.context.get('active_id')
         if not lot_id or 'lot_id' not in fields_list:
             return res
         
@@ -440,7 +440,7 @@ class LotSupplyEditorWizardLine(models.TransientModel):
     uom_id = fields.Many2one(
         'uom.uom',
         string='UdM',
-        domain="[('category_id','=', product_id and product_id.uom_id and product_id.uom_id.category_id)]",
+        domain=[],
         help='Unidad de medida'
     )
     

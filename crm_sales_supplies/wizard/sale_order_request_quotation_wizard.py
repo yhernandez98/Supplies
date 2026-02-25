@@ -36,7 +36,6 @@ class SaleOrderRequestQuotationWizard(models.TransientModel):
         string='Descripción de lo que se necesita cotizar',
         required=False,
         help='Describe los productos o servicios que necesita cotizar el área de compras. Esta información aparecerá en la alerta. Solo requerido si no hay productos en la orden.',
-        placeholder='Ejemplo: Necesitamos cotizar equipos de seguridad para el cliente...'
     )
     has_products_needing_stock = fields.Boolean(
         string='Tiene Productos Sin Stock',

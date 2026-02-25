@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import base64
 from odoo import models, fields, api
 from odoo.exceptions import UserError
 from decimal import Decimal, getcontext
@@ -41,7 +42,22 @@ class Calculadora(models.Model):
         store=False,
         help='Cantidad de suscripciones no contables activas del cliente'
     )
-    
+
+    # Estado del flujo: borrador, enviada por correo, aprobada (y cargada a lista de precios si es renting)
+    state = fields.Selection([
+        ('draft', 'Borrador'),
+        ('sent', 'Enviada'),
+        ('approved', 'Aprobada'),
+    ], string='Estado', default='draft', required=True, copy=False,
+       help='Borrador: en edición. Enviada: cotización enviada por correo. Aprobada: cliente aprobó y (si es renting) se cargó a lista de precios.')
+
+    # Tipo de operación: Venta (solo valor con utilidad) o Renting (con servicios, financiación, plazos)
+    tipo_operacion = fields.Selection([
+        ('venta', 'Venta'),
+        ('renting', 'Renting'),
+    ], string='Tipo de operación', default='renting', required=True,
+       help='Venta: cotización con valor del producto con utilidad. Renting: incluye servicios técnicos, parámetros financieros y opciones por plazo.')
+
     # Moneda de cotización (el total siempre se muestra en COP)
     moneda_cotizacion = fields.Selection([
         ('usd', 'USD'),
@@ -59,6 +75,12 @@ class Calculadora(models.Model):
         'product.asset.category',
         string='Categoría de activo',
         help='Categoría del activo a cotizar (visible cuando el tipo es Bien).'
+    )
+    asset_class_id = fields.Many2one(
+        'product.asset.class',
+        string='Clase de activo',
+        domain="[('category_id', '=', asset_category_id)]",
+        help='Clase del activo a cotizar (visible cuando el tipo es Bien). Filtra por la categoría seleccionada.'
     )
 
     # Cantidad de equipos a cotizar (1 o más)
@@ -444,6 +466,19 @@ class Calculadora(models.Model):
         help='Total a pagar durante todo el plazo'
     )
     
+    # Aprobación (solo renting): plazo y escenario elegidos por el cliente para cargar a lista de precios
+    approved_plazo_meses = fields.Integer(
+        string='Plazo aprobado (meses)',
+        help='Plazo en meses con el que el cliente aprobó la cotización (12, 24, 36, 48 o 60).'
+    )
+    approved_escenario_key = fields.Selection([
+        ('escenario_1', 'Escenario 1: Con Seguro y Servicios'),
+        ('escenario_2', 'Escenario 2: Sin Seguro, con Servicios'),
+        ('escenario_3', 'Escenario 3: Con Seguro, sin Servicios'),
+        ('escenario_4', 'Escenario 4: Sin Seguro ni Servicios'),
+    ], string='Escenario aprobado',
+       help='Escenario elegido por el cliente al aprobar.')
+
     # Información adicional
     active = fields.Boolean(
         string='Activo',
@@ -855,22 +890,40 @@ class Calculadora(models.Model):
                 setattr(rec, 'equipo_%d_costo_total_cop' % n, line.costo_total_cop if line else 0.0)
 
     def _inverse_equipo_campos(self):
-        """Escribe en line_ids los valores de los campos equipo_N_*."""
+        """Escribe en line_ids los valores de los campos equipo_N_*. Conserva siempre los valores
+        existentes de la línea cuando el formulario envía vacío/0 (evita que se borren al guardar)."""
         for rec in self:
             lines = rec.line_ids.sorted(key=lambda l: l.sequence)
+            if not lines:
+                continue
+            line_commands = []
             for n in range(1, 21):
                 if n > len(lines):
                     break
                 line = lines[n - 1]
+                nombre_nuevo = getattr(rec, 'equipo_%d_nombre' % n)
                 prod = getattr(rec, 'equipo_%d_product_id' % n)
-                line.write({
-                    'name': getattr(rec, 'equipo_%d_nombre' % n) or '',
-                    'product_id': prod.id if prod else False,
-                    'valor_usd': getattr(rec, 'equipo_%d_valor_usd' % n),
-                    'valor_garantia_usd': getattr(rec, 'equipo_%d_garantia_usd' % n),
-                    'valor_cop': getattr(rec, 'equipo_%d_valor_cop' % n),
-                    'valor_garantia_cop': getattr(rec, 'equipo_%d_garantia_cop' % n),
-                })
+                v_usd = getattr(rec, 'equipo_%d_valor_usd' % n)
+                g_usd = getattr(rec, 'equipo_%d_garantia_usd' % n)
+                v_cop = getattr(rec, 'equipo_%d_valor_cop' % n)
+                g_cop = getattr(rec, 'equipo_%d_garantia_cop' % n)
+                # Conservar valores de la línea cuando lo que llega está vacío o es 0 (actualización parcial)
+                name_final = nombre_nuevo or line.name or ''
+                product_final = prod or line.product_id
+                valor_usd_final = v_usd if (v_usd != 0 or line.valor_usd == 0) else line.valor_usd
+                garantia_usd_final = g_usd if (g_usd != 0 or line.valor_garantia_usd == 0) else line.valor_garantia_usd
+                valor_cop_final = v_cop if (v_cop != 0 or line.valor_cop == 0) else line.valor_cop
+                garantia_cop_final = g_cop if (g_cop != 0 or line.valor_garantia_cop == 0) else line.valor_garantia_cop
+                line_commands.append((1, line.id, {
+                    'name': name_final or '',
+                    'product_id': product_final.id if product_final else False,
+                    'valor_usd': valor_usd_final,
+                    'valor_garantia_usd': garantia_usd_final,
+                    'valor_cop': valor_cop_final,
+                    'valor_garantia_cop': garantia_cop_final,
+                }))
+            if line_commands:
+                rec.write({'line_ids': line_commands})
 
     def _calcular_escenario(self, incluir_seguro=True, incluir_servicios=True, plazo=None):
         """
@@ -1107,4 +1160,139 @@ class Calculadora(models.Model):
             'res_model': 'calculadora.costos',
             'res_id': self.id,
             'context': self.env.context,
+        }
+
+    def action_send_quote_email(self):
+        """Abre el asistente para enviar la cotización por correo al cliente."""
+        self.ensure_one()
+        if not self.partner_id or not self.partner_id.email:
+            raise UserError('El cliente debe tener un correo electrónico para enviar la cotización.')
+        report = self.env.ref('calculadora_costos.action_report_cotizacion', raise_if_not_found=False)
+        if not report:
+            raise UserError('No se encontró el reporte de cotización.')
+        pdf_content, _ = report._render_qweb_pdf(report.report_name, self.ids)
+        filename = 'Cotización - %s.pdf' % (self.name or 'Sin Nombre')
+        datas = base64.b64encode(pdf_content) if isinstance(pdf_content, bytes) else base64.b64encode(pdf_content.encode() if pdf_content else b'')
+        attachment = self.env['ir.attachment'].create({
+            'name': filename,
+            'type': 'binary',
+            'datas': datas,
+            'res_model': self._name,
+            'res_id': self.id,
+        })
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Enviar cotización por correo',
+            'res_model': 'mail.compose.message',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_model': self._name,
+                'default_res_id': self.id,
+                'default_res_ids': [self.id],
+                'default_attachment_ids': [(6, 0, [attachment.id])],
+                'default_subject': 'Cotización: %s' % (self.name or ''),
+                'default_body': 'Adjunto encontrará la cotización solicitada.',
+                'default_partner_ids': [(6, 0, self.partner_id.ids)],
+                'default_composition_mode': 'comment',
+            },
+        }
+
+    def _get_escenario_params(self, escenario_key):
+        """Devuelve incluir_seguro e incluir_servicios según la clave del escenario."""
+        map_escenario = {
+            'escenario_1': (True, True),
+            'escenario_2': (False, True),
+            'escenario_3': (True, False),
+            'escenario_4': (False, False),
+        }
+        return map_escenario.get(escenario_key, (True, True))
+
+    def action_approve_and_load_pricelist(self, plazo_meses, escenario_key):
+        """
+        Aprobación de cotización renting: guarda plazo y escenario, y carga cada equipo
+        a la lista de precios del cliente con el valor mensual (COP) del escenario/plazo elegido.
+        """
+        self.ensure_one()
+        if self.tipo_operacion != 'renting':
+            raise UserError('Solo se puede aprobar y cargar a lista de precios una cotización de tipo Renting.')
+        if self.state == 'approved':
+            raise UserError('Esta cotización ya está aprobada.')
+        if not self.partner_id:
+            raise UserError('Debe indicar un cliente para cargar la cotización a su lista de precios.')
+        if plazo_meses not in (12, 24, 36, 48, 60):
+            raise UserError('El plazo debe ser 12, 24, 36, 48 o 60 meses.')
+        if escenario_key not in ('escenario_1', 'escenario_2', 'escenario_3', 'escenario_4'):
+            raise UserError('Debe seleccionar un escenario válido.')
+        incluir_seguro, incluir_servicios = self._get_escenario_params(escenario_key)
+        # Obtener o crear lista de precios del cliente
+        pricelist = self.partner_id.property_product_pricelist
+        if not pricelist:
+            pricelist = self.env['product.pricelist'].create({
+                'name': 'Lista - %s' % self.partner_id.name,
+                'currency_id': self.env.ref('base.COP', raise_if_not_found=False).id or self.currency_id.id,
+            })
+            self.partner_id.property_product_pricelist = pricelist
+        lineas = self.get_lineas_para_reporte()
+        created_items = []
+        for linea in lineas:
+            if linea._name == 'calculadora.costos.line':
+                product = linea.product_id
+                nombre_equipo = linea.name or (product.display_name if product else 'Equipo')
+            else:
+                product = False
+                nombre_equipo = 'Equipo 1'
+            if not product:
+                raise UserError(
+                    'Para cargar a la lista de precios, cada equipo debe tener un producto asociado. '
+                    'Falta producto en: %s.' % nombre_equipo
+                )
+            valores = self._calcular_escenario_linea(
+                linea,
+                incluir_seguro=incluir_seguro,
+                incluir_servicios=incluir_servicios,
+                plazo=plazo_meses,
+            )
+            pago_mensual_cop = valores.get('pago_mensual_total', 0)
+            if pago_mensual_cop <= 0:
+                continue
+            item_vals = {
+                'pricelist_id': pricelist.id,
+                'applied_on': '0_product_variant',
+                'product_id': product.id,
+                'compute_price': 'fixed',
+                'fixed_price': pago_mensual_cop,
+            }
+            # La moneda de la lista de precios se usa automáticamente; si la lista no tiene COP, se creó con COP arriba
+            item = self.env['product.pricelist.item'].create(item_vals)
+            created_items.append(item)
+        self.write({
+            'state': 'approved',
+            'approved_plazo_meses': plazo_meses,
+            'approved_escenario_key': escenario_key,
+        })
+        return created_items
+
+    def action_confirm_sent(self):
+        """Marca la cotización como enviada por correo (puede llamarse desde el wizard de envío o al cerrar el composer)."""
+        self.ensure_one()
+        if self.state == 'draft':
+            self.write({'state': 'sent'})
+
+    def action_open_approve_wizard(self):
+        """Abre el asistente para aprobar la cotización (plazo + escenario) y cargar a lista de precios del cliente."""
+        self.ensure_one()
+        if self.tipo_operacion != 'renting':
+            raise UserError('Solo las cotizaciones de tipo Renting se pueden aprobar y cargar a lista de precios.')
+        if self.state == 'approved':
+            raise UserError('Esta cotización ya está aprobada.')
+        if not self.partner_id:
+            raise UserError('Seleccione un cliente para poder aprobar y cargar a su lista de precios.')
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Aprobar cotización y cargar a lista de precios',
+            'res_model': 'calculadora.approve.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {'default_calculadora_id': self.id},
         }

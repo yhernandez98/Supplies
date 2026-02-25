@@ -29,12 +29,17 @@ class StockPicking(models.Model):
         help='Solo muestra movimientos con supply_kind = parent'
     )
     
-    @api.depends('move_ids_without_package', 'move_ids_without_package.supply_kind')
+    def _get_moves_without_package(self):
+        """Obtener movimientos sin paquete (Odoo 18: move_ids_without_package; Odoo 19+: puede ser move_ids)."""
+        return getattr(self, 'move_ids_without_package', None) or self.move_ids
+
+    @api.depends('move_ids', 'move_ids.supply_kind')
     def _compute_move_ids_main_only(self):
-        """Calcular movimientos principales (solo supply_kind = 'parent')"""
+        """Calcular movimientos principales (solo supply_kind = 'parent')."""
         for picking in self:
             try:
-                picking.move_ids_main_only = picking.move_ids_without_package.filtered(
+                moves = picking._get_moves_without_package()
+                picking.move_ids_main_only = moves.filtered(
                     lambda m: hasattr(m, 'supply_kind') and m.supply_kind == 'parent'
                 )
             except Exception:
@@ -50,12 +55,17 @@ class StockPicking(models.Model):
         help='Solo muestra move_line_ids con supply_kind = parent'
     )
     
-    @api.depends('move_line_ids_without_package', 'move_line_ids_without_package.supply_kind')
+    def _get_move_lines_without_package(self):
+        """Obtener líneas de movimiento sin paquete (Odoo 18: move_line_ids_without_package; Odoo 19+: puede ser move_line_ids)."""
+        return getattr(self, 'move_line_ids_without_package', None) or self.move_line_ids
+
+    @api.depends('move_line_ids', 'move_line_ids.supply_kind')
     def _compute_move_line_ids_main_only(self):
-        """Calcular move_line_ids principales (solo supply_kind = 'parent')"""
+        """Calcular move_line_ids principales (solo supply_kind = 'parent')."""
         for picking in self:
             try:
-                picking.move_line_ids_main_only = picking.move_line_ids_without_package.filtered(
+                lines = picking._get_move_lines_without_package()
+                picking.move_line_ids_main_only = lines.filtered(
                     lambda ml: hasattr(ml, 'supply_kind') and ml.supply_kind == 'parent'
                 )
             except Exception:
@@ -390,7 +400,7 @@ class StockPicking(models.Model):
                     default_date = picking.date_done or fields.Datetime.now()
                     partner = picking.partner_id
 
-                    for move in picking.move_ids_without_package:
+                    for move in picking._get_moves_without_package():
                         try:
                             kind = move.supply_kind
                             if kind not in ("component", "peripheral", "complement"):
@@ -444,7 +454,7 @@ class StockPicking(models.Model):
         MoveLine = self.env["stock.move.line"]
 
         # CORRECCIÓN: Filtrar movimientos padres y asegurar que cada uno se procese independientemente
-        parent_moves = self.move_ids_without_package.filtered(
+        parent_moves = self._get_moves_without_package().filtered(
             lambda m: m.state in ("draft", "confirmed", "waiting", "assigned") and 
                      m.supply_kind == "parent" and
                      m.product_id and m.product_id.exists()
@@ -534,7 +544,7 @@ class StockPicking(models.Model):
             
             # Verificar si ya existen movimientos de complementos antes de eliminar
             # Esto evita eliminar y recrear complementos que ya fueron recibidos
-            existing_complement_moves = self.move_ids_without_package.filtered(
+            existing_complement_moves = self._get_moves_without_package().filtered(
                 lambda m: m.supply_kind == "complement" and 
                          m.internal_parent_move_id and m.internal_parent_move_id.id == parent.id
             )

@@ -50,16 +50,37 @@
                             type="object" 
                             string="Imprimir Reporte" 
                             icon="fa-print"/>
+                    <button name="action_send_quote_email" 
+                            type="object" 
+                            string="Enviar por correo" 
+                            icon="fa-envelope"
+                            invisible="state == 'approved' or not partner_id"
+                            title="Envía la cotización por correo al cliente"/>
+                    <button name="action_open_approve_wizard" 
+                            type="object" 
+                            string="Aprobar y cargar a lista de precios" 
+                            icon="fa-check"
+                            invisible="tipo_operacion != 'renting' or state == 'approved' or not partner_id"
+                            title="Aprobar con plazo y escenario y añadir equipos a la lista de precios del cliente"/>
+                    <button name="action_confirm_sent" 
+                            type="object" 
+                            string="Marcar como enviada" 
+                            icon="fa-send"
+                            invisible="state != 'draft'"
+                            title="Marcar que la cotización fue enviada por correo"/>
                 </header>
                 <sheet>
                     <field name="currency_id" invisible="1"/>
                     <field name="currency_usd_id" invisible="1"/>
+                    <field name="state" invisible="1"/>
                     <group>
                         <group>
                             <field name="name" placeholder="Ej: Renting Equipo"/>
                             <field name="tipo_calculo" invisible="1"/>
                             <field name="active"/>
                             <field name="partner_id" options="{'no_create': True, 'no_create_edit': True}"/>
+                            <field name="approved_plazo_meses" readonly="1" invisible="state != 'approved'"/>
+                            <field name="approved_escenario_key" readonly="1" invisible="state != 'approved'"/>
                         </group>
                         <group>
                             <label for="costo_total_cop" string="Costo total (COP)"/>
@@ -67,6 +88,7 @@
                                 <field name="costo_total_cop" widget="float" digits="[16, 0]" readonly="1"/>
                             </div>
                             <field name="pago_mensual" widget="float" digits="[16, 0]" readonly="1"/>
+                            <field name="tipo_operacion"/>
                             <field name="subscription_count" invisible="not partner_id"/>
                         </group>
                     </group>
@@ -77,6 +99,7 @@
                                     <field name="moneda_cotizacion"/>
                                     <field name="tipo_producto" widget="radio" options="{'horizontal': true}"/>
                                     <field name="asset_category_id" invisible="tipo_producto != 'consu'"/>
+                                    <field name="asset_class_id" invisible="tipo_producto != 'consu'"/>
                                     <p class="text-muted" colspan="2">
                                         El valor total siempre se mostrará en pesos (COP).
                                     </p>
@@ -102,7 +125,7 @@
                             <!-- Campos por equipo (1 a 20): sin tabla; USD o COP según Cotizar en -->
                             <group string="Equipo 1" invisible="cantidad_equipos &lt; 1">
                                 <field name="equipo_1_nombre" placeholder="Nombre o descripción"/>
-                                <field name="equipo_1_product_id" options="{'no_create': True}"/>
+                                <field name="equipo_1_product_id" options="{'no_create': True}" domain="[('type', '=', tipo_producto)] + ([('asset_category_id', '=', asset_category_id), ('asset_class_id', '=', asset_class_id)] if tipo_producto == 'consu' else [])"/>
                                 <field name="equipo_1_valor_usd" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'usd'"/>
                                 <field name="equipo_1_garantia_usd" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'usd'"/>
                                 <field name="equipo_1_valor_cop" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'cop'"/>
@@ -111,7 +134,7 @@
                             </group>
                             <group string="Equipo 2" invisible="cantidad_equipos &lt; 2">
                                 <field name="equipo_2_nombre" placeholder="Nombre o descripción"/>
-                                <field name="equipo_2_product_id" options="{'no_create': True}"/>
+                                <field name="equipo_2_product_id" options="{'no_create': True}" domain="[('type', '=', tipo_producto)] + ([('asset_category_id', '=', asset_category_id), ('asset_class_id', '=', asset_class_id)] if tipo_producto == 'consu' else [])"/>
                                 <field name="equipo_2_valor_usd" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'usd'"/>
                                 <field name="equipo_2_garantia_usd" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'usd'"/>
                                 <field name="equipo_2_valor_cop" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'cop'"/>
@@ -120,7 +143,7 @@
                             </group>
                             <group string="Equipo 3" invisible="cantidad_equipos &lt; 3">
                                 <field name="equipo_3_nombre" placeholder="Nombre o descripción"/>
-                                <field name="equipo_3_product_id" options="{'no_create': True}"/>
+                                <field name="equipo_3_product_id" options="{'no_create': True}" domain="[('type', '=', tipo_producto)] + ([('asset_category_id', '=', asset_category_id), ('asset_class_id', '=', asset_class_id)] if tipo_producto == 'consu' else [])"/>
                                 <field name="equipo_3_valor_usd" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'usd'"/>
                                 <field name="equipo_3_garantia_usd" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'usd'"/>
                                 <field name="equipo_3_valor_cop" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'cop'"/>
@@ -129,7 +152,7 @@
                             </group>
                             <group string="Equipo 4" invisible="cantidad_equipos &lt; 4">
                                 <field name="equipo_4_nombre" placeholder="Nombre o descripción"/>
-                                <field name="equipo_4_product_id" options="{'no_create': True}"/>
+                                <field name="equipo_4_product_id" options="{'no_create': True}" domain="[('type', '=', tipo_producto)] + ([('asset_category_id', '=', asset_category_id), ('asset_class_id', '=', asset_class_id)] if tipo_producto == 'consu' else [])"/>
                                 <field name="equipo_4_valor_usd" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'usd'"/>
                                 <field name="equipo_4_garantia_usd" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'usd'"/>
                                 <field name="equipo_4_valor_cop" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'cop'"/>
@@ -138,7 +161,7 @@
                             </group>
                             <group string="Equipo 5" invisible="cantidad_equipos &lt; 5">
                                 <field name="equipo_5_nombre" placeholder="Nombre o descripción"/>
-                                <field name="equipo_5_product_id" options="{'no_create': True}"/>
+                                <field name="equipo_5_product_id" options="{'no_create': True}" domain="[('type', '=', tipo_producto)] + ([('asset_category_id', '=', asset_category_id), ('asset_class_id', '=', asset_class_id)] if tipo_producto == 'consu' else [])"/>
                                 <field name="equipo_5_valor_usd" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'usd'"/>
                                 <field name="equipo_5_garantia_usd" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'usd'"/>
                                 <field name="equipo_5_valor_cop" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'cop'"/>
@@ -147,7 +170,7 @@
                             </group>
                             <group string="Equipo 6" invisible="cantidad_equipos &lt; 6">
                                 <field name="equipo_6_nombre" placeholder="Nombre o descripción"/>
-                                <field name="equipo_6_product_id" options="{'no_create': True}"/>
+                                <field name="equipo_6_product_id" options="{'no_create': True}" domain="[('type', '=', tipo_producto)] + ([('asset_category_id', '=', asset_category_id), ('asset_class_id', '=', asset_class_id)] if tipo_producto == 'consu' else [])"/>
                                 <field name="equipo_6_valor_usd" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'usd'"/>
                                 <field name="equipo_6_garantia_usd" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'usd'"/>
                                 <field name="equipo_6_valor_cop" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'cop'"/>
@@ -155,7 +178,7 @@
                                 <field name="equipo_6_costo_total_cop" widget="float" digits="[16, 0]" readonly="1"/>
                             </group>
                             <group string="Equipo 7" invisible="cantidad_equipos &lt; 7">
-                                <field name="equipo_7_nombre"/><field name="equipo_7_product_id" options="{'no_create': True}"/>
+                                <field name="equipo_7_nombre"/><field name="equipo_7_product_id" options="{'no_create': True}" domain="[('type', '=', tipo_producto)] + ([('asset_category_id', '=', asset_category_id), ('asset_class_id', '=', asset_class_id)] if tipo_producto == 'consu' else [])"/>
                                 <field name="equipo_7_valor_usd" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'usd'"/>
                                 <field name="equipo_7_garantia_usd" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'usd'"/>
                                 <field name="equipo_7_valor_cop" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'cop'"/>
@@ -163,7 +186,7 @@
                                 <field name="equipo_7_costo_total_cop" widget="float" digits="[16, 0]" readonly="1"/>
                             </group>
                             <group string="Equipo 8" invisible="cantidad_equipos &lt; 8">
-                                <field name="equipo_8_nombre"/><field name="equipo_8_product_id" options="{'no_create': True}"/>
+                                <field name="equipo_8_nombre"/><field name="equipo_8_product_id" options="{'no_create': True}" domain="[('type', '=', tipo_producto)] + ([('asset_category_id', '=', asset_category_id), ('asset_class_id', '=', asset_class_id)] if tipo_producto == 'consu' else [])"/>
                                 <field name="equipo_8_valor_usd" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'usd'"/>
                                 <field name="equipo_8_garantia_usd" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'usd'"/>
                                 <field name="equipo_8_valor_cop" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'cop'"/>
@@ -171,7 +194,7 @@
                                 <field name="equipo_8_costo_total_cop" widget="float" digits="[16, 0]" readonly="1"/>
                             </group>
                             <group string="Equipo 9" invisible="cantidad_equipos &lt; 9">
-                                <field name="equipo_9_nombre"/><field name="equipo_9_product_id" options="{'no_create': True}"/>
+                                <field name="equipo_9_nombre"/><field name="equipo_9_product_id" options="{'no_create': True}" domain="[('type', '=', tipo_producto)] + ([('asset_category_id', '=', asset_category_id), ('asset_class_id', '=', asset_class_id)] if tipo_producto == 'consu' else [])"/>
                                 <field name="equipo_9_valor_usd" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'usd'"/>
                                 <field name="equipo_9_garantia_usd" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'usd'"/>
                                 <field name="equipo_9_valor_cop" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'cop'"/>
@@ -179,7 +202,7 @@
                                 <field name="equipo_9_costo_total_cop" widget="float" digits="[16, 0]" readonly="1"/>
                             </group>
                             <group string="Equipo 10" invisible="cantidad_equipos &lt; 10">
-                                <field name="equipo_10_nombre"/><field name="equipo_10_product_id" options="{'no_create': True}"/>
+                                <field name="equipo_10_nombre"/><field name="equipo_10_product_id" options="{'no_create': True}" domain="[('type', '=', tipo_producto)] + ([('asset_category_id', '=', asset_category_id), ('asset_class_id', '=', asset_class_id)] if tipo_producto == 'consu' else [])"/>
                                 <field name="equipo_10_valor_usd" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'usd'"/>
                                 <field name="equipo_10_garantia_usd" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'usd'"/>
                                 <field name="equipo_10_valor_cop" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'cop'"/>
@@ -187,7 +210,7 @@
                                 <field name="equipo_10_costo_total_cop" widget="float" digits="[16, 0]" readonly="1"/>
                             </group>
                             <group string="Equipo 11" invisible="cantidad_equipos &lt; 11">
-                                <field name="equipo_11_nombre"/><field name="equipo_11_product_id" options="{'no_create': True}"/>
+                                <field name="equipo_11_nombre"/><field name="equipo_11_product_id" options="{'no_create': True}" domain="[('type', '=', tipo_producto)] + ([('asset_category_id', '=', asset_category_id), ('asset_class_id', '=', asset_class_id)] if tipo_producto == 'consu' else [])"/>
                                 <field name="equipo_11_valor_usd" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'usd'"/>
                                 <field name="equipo_11_garantia_usd" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'usd'"/>
                                 <field name="equipo_11_valor_cop" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'cop'"/>
@@ -195,7 +218,7 @@
                                 <field name="equipo_11_costo_total_cop" widget="float" digits="[16, 0]" readonly="1"/>
                             </group>
                             <group string="Equipo 12" invisible="cantidad_equipos &lt; 12">
-                                <field name="equipo_12_nombre"/><field name="equipo_12_product_id" options="{'no_create': True}"/>
+                                <field name="equipo_12_nombre"/><field name="equipo_12_product_id" options="{'no_create': True}" domain="[('type', '=', tipo_producto)] + ([('asset_category_id', '=', asset_category_id), ('asset_class_id', '=', asset_class_id)] if tipo_producto == 'consu' else [])"/>
                                 <field name="equipo_12_valor_usd" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'usd'"/>
                                 <field name="equipo_12_garantia_usd" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'usd'"/>
                                 <field name="equipo_12_valor_cop" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'cop'"/>
@@ -203,7 +226,7 @@
                                 <field name="equipo_12_costo_total_cop" widget="float" digits="[16, 0]" readonly="1"/>
                             </group>
                             <group string="Equipo 13" invisible="cantidad_equipos &lt; 13">
-                                <field name="equipo_13_nombre"/><field name="equipo_13_product_id" options="{'no_create': True}"/>
+                                <field name="equipo_13_nombre"/><field name="equipo_13_product_id" options="{'no_create': True}" domain="[('type', '=', tipo_producto)] + ([('asset_category_id', '=', asset_category_id), ('asset_class_id', '=', asset_class_id)] if tipo_producto == 'consu' else [])"/>
                                 <field name="equipo_13_valor_usd" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'usd'"/>
                                 <field name="equipo_13_garantia_usd" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'usd'"/>
                                 <field name="equipo_13_valor_cop" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'cop'"/>
@@ -211,7 +234,7 @@
                                 <field name="equipo_13_costo_total_cop" widget="float" digits="[16, 0]" readonly="1"/>
                             </group>
                             <group string="Equipo 14" invisible="cantidad_equipos &lt; 14">
-                                <field name="equipo_14_nombre"/><field name="equipo_14_product_id" options="{'no_create': True}"/>
+                                <field name="equipo_14_nombre"/><field name="equipo_14_product_id" options="{'no_create': True}" domain="[('type', '=', tipo_producto)] + ([('asset_category_id', '=', asset_category_id), ('asset_class_id', '=', asset_class_id)] if tipo_producto == 'consu' else [])"/>
                                 <field name="equipo_14_valor_usd" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'usd'"/>
                                 <field name="equipo_14_garantia_usd" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'usd'"/>
                                 <field name="equipo_14_valor_cop" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'cop'"/>
@@ -219,7 +242,7 @@
                                 <field name="equipo_14_costo_total_cop" widget="float" digits="[16, 0]" readonly="1"/>
                             </group>
                             <group string="Equipo 15" invisible="cantidad_equipos &lt; 15">
-                                <field name="equipo_15_nombre"/><field name="equipo_15_product_id" options="{'no_create': True}"/>
+                                <field name="equipo_15_nombre"/><field name="equipo_15_product_id" options="{'no_create': True}" domain="[('type', '=', tipo_producto)] + ([('asset_category_id', '=', asset_category_id), ('asset_class_id', '=', asset_class_id)] if tipo_producto == 'consu' else [])"/>
                                 <field name="equipo_15_valor_usd" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'usd'"/>
                                 <field name="equipo_15_garantia_usd" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'usd'"/>
                                 <field name="equipo_15_valor_cop" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'cop'"/>
@@ -227,7 +250,7 @@
                                 <field name="equipo_15_costo_total_cop" widget="float" digits="[16, 0]" readonly="1"/>
                             </group>
                             <group string="Equipo 16" invisible="cantidad_equipos &lt; 16">
-                                <field name="equipo_16_nombre"/><field name="equipo_16_product_id" options="{'no_create': True}"/>
+                                <field name="equipo_16_nombre"/><field name="equipo_16_product_id" options="{'no_create': True}" domain="[('type', '=', tipo_producto)] + ([('asset_category_id', '=', asset_category_id), ('asset_class_id', '=', asset_class_id)] if tipo_producto == 'consu' else [])"/>
                                 <field name="equipo_16_valor_usd" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'usd'"/>
                                 <field name="equipo_16_garantia_usd" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'usd'"/>
                                 <field name="equipo_16_valor_cop" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'cop'"/>
@@ -235,7 +258,7 @@
                                 <field name="equipo_16_costo_total_cop" widget="float" digits="[16, 0]" readonly="1"/>
                             </group>
                             <group string="Equipo 17" invisible="cantidad_equipos &lt; 17">
-                                <field name="equipo_17_nombre"/><field name="equipo_17_product_id" options="{'no_create': True}"/>
+                                <field name="equipo_17_nombre"/><field name="equipo_17_product_id" options="{'no_create': True}" domain="[('type', '=', tipo_producto)] + ([('asset_category_id', '=', asset_category_id), ('asset_class_id', '=', asset_class_id)] if tipo_producto == 'consu' else [])"/>
                                 <field name="equipo_17_valor_usd" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'usd'"/>
                                 <field name="equipo_17_garantia_usd" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'usd'"/>
                                 <field name="equipo_17_valor_cop" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'cop'"/>
@@ -243,7 +266,7 @@
                                 <field name="equipo_17_costo_total_cop" widget="float" digits="[16, 0]" readonly="1"/>
                             </group>
                             <group string="Equipo 18" invisible="cantidad_equipos &lt; 18">
-                                <field name="equipo_18_nombre"/><field name="equipo_18_product_id" options="{'no_create': True}"/>
+                                <field name="equipo_18_nombre"/><field name="equipo_18_product_id" options="{'no_create': True}" domain="[('type', '=', tipo_producto)] + ([('asset_category_id', '=', asset_category_id), ('asset_class_id', '=', asset_class_id)] if tipo_producto == 'consu' else [])"/>
                                 <field name="equipo_18_valor_usd" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'usd'"/>
                                 <field name="equipo_18_garantia_usd" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'usd'"/>
                                 <field name="equipo_18_valor_cop" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'cop'"/>
@@ -251,7 +274,7 @@
                                 <field name="equipo_18_costo_total_cop" widget="float" digits="[16, 0]" readonly="1"/>
                             </group>
                             <group string="Equipo 19" invisible="cantidad_equipos &lt; 19">
-                                <field name="equipo_19_nombre"/><field name="equipo_19_product_id" options="{'no_create': True}"/>
+                                <field name="equipo_19_nombre"/><field name="equipo_19_product_id" options="{'no_create': True}" domain="[('type', '=', tipo_producto)] + ([('asset_category_id', '=', asset_category_id), ('asset_class_id', '=', asset_class_id)] if tipo_producto == 'consu' else [])"/>
                                 <field name="equipo_19_valor_usd" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'usd'"/>
                                 <field name="equipo_19_garantia_usd" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'usd'"/>
                                 <field name="equipo_19_valor_cop" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'cop'"/>
@@ -259,7 +282,7 @@
                                 <field name="equipo_19_costo_total_cop" widget="float" digits="[16, 0]" readonly="1"/>
                             </group>
                             <group string="Equipo 20" invisible="cantidad_equipos &lt; 20">
-                                <field name="equipo_20_nombre"/><field name="equipo_20_product_id" options="{'no_create': True}"/>
+                                <field name="equipo_20_nombre"/><field name="equipo_20_product_id" options="{'no_create': True}" domain="[('type', '=', tipo_producto)] + ([('asset_category_id', '=', asset_category_id), ('asset_class_id', '=', asset_class_id)] if tipo_producto == 'consu' else [])"/>
                                 <field name="equipo_20_valor_usd" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'usd'"/>
                                 <field name="equipo_20_garantia_usd" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'usd'"/>
                                 <field name="equipo_20_valor_cop" options="{'digits': [16, 0]}" invisible="moneda_cotizacion != 'cop'"/>
@@ -267,7 +290,7 @@
                                 <field name="equipo_20_costo_total_cop" widget="float" digits="[16, 0]" readonly="1"/>
                             </group>
                         </page>
-                        <page string="Servicios Técnicos">
+                        <page string="Servicios Técnicos" invisible="tipo_operacion == 'venta'">
                             <group>
                                 <group>
                                     <field name="costo_servicios_completos" 
@@ -279,7 +302,7 @@
                                 </group>
                             </group>
                         </page>
-                        <page string="Parámetros Financieros">
+                        <page string="Parámetros Financieros" invisible="tipo_operacion == 'venta'">
                             <group>
                                 <group string="Tasas de Interés">
                                     <field name="tasa_nominal" options="{'digits': [16, 0]}"/>
@@ -291,7 +314,7 @@
                                 </group>
                             </group>
                         </page>
-                        <page string="Opción de Compra">
+                        <page string="Opción de Compra" invisible="tipo_operacion == 'venta'">
                             <group>
                                 <group>
                                     <field name="porcentaje_opcion_compra" options="{'digits': [16, 0]}"/>
@@ -300,7 +323,7 @@
                                 </group>
                             </group>
                         </page>
-                        <page string="Valores por Plazo">
+                        <page string="Valores por Plazo" invisible="tipo_operacion == 'venta'">
                             <group>
                                 <group string="Comparación de Plazos (cuota = costo total ÷ meses)">
                                     <label for="valor_12_meses" string="12 Meses:"/>
@@ -371,11 +394,13 @@
         <field name="name">calculadora.costos.list</field>
         <field name="model">calculadora.costos</field>
         <field name="arch" type="xml">
-            <list string="Calculadoras" decoration-muted="active == False">
+            <list string="Calculadoras" decoration-muted="active == False" decoration-success="state == 'approved'" decoration-info="state == 'sent'">
                 <field name="currency_id" optional="hide"/>
                 <field name="currency_usd_id" optional="hide"/>
+                <field name="state" widget="badge" decoration-info="state == 'sent'" decoration-success="state == 'approved'"/>
                 <field name="name"/>
                 <field name="tipo_calculo"/>
+                <field name="tipo_operacion"/>
                 <field name="moneda_cotizacion"/>
                 <field name="partner_id"/>
                 <field name="valor_usd" widget="float" digits="[16, 0]"/>
@@ -396,10 +421,16 @@
             <search string="Buscar Calculadoras">
                 <field name="name" string="Nombre"/>
                 <field name="partner_id" string="Cliente"/>
+                <field name="state"/>
+                <separator/>
+                <filter string="Borrador" name="filter_draft" domain="[('state', '=', 'draft')]"/>
+                <filter string="Enviadas" name="filter_sent" domain="[('state', '=', 'sent')]"/>
+                <filter string="Aprobadas" name="filter_approved" domain="[('state', '=', 'approved')]"/>
                 <separator/>
                 <filter string="Activos" name="filter_active" domain="[('active', '=', True)]"/>
                 <filter string="Inactivos" name="filter_inactive" domain="[('active', '=', False)]"/>
                 <group expand="0" string="Agrupar por">
+                    <filter string="Estado" name="group_state" context="{'group_by': 'state'}"/>
                     <filter string="Cliente" name="group_partner" context="{'group_by': 'partner_id'}"/>
                     <filter string="Plazo" name="group_plazo" context="{'group_by': 'plazo_meses'}"/>
                 </group>

@@ -22,7 +22,6 @@ class PurchaseAlertValidationWizard(models.TransientModel):
     validation_notes = fields.Text(
         string='Notas de Validación',
         help='Comentarios generales sobre la validación de las cotizaciones',
-        placeholder='Ej: Se aprobó la cotización del proveedor X por mejor precio...',
     )
 
     @api.model

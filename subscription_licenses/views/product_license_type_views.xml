@@ -60,7 +60,8 @@
                 <field name="name"/>
                 <filter string="Activas" name="active" domain="[('active', '=', True)]"/>
                 <filter string="Inactivas" name="inactive" domain="[('active', '=', False)]"/>
-                <group expand="0" string="Agrupar por">
+                <separator string="Agrupar por"/>
+                <group>
                     <filter string="Compañía" name="group_company" context="{'group_by': 'company_id'}" groups="base.group_multi_company"/>
                 </group>
             </search>

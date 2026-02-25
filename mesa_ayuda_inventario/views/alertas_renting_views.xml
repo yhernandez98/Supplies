@@ -29,7 +29,7 @@
             <field name="view_id" ref="view_stock_lot_tree_alertas_renting"/>
             <field name="view_ids" eval="[(5, 0, 0),
                 (0, 0, {'view_mode': 'list', 'view_id': ref('view_stock_lot_tree_alertas_renting')}),
-                (0, 0, {'view_mode': 'form', 'view_id': ref('stock.view_production_lot_form')})]"/>
+                (0, 0, {'view_mode': 'form', 'view_id': ref('product_suppiles.view_production_lot_form_inherit_supplies')})]"/>
             <field name="search_view_id" ref="view_customer_inventory_lot_search"/>
             <field name="domain">[]</field>
             <field name="context">{'search_default_group_customer': 1, 'group_by': 'customer_id'}</field>
@@ -46,7 +46,7 @@ today = env.cr.fetchone()[0]
 env.cr.execute("SELECT CURRENT_DATE + INTERVAL '30 days'")
 end = env.cr.fetchone()[0]
 tree_view = env.ref('mesa_ayuda_inventario.view_stock_lot_tree_alertas_renting')
-form_view = env.ref('stock.view_production_lot_form')
+form_view = env.ref('product_suppiles.view_production_lot_form_inherit_supplies', raise_if_not_found=False) or env.ref('stock.view_production_lot_form')
 search_view = env.ref('mesa_ayuda_inventario.view_customer_inventory_lot_search')
 action = {
     'type': 'ir.actions.act_window',
