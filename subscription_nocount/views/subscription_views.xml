@@ -61,7 +61,7 @@
         </field>
     </record>
 
-    <!-- Búsqueda para Series con licencias: agrupar por asignadas / no asignadas -->
+    <!-- Búsqueda para Series con licencias (sin group_by: evita Invalid view en Odoo 19 para TransientModel) -->
     <record id="view_subscription_license_serial_line_search" model="ir.ui.view">
         <field name="name">subscription.license.serial.line.search</field>
         <field name="model">subscription.license.serial.line</field>
@@ -72,10 +72,6 @@
                 <field name="product_id"/>
                 <field name="lot_id"/>
                 <field name="license_service_name"/>
-                <group expand="0" string="Agrupar por">
-                    <filter string="Por tipo de licencia" name="group_by_license_type" context="{'group_by': 'license_service_name'}"/>
-                    <filter string="Licencias asignadas / No asignadas" name="group_assignment" context="{'group_by': 'assignment_group'}"/>
-                </group>
             </search>
         </field>
     </record>
