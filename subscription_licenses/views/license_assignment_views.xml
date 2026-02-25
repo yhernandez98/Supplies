@@ -1,0 +1,299 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_license_assignment_tree" model="ir.ui.view">
+        <field name="name">license.assignment.tree</field>
+        <field name="model">license.assignment</field>
+        <field name="arch" type="xml">
+            <list string="Asignaciones de Licencias" class="o_license_assignment_list" decoration-muted="state == 'cancelled'" 
+                  decoration-info="state == 'active'" decoration-warning="state == 'expired'"
+                  default_group_by="partner_id" default_order="partner_id,license_id">
+                <field name="partner_id" optional="hide" string="Cliente"/>
+                <field name="license_id" string="Licencia" optional="show"/>
+                <field name="license_provider_id" string="Proveedor" optional="show"/>
+                <field name="license_display_name" string="Tipo de Licencia" optional="show" 
+                       readonly="1" widget="text"/>
+                <field name="assignment_period_display" string="Período" optional="show" readonly="1"/>
+                <field name="quantity" string="Cantidad" sum="Total" optional="show"/>
+                <field name="equipment_count" string="Equipos" optional="show"/>
+                <field name="user_count" string="Usuarios" optional="show"/>
+                <field name="state" widget="badge" string="Estado"
+                       decoration-success="state == 'active'"
+                       decoration-muted="state == 'cancelled'"
+                       decoration-warning="state == 'expired'"
+                       optional="show"/>
+                <field name="start_date" string="Fecha de Inicio" optional="show"/>
+                <field name="end_date" string="Fecha de Fin" optional="show"/>
+                <field name="auto_renewal" string="Renovación automática" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_license_assignment_form" model="ir.ui.view">
+        <field name="name">license.assignment.form</field>
+        <field name="model">license.assignment</field>
+        <field name="arch" type="xml">
+            <form string="Asignación de Licencia" class="o_subscription_form o_license_module_form">
+                <header>
+                    <button name="action_activate" string="Activar" type="object" class="btn-primary" 
+                            invisible="state != 'draft'"/>
+                    <button name="action_cancel" string="Cancelar" type="object" class="btn-secondary"
+                            invisible="state == 'cancelled' or state == 'draft'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,active,expired,cancelled" class="o_subscription_statusbar"/>
+                </header>
+                <sheet>
+                    <group invisible="1" class="oe_no_button">
+                        <field name="license_applies_to_equipment"/>
+                        <field name="license_applies_to_user"/>
+                    </group>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="%(action_license_users)d" type="action" 
+                                class="oe_stat_button" icon="fa-users" 
+                                context="{'default_assignment_id': id, 'search_default_assignment_id': id, 'filter_by_user': True}">
+                            <div class="o_stat_info">
+                                <span class="o_stat_text">Usuarios</span>
+                                <span class="o_stat_value">
+                                    <field name="user_count"/>
+                                </span>
+                            </div>
+                        </button>
+                        <button name="%(action_license_equipment)d" type="action" 
+                                class="oe_stat_button" icon="fa-desktop" 
+                                context="{'default_assignment_id': id, 'search_default_assignment_id': id, 'filter_by_equipment': True}">
+                            <div class="o_stat_info">
+                                <span class="o_stat_text">Equipos</span>
+                                <span class="o_stat_value">
+                                    <field name="equipment_count"/>
+                                </span>
+                            </div>
+                        </button>
+                    </div>
+                    <group>
+                        <group string="Información de la Licencia">
+                            <field name="selected_product_id" string="Licencia" options="{'no_create': True}" 
+                                   placeholder="Seleccione el producto/servicio (solo RENTING SOFTWARE Y LICENCIAMIENTO)"/>
+                            <field name="license_id" string="Categoria" options="{'no_create': True}" 
+                                   readonly="1"
+                                   invisible="not selected_product_id"
+                                   placeholder="Se cargará automáticamente al seleccionar el producto/servicio"/>
+                            <field name="license_product_id" readonly="1" 
+                                   string="Servicio"
+                                   invisible="not selected_product_id"
+                                   placeholder="Se cargará automáticamente"/>
+                        </group>
+                        <group string="Información del Cliente">
+                            <div class="text-muted mb-1">
+                                Puede crear varias asignaciones para el mismo cliente y la misma licencia si en el reporte del proveedor aparecen líneas distintas (cantidad, precio o fechas diferentes). Cada asignación será una línea al rellenar Reporte / Facturación.
+                            </div>
+                            <field name="partner_id" options="{'no_create': True}" 
+                                   placeholder="Seleccione el cliente al que se asignará la licencia"/>
+                            <field name="license_provider_choice_ids" invisible="1"/>
+                            <field name="license_provider_id" options="{'no_create': True}" 
+                                   placeholder="Solo proveedores que ofrecen esta licencia (opcional)"/>
+                            <field name="location_id" options="{'no_create': True}" 
+                                   placeholder="Ubicación donde se encuentran los equipos"/>
+                        </group>
+                        <group string="Detalles Contratación">
+                            <field name="contracting_type" 
+                                   placeholder="Seleccione el tipo de contratación"/>
+                            <field name="contracting_type_description" nolabel="1" readonly="1" 
+                                   invisible="not contracting_type"/>
+                        </group>
+                        <group string="Detalles de la Asignación">
+                            <field name="quantity" string="Cantidad de Licencias"
+                                   readonly="contracting_type in ('annual_monthly_commitment', 'annual')"/>
+                            <button name="action_open_quantity_warning_wizard" type="object"
+                                    string="Modificar cantidad"
+                                    class="btn-link"
+                                    invisible="contracting_type not in ('annual_monthly_commitment', 'annual')"
+                                    title="En contratos anuales use este botón para cambiar la cantidad (verá una advertencia)"/>
+                            <field name="start_date" string="Fecha de Inicio" 
+                                   required="contracting_type in ('annual_monthly_commitment', 'annual')"
+                                   help="Obligatoria para contratos anuales. Se actualiza automáticamente cuando se asignan equipos/usuarios."/>
+                            <field name="end_date" string="Fecha de Fin" 
+                                   required="contracting_type in ('annual_monthly_commitment', 'annual')"
+                                   help="Obligatoria para contratos anuales. Se calcula automáticamente (12 meses desde la fecha de inicio)."/>
+                            <field name="auto_renewal" string="Renovación automática" 
+                                   help="Sí/No. También aparece en Licencias contratadas del proveedor y en la línea de reporte."/>
+                            <field name="provider_cost_usd" string="Costo Proveedor (USD)" invisible="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Equipos / Usuarios Asignados">
+                            <group>
+                                <button name="action_open_add_multiple_equipment" type="object"
+                                        string="Añadir varios equipos"
+                                        class="btn-primary"
+                                        invisible="not license_applies_to_equipment"/>
+                                <button name="action_open_add_multiple_contact" type="object"
+                                        string="Añadir varios contactos"
+                                        class="btn-primary"
+                                        invisible="not license_applies_to_user"/>
+                            </group>
+                            <!-- Lista para filas de equipo: Equipo primero, Asignado después -->
+                            <group string="Equipos" invisible="not license_applies_to_equipment">
+                                <field name="equipment_ids" nolabel="1" create="0" domain="[('lot_id', '!=', False)]">
+                                    <list create="0" delete="0" edit="1">
+                                        <field name="display_lot_id" string="Equipo" optional="show"/>
+                                        <field name="assigned_partner_id" string="Asignado" optional="show"/>
+                                        <field name="lot_id" column_invisible="1"/>
+                                        <field name="contact_id" column_invisible="1"/>
+                                        <field name="inventory_plate" optional="hide"/>
+                                        <field name="product_id" optional="hide"/>
+                                        <field name="assignment_date" string="Fecha asignación"/>
+                                        <field name="assignment_end_date" string="Fecha de desasignación"/>
+                                        <field name="state" widget="badge"
+                                               decoration-success="state == 'assigned'"
+                                               decoration-muted="state == 'unassigned'"/>
+                                        <button name="action_open_delete_wizard" type="object" string="Eliminar" icon="fa-trash" class="btn-danger" title="Eliminar asignación"/>
+                                    </list>
+                                    <form string="Crear asignación (Equipo o Usuario)" class="o_subscription_form">
+                                        <field name="assignment_id" invisible="1"/>
+                                        <field name="license_id" invisible="1"/>
+                                        <field name="license_applies_to_equipment" invisible="1"/>
+                                        <field name="license_applies_to_user" invisible="1"/>
+                                        <group>
+                                            <group>
+                                                <field name="contact_id" options="{'no_create': True}" 
+                                                       placeholder="Seleccione un contacto (usuario) de la empresa"
+                                                       invisible="license_applies_to_equipment and not license_applies_to_user"/>
+                                                <field name="lot_id" options="{'no_create': True}"
+                                                       placeholder="Seleccione un equipo (lote/serie)"
+                                                       invisible="license_applies_to_user and not license_applies_to_equipment"/>
+                                                <field name="product_id" readonly="1" invisible="not license_applies_to_equipment"/>
+                                            </group>
+                                            <group>
+                                                <field name="assignment_date"/>
+                                                <field name="assignment_end_date"/>
+                                                <field name="state"/>
+                                            </group>
+                                        </group>
+                                        <group>
+                                            <field name="notes" placeholder="Notas sobre la asignación..."/>
+                                        </group>
+                                    </form>
+                                </field>
+                            </group>
+                            <!-- Lista para filas de usuario: Asignado primero, Equipo después -->
+                            <group string="Usuarios" invisible="not license_applies_to_user">
+                                <field name="equipment_ids" nolabel="1" create="0" domain="[('lot_id', '=', False), ('contact_id', '!=', False)]">
+                                    <list create="0" delete="0" edit="1">
+                                        <field name="assigned_partner_id" string="Asignado" optional="show"/>
+                                        <field name="display_lot_id" string="Equipo" optional="show"/>
+                                        <field name="lot_id" column_invisible="1"/>
+                                        <field name="contact_id" column_invisible="1"/>
+                                        <field name="inventory_plate" optional="hide"/>
+                                        <field name="product_id" optional="hide"/>
+                                        <field name="assignment_date" string="Fecha asignación"/>
+                                        <field name="assignment_end_date" string="Fecha de desasignación"/>
+                                        <field name="state" widget="badge"
+                                               decoration-success="state == 'assigned'"
+                                               decoration-muted="state == 'unassigned'"/>
+                                        <button name="action_open_delete_wizard" type="object" string="Eliminar" icon="fa-trash" class="btn-danger" title="Eliminar asignación"/>
+                                    </list>
+                                    <form string="Crear asignación (Equipo o Usuario)" class="o_subscription_form">
+                                        <field name="assignment_id" invisible="1"/>
+                                        <field name="license_id" invisible="1"/>
+                                        <field name="license_applies_to_equipment" invisible="1"/>
+                                        <field name="license_applies_to_user" invisible="1"/>
+                                        <group>
+                                            <group>
+                                                <field name="contact_id" options="{'no_create': True}" 
+                                                       placeholder="Seleccione un contacto (usuario) de la empresa"
+                                                       invisible="license_applies_to_equipment and not license_applies_to_user"/>
+                                                <field name="lot_id" options="{'no_create': True}"
+                                                       placeholder="Seleccione un equipo (lote/serie)"
+                                                       invisible="license_applies_to_user and not license_applies_to_equipment"/>
+                                                <field name="product_id" readonly="1" invisible="not license_applies_to_equipment"/>
+                                            </group>
+                                            <group>
+                                                <field name="assignment_date"/>
+                                                <field name="unassignment_date"/>
+                                                <field name="state"/>
+                                            </group>
+                                        </group>
+                                        <group>
+                                            <field name="notes" placeholder="Notas sobre la asignación..."/>
+                                        </group>
+                                    </form>
+                                </field>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_license_assignment_search" model="ir.ui.view">
+        <field name="name">license.assignment.search</field>
+        <field name="model">license.assignment</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Asignaciones">
+                <field name="license_id"/>
+                <field name="partner_id"/>
+                <field name="license_provider_id"/>
+                <field name="location_id"/>
+                <field name="state"/>
+                <filter string="Borrador" name="draft" domain="[('state', '=', 'draft')]"/>
+                <filter string="Activas" name="active" domain="[('state', '=', 'active')]"/>
+                <filter string="Vencidas" name="expired" domain="[('state', '=', 'expired')]"/>
+                <filter string="Canceladas" name="cancelled" domain="[('state', '=', 'cancelled')]"/>
+                <separator/>
+                <filter string="Vencidas (por fecha)" name="expired_by_date" 
+                        domain="[('end_date', '!=', False), ('end_date', '&lt;=', context_today().strftime('%Y-%m-%d')), ('state', '=', 'active')]"/>
+                <filter string="Próximas a Vencer" name="expiring_soon" 
+                        domain="[('end_date', '!=', False), ('end_date', '&gt;', context_today().strftime('%Y-%m-%d')), ('state', '=', 'active')]"/>
+                <separator/>
+                <filter string="Sin equipos asignados" name="no_equipment" 
+                        domain="[('equipment_ids', '=', False)]"/>
+                <filter string="Con equipos asignados" name="with_equipment" 
+                        domain="[('equipment_ids', '!=', False)]"/>
+                <separator string="Agrupar por"/>
+                <group>
+                    <filter string="Tipo de Licencia" name="group_license_display" context="{'group_by': 'license_display_name_stored'}"/>
+                    <filter string="Por categoría (Licencia)" name="group_license" context="{'group_by': 'license_id'}"/>
+                    <filter string="Cliente" name="group_partner" context="{'group_by': 'partner_id'}"/>
+                    <filter string="Proveedor" name="group_provider" context="{'group_by': 'license_provider_id'}"/>
+                    <filter string="Estado" name="group_state" context="{'group_by': 'state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_license_assignment" model="ir.actions.act_window">
+        <field name="name">Asignaciones de Licencias</field>
+        <field name="res_model">license.assignment</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_active': 1, 'search_default_group_partner': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Cree una nueva asignación de licencia
+            </p>
+            <p>
+                Asigne licencias a clientes especificando la cantidad y la ubicación donde se encuentran los equipos.
+                Luego podrá asignar equipos específicos a cada licencia.
+            </p>
+            <p>
+                <strong>Tip:</strong> Use el filtro "Agrupar por Cliente" para ver todas las licencias de cada cliente agrupadas.
+            </p>
+        </field>
+    </record>
+
+    <record id="action_license_assignment_by_partner" model="ir.actions.act_window">
+        <field name="name">Asignaciones Agrupadas por Cliente</field>
+        <field name="res_model">license.assignment</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_active': 1, 'search_default_group_partner': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Vista agrupada por cliente
+            </p>
+            <p>
+                Esta vista muestra todas las licencias agrupadas por cliente, facilitando la identificación 
+                de qué licencias tiene contratadas cada cliente.
+            </p>
+        </field>
+    </record>
+</odoo>
+

@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista de formulario para res.partner con funcionalidad DIAN -->
+    <record id="res_partner_form_view_dian_nit" model="ir.ui.view">
+        <field name="name">res.partner.form.dian.nit</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            
+            <!-- Ocultar campo VAT original y mostrar campos NIT DIAN -->
+            <xpath expr="//field[@name='vat']" position="attributes">
+                <attribute name="invisible">1</attribute>
+                <attribute name="required">0</attribute>
+            </xpath>
+            
+            <!-- Ocultar campo de identificacion latinoamericana completamente (siempre invisible) -->
+            <xpath expr="//field[@name='l10n_latam_identification_type_id']" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+            
+            <!-- Campos NIT DIAN despues del tipo de identificacion -->
+            <xpath expr="//field[@name='l10n_latam_identification_type_id']" position="after">
+                <group string="NIT Colombiano DIAN" invisible="not dian_is_colombia or not is_company" class="dian_nit_fields_container">
+                    <field name="dian_nit_number" 
+                           placeholder="Ej: 800123456"
+                           size="15"
+                           class="oe_highlight dian_nit_number_field dian_nit_field"/>
+                    <field name="dian_nit_dv" 
+                           placeholder="DV"
+                           size="2"
+                           readonly="1"
+                           class="dian_nit_dv_field dian_nit_field"/>
+                    <field name="dian_nit_full" 
+                           invisible="1"/>
+                </group>
+                
+                <!-- Campos adicionales DIAN -->
+                <group string="Informacion DIAN" invisible="not dian_is_colombia or not is_company" class="dian_info_fields_container">
+                    <field name="dian_responsibility_code" 
+                           placeholder="Ej: 1"
+                           size="4"
+                           class="dian_info_field"/>
+                    <field name="dian_tax_regime"
+                           class="dian_info_field"/>
+                    <field name="dian_commercial_name" 
+                           placeholder="Nombre comercial"
+                           class="dian_info_field"/>
+                    <field name="dian_economic_activity" 
+                           placeholder="Codigo actividad economica"
+                           class="dian_info_field"/>
+                </group>
+                
+                <!-- Botones de accion para NIT DIAN -->
+                <group string="Acciones DIAN" invisible="not dian_is_colombia or not is_company">
+                    <button name="action_dian_calculate_dv" 
+                            type="object" 
+                            string="Calcular DV" 
+                            class="btn-secondary"
+                            invisible="not dian_nit_number"
+                            icon="fa-calculator"/>
+                    <button name="action_dian_validate_nit" 
+                            type="object" 
+                            string="Validar DIAN" 
+                            class="btn-info"
+                            invisible="not dian_nit_number"
+                            icon="fa-check-circle"/>
+                    <button name="action_dian_clear_nit" 
+                            type="object" 
+                            string="Limpiar NIT" 
+                            class="btn-warning"
+                            invisible="not dian_nit_number"
+                            icon="fa-trash"/>
+                    <button name="action_dian_diagnose_nit" 
+                            type="object" 
+                            string="Diagnosticar" 
+                            class="btn-info"
+                            invisible="not dian_is_colombia"
+                            icon="fa-stethoscope"/>
+                </group>
+                
+                <!-- Informacion adicional -->
+                <div class="alert alert-info" role="alert" invisible="not dian_is_colombia or not is_company">
+                    <strong>Informacion DIAN:</strong> 
+                    El digito de verificacion se calcula automaticamente segun el algoritmo oficial DIAN. 
+                    Este modulo gestiona exclusivamente la validacion y calculo de NIT colombiano.
+                </div>
+            </xpath>
+
+            <!-- Pestana dedicada para DIAN -->
+            <xpath expr="//notebook" position="inside">
+                <page string="DIAN Colombia" 
+                      name="dian_page" 
+                      invisible="not dian_is_colombia or not is_company">
+                    <group>
+                        <group string="Estado NIT">
+                            <field name="dian_nit_validated" 
+                                   readonly="1" 
+                                   string="NIT Validado"/>
+                        </group>
+                        <group string="Informacion Fiscal">
+                            <field name="dian_tax_regime" readonly="1"/>
+                            <field name="dian_responsibility_code" readonly="1"/>
+                        </group>
+                    </group>
+                    
+                    <group>
+                        <group string="Datos Comerciales">
+                            <field name="dian_commercial_name" readonly="1"/>
+                            <field name="dian_economic_activity" readonly="1"/>
+                        </group>
+                    </group>
+                    
+                    <!-- Botones de accion en pestana -->
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_dian_validate_nit" 
+                                type="object" 
+                                class="oe_stat_button" 
+                                icon="fa-check-circle">
+                            <field name="dian_nit_validated" widget="statinfo" string="Validado"/>
+                        </button>
+                    </div>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Vista de lista para res.partner con campos DIAN -->
+    <record id="res_partner_tree_view_dian_nit" model="ir.ui.view">
+        <field name="name">res.partner.tree.dian.nit</field>
+        <field name="model">res.partner</field>
+        <field name="type">list</field>
+        <field name="arch" type="xml">
+            <list string="Contactos" create="true" edit="true" delete="true">
+                <field name="name"/>
+                <field name="email"/>
+                <field name="phone"/>
+                <field name="dian_nit_full" 
+                       string="NIT"
+                       invisible="not dian_is_colombia or not is_company"/>
+                <field name="dian_tax_regime" 
+                       string="Regimen"
+                       invisible="not dian_is_colombia or not is_company"/>
+                <field name="dian_nit_validated" 
+                       string="Validado"
+                       invisible="not dian_is_colombia or not is_company"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Vista de busqueda para res.partner con filtros DIAN -->
+    <record id="res_partner_search_view_dian_nit" model="ir.ui.view">
+        <field name="name">res.partner.search.dian.nit</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_res_partner_filter"/>
+        <field name="arch" type="xml">
+            <!-- Agregar campos de búsqueda DIAN -->
+            <xpath expr="//field[@name='name']" position="after">
+                <field name="dian_nit_number"/>
+                <field name="dian_nit_full"/>
+                <field name="dian_responsibility_code"/>
+                <field name="dian_tax_regime"/>
+                <field name="dian_commercial_name"/>
+            </xpath>
+            <xpath expr="//filter[@name='supplier']" position="after">
+                <filter string="Con NIT DIAN" 
+                        name="con_nit_dian"
+                        domain="[('dian_nit_number', '!=', False), ('is_company', '=', True)]"/>
+                <filter string="NIT Validado" 
+                        name="nit_validado"
+                        domain="[('dian_nit_validated', '=', True), ('is_company', '=', True)]"/>
+                <filter string="Regimen Simplificado" 
+                        name="regimen_simplificado"
+                        domain="[('dian_tax_regime', '=', 'simplified'), ('is_company', '=', True)]"/>
+                <filter string="Regimen Comun" 
+                        name="regimen_comun"
+                        domain="[('dian_tax_regime', '=', 'common'), ('is_company', '=', True)]"/>
+                <filter string="Gran Contribuyente" 
+                        name="gran_contribuyente"
+                        domain="[('dian_tax_regime', '=', 'large_taxpayer'), ('is_company', '=', True)]"/>
+            </xpath>
+            <xpath expr="//group[@name='group_by']" position="inside">
+                <filter string="Regimen Tributario" 
+                        name="group_by_regimen"
+                        context="{'group_by': 'dian_tax_regime'}"/>
+                <filter string="Estado NIT" 
+                        name="group_by_nit_status"
+                        context="{'group_by': 'dian_nit_validated'}"/>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>
+

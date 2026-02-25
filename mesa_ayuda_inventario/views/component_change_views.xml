@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Vista de lista para cambios de componentes -->
+        <record id="view_maintenance_component_change_tree" model="ir.ui.view">
+            <field name="name">maintenance.component.change.list</field>
+            <field name="model">maintenance.component.change</field>
+            <field name="type">list</field>
+            <field name="arch" type="xml">
+                <list string="Cambios de Componentes">
+                    <field name="change_date"/>
+                    <field name="maintenance_id" string="Mantenimiento"/>
+                    <field name="product_id" string="Tipo de Componente"/>
+                    <field name="old_component_lot_id" string="Componente Retirado"/>
+                    <field name="new_component_lot_id" string="Componente Instalado"/>
+                    <field name="reason"/>
+                    <field name="technician_id" string="Técnico"/>
+                </list>
+            </field>
+        </record>
+        
+        <!-- Vista de formulario para cambios de componentes -->
+        <record id="view_maintenance_component_change_form" model="ir.ui.view">
+            <field name="name">maintenance.component.change.form</field>
+            <field name="model">maintenance.component.change</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <form string="Cambio de Componente">
+                    <sheet>
+                        <group>
+                            <group>
+                                <field name="change_date"/>
+                                <field name="maintenance_id" readonly="1"/>
+                                <field name="product_id" readonly="1"/>
+                            </group>
+                            <group>
+                                <field name="old_component_lot_id" readonly="1"/>
+                                <field name="new_component_lot_id" readonly="1"/>
+                                <field name="technician_id" readonly="1"/>
+                            </group>
+                        </group>
+                        <group>
+                            <field name="reason" readonly="1" nolabel="1" placeholder="Motivo del cambio..."/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+        
+        <!-- Acción para ver cambios de componentes -->
+        <record id="action_maintenance_component_change" model="ir.actions.act_window">
+            <field name="name">Cambios de Componentes</field>
+            <field name="res_model">maintenance.component.change</field>
+            <field name="view_mode">list,form</field>
+            <field name="view_id" ref="view_maintenance_component_change_tree"/>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No hay cambios de componentes registrados.
+                </p>
+            </field>
+        </record>
+    </data>
+</odoo>
+

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Parámetros Financieros por Defecto -->
+        <record id="parametros_financieros_default" model="calculadora.parametros.financieros">
+            <field name="name">Parámetros Financieros por Defecto</field>
+            <field name="trm_actual">4000.0</field>
+            <field name="porcentaje_utilidad_default">10.0</field>
+            <field name="tasa_nominal_default">21.0</field>
+            <field name="margen_servicio_default">15.0</field>
+            <field name="horas_trabajo_mes_default">240</field>
+            <field name="dias_trabajo_mes_default">30</field>
+            <field name="horas_trabajo_dia_default">8</field>
+            <field name="anos_depreciacion_vehiculo">7</field>
+        </record>
+    </data>
+</odoo>

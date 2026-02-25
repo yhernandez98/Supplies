@@ -1,0 +1,5 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_permission_manager_admin,permission.manager.admin,model_permission_manager,base.group_system,1,1,1,1
+access_permission_role_admin,permission.role.admin,model_permission_role,base.group_system,1,1,1,1
+access_permission_manager_module_line_admin,permission.manager.module.line.admin,model_permission_manager_module_line,base.group_system,1,1,1,1
+access_permission_manager_group_line_admin,permission.manager.group.line.admin,model_permission_manager_group_line,base.group_system,1,1,1,1

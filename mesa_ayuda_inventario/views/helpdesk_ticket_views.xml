@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Vista lista mínima para tickets -->
+        <record id="view_helpdesk_ticket_list" model="ir.ui.view">
+            <field name="name">helpdesk.ticket.list</field>
+            <field name="model">helpdesk.ticket</field>
+            <field name="arch" type="xml">
+                <list string="Tickets">
+                    <field name="name"/>
+                    <field name="partner_id"/>
+                    <field name="category_id" optional="show"/>
+                    <field name="maintenance_order_id" optional="hide" string="Orden servicio"/>
+                    <field name="urgency" optional="hide"/>
+                    <field name="impact" optional="hide"/>
+                    <field name="stage_id"/>
+                    <field name="user_id"/>
+                    <field name="priority"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_helpdesk_ticket_form_inherit_category" model="ir.ui.view">
+            <field name="name">helpdesk.ticket.form.inherit.category</field>
+            <field name="model">helpdesk.ticket</field>
+            <field name="inherit_id" ref="helpdesk.helpdesk_ticket_view_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='user_id']" position="attributes">
+                    <attribute name="required">1</attribute>
+                </xpath>
+                <xpath expr="//field[@name='team_id']" position="attributes">
+                    <attribute name="help">Equipo de soporte (ej. Nivel 1, Nivel 2). Configurar en: Mesa de Ayuda → Configuración → Equipos.</attribute>
+                </xpath>
+                <xpath expr="//field[@name='partner_id']" position="after">
+                    <field name="category_id"/>
+                    <field name="values_from_category" invisible="1"/>
+                    <field name="maintenance_order_id" readonly="1"/>
+                    <button name="action_escalate_ticket" type="object" string="Escalar a otro equipo / responsable" class="btn-secondary" icon="fa-level-up" help="Cambiar equipo (ej. Nivel 2) o asignar a otra persona"/>
+                    <field name="urgency" readonly="1"/>
+                    <field name="impact" readonly="1"/>
+                    <field name="location_site" placeholder="Sede o ubicación"/>
+                    <field name="date_deadline_response" readonly="1"/>
+                    <field name="date_deadline_resolution" readonly="1"/>
+                    <div class="alert alert-info" role="alert" style="margin-top: 8px;">
+                        Al cerrar el ticket puede enviarse una encuesta de satisfacción al cliente (app Rating / Valoración de Odoo).
+                    </div>
+                </xpath>
+                <xpath expr="//field[@name='stage_id']" position="after">
+                    <group string="Tiempo" name="custom_timer_group">
+                        <field name="custom_timer_display" readonly="1" nolabel="1" class="fw-bold"/>
+                        <field name="custom_timer_start" invisible="1"/>
+                        <field name="custom_timer_accumulated_hours" invisible="1"/>
+                        <field name="custom_timer_can_stop" invisible="1"/>
+                    </group>
+                </xpath>
+                <xpath expr="//field[@name='priority']" position="attributes">
+                    <attribute name="readonly">1</attribute>
+                </xpath>
+            </field>
+        </record>
+
+        <!-- Vista de búsqueda propia (sin heredar: el xml_id del helpdesk puede cambiar por versión) -->
+        <record id="view_helpdesk_ticket_search_mesa" model="ir.ui.view">
+            <field name="name">helpdesk.ticket.search.mesa</field>
+            <field name="model">helpdesk.ticket</field>
+            <field name="arch" type="xml">
+                <search string="Buscar tickets">
+                    <field name="name"/>
+                    <field name="partner_id"/>
+                    <field name="category_id"/>
+                    <field name="user_id"/>
+                    <filter name="filter_my_category" string="Con categoría" domain="[('category_id', '!=', False)]"/>
+                    <separator/>
+                    <filter name="group_category" string="Por Categoría" context="{'group_by': 'category_id'}"/>
+                    <filter name="group_user" string="Por Asignado" context="{'group_by': 'user_id'}"/>
+                </search>
+            </field>
+        </record>
+
+        <!-- Acción para ver tickets -->
+        <record id="action_mesa_ayuda_ticket" model="ir.actions.act_window">
+            <field name="name">Tickets</field>
+            <field name="res_model">helpdesk.ticket</field>
+            <field name="view_mode">list,form</field>
+            <field name="view_id" ref="view_helpdesk_ticket_list"/>
+            <field name="search_view_id" ref="view_helpdesk_ticket_search_mesa"/>
+        </record>
+
+        <!-- Acción para configurar equipos de soporte (Nivel 1, Nivel 2, etc.) -->
+        <record id="action_mesa_ayuda_teams" model="ir.actions.act_window">
+            <field name="name">Equipos de soporte</field>
+            <field name="res_model">helpdesk.team</field>
+            <field name="view_mode">list,form</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Crear equipos (ej. Nivel 1, Nivel 2, Atención al cliente) y asignar miembros. El campo "Equipo de soporte al cliente" del ticket usa estos equipos.
+                </p>
+            </field>
+        </record>
+        <!-- Políticas SLA y Base de conocimiento: no se definen aquí para evitar ParseError
+             cuando helpdesk_sla o knowledge no están instalados. Si los tienes instalados,
+             puedes acceder a Políticas SLA desde Helpdesk nativo y a Knowledge desde su app. -->
+    </data>
+</odoo>

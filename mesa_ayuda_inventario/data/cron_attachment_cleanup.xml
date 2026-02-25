@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Cron job para limpiar attachments temporales de hojas de vida -->
+        <record id="ir_cron_cleanup_temp_life_sheets" model="ir.cron">
+            <field name="name">Limpiar PDFs Temporales de Hojas de Vida</field>
+            <field name="model_id" ref="base.model_ir_attachment"/>
+            <field name="state">code</field>
+            <field name="code">model.cleanup_temp_life_sheet_pdfs(days_old=7)</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="active" eval="True"/>
+        </record>
+    </data>
+</odoo>
+
