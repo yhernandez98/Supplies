@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Vista del wizard para solicitar cotización sin productos -->
+        <record id="view_sale_order_request_quotation_wizard_form" model="ir.ui.view">
+            <field name="name">sale.order.request.quotation.wizard.form</field>
+            <field name="model">sale.order.request.quotation.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Solicitar Cotización de Compra">
+                    <group>
+                        <group>
+                            <field name="sale_order_id" invisible="1"/>
+                            <field name="partner_id" readonly="1"/>
+                            <field name="opportunity_id" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="assign_to_user_id" 
+                                   widget="many2one" 
+                                   options="{'no_create': True, 'no_open': True}"
+                                   required="1"/>
+                            <field name="activity_date_deadline" required="1"/>
+                        </group>
+                    </group>
+                    
+                    <notebook>
+                        <page string="Descripción de la Solicitud" name="description">
+                            <group>
+                                <field name="has_products_needing_stock" invisible="1"/>
+                                <div class="alert alert-info" role="alert" invisible="not has_products_needing_stock">
+                                    <strong>ℹ️ Información:</strong> Esta orden tiene productos sin stock. Se creará una alerta con esos productos. Puede agregar notas adicionales si lo desea.
+                                </div>
+                                <div class="alert alert-warning" role="alert" invisible="has_products_needing_stock">
+                                    <strong>⚠️ Advertencia:</strong> Esta orden no tiene productos sin stock. Debe especificar una descripción de lo que se necesita cotizar.
+                                </div>
+                                <field name="notes" 
+                                       placeholder="Describe los productos o servicios que necesita cotizar el área de compras..."
+                                       required="not has_products_needing_stock"
+                                       nolabel="1"/>
+                            </group>
+                        </page>
+                        
+                        <page string="Actividad" name="activity">
+                            <group>
+                                <field name="activity_type_id" 
+                                       options="{'no_create': True}"/>
+                                <field name="activity_summary" required="1"/>
+                                <field name="activity_note" widget="html"/>
+                            </group>
+                        </page>
+                    </notebook>
+                    
+                    <footer>
+                        <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                        <button string="Crear Alerta y Asignar Actividad" 
+                                name="action_create_alert_and_activity" 
+                                type="object" 
+                                class="btn-primary"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+        <!-- Acción para abrir el wizard -->
+        <record id="action_sale_order_request_quotation_wizard" model="ir.actions.act_window">
+            <field name="name">Solicitar Cotización de Compra</field>
+            <field name="res_model">sale.order.request.quotation.wizard</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+        </record>
+    </data>
+</odoo>
+

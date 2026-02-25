@@ -1,0 +1,417 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Reporte PDF de Calculadora de Costos -->
+        <record id="action_report_calculadora" model="ir.actions.report">
+            <field name="name">Reporte de Calculadora de Costos</field>
+            <field name="model">calculadora.costos</field>
+            <field name="report_type">qweb-pdf</field>
+            <field name="report_name">calculadora_costos.report_calculadora</field>
+            <field name="report_file">calculadora_costos.report_calculadora</field>
+            <field name="print_report_name">'Reporte Calculadora - %s' % (object.name or 'Sin Nombre')</field>
+            <field name="binding_model_id" ref="model_calculadora_costos"/>
+            <field name="binding_type">report</field>
+        </record>
+
+        <!-- Plantilla QWeb del Reporte -->
+        <template id="report_calculadora">
+            <t t-call="web.html_container">
+                <t t-foreach="docs" t-as="calc">
+                    <t t-call="web.external_layout">
+                        <div class="page" style="padding: 30px; font-family: 'Arial', sans-serif; color: #2c3e50;">
+                            <!-- Encabezado -->
+                            <div style="text-align: center; margin-bottom: 30px; border-bottom: 3px solid #4a90e2; padding-bottom: 20px;">
+                                <h1 style="color: #4a90e2; margin: 0; font-size: 28px; font-weight: bold;">
+                                    REPORTE DE CALCULADORA DE COSTOS
+                                </h1>
+                                <p style="color: #6c757d; margin: 10px 0 0 0; font-size: 16px; font-weight: bold;">
+                                    <t t-esc="calc.name or 'Sin Nombre'"/>
+                                </p>
+                            </div>
+
+                            <!-- Información General -->
+                            <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 25px; border-left: 5px solid #4a90e2;">
+                                <h2 style="color: #2c3e50; margin-top: 0; margin-bottom: 15px; font-size: 18px; border-bottom: 2px solid #4a90e2; padding-bottom: 8px;">
+                                    📋 INFORMACIÓN GENERAL
+                                </h2>
+                                <table style="width: 100%; border-collapse: collapse;">
+                                    <tr t-if="calc.partner_id">
+                                        <td style="width: 35%; padding: 8px; font-weight: bold; color: #495057;">Cliente:</td>
+                                        <td style="padding: 8px; color: #212529; font-size: 16px;"><strong><t t-esc="calc.partner_id.display_name"/></strong></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 8px; font-weight: bold; color: #495057;">Tipo de Cálculo:</td>
+                                        <td style="padding: 8px; color: #212529;">
+                                            <t t-if="calc.tipo_calculo == 'equipo'">Equipo</t>
+                                            <t t-if="calc.tipo_calculo == 'renting'">Renting/Leasing</t>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 8px; font-weight: bold; color: #495057;">Valor del Equipo:</td>
+                                        <td style="padding: 8px; color: #212529; font-size: 16px; font-weight: bold;">
+                                            <t t-set="valor_equipo_sin_garantia" t-value="calc.valor_usd * calc.trm * (1 + calc.porcentaje_utilidad / 100.0)"/>
+                                            $<t t-esc="'{:,.0f}'.format(valor_equipo_sin_garantia)"/>
+                                        </td>
+                                    </tr>
+                                    <tr t-if="calc.valor_garantia_usd > 0">
+                                        <td style="padding: 8px; font-weight: bold; color: #495057;">Garantía Extendida / Seguro:</td>
+                                        <td style="padding: 8px; color: #212529; font-size: 16px;">
+                                            <t t-set="garantia_cop" t-value="calc.valor_garantia_usd * calc.trm * (1 + calc.porcentaje_utilidad / 100.0)"/>
+                                            $<t t-esc="'{:,.0f}'.format(garantia_cop)"/>
+                                        </td>
+                                    </tr>
+                                    <tr t-if="calc.costo_servicios_completos > 0">
+                                        <td style="padding: 8px; font-weight: bold; color: #495057;">Servicio Técnico:</td>
+                                        <td style="padding: 8px; color: #212529;">$<t t-esc="'{:,.0f}'.format(calc.servicio_con_margen)"/></td>
+                                    </tr>
+                                </table>
+                            </div>
+
+                            <!-- Escenarios -->
+                            <t t-set="escenarios" t-value="calc.get_escenarios_resumen()"/>
+                            
+                            <!-- Escenario 1: Con Seguro y Servicios -->
+                            <div style="background: #e8f5e9; padding: 20px; border-radius: 10px; margin-bottom: 25px; border-left: 5px solid #28a745; page-break-inside: avoid;">
+                                <h2 style="color: #2c3e50; margin-top: 0; margin-bottom: 15px; font-size: 18px; border-bottom: 2px solid #28a745; padding-bottom: 8px;">
+                                    ✅ ESCENARIO 1: <t t-esc="escenarios['escenario_1']['nombre']"/>
+                                </h2>
+                                <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 5px; overflow: hidden;">
+                                    <thead>
+                                        <tr style="background: #28a745; color: white;">
+                                            <th style="padding: 12px; text-align: left; font-weight: bold;">Plazo</th>
+                                            <th style="padding: 12px; text-align: right; font-weight: bold;">Valor Equipo</th>
+                                            <th style="padding: 12px; text-align: right; font-weight: bold;">Seguro/Garantía</th>
+                                            <th style="padding: 12px; text-align: right; font-weight: bold;">Servicio Mensual</th>
+                                            <th style="padding: 12px; text-align: right; font-weight: bold;">Pago Mensual</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr t-foreach="[24, 36, 48]" t-as="plazo">
+                                            <t t-set="valores" t-value="escenarios['escenario_1']['plazos'][plazo]"/>
+                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; font-weight: bold;"><t t-esc="plazo"/> meses</td>
+                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right;">$<t t-esc="'{:,.0f}'.format(valores['valor_equipo_sin_garantia_cop'])"/></td>
+                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right;">$<t t-esc="'{:,.0f}'.format(valores.get('garantia_cop', 0))"/></td>
+                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right;">$<t t-esc="'{:,.0f}'.format(valores['servicio_mensual'])"/></td>
+                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right; font-weight: bold; color: #28a745;">$<t t-esc="'{:,.0f}'.format(valores['pago_mensual_total'])"/></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Escenario 2: Sin Seguro pero con Servicios -->
+                            <div style="background: #fff3e0; padding: 20px; border-radius: 10px; margin-bottom: 25px; border-left: 5px solid #ff9800; page-break-inside: avoid;">
+                                <h2 style="color: #2c3e50; margin-top: 0; margin-bottom: 15px; font-size: 18px; border-bottom: 2px solid #ff9800; padding-bottom: 8px;">
+                                    ⚠️ ESCENARIO 2: <t t-esc="escenarios['escenario_2']['nombre']"/>
+                                </h2>
+                                <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 5px; overflow: hidden;">
+                                    <thead>
+                                        <tr style="background: #ff9800; color: white;">
+                                            <th style="padding: 12px; text-align: left; font-weight: bold;">Plazo</th>
+                                            <th style="padding: 12px; text-align: right; font-weight: bold;">Valor Equipo</th>
+                                            <th style="padding: 12px; text-align: right; font-weight: bold;">Seguro/Garantía</th>
+                                            <th style="padding: 12px; text-align: right; font-weight: bold;">Servicio Mensual</th>
+                                            <th style="padding: 12px; text-align: right; font-weight: bold;">Pago Mensual</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr t-foreach="[24, 36, 48]" t-as="plazo">
+                                            <t t-set="valores" t-value="escenarios['escenario_2']['plazos'][plazo]"/>
+                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; font-weight: bold;"><t t-esc="plazo"/> meses</td>
+                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right;">$<t t-esc="'{:,.0f}'.format(valores['valor_equipo_sin_garantia_cop'])"/></td>
+                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right;">$<t t-esc="'{:,.0f}'.format(valores.get('garantia_cop', 0))"/></td>
+                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right;">$<t t-esc="'{:,.0f}'.format(valores['servicio_mensual'])"/></td>
+                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right; font-weight: bold; color: #ff9800;">$<t t-esc="'{:,.0f}'.format(valores['pago_mensual_total'])"/></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Escenario 3: Con Seguro pero sin Servicios -->
+                            <div style="background: #e3f2fd; padding: 20px; border-radius: 10px; margin-bottom: 25px; border-left: 5px solid #2196f3; page-break-inside: avoid;">
+                                <h2 style="color: #2c3e50; margin-top: 0; margin-bottom: 15px; font-size: 18px; border-bottom: 2px solid #2196f3; padding-bottom: 8px;">
+                                    🔵 ESCENARIO 3: <t t-esc="escenarios['escenario_3']['nombre']"/>
+                                </h2>
+                                <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 5px; overflow: hidden;">
+                                    <thead>
+                                        <tr style="background: #2196f3; color: white;">
+                                            <th style="padding: 12px; text-align: left; font-weight: bold;">Plazo</th>
+                                            <th style="padding: 12px; text-align: right; font-weight: bold;">Valor Equipo</th>
+                                            <th style="padding: 12px; text-align: right; font-weight: bold;">Seguro/Garantía</th>
+                                            <th style="padding: 12px; text-align: right; font-weight: bold;">Servicio Mensual</th>
+                                            <th style="padding: 12px; text-align: right; font-weight: bold;">Pago Mensual</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr t-foreach="[24, 36, 48]" t-as="plazo">
+                                            <t t-set="valores" t-value="escenarios['escenario_3']['plazos'][plazo]"/>
+                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; font-weight: bold;"><t t-esc="plazo"/> meses</td>
+                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right;">$<t t-esc="'{:,.0f}'.format(valores['valor_equipo_sin_garantia_cop'])"/></td>
+                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right;">$<t t-esc="'{:,.0f}'.format(valores.get('garantia_cop', 0))"/></td>
+                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right;">$<t t-esc="'{:,.0f}'.format(valores['servicio_mensual'])"/></td>
+                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right; font-weight: bold; color: #2196f3;">$<t t-esc="'{:,.0f}'.format(valores['pago_mensual_total'])"/></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Escenario 4: Sin Seguro ni Servicios -->
+                            <div style="background: #fce4ec; padding: 20px; border-radius: 10px; margin-bottom: 25px; border-left: 5px solid #e91e63; page-break-inside: avoid;">
+                                <h2 style="color: #2c3e50; margin-top: 0; margin-bottom: 15px; font-size: 18px; border-bottom: 2px solid #e91e63; padding-bottom: 8px;">
+                                    ❌ ESCENARIO 4: <t t-esc="escenarios['escenario_4']['nombre']"/>
+                                </h2>
+                                <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 5px; overflow: hidden;">
+                                    <thead>
+                                        <tr style="background: #e91e63; color: white;">
+                                            <th style="padding: 12px; text-align: left; font-weight: bold;">Plazo</th>
+                                            <th style="padding: 12px; text-align: right; font-weight: bold;">Valor Equipo</th>
+                                            <th style="padding: 12px; text-align: right; font-weight: bold;">Seguro/Garantía</th>
+                                            <th style="padding: 12px; text-align: right; font-weight: bold;">Servicio Mensual</th>
+                                            <th style="padding: 12px; text-align: right; font-weight: bold;">Pago Mensual</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr t-foreach="[24, 36, 48]" t-as="plazo">
+                                            <t t-set="valores" t-value="escenarios['escenario_4']['plazos'][plazo]"/>
+                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; font-weight: bold;"><t t-esc="plazo"/> meses</td>
+                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right;">$<t t-esc="'{:,.0f}'.format(valores['valor_equipo_sin_garantia_cop'])"/></td>
+                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right;">$<t t-esc="'{:,.0f}'.format(valores.get('garantia_cop', 0))"/></td>
+                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right;">$<t t-esc="'{:,.0f}'.format(valores['servicio_mensual'])"/></td>
+                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right; font-weight: bold; color: #e91e63;">$<t t-esc="'{:,.0f}'.format(valores['pago_mensual_total'])"/></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Explicación para el Cliente -->
+                            <div style="margin-top: 40px; padding: 25px; background: #f8f9fa; border-radius: 10px; border-left: 5px solid #4a90e2; page-break-inside: avoid;">
+                                <h2 style="color: #2c3e50; margin-top: 0; margin-bottom: 20px; font-size: 20px; border-bottom: 2px solid #4a90e2; padding-bottom: 10px;">
+                                    📖 Explicación de los Escenarios
+                                </h2>
+                                
+                                <div style="margin-bottom: 25px;">
+                                    <h3 style="color: #28a745; font-size: 16px; margin-bottom: 10px;">✅ Escenario 1: Con Seguro y Servicios Técnicos</h3>
+                                    <p style="color: #495057; line-height: 1.6; margin-bottom: 8px;">
+                                        <strong>¿Qué incluye?</strong> Este escenario incluye el equipo completo con garantía extendida y servicios técnicos mensuales.
+                                    </p>
+                                    <p style="color: #495057; line-height: 1.6; margin-bottom: 8px;">
+                                        <strong>¿Por qué se cobra el Valor del Equipo?</strong> Es el costo del equipo con la utilidad aplicada. Incluye el valor base del equipo más la garantía extendida (seguro) que protege tu inversión.
+                                    </p>
+                                    <p style="color: #495057; line-height: 1.6; margin-bottom: 8px;">
+                                        <strong>¿Por qué se cobra el Seguro/Garantía?</strong> La garantía extendida te protege contra fallas y daños del equipo durante el período del contrato. Es una protección adicional que cubre reparaciones y reemplazos.
+                                    </p>
+                                    <p style="color: #495057; line-height: 1.6; margin-bottom: 8px;">
+                                        <strong>¿Por qué se cobra el Servicio Mensual?</strong> Incluye mantenimiento técnico, soporte, actualizaciones y monitoreo del equipo. Te garantiza que el equipo funcione correctamente durante todo el contrato.
+                                    </p>
+                                    <p style="color: #495057; line-height: 1.6; margin-bottom: 0;">
+                                        <strong>Ventaja:</strong> Máxima protección y soporte. No te preocupas por mantenimiento ni reparaciones.
+                                    </p>
+                                </div>
+                                
+                                <div style="margin-bottom: 25px; padding-top: 20px; border-top: 1px solid #dee2e6;">
+                                    <h3 style="color: #ff9800; font-size: 16px; margin-bottom: 10px;">⚠️ Escenario 2: Sin Seguro pero con Servicios Técnicos</h3>
+                                    <p style="color: #495057; line-height: 1.6; margin-bottom: 8px;">
+                                        <strong>¿Qué incluye?</strong> Este escenario incluye el equipo base (sin garantía extendida) pero con servicios técnicos mensuales.
+                                    </p>
+                                    <p style="color: #495057; line-height: 1.6; margin-bottom: 8px;">
+                                        <strong>¿Por qué se cobra el Valor del Equipo?</strong> Es el costo del equipo base con la utilidad aplicada, pero sin incluir la garantía extendida. Es más económico que el Escenario 1.
+                                    </p>
+                                    <p style="color: #495057; line-height: 1.6; margin-bottom: 8px;">
+                                        <strong>¿Por qué NO se cobra el Seguro/Garantía?</strong> Decidiste no incluir la garantía extendida, por lo que no pagas por esta protección adicional. Ahorras en el costo inicial.
+                                    </p>
+                                    <p style="color: #495057; line-height: 1.6; margin-bottom: 8px;">
+                                        <strong>¿Por qué se cobra el Servicio Mensual?</strong> Mantienes los servicios técnicos para asegurar el buen funcionamiento del equipo. Incluye mantenimiento, soporte y actualizaciones.
+                                    </p>
+                                    <p style="color: #495057; line-height: 1.6; margin-bottom: 0;">
+                                        <strong>Ventaja:</strong> Ahorras en garantía pero mantienes el soporte técnico. Ideal si confías en la calidad del equipo.
+                                    </p>
+                                </div>
+                                
+                                <div style="margin-bottom: 25px; padding-top: 20px; border-top: 1px solid #dee2e6;">
+                                    <h3 style="color: #2196f3; font-size: 16px; margin-bottom: 10px;">🔵 Escenario 3: Con Seguro pero sin Servicios Técnicos</h3>
+                                    <p style="color: #495057; line-height: 1.6; margin-bottom: 8px;">
+                                        <strong>¿Qué incluye?</strong> Este escenario incluye el equipo completo con garantía extendida pero sin servicios técnicos mensuales.
+                                    </p>
+                                    <p style="color: #495057; line-height: 1.6; margin-bottom: 8px;">
+                                        <strong>¿Por qué se cobra el Valor del Equipo?</strong> Es el costo del equipo con garantía extendida incluida. Tienes protección contra fallas y daños.
+                                    </p>
+                                    <p style="color: #495057; line-height: 1.6; margin-bottom: 8px;">
+                                        <strong>¿Por qué se cobra el Seguro/Garantía?</strong> La garantía extendida te protege, pero no incluye mantenimiento preventivo ni soporte técnico continuo.
+                                    </p>
+                                    <p style="color: #495057; line-height: 1.6; margin-bottom: 8px;">
+                                        <strong>¿Por qué NO se cobra el Servicio Mensual?</strong> Decidiste no incluir los servicios técnicos mensuales. Tú te encargas del mantenimiento y soporte, o contratas servicios por separado cuando los necesites.
+                                    </p>
+                                    <p style="color: #495057; line-height: 1.6; margin-bottom: 0;">
+                                        <strong>Ventaja:</strong> Tienes protección (garantía) pero ahorras en servicios mensuales. Ideal si tienes tu propio equipo técnico.
+                                    </p>
+                                </div>
+                                
+                                <div style="margin-bottom: 0; padding-top: 20px; border-top: 1px solid #dee2e6;">
+                                    <h3 style="color: #e91e63; font-size: 16px; margin-bottom: 10px;">❌ Escenario 4: Sin Seguro ni Servicios Técnicos</h3>
+                                    <p style="color: #495057; line-height: 1.6; margin-bottom: 8px;">
+                                        <strong>¿Qué incluye?</strong> Este escenario incluye solo el equipo base, sin garantía extendida ni servicios técnicos mensuales.
+                                    </p>
+                                    <p style="color: #495057; line-height: 1.6; margin-bottom: 8px;">
+                                        <strong>¿Por qué se cobra el Valor del Equipo?</strong> Es el costo del equipo base con la utilidad aplicada. Es la opción más económica.
+                                    </p>
+                                    <p style="color: #495057; line-height: 1.6; margin-bottom: 8px;">
+                                        <strong>¿Por qué NO se cobra el Seguro/Garantía?</strong> No incluyes la garantía extendida. Solo tienes la garantía estándar del fabricante.
+                                    </p>
+                                    <p style="color: #495057; line-height: 1.6; margin-bottom: 8px;">
+                                        <strong>¿Por qué NO se cobra el Servicio Mensual?</strong> No incluyes servicios técnicos mensuales. Tú te encargas de todo el mantenimiento y soporte.
+                                    </p>
+                                    <p style="color: #495057; line-height: 1.6; margin-bottom: 0;">
+                                        <strong>Ventaja:</strong> Es la opción más económica. Solo pagas por el equipo. Ideal si tienes tu propio soporte técnico y no necesitas garantía extendida.
+                                    </p>
+                                </div>
+                                
+                                <div style="margin-top: 30px; padding: 15px; background: #e3f2fd; border-radius: 5px; border-left: 4px solid #2196f3;">
+                                    <p style="color: #1565c0; margin: 0; font-weight: bold; font-size: 14px;">
+                                        💡 Nota Importante:
+                                    </p>
+                                    <p style="color: #495057; margin: 8px 0 0 0; line-height: 1.6; font-size: 13px;">
+                                        Los valores mostrados son estimaciones basadas en los parámetros financieros actuales. El pago mensual incluye intereses calculados según la tasa de interés aplicada. Puedes elegir el escenario que mejor se adapte a tus necesidades y presupuesto.
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <!-- Explicación Detallada de Cálculos -->
+                            <div style="margin-top: 40px; padding: 25px; background: #fff; border-radius: 10px; border: 2px solid #4a90e2; page-break-inside: avoid;">
+                                <h2 style="color: #2c3e50; margin-top: 0; margin-bottom: 20px; font-size: 20px; border-bottom: 2px solid #4a90e2; padding-bottom: 10px;">
+                                    🔢 ¿Cómo se Calculan los Valores?
+                                </h2>
+                                
+                                <div style="margin-bottom: 25px;">
+                                    <h3 style="color: #4a90e2; font-size: 16px; margin-bottom: 12px;">1. Valor del Equipo</h3>
+                                    <p style="color: #495057; line-height: 1.6; margin-bottom: 10px;">
+                                        El <strong>Valor del Equipo</strong> se calcula de la siguiente manera:
+                                    </p>
+                                    <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 10px; border-left: 4px solid #4a90e2;">
+                                        <p style="color: #495057; margin: 0; font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.8;">
+                                            <strong>Paso 1:</strong> Sumar el valor del equipo y la garantía (si aplica)<br/>
+                                            &#160;&#160;&#160;&#160;Valor Total USD = Valor Equipo USD + Garantía USD<br/><br/>
+                                            <strong>Paso 2:</strong> Aplicar el porcentaje de utilidad<br/>
+                                            &#160;&#160;&#160;&#160;Costo con Utilidad USD = Valor Total USD × (1 + Utilidad% / 100)<br/><br/>
+                                            <strong>Paso 3:</strong> Convertir a pesos colombianos usando la TRM<br/>
+                                            &#160;&#160;&#160;&#160;Valor del Equipo COP = Costo con Utilidad USD × TRM
+                                        </p>
+                                    </div>
+                                    <p style="color: #495057; line-height: 1.6; margin-bottom: 0; font-size: 13px;">
+                                        <strong>Ejemplo:</strong> Si el equipo cuesta 500 USD, la garantía 100 USD, la utilidad es 15% y la TRM es 4,000:<br/>
+                                        Valor Total = 600 USD → Con utilidad = 690 USD → En COP = 2,760,000 COP
+                                    </p>
+                                </div>
+                                
+                                <div style="margin-bottom: 25px; padding-top: 20px; border-top: 1px solid #dee2e6;">
+                                    <h3 style="color: #4a90e2; font-size: 16px; margin-bottom: 12px;">2. Seguro/Garantía Extendida</h3>
+                                    <p style="color: #495057; line-height: 1.6; margin-bottom: 10px;">
+                                        El <strong>Seguro/Garantía</strong> se calcula de la siguiente manera:
+                                    </p>
+                                    <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 10px; border-left: 4px solid #4a90e2;">
+                                        <p style="color: #495057; margin: 0; font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.8;">
+                                            <strong>Paso 1:</strong> Aplicar el porcentaje de utilidad a la garantía<br/>
+                                            &#160;&#160;&#160;&#160;Garantía con Utilidad USD = Garantía USD × (1 + Utilidad% / 100)<br/><br/>
+                                            <strong>Paso 2:</strong> Convertir a pesos colombianos usando la TRM<br/>
+                                            &#160;&#160;&#160;&#160;Seguro/Garantía COP = Garantía con Utilidad USD × TRM
+                                        </p>
+                                    </div>
+                                    <p style="color: #495057; line-height: 1.6; margin-bottom: 0; font-size: 13px;">
+                                        <strong>Ejemplo:</strong> Si la garantía cuesta 100 USD, la utilidad es 15% y la TRM es 4,000:<br/>
+                                        Con utilidad = 115 USD → En COP = 460,000 COP
+                                    </p>
+                                </div>
+                                
+                                <div style="margin-bottom: 25px; padding-top: 20px; border-top: 1px solid #dee2e6;">
+                                    <h3 style="color: #4a90e2; font-size: 16px; margin-bottom: 12px;">3. Servicio Técnico Mensual</h3>
+                                    <p style="color: #495057; line-height: 1.6; margin-bottom: 10px;">
+                                        El <strong>Servicio Técnico Mensual</strong> se calcula de la siguiente manera:
+                                    </p>
+                                    <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 10px; border-left: 4px solid #4a90e2;">
+                                        <p style="color: #495057; margin: 0; font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.8;">
+                                            <strong>Paso 1:</strong> Tomar el costo base de servicios técnicos<br/>
+                                            &#160;&#160;&#160;&#160;Costo Base = Costo Servicios Completos (COP)<br/><br/>
+                                            <strong>Paso 2:</strong> Aplicar el porcentaje de margen de servicio<br/>
+                                            &#160;&#160;&#160;&#160;Servicio Mensual = Costo Base × (1 + Margen Servicio% / 100)
+                                        </p>
+                                    </div>
+                                    <p style="color: #495057; line-height: 1.6; margin-bottom: 0; font-size: 13px;">
+                                        <strong>Ejemplo:</strong> Si el costo base es 30,000 COP y el margen es 15%:<br/>
+                                        Servicio Mensual = 30,000 × 1.15 = 34,500 COP/mes
+                                    </p>
+                                </div>
+                                
+                                <div style="margin-bottom: 25px; padding-top: 20px; border-top: 1px solid #dee2e6;">
+                                    <h3 style="color: #4a90e2; font-size: 16px; margin-bottom: 12px;">4. Pago Mensual</h3>
+                                    <p style="color: #495057; line-height: 1.6; margin-bottom: 10px;">
+                                        El <strong>Pago Mensual</strong> se calcula usando la fórmula financiera PMT (Pago Periódico):
+                                    </p>
+                                    <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 10px; border-left: 4px solid #4a90e2;">
+                                        <p style="color: #495057; margin: 0; font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.8;">
+                                            <strong>Paso 1:</strong> Calcular la tasa de interés mensual<br/>
+                                            &#160;&#160;&#160;&#160;Tasa Mensual = Tasa Nominal% / 12 / 100<br/><br/>
+                                            <strong>Paso 2:</strong> Calcular el factor de capitalización<br/>
+                                            &#160;&#160;&#160;&#160;Factor = (1 + Tasa Mensual)^Plazo<br/><br/>
+                                            <strong>Paso 3:</strong> Calcular el pago base del equipo<br/>
+                                            &#160;&#160;&#160;&#160;Pago Base = (Valor Equipo × Tasa Mensual × Factor) / (Factor - 1)<br/><br/>
+                                            <strong>Paso 4:</strong> Ajustar por opción de compra (si aplica)<br/>
+                                            &#160;&#160;&#160;&#160;Ajuste = (Valor Opción × Tasa Mensual) / (Factor - 1)<br/>
+                                            &#160;&#160;&#160;&#160;Pago Base Ajustado = Pago Base - Ajuste<br/><br/>
+                                            <strong>Paso 5:</strong> Sumar el servicio técnico mensual<br/>
+                                            &#160;&#160;&#160;&#160;Pago Mensual Total = Pago Base Ajustado + Servicio Mensual
+                                        </p>
+                                    </div>
+                                    <p style="color: #495057; line-height: 1.6; margin-bottom: 0; font-size: 13px;">
+                                        <strong>Ejemplo:</strong> Con un equipo de 2,760,000 COP, tasa 21%, plazo 24 meses, opción 20% y servicio 34,500:<br/>
+                                        Tasa Mensual = 1.75% → Factor = 1.5196 → Pago Base = 141,230 → Con opción = 122,619 → Con servicio = 157,119 COP/mes
+                                    </p>
+                                </div>
+                                
+                                <div style="margin-bottom: 0; padding-top: 20px; border-top: 1px solid #dee2e6;">
+                                    <h3 style="color: #4a90e2; font-size: 16px; margin-bottom: 12px;">5. ¿De Dónde Salen los Valores en Cada Escenario?</h3>
+                                    <p style="color: #495057; line-height: 1.6; margin-bottom: 10px;">
+                                        Los valores en cada escenario se calculan de la misma manera, pero <strong>incluyendo o excluyendo</strong> ciertos componentes:
+                                    </p>
+                                    <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 10px; border-left: 4px solid #4a90e2;">
+                                        <p style="color: #495057; margin: 0; font-size: 13px; line-height: 1.8;">
+                                            <strong>Escenario 1 (Con Seguro y Servicios):</strong><br/>
+                                            • Valor Equipo = Equipo USD + Garantía USD → Con utilidad → En COP<br/>
+                                            • Seguro/Garantía = Garantía USD → Con utilidad → En COP<br/>
+                                            • Servicio Mensual = Costo Base × (1 + Margen%)<br/>
+                                            • Pago Mensual = PMT(Valor Equipo con Seguro) + Servicio Mensual<br/><br/>
+                                            
+                                            <strong>Escenario 2 (Sin Seguro, con Servicios):</strong><br/>
+                                            • Valor Equipo = Solo Equipo USD → Con utilidad → En COP<br/>
+                                            • Seguro/Garantía = 0 (no incluido)<br/>
+                                            • Servicio Mensual = Costo Base × (1 + Margen%)<br/>
+                                            • Pago Mensual = PMT(Valor Equipo sin Seguro) + Servicio Mensual<br/><br/>
+                                            
+                                            <strong>Escenario 3 (Con Seguro, sin Servicios):</strong><br/>
+                                            • Valor Equipo = Equipo USD + Garantía USD → Con utilidad → En COP<br/>
+                                            • Seguro/Garantía = Garantía USD → Con utilidad → En COP<br/>
+                                            • Servicio Mensual = 0 (no incluido)<br/>
+                                            • Pago Mensual = PMT(Valor Equipo con Seguro) + 0<br/><br/>
+                                            
+                                            <strong>Escenario 4 (Sin Seguro ni Servicios):</strong><br/>
+                                            • Valor Equipo = Solo Equipo USD → Con utilidad → En COP<br/>
+                                            • Seguro/Garantía = 0 (no incluido)<br/>
+                                            • Servicio Mensual = 0 (no incluido)<br/>
+                                            • Pago Mensual = PMT(Valor Equipo sin Seguro) + 0
+                                        </p>
+                                    </div>
+                                    <p style="color: #495057; line-height: 1.6; margin-bottom: 0; font-size: 13px;">
+                                        <strong>Nota:</strong> La fórmula PMT calcula el pago mensual considerando los intereses del financiamiento. A mayor plazo, menor pago mensual pero mayor total a pagar.
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <!-- Pie de Página -->
+                            <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #dee2e6; text-align: center; color: #6c757d; font-size: 12px;">
+                                <p>Este reporte muestra diferentes escenarios de financiamiento para comparación.</p>
+                                <p style="margin-top: 5px; font-size: 10px;">Los valores mostrados son estimaciones basadas en los parámetros ingresados.</p>
+                            </div>
+                        </div>
+                    </t>
+                </t>
+            </t>
+        </template>
+    </data>
+</odoo>

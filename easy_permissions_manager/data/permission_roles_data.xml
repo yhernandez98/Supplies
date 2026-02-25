@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Rol: Sin Acceso a Compras -->
+        <record id="role_no_purchase_access" model="permission.role">
+            <field name="name">Sin Acceso a Compras</field>
+            <field name="description">Bloquea todo acceso al módulo de compras. Remueve los grupos de compras del usuario.</field>
+            <field name="active">True</field>
+        </record>
+
+        <!-- Rol: Solo Lectura Inventario -->
+        <record id="role_readonly_inventory" model="permission.role">
+            <field name="name">Solo Lectura Inventario</field>
+            <field name="description">Permite ver productos e inventario pero no modificar. Agrega grupo de usuario de inventario y remueve grupo de manager.</field>
+            <field name="active">True</field>
+        </record>
+
+        <!-- Rol: Solo Lectura Productos -->
+        <record id="role_readonly_products" model="permission.role">
+            <field name="name">Solo Lectura Productos</field>
+            <field name="description">Permite ver productos pero no crear ni modificar. Agrega grupo de usuario de inventario y remueve grupo de manager de productos.</field>
+            <field name="active">True</field>
+        </record>
+    </data>
+</odoo>

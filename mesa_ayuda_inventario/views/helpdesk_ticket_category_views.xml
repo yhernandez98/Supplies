@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="view_helpdesk_ticket_category_tree" model="ir.ui.view">
+            <field name="name">helpdesk.ticket.category.tree</field>
+            <field name="model">helpdesk.ticket.category</field>
+            <field name="arch" type="xml">
+                <list string="Categorías" create="1" delete="1">
+                    <header>
+                        <button name="action_fix_parent_from_name" string="Corregir Categoría principal (después de importar Excel)" type="object" class="btn-primary"/>
+                    </header>
+                    <field name="complete_name" string="Categoría"/>
+                </list>
+            </field>
+        </record>
+        <record id="view_helpdesk_ticket_category_form" model="ir.ui.view">
+            <field name="name">helpdesk.ticket.category.form</field>
+            <field name="model">helpdesk.ticket.category</field>
+            <field name="arch" type="xml">
+                <form string="Categoría">
+                    <sheet>
+                        <group>
+                            <field name="name" placeholder="Por ejemplo, Computo"/>
+                            <field name="parent_id" placeholder="Categoría principal"/>
+                            <field name="level" invisible="1"/>
+                            <field name="complete_name" invisible="1"/>
+                        </group>
+                        <notebook>
+                            <page string="Configuración para tickets" name="ticket_config">
+                                <div class="alert alert-info" role="alert" style="margin-bottom: 12px;">
+                                    <strong>Prioridad:</strong> importancia general del ticket (orden, listados, SLA). —
+                                    <strong>Urgencia:</strong> cuán rápido debe atenderse. —
+                                    <strong>Impacto:</strong> gravedad si no se resuelve. Si defines estos valores aquí, el técnico no podrá modificarlos en el ticket.
+                                </div>
+                                <group string="Valores por defecto al elegir esta categoría">
+                                    <field name="default_priority" options="{'no_create': True}"/>
+                                    <field name="default_urgency" options="{'no_create': True}"/>
+                                    <field name="default_impact" options="{'no_create': True}"/>
+                                </group>
+                                <div class="alert alert-secondary" role="alert" style="margin-bottom: 12px;">
+                                    <strong>¿Qué es el SLA?</strong> Acuerdo de nivel de servicio: plazos que el equipo se compromete a cumplir. Se cuentan desde la <strong>creación del ticket</strong>.<br/>
+                                    <strong>SLA Respuesta:</strong> fecha/hora límite para dar la primera respuesta al usuario (ej. confirmar recepción o contacto).<br/>
+                                    <strong>SLA Resolución:</strong> fecha/hora límite para cerrar o resolver el ticket. Indique días y/o horas (0 = no fijar ese plazo).
+                                </div>
+                                <group string="SLA: intervalo desde creación del ticket (días + horas)">
+                                    <field name="sla_response_days" placeholder="0"/>
+                                    <field name="sla_response_hours" placeholder="0"/>
+                                    <field name="sla_resolution_days" placeholder="0"/>
+                                    <field name="sla_resolution_hours" placeholder="0"/>
+                                </group>
+                                <group>
+                                    <field name="auto_create_maintenance_order"/>
+                                </group>
+                                <div class="alert alert-info" role="alert" style="margin-top: 12px;">
+                                    <strong>Control del tiempo registrado:</strong> define cómo se comporta el tiempo en las hojas de horas de los tickets de esta categoría. "Usar tiempo real del cronómetro" obliga a que el tiempo guardado sea el del temporizador; "Tiempo mínimo por registro" exige un mínimo de horas por cada línea.
+                                </div>
+                                <group string="Control tiempo en hojas de horas">
+                                    <field name="control_tiempo_registro"/>
+                                    <field name="tiempo_minimo_horas" invisible="control_tiempo_registro != 'minimo_horas'"/>
+                                </group>
+                            </page>
+                        </notebook>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+        <record id="action_helpdesk_ticket_category" model="ir.actions.act_window">
+            <field name="name">Categorías</field>
+            <field name="res_model">helpdesk.ticket.category</field>
+            <field name="view_mode">list,form</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Crear categorías y subcategorías como en Inventario (Categoría principal / subcategoría).
+                </p>
+            </field>
+        </record>
+    </data>
+</odoo>

@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista list para las líneas del wizard -->
+    <record id="view_delivery_route_trigger_wizard_line_tree" model="ir.ui.view">
+        <field name="name">delivery.route.trigger.wizard.line.tree</field>
+        <field name="model">delivery.route.trigger.wizard.line</field>
+        <field name="arch" type="xml">
+            <list editable="bottom" create="true" delete="true">
+                <field name="lot_id" 
+                       options="{'no_create': True, 'no_open': True}"
+                       placeholder="Buscar por número de serie o placa de inventario..."/>
+                <field name="product_id" readonly="1"/>
+                <field name="quantity"/>
+                <field name="product_uom_id" readonly="1"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Vista form del wizard -->
+    <record id="view_delivery_route_trigger_wizard_form" model="ir.ui.view">
+        <field name="name">delivery.route.trigger.wizard.form</field>
+        <field name="model">delivery.route.trigger.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Procesar Ruta de Entrega/Devolución">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="operation_type"/>
+                            <field name="partner_id" 
+                                   options="{'no_open': True}"
+                                   placeholder="Seleccione un cliente"/>
+                        </group>
+                        <group>
+                            <field name="route_code"/>
+                            <field name="route_id" 
+                                   options="{'no_open': True}"
+                                   placeholder="Seleccione una ruta"/>
+                        </group>
+                    </group>
+                    
+                    <notebook>
+                        <page string="Productos por Número de Serie">
+                            <field name="line_ids" nolabel="1"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                
+                <footer>
+                    <button name="action_trigger_route" type="object" 
+                            string="Procesar Ruta" class="btn-primary"/>
+                    <button string="Cancelar" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Acción del wizard -->
+    <record id="action_delivery_route_trigger_wizard" model="ir.actions.act_window">
+        <field name="name">Procesar Ruta de Entrega/Devolución</field>
+        <field name="res_model">delivery.route.trigger.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="view_id" ref="view_delivery_route_trigger_wizard_form"/>
+    </record>
+</odoo>
+

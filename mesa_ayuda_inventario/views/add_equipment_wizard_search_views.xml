@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Vista de búsqueda para stock.lot en el contexto del wizard -->
+        <record id="view_stock_lot_search_for_wizard" model="ir.ui.view">
+            <field name="name">stock.lot.search.wizard</field>
+            <field name="model">stock.lot</field>
+            <field name="arch" type="xml">
+                <search string="Buscar Equipos">
+                    <field name="name" string="Número de Serie"/>
+                    <field name="inventory_plate" string="Placa de Inventario"/>
+                    <field name="product_id" string="Producto"/>
+                    <field name="customer_id" string="Cliente"/>
+                </search>
+            </field>
+        </record>
+    </data>
+</odoo>
+
