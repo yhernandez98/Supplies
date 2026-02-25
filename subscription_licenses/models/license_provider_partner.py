@@ -372,6 +372,7 @@ class LicenseProviderPartner(models.Model):
             'target': 'self',
         }
 
-    _sql_constraints = [
-        ('partner_uniq', 'unique(partner_id)', 'Este contacto ya está en la lista de proveedores.'),
-    ]
+    partner_uniq = models.Constraint(
+        'unique(partner_id)',
+        'Este contacto ya está en la lista de proveedores.',
+    )

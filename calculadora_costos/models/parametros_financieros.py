@@ -117,7 +117,7 @@ class ParametrosFinancieros(models.Model):
             return parametros.margen_servicio_default / 100.0
         return 0.15
     
-    _sql_constraints = [
-        ('unique_parametros', 'UNIQUE(name)',
-         'Solo puede existir un registro de parámetros financieros'),
-    ]
+    unique_parametros = models.Constraint(
+        'UNIQUE(name)',
+        'Solo puede existir un registro de parámetros financieros',
+    )

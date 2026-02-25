@@ -9,9 +9,10 @@ class ProductAssetCategory(models.Model):
     _rec_name = "name"
     _inherit = ['mail.thread', 'mail.activity.mixin'] 
 
-    _sql_constraints = [
-        ("asset_cat_code_uniq", "unique(code)", "El código de la categoría de activo debe ser único."),
-    ]
+    asset_cat_code_uniq = models.Constraint(
+        "unique(code)",
+        "El código de la categoría de activo debe ser único.",
+    )
 
     name = fields.Char("Nombre", required=True, translate=False)
     code = fields.Char("Código", required=True, help="Código único para referencia interna/reporte.")
@@ -57,11 +58,10 @@ class ProductAssetClass(models.Model):
 
     _check_company_auto = True
 
-    _sql_constraints = [
-        ("asset_class_code_uniq",
-         "unique(code, company_id, category_id)",
-         "El código de la clase de activo debe ser único dentro de la categoría y la compañía."),
-    ]
+    asset_class_code_uniq = models.Constraint(
+        "unique(code, company_id, category_id)",
+        "El código de la clase de activo debe ser único dentro de la categoría y la compañía.",
+    )
 
     @api.constrains("category_id", "company_id")
     def _check_company_alignment(self):

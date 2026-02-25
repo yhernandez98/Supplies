@@ -90,9 +90,10 @@ class Calculadora(models.Model):
         required=True,
         help='Número de equipos a cotizar (1 a 20). Guarde para actualizar la lista de equipos.'
     )
-    _sql_constraints = [
-        ('cantidad_equipos_range', 'CHECK(cantidad_equipos >= 1 AND cantidad_equipos <= 20)', 'La cantidad de equipos debe estar entre 1 y 20.'),
-    ]
+    cantidad_equipos_range = models.Constraint(
+        'CHECK(cantidad_equipos >= 1 AND cantidad_equipos <= 20)',
+        'La cantidad de equipos debe estar entre 1 y 20.',
+    )
     line_ids = fields.One2many(
         'calculadora.costos.line',
         'calculadora_id',

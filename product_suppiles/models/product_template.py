@@ -381,9 +381,10 @@ class ProductProduct(models.Model):
         related="product_tmpl_id.classification", readonly=False
     )
 
-    _sql_constraints = [
-        ("serial_cc_unique", "unique(serial_cc)", "El Serial (Único) debe ser único en todas las variantes."),
-    ]
+    serial_cc_unique = models.Constraint(
+        "unique(serial_cc)",
+        "El Serial (Único) debe ser único en todas las variantes.",
+    )
 
     @api.constrains("serial_cc")
     def _check_unique_serial_cc(self):

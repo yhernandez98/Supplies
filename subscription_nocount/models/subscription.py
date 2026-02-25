@@ -3213,9 +3213,10 @@ class SubscriptionLotDateOverride(models.Model):
                 )
         return res
 
-    _sql_constraints = [
-        ('unique_sub_lot', 'unique(subscription_id, lot_id)', 'Ya existe un ajuste de fechas para este serial en esta suscripción.'),
-    ]
+    unique_sub_lot = models.Constraint(
+        'unique(subscription_id, lot_id)',
+        'Ya existe un ajuste de fechas para este serial en esta suscripción.',
+    )
 
 
 class SubscriptionSubscriptionLine(models.Model):
@@ -3225,7 +3226,7 @@ class SubscriptionSubscriptionLine(models.Model):
     
     def _auto_init(self):
         # Eliminar columnas de campos eliminados si existen en la base de datos
-        cr = self._cr
+        cr = self.env.cr
         table = self._table
         # Verificar y eliminar usage_closed_count si existe
         cr.execute("""

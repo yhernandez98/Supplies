@@ -85,7 +85,6 @@ class EquipmentChangeWizard(models.TransientModel):
         domain="[('id', 'in', available_old_equipment_ids), ('inventory_plate', '!=', False)]",
         help='Serial del equipo seleccionado.',
         readonly=True,
-        invisible="not old_equipment_inventory_plate_search",
     )
     
     old_equipment_inventory_plate = fields.Char(
@@ -133,7 +132,6 @@ class EquipmentChangeWizard(models.TransientModel):
         domain="[('id', 'in', available_new_equipment_ids), ('inventory_plate', '!=', False)]",
         help='Equipo nuevo seleccionado. Use el campo de búsqueda por placa de inventario para seleccionar el equipo.',
         readonly=True,
-        invisible="not new_equipment_inventory_plate_search",
     )
     
     new_equipment_inventory_plate = fields.Char(

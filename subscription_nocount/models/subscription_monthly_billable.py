@@ -28,7 +28,6 @@ class SubscriptionMonthlyBillable(models.Model):
     total_amount = fields.Monetary(
         string='Total Mensual',
         currency_field='currency_id',
-        digits=(16, 2),
         readonly=True,
     )
     currency_id = fields.Many2one(

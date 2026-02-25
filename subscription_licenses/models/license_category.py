@@ -27,9 +27,10 @@ class LicenseCategory(models.Model):
     # Contador de licencias en esta categoría
     license_count = fields.Integer(string='Total Licencias', compute='_compute_license_count', store=False)
     
-    _sql_constraints = [
-        ('unique_name', 'unique(name)', 'El nombre de la categoría debe ser único.')
-    ]
+    unique_name = models.Constraint(
+        'unique(name)',
+        'El nombre de la categoría debe ser único.',
+    )
 
     @api.depends('name')
     def _compute_license_count(self):

@@ -37,10 +37,10 @@ class TRM(models.Model):
     active = fields.Boolean(string='Activo', default=True)
     company_id = fields.Many2one('res.company', string='Compañía', default=lambda self: self.env.company)
 
-    _sql_constraints = [
-        ('unique_year_month', 'unique(year, month, company_id)', 
-         'Ya existe una TRM para este mes y año en esta compañía.')
-    ]
+    unique_year_month = models.Constraint(
+        'unique(year, month, company_id)',
+        'Ya existe una TRM para este mes y año en esta compañía.',
+    )
 
     @api.depends('year', 'month')
     def _compute_display_name(self):

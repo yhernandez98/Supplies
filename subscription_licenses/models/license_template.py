@@ -120,9 +120,10 @@ class LicenseTemplate(models.Model):
             else:
                 rec.display_name_full = category_name
     
-    _sql_constraints = [
-        ('unique_code', 'unique(code)', 'El código de la licencia debe ser único.')
-    ]
+    unique_code = models.Constraint(
+        'unique(code)',
+        'El código de la licencia debe ser único.',
+    )
 
     def _auto_init(self):
         """Limpiar datos ANTES de que Odoo intente convertir el campo."""

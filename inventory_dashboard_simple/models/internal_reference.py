@@ -43,9 +43,10 @@ class InternalReference(models.Model):
         store=True
     )
 
-    _sql_constraints = [
-        ('name_product_unique', 'UNIQUE(name, product_id)', 'La referencia interna debe ser única por producto.')
-    ]
+    name_product_unique = models.Constraint(
+        'UNIQUE(name, product_id)',
+        'La referencia interna debe ser única por producto.',
+    )
     
     @api.model
     def default_get(self, fields_list):
