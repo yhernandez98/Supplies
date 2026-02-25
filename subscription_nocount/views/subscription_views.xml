@@ -523,10 +523,6 @@
                 <field name="subscription_id"/>
                 <filter name="filter_active" string="En curso" domain="[('date_end', '=', False)]"/>
                 <filter name="filter_completed" string="Finalizadas" domain="[('date_end', '!=', False)]"/>
-                <group expand="0" string="Agrupar">
-                    <filter name="group_by_month" string="Por mes" context="{'group_by': 'date_start:month'}"/>
-                    <filter name="group_by_subscription" string="Por suscripción" context="{'group_by': 'subscription_id'}"/>
-                </group>
             </search>
         </field>
     </record>
