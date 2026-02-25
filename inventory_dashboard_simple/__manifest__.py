@@ -7,9 +7,9 @@
         (Recibidos, Traslados, Órdenes de entrega, etc.) en lugar de por cliente/empresa,
         facilitando la navegación para el personal de inventario.
     ''',
-    'author': 'Supplies De Colombia SAS',
+    'author': 'Supplies de Colombia',
     'category': 'Inventory/Inventory',
-    'version': '19.0.0.0.2',
+    'version': '18.0.0.0.2',
     'depends': [
         'stock',
         'product_suppiles',  # Para usar el campo inventory_plate en stock.lot y mover productos relacionados
@@ -36,6 +36,5 @@
     'installable': True,
     'application': False,
     'auto_install': False,
-    'license': 'LGPL-3',
 }
 

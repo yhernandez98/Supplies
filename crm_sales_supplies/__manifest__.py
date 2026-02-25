@@ -1,7 +1,7 @@
 {
     'name': 'CRM Sales Supplies Integration',
-    'version': '19.0.1.0.0',
-    'author': 'Supplies De Colombia SAS',
+    'version': '18.0.1.0.0',
+    'author': 'Supplies',
     'category': 'Sales/CRM',
     'depends': [
         'crm',

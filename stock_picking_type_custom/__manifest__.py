@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Personalización de Tipos de Operación de Stock',
-    'version': '19.0.1.0.0',
+    'version': '18.0.1.0.0',
     'category': 'Warehouse',
     'summary': 'Personaliza los nombres de los tipos de operación de entrega',
     'description': """
@@ -18,7 +18,7 @@ Características:
 * Actualización masiva de tipos de operación existentes
 * Actualización automática al crear nuevos tipos de operación
     """,
-    'author': 'Supplies De Colombia SAS',
+    'author': 'Supplies de Colombia',
     'website': 'https://www.suppliesdecolombia.com',
     'depends': [
         'base',

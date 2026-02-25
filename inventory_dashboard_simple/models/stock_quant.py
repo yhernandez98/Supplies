@@ -9,7 +9,7 @@ class StockQuant(models.Model):
 
     # Campos editables del lote - computed para mostrar, editables para escribir
     lot_inventory_plate = fields.Char(
-        string='Placa Inventario (dashboard)',
+        string='Placa de Inventario',
         compute='_compute_lot_fields',
         inverse='_inverse_lot_inventory_plate',
         store=False,

@@ -181,6 +181,7 @@ class SubscriptionMonthlyBillableLine(models.Model):
     cost = fields.Monetary(
         string='Costo',
         currency_field='currency_id',
+        digits=(16, 2),
         readonly=True,
     )
     is_license = fields.Boolean(string='Es licencia', readonly=True, help='True si esta línea es de licencias (Ver Detalles usa vista de 4 columnas).')
@@ -262,11 +263,13 @@ class SubscriptionMonthlyBillableLineDetail(models.Model):
     cost_renting = fields.Monetary(
         string='Costo Renting',
         currency_field='currency_id',
+        digits=(16, 2),
         readonly=True,
     )
     cost_additional = fields.Monetary(
         string='Costo Adicional',
         currency_field='currency_id',
+        digits=(16, 2),
         readonly=True,
         compute='_compute_cost_additional',
         help='Suma de los costos de los elementos asociados con costo (pestaña Elementos Con Costo del serial).',
@@ -274,6 +277,7 @@ class SubscriptionMonthlyBillableLineDetail(models.Model):
     cost_renting_total = fields.Monetary(
         string='Costo Renting (total)',
         currency_field='currency_id',
+        digits=(16, 2),
         readonly=True,
         compute='_compute_cost_additional',
         help='Costo Renting base + Costo adicional (elementos con costo).',
@@ -298,6 +302,7 @@ class SubscriptionMonthlyBillableLineDetail(models.Model):
     cost_daily = fields.Monetary(
         string='Costo Diario',
         currency_field='currency_id',
+        digits=(16, 2),
         readonly=True,
         compute='_compute_cost_daily_from_total',
         help='Costo diario calculado a partir del Costo Renting total (base + adicional).',
@@ -305,6 +310,7 @@ class SubscriptionMonthlyBillableLineDetail(models.Model):
     cost_to_date = fields.Monetary(
         string='Costo Días En Servicio',
         currency_field='currency_id',
+        digits=(16, 2),
         readonly=True,
         compute='_compute_cost_daily_from_total',
         help='Costo días en servicio = Costo diario × Días en servicio.',

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Transferencia de Productos y Seriales',
-    'version': '19.0.1.0.0',
+    'version': '18.0.1.0.0',
     'category': 'Warehouse',
     'summary': 'Transferir unidades y seriales de un producto a otro',
     'description': """
@@ -19,7 +19,7 @@ Características:
 * Actualizar los quants de stock
 * Mantener el historial de los seriales transferidos
     """,
-    'author': 'Supplies De Colombia SAS',
+    'author': 'Felipe Valbuena Para Supplies de Colombia',
     'website': 'https://www.suppliesdecolombia.com',
     'depends': [
         'base',

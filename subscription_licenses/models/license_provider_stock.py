@@ -120,19 +120,12 @@ class LicenseProviderStock(models.Model):
                 vals['provider_id'] = provider_id
         recs = super().create(vals_list)
         recs._set_license_template_from_product()
-        templates = recs.mapped('license_template_id').filtered(None)
-        if templates:
-            templates.invalidate_recordset(['provider_stock_count', 'provider_stock_total', 'provider_has_unlimited'])
         return recs
 
     def write(self, vals):
         res = super().write(vals)
         if 'license_product_id' in vals:
             self._set_license_template_from_product()
-        if self and any(k in vals for k in ('quantity', 'is_unlimited', 'license_template_id')):
-            templates = self.mapped('license_template_id').filtered(None)
-            if templates:
-                templates.invalidate_recordset(['provider_stock_count', 'provider_stock_total', 'provider_has_unlimited'])
         return res
 
     def _set_license_template_from_product(self):

@@ -1,6 +1,6 @@
 {
     'name': 'Subscription Licenses',
-    'version': '19.0.1.0.1',
+    'version': '18.0.1.0.1',
     'author': 'Supplies De Colombia SAS',
     'category': 'Sales/Subscriptions',
     'depends': ['sale', 'stock', 'account', 'product', 'base', 'web', 'product_suppiles', 'subscription_nocount'],

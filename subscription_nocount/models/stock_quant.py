@@ -9,7 +9,7 @@ class StockQuant(models.Model):
     
     principal_lot_id = fields.Many2one(
         'stock.lot',
-        string='Serial/Producto Principal (suscripción)',
+        string='Producto Principal',
         compute='_compute_principal_lot_info',
         store=False,
         help='Producto principal al que está asociado este componente/periférico/complemento'
@@ -17,14 +17,14 @@ class StockQuant(models.Model):
     
     principal_product_id = fields.Many2one(
         'product.product',
-        string='Producto Principal (suscripción)',
+        string='Producto Principal',
         compute='_compute_principal_lot_info',
         store=False,
         help='Producto principal al que está asociado este componente/periférico/complemento'
     )
     
     inventory_plate = fields.Char(
-        string='Placa Inventario (quant)',
+        string='Placa de Inventario',
         related='lot_id.inventory_plate',
         readonly=True,
         store=False,

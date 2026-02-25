@@ -11,15 +11,16 @@
     'website': 'https://www.supplies.com',
     'license': 'LGPL-3',
     'category': 'Inventory/Inventory',
-    'version': '19.0.0.0.2',
+    'version': '18.0.0.0.1',
     'installable': True,
     'depends': [
         'purchase',
         'stock',
         'stock_account',
         'purchase_stock',
-        'sale_stock',
+        'sale_stock', 
         'product',
+        'uom',
         'mail',
     ],
     'data': [

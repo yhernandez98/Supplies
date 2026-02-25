@@ -19,15 +19,11 @@ class StockPicking(models.Model):
         help='Cantidad de productos de leasing en esta transferencia'
     )
 
-    def _get_moves_without_package(self):
-        """Movimientos sin paquete (Odoo 18: move_ids_without_package; Odoo 19+: move_ids)."""
-        return getattr(self, 'move_ids_without_package', None) or self.move_ids
-
-    @api.depends('move_ids', 'move_ids.product_id.is_leasing')
+    @api.depends('move_ids_without_package.product_id.is_leasing')
     def _compute_has_leasing_products(self):
         """Calcular si la transferencia contiene productos de leasing"""
         for picking in self:
-            leasing_moves = picking._get_moves_without_package().filtered(
+            leasing_moves = picking.move_ids_without_package.filtered(
                 lambda m: m.product_id and m.product_id.is_leasing
             )
             picking.has_leasing_products = bool(leasing_moves)

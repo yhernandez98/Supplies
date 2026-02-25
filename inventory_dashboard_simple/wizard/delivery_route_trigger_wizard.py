@@ -355,10 +355,6 @@ class DeliveryRouteTriggerWizard(models.TransientModel):
         
         # Obtener las líneas de suministro que tienen lotes asignados
         supply_lines = principal_lot.lot_supply_line_ids.filtered(lambda sl: sl.related_lot_id)
-        # Si se indica only_related_lot_ids (ej. devolución con selección), filtrar solo esos
-        only_related_lot_ids = self.env.context.get('only_related_lot_ids') or []
-        if only_related_lot_ids:
-            supply_lines = supply_lines.filtered(lambda sl: sl.related_lot_id.id in only_related_lot_ids)
         
         if not supply_lines:
             _logger.debug("Lote %s tiene líneas de suministro pero sin lotes asignados", principal_lot.name)
@@ -433,20 +429,6 @@ class DeliveryRouteTriggerWizard(models.TransientModel):
 
         if not self.line_ids:
             raise UserError(_('Debe agregar al menos un producto por número de serie.'))
-
-        # DEVOLUCIÓN: validar fechas de finalización antes de continuar
-        if self.operation_type == 'return' and not self.env.context.get('skip_return_date_validation'):
-            today = fields.Date.context_today(self)
-            lots_with_early_return = []
-            for line in self.line_ids:
-                if not line.lot_id:
-                    continue
-                lot = line.lot_id
-                exit_date = getattr(lot, 'exit_date', None) or getattr(lot, 'last_exit_date_display', None)
-                if exit_date and exit_date > today:
-                    lots_with_early_return.append((lot, exit_date))
-            if lots_with_early_return:
-                return self._action_open_return_date_warning_wizard(lots_with_early_return)
 
         _logger.info("Procesando ruta %s para cliente %s con %d productos (Tipo: %s)",
                     self.route_id.name, self.partner_id.name, len(self.line_ids), self.operation_type)
@@ -571,11 +553,8 @@ class DeliveryRouteTriggerWizard(models.TransientModel):
                 
                 # Si es un producto principal, explotar sus componentes relacionados
                 if is_principal:
-                    only_ids = []
-                    if self.operation_type == 'return' and line.related_lot_ids_to_return:
-                        only_ids = line.related_lot_ids_to_return.ids
-                    _logger.info("Lote %s es principal, explotando productos relacionados... (solo_ids=%s)", lot.name, only_ids or 'todos')
-                    related_moves = self.with_context(only_related_lot_ids=only_ids)._explode_related_products(
+                    _logger.info("Lote %s es principal, explotando productos relacionados...", lot.name)
+                    related_moves = self._explode_related_products(
                         principal_lot=lot,
                         quantity=line.quantity,
                         picking=picking,
@@ -723,29 +702,6 @@ class DeliveryRouteTriggerWizard(models.TransientModel):
                 'Por favor, verifique la configuración de las reglas de la ruta y los productos seleccionados.'
             ) % error_msg)
 
-    def _action_open_return_date_warning_wizard(self, lots_with_early_return):
-        """Abre el wizard de aviso cuando hay devoluciones con fecha de finalización no cumplida."""
-        self.ensure_one()
-        ReturnDateWizard = self.env['return.date.warning.wizard']
-        def _to_date(d):
-            return d.date() if hasattr(d, 'date') and callable(getattr(d, 'date')) else d
-        line_vals = [
-            (0, 0, {'lot_id': lot.id, 'exit_date': _to_date(exit_date)})
-            for lot, exit_date in lots_with_early_return
-        ]
-        wiz = ReturnDateWizard.create({
-            'delivery_wizard_id': self.id,
-            'line_ids': line_vals,
-        })
-        return {
-            'type': 'ir.actions.act_window',
-            'name': _('Devolución: fecha de finalización no cumplida'),
-            'res_model': 'return.date.warning.wizard',
-            'res_id': wiz.id,
-            'view_mode': 'form',
-            'target': 'new',
-        }
-
 
 class DeliveryRouteTriggerWizardLine(models.TransientModel):
     """Líneas del wizard para productos por número de serie."""
@@ -892,29 +848,6 @@ class DeliveryRouteTriggerWizardLine(models.TransientModel):
         readonly=True
     )
 
-    # Para DEVOLUCIÓN: elementos asociados que se incluirán en la devolución (el usuario puede quitar alguno)
-    related_lot_ids_to_return = fields.Many2many(
-        'stock.lot',
-        'delivery_route_trigger_line_related_lot_rel',
-        'wizard_line_id',
-        'lot_id',
-        string='Elementos asociados a devolver',
-        help='En devolución: componentes/periféricos/complementos que se devuelven con este producto. Por defecto todos; puede quitar los que no devuelva.'
-    )
-
-    @api.onchange('lot_id')
-    def _onchange_lot_id(self):
-        """Actualizar cantidad por defecto cuando se selecciona un lote."""
-        if self.lot_id and self.lot_id.product_id and not self.quantity:
-            self.quantity = 1.0
-        # En devolución: pre-llenar elementos asociados a devolver
-        if self.lot_id and self.wizard_id and self.wizard_id.operation_type == 'return':
-            if hasattr(self.lot_id, 'lot_supply_line_ids') and self.lot_id.lot_supply_line_ids:
-                related = self.lot_id.lot_supply_line_ids.mapped('related_lot_id').filtered(lambda r: r)
-                self.related_lot_ids_to_return = [(6, 0, related.ids)]
-            else:
-                self.related_lot_ids_to_return = [(5, 0, 0)]
-
     @api.model_create_multi
     def create(self, vals_list):
         """Forzar cálculo de available_lot_ids al crear líneas."""
@@ -931,50 +864,9 @@ class DeliveryRouteTriggerWizardLine(models.TransientModel):
         if self.wizard_id:
             self._compute_available_lot_ids()
 
-
-class ReturnDateWarningWizardLine(models.TransientModel):
-    _name = 'return.date.warning.wizard.line'
-    _description = 'Línea del wizard de aviso de fecha de devolución'
-
-    wizard_id = fields.Many2one('return.date.warning.wizard', required=True, ondelete='cascade')
-    lot_id = fields.Many2one('stock.lot', string='Lote/Serie', required=True, ondelete='cascade')
-    exit_date = fields.Date(string='Fecha de finalización')
-
-
-class ReturnDateWarningWizard(models.TransientModel):
-    _name = 'return.date.warning.wizard'
-    _description = 'Aviso: devolución con fecha de finalización no cumplida'
-
-    delivery_wizard_id = fields.Many2one(
-        'delivery.route.trigger.wizard',
-        string='Wizard de ruta',
-        required=True,
-        ondelete='cascade'
-    )
-    line_ids = fields.One2many(
-        'return.date.warning.wizard.line',
-        'wizard_id',
-        string='Productos con fecha no cumplida'
-    )
-
-    def action_cancel_return(self):
-        """No devolver: cerrar wizard y mostrar mensaje."""
-        self.ensure_one()
-        return {'type': 'ir.actions.act_window_close'}
-
-    def action_continue_with_penalty(self):
-        """Continuar asumiendo la penalización."""
-        self.ensure_one()
-        return self.delivery_wizard_id.with_context(
-            skip_return_date_validation=True,
-            return_with_penalty=True
-        ).action_trigger_route()
-
-    def action_continue_without_penalty(self):
-        """Continuar sin penalización."""
-        self.ensure_one()
-        return self.delivery_wizard_id.with_context(
-            skip_return_date_validation=True,
-            return_with_penalty=False
-        ).action_trigger_route()
+    @api.onchange('lot_id')
+    def _onchange_lot_id(self):
+        """Actualizar cantidad por defecto cuando se selecciona un lote."""
+        if self.lot_id and self.lot_id.product_id and not self.quantity:
+            self.quantity = 1.0
 

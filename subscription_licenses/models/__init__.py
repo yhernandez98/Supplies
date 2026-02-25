@@ -11,7 +11,6 @@ from . import license_report_wizard
 # Modelos adicionales para funcionalidad extendida
 from . import exchange_rate_monthly
 from . import product_license_type
-from . import subscription_product_grouped  # Añade license_type_id a subscription.product.grouped
 from . import stock_lot  # Extender stock.lot para mostrar licencias
 from . import license_provider_stock  # Paso 1: Modelo básico activado ✓
 from . import product_product  # Restringir selector de producto a licencias del módulo

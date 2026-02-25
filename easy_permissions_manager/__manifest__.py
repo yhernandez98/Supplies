@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Gestor Fácil de Permisos',
-    'version': '19.0.1.0.0',
+    'version': '18.0.1.0.0',
     'category': 'Tools',
     'summary': 'Gestión simplificada de permisos y roles de usuarios',
     'description': """
@@ -13,7 +13,7 @@
         - Wizard para asignar permisos rápidamente
         - Vista de módulos y modelos disponibles
     """,
-    'author': 'Supplies De Colombia SAS',
+    'author': 'Supplies de Colombia',
     'website': '',
     'depends': ['base', 'stock', 'purchase', 'sale'],
     'data': [

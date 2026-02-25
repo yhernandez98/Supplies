@@ -37,13 +37,12 @@ class StockLot(models.Model):
         help='Clase de activo del producto (almacenado para permitir agrupación)'
     )
     
-    # Campos para la vista de lotes incompletos (mismo store y compute_sudo para Odoo 19)
+    # Campos para la vista de lotes incompletos
     display_location_id = fields.Many2one(
         'stock.location',
         string='Ubicación',
         compute='_compute_display_location_contact',
-        store=True,
-        compute_sudo=False,
+        store=False,
         help='Ubicación actual del lote (desde quants)'
     )
     
@@ -52,7 +51,6 @@ class StockLot(models.Model):
         string='Contacto',
         compute='_compute_display_location_contact',
         store=True,
-        compute_sudo=False,
         help='Contacto asociado a la ubicación del lote'
     )
     

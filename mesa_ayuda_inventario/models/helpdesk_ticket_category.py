@@ -17,7 +17,7 @@ class HelpdeskTicketCategory(models.Model):
     name = fields.Char(string='Categoría', required=True, translate=False)
     complete_name = fields.Char(string='Categoría', compute='_compute_complete_name', store=True, recursive=True)
     parent_id = fields.Many2one('helpdesk.ticket.category', string='Categoría principal', ondelete='cascade', index=True)
-    parent_path = fields.Char(index=True)
+    parent_path = fields.Char(index=True, unaccent=False)
     level = fields.Integer(string='Nivel', default=1)
 
     # ---------- Configuración aplicada al ticket según categoría ----------

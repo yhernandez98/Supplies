@@ -8,20 +8,20 @@ class StockQuant(models.Model):
 
     parent_product_id = fields.Many2one(
         'product.product',
-        string='Producto Principal (filtro)',
+        string='Producto Principal',
         help='Filtrar componentes, periféricos y complementos relacionados a este producto principal',
         store=False,
     )
     
     inventory_plate = fields.Char(
-        string='Placa de Inventario (quant)',
+        string='Placa de Inventario',
         related='lot_id.inventory_plate',
         readonly=True,
         store=False,
     )
     
     related_products_display = fields.Char(
-        string='Hardware Asociado (resumen)',
+        string='Hardware Asociado',
         compute='_compute_related_products_display',
         store=False,
         help='Componentes, periféricos y complementos asociados a este producto principal'
@@ -29,7 +29,7 @@ class StockQuant(models.Model):
     
     related_products_ids = fields.Many2many(
         'product.product',
-        string='Hardware Asociado (lista)',
+        string='Hardware Asociado',
         compute='_compute_related_products_display',
         store=False,
     )
@@ -168,7 +168,7 @@ class StockQuant(models.Model):
                 quant.related_products_ids = self.env['product.product']
     
     @api.model
-    def _search(self, domain, offset=0, limit=None, order=None, **kwargs):
+    def _search(self, domain, offset=0, limit=None, order=None, access_rights_uid=None):
         """Extender búsqueda para filtrar por producto principal o por características de componentes.
         Excluye automáticamente componentes, periféricos y complementos asociados a productos principales.
         IMPORTANTE: Solo aplica el filtro en la vista de inventario, NO durante validaciones."""
@@ -181,7 +181,7 @@ class StockQuant(models.Model):
             is_inventory_view = False
             
             # Verificar el contexto - solo aplicar si está explícitamente marcado
-            if self.env.context.get('filter_associated_items', False):
+            if self._context.get('filter_associated_items', False):
                 # Verificar que NO es una validación o constraint
                 # Las validaciones normalmente buscan un lote específico
                 if domain:
@@ -283,7 +283,7 @@ class StockQuant(models.Model):
             # Ejecutar la búsqueda con el dominio (con o sin filtro de exclusión)
             # Usar try/except para manejar errores de acceso de forma segura
             try:
-                return super()._search(domain, offset=offset, limit=limit, order=order, **kwargs)
+                return super()._search(domain, offset=offset, limit=limit, order=order)
             except Exception as search_error:
                 # Si hay error de acceso, intentar filtrar los quants accesibles manualmente
                 import logging
@@ -366,7 +366,7 @@ class StockQuant(models.Model):
             _logger.error("Error en _search de stock.quant: %s", str(e), exc_info=True)
             # En caso de error, delegar al método padre para que no falle
             try:
-                return super()._search(domain, offset=offset, limit=limit, order=order, **kwargs)
+                return super()._search(domain, offset=offset, limit=limit, order=order)
             except Exception:
                 return self.env['stock.quant']
         
@@ -375,13 +375,13 @@ class StockQuant(models.Model):
         # Verificar si hay contexto específico que requiera nuestra lógica personalizada
         try:
             has_custom_context = bool(
-                self.env.context.get('parent_product_id') or
-                self.env.context.get('supplies_filter') or
-                self.env.context.get('search_supplies_products')
+                self._context.get('parent_product_id') or
+                self._context.get('supplies_filter') or
+                self._context.get('search_supplies_products')
             )
         except Exception:
             # Si hay error al verificar el contexto, delegar a Odoo
-            return super()._search(domain, offset=offset, limit=limit, order=order, **kwargs)
+            return super()._search(domain, offset=offset, limit=limit, order=order)
         
         # Verificar si hay filtros personalizados en el dominio
         parent_product_id = None
@@ -389,8 +389,8 @@ class StockQuant(models.Model):
         has_custom_domain = False
         
         # Buscar en el contexto
-        if self.env.context.get('parent_product_id'):
-            parent_product_id = self.env.context.get('parent_product_id')
+        if self._context.get('parent_product_id'):
+            parent_product_id = self._context.get('parent_product_id')
             has_custom_domain = True
         
         # Buscar en el dominio cualquier término de búsqueda de texto
@@ -425,7 +425,7 @@ class StockQuant(models.Model):
         if not has_custom_context and not has_custom_domain:
             # Llamar al método padre directamente sin modificar el dominio
             try:
-                return super()._search(domain, offset=offset, limit=limit, order=order, **kwargs)
+                return super()._search(domain, offset=offset, limit=limit, order=order)
             except Exception as e:
                 # Si hay error, intentar con dominio básico o retornar búsqueda vacía
                 import logging
@@ -434,7 +434,7 @@ class StockQuant(models.Model):
                 # Intentar con dominio mínimo
                 try:
                     safe_domain = [('id', '>', 0)]  # Dominio seguro que no debería fallar
-                    return super()._search(safe_domain, offset=offset, limit=limit, order=order, **kwargs)
+                    return super()._search(safe_domain, offset=offset, limit=limit, order=order)
                 except Exception:
                     # Si aún falla, retornar búsqueda vacía
                     return self.env['stock.quant']
@@ -605,7 +605,7 @@ class StockQuant(models.Model):
         # Llamar al método padre - stock.quant._search no acepta access_rights_uid
         # Usar try/except para manejar errores de acceso
         try:
-            return super()._search(domain, offset=offset, limit=limit, order=order, **kwargs)
+            return super()._search(domain, offset=offset, limit=limit, order=order)
         except Exception as e:
             # Si hay error de acceso, intentar con un dominio más permisivo
             # Eliminar filtros que puedan causar problemas de acceso
@@ -616,7 +616,7 @@ class StockQuant(models.Model):
                     if dom[0] in ('id', 'product_id') and dom[1] == '=':
                         safe_domain.append(dom)
             if safe_domain:
-                return super()._search(safe_domain, offset=offset, limit=limit, order=order, **kwargs)
+                return super()._search(safe_domain, offset=offset, limit=limit, order=order)
             # Si aún falla, retornar búsqueda vacía
             return self.env['stock.quant']
         """

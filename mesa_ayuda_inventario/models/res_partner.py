@@ -241,10 +241,8 @@ class ResPartner(models.Model):
         action_dict['view_mode'] = 'kanban,list,form'
         kanban_view = self.env.ref('mesa_ayuda_inventario.view_customer_inventory_lot_kanban_simple', raise_if_not_found=False)
         list_view = self.env.ref('mesa_ayuda_inventario.view_stock_lot_tree_hierarchical', raise_if_not_found=False)
-        # Usar formulario de product_suppiles (Placa, Código, Referencia, etc.) si está instalado; si no, el de stock
-        form_view = self.env.ref('product_suppiles.view_production_lot_form_inherit_supplies', raise_if_not_found=False)
-        if not form_view:
-            form_view = self.env.ref('stock.view_production_lot_form', raise_if_not_found=False)
+        # Abrir el formulario nativo de stock.lot (con herencias: hostname, pestañas, etc.)
+        form_view = self.env.ref('stock.view_production_lot_form', raise_if_not_found=False)
         action_dict['views'] = [
             (kanban_view.id if kanban_view else False, 'kanban'),
             (list_view.id if list_view else False, 'list'),
@@ -314,10 +312,8 @@ class ResPartner(models.Model):
         action_dict['domain'] = domain
         action_dict['view_mode'] = 'list,form'
         list_view = self.env.ref('mesa_ayuda_inventario.view_stock_lot_tree_hierarchical', raise_if_not_found=False)
-        # Usar formulario de product_suppiles (Placa, Código, Referencia, etc.) si está instalado; si no, el de stock
-        form_view = self.env.ref('product_suppiles.view_production_lot_form_inherit_supplies', raise_if_not_found=False)
-        if not form_view:
-            form_view = self.env.ref('stock.view_production_lot_form', raise_if_not_found=False)
+        # Abrir el formulario nativo de stock.lot (con herencias: hostname, pestañas, etc.)
+        form_view = self.env.ref('stock.view_production_lot_form', raise_if_not_found=False)
         action_dict['views'] = [
             (list_view.id if list_view else False, 'list'),
             (form_view.id if form_view else False, 'form'),
