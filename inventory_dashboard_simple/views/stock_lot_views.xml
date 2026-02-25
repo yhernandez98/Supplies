@@ -16,10 +16,11 @@
             </field>
         </record>
 
-        <!-- Vista de búsqueda para lotes con campos incompletos -->
+        <!-- Vista de búsqueda para lotes con campos incompletos (sin group_by: evita Invalid view en Odoo 19) -->
         <record id="view_stock_lot_incomplete_fields_search" model="ir.ui.view">
             <field name="name">stock.lot.incomplete.fields.search</field>
             <field name="model">stock.lot</field>
+            <field name="type">search</field>
             <field name="arch" type="xml">
                 <search string="Buscar Productos Pendientes">
                     <field name="display_contact_id" string="Contacto" 
@@ -27,13 +28,6 @@
                     <field name="name" string="Número de Serie"/>
                     <field name="inventory_plate" string="Placa de Inventario"/>
                     <field name="product_id" string="Producto"/>
-                    <group expand="0" string="Agrupar por">
-                        <filter string="Contacto" name="group_contact" context="{'group_by': 'display_contact_id'}"/>
-                        <filter string="Categoría de Activo" name="group_category" context="{'group_by': 'product_asset_category_id'}"/>
-                        <filter string="Clase de Activo" name="group_class" context="{'group_by': 'product_asset_class_id'}"/>
-                        <filter string="Producto" name="group_product" context="{'group_by': 'product_id'}"/>
-                        <filter string="Ubicación" name="group_location" context="{'group_by': 'display_location_id'}"/>
-                    </group>
                 </search>
             </field>
         </record>
