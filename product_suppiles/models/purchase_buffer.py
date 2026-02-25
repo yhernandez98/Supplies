@@ -98,7 +98,7 @@ class PurchaseLineItemBufferLine(models.Model):
     quantity = fields.Float(string="Cantidad", required=True, default=1.0, digits="Product Unit of Measure")
     uom_id = fields.Many2one(
         "uom.uom", string="Unidad",
-        domain=[],
+        domain="[('category_id','=', product_id and product_id.uom_id and product_id.uom_id.category_id)]",
     )
 
     @api.onchange("product_id")

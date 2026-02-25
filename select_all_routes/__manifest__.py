@@ -2,9 +2,9 @@
 {
     'name': 'Select All Routes',
     'summary': 'Adds buttons to quickly select and deselect all available stock routes on a product.',
-    'version': '19.0.1.0.0',
+    'version': '18.0.1.0.0',
     'category': 'Inventory/Stock',
-    'author': 'Supplies De Colombia SAS',
+    'author': 'Tu Nombre',
     'license': 'AGPL-3',
     'depends': [
         'product', 

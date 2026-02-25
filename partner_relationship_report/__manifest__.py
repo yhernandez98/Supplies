@@ -6,12 +6,12 @@
         Caracteristicas:
         - Reporte de relaciones de contacto con productos y seriales
     ''',
-    'author': 'Supplies De Colombia SAS',
+    'author': 'Sebastian Cogollo',
     'contributors': ['Sebastian Cogollo, correocogollo@gmail.com'],
     'website': 'https://www.supplies.com',
     'license': 'LGPL-3',
     'category': 'Contacts',
-    'version': '19.0.0.0.1',
+    'version': '18.0.0.0.1',
     'depends': ['base', 'contacts', 'stock', 'report_xlsx'],
     'data': [
         'security/ir.model.access.csv',

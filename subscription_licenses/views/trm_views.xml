@@ -45,8 +45,7 @@
                 <field name="rate"/>
                 <filter string="Activas" name="active" domain="[('active', '=', True)]"/>
                 <filter string="Inactivas" name="inactive" domain="[('active', '=', False)]"/>
-                <separator string="Agrupar por"/>
-                <group>
+                <group expand="0" string="Agrupar por">
                     <filter string="Año" name="group_year" context="{'group_by': 'year'}"/>
                     <filter string="Mes" name="group_month" context="{'group_by': 'month'}"/>
                 </group>

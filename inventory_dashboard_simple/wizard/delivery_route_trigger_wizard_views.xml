@@ -12,12 +12,6 @@
                 <field name="product_id" readonly="1"/>
                 <field name="quantity"/>
                 <field name="product_uom_id" readonly="1"/>
-                <field name="related_lot_ids_to_return" 
-                       widget="many2many_tags"
-                       options="{'no_create': True}"
-                       optional="show"
-                       invisible="parent.operation_type != 'return'"
-                       string="Elementos asociados a devolver"/>
             </list>
         </field>
     </record>
@@ -55,33 +49,6 @@
                     <button name="action_trigger_route" type="object" 
                             string="Procesar Ruta" class="btn-primary"/>
                     <button string="Cancelar" special="cancel" class="btn-secondary"/>
-                </footer>
-            </form>
-        </field>
-    </record>
-
-    <!-- Wizard de aviso: devolución con fecha de finalización no cumplida -->
-    <record id="view_return_date_warning_wizard_form" model="ir.ui.view">
-        <field name="name">return.date.warning.wizard.form</field>
-        <field name="model">return.date.warning.wizard</field>
-        <field name="arch" type="xml">
-            <form string="Devolución: fecha de finalización no cumplida">
-                <sheet>
-                    <div class="alert alert-warning" role="alert">
-                        <p>Los siguientes productos tienen fecha de finalización posterior a hoy. La devolución puede estar sujeta a penalización según política del cliente.</p>
-                    </div>
-                    <field name="delivery_wizard_id" invisible="1"/>
-                    <field name="line_ids" nolabel="1" readonly="1">
-                        <list create="false" delete="false" edit="false">
-                            <field name="lot_id"/>
-                            <field name="exit_date" string="Fecha de finalización"/>
-                        </list>
-                    </field>
-                </sheet>
-                <footer>
-                    <button name="action_cancel_return" type="object" string="No devolver (fecha no cumplida)" class="btn-secondary"/>
-                    <button name="action_continue_with_penalty" type="object" string="Continuar con penalización" class="btn-primary"/>
-                    <button name="action_continue_without_penalty" type="object" string="Continuar sin penalización" class="btn-primary"/>
                 </footer>
             </form>
         </field>

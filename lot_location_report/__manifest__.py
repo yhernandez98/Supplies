@@ -10,10 +10,10 @@
         - Filtros por ubicación, producto y fechas
         - Información detallada de stock
     ''',
-    'author': 'Supplies De Colombia SAS',
+    'author': 'Felipe Valbuena',
     'license': 'LGPL-3',
     'category': 'Inventory/Reports',
-    'version': '19.0.0.0.1',
+    'version': '18.0.0.0.1',
     'depends': [
         'stock',
         'product',

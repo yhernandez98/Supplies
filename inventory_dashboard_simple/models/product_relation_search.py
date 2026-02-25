@@ -6,8 +6,7 @@ from odoo.exceptions import UserError
 class ProductRelationSearch(models.TransientModel):
     _name = 'product.relation.search'
     _description = 'Búsqueda de Relaciones de Productos'
-    # Solo campos almacenados en BD (main_product_name es compute store=False; orden por id para transient)
-    _order = 'id'
+    _order = 'main_product_name, element_type, element_name'
 
     # Campos de búsqueda
     search_plate = fields.Char(
@@ -33,8 +32,7 @@ class ProductRelationSearch(models.TransientModel):
         string='Elemento',
         readonly=True,
         compute='_compute_element_info',
-        store=True,
-        compute_sudo=True,
+        store=True
     )
     element_product_id = fields.Many2one(
         'product.product',
@@ -53,8 +51,7 @@ class ProductRelationSearch(models.TransientModel):
         string='Tipo de Elemento',
         readonly=True,
         compute='_compute_element_info',
-        store=True,
-        compute_sudo=True,
+        store=True
     )
     element_plate = fields.Char(
         string='Placa del Elemento',
@@ -69,50 +66,44 @@ class ProductRelationSearch(models.TransientModel):
         store=False
     )
 
-    # Información del producto principal (todos store=False y compute_sudo=True para consistencia Odoo 19)
+    # Información del producto principal
     main_lot_id = fields.Many2one(
         'stock.lot',
         string='Lote/Serie Principal',
         readonly=True,
         compute='_compute_main_product_info',
-        store=False,
-        compute_sudo=True,
+        store=False
     )
     main_product_id = fields.Many2one(
         'product.product',
         string='Producto Principal',
         readonly=True,
         compute='_compute_main_product_info',
-        store=False,
-        compute_sudo=True,
+        store=False
     )
     main_product_name = fields.Char(
         string='Nombre Producto Principal',
         readonly=True,
         compute='_compute_main_product_info',
-        store=False,
-        compute_sudo=True,
+        store=True
     )
     main_plate = fields.Char(
         string='Placa Principal',
         readonly=True,
         compute='_compute_main_product_info',
-        store=False,
-        compute_sudo=True,
+        store=False
     )
     main_serial = fields.Char(
         string='Serial Principal',
         readonly=True,
         compute='_compute_main_product_info',
-        store=False,
-        compute_sudo=True,
+        store=False
     )
     relation_type = fields.Char(
         string='Tipo de Relación',
         readonly=True,
         compute='_compute_main_product_info',
-        store=False,
-        compute_sudo=True,
+        store=True
     )
 
     @api.depends('element_lot_id')

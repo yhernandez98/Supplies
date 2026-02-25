@@ -76,20 +76,10 @@
                             <field name="copy_from_user_id" 
                                    options="{'no_create': True}"
                                    placeholder="Seleccione un usuario para copiar sus permisos"/>
-                            <field name="role_ids" 
-                                   widget="many2many_tags"
+                            <field name="role_id" 
                                    options="{'no_create': True}"
                                    domain="[('active', '=', True)]"
-                                   placeholder="Seleccione uno o más roles predefinidos"/>
-                            <field name="role_apply_mode" 
-                                   widget="radio"
-                                   options="{'horizontal': true}"
-                                   invisible="not role_ids"/>
-                            <div class="alert alert-info" role="alert" invisible="not role_ids">
-                                <p><strong>ℹ️ Modo de Aplicación:</strong></p>
-                                <p><strong>Agregar al Existente:</strong> Mantiene los permisos actuales del usuario y agrega los permisos de los roles seleccionados.</p>
-                                <p><strong>Reemplazar Todo:</strong> Elimina todos los permisos actuales (excepto los esenciales) y aplica solo los permisos de los roles seleccionados.</p>
-                            </div>
+                                   placeholder="Seleccione un rol predefinido o configure manualmente"/>
                         </group>
                         <group>
                             <button name="action_copy_permissions" 

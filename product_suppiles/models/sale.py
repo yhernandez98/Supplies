@@ -159,7 +159,7 @@ class SaleOrder(models.Model):
                         # Buscar movimientos padre (productos principales) que no sean de renting
                         # Los movimientos de renting ya fueron procesados en _create_renting_moves
                         # CORRECCIÓN: Validar que sale_line_id, product_id y product_tmpl_id existen antes de acceder
-                        parent_moves = (getattr(picking, 'move_ids_without_package', None) or picking.move_ids).filtered(
+                        parent_moves = picking.move_ids_without_package.filtered(
                             lambda m: m.sale_line_id and m.sale_line_id.exists()
                             and m.sale_line_id.product_id and m.sale_line_id.product_id.exists()
                             and m.sale_line_id.product_id.product_tmpl_id
@@ -222,7 +222,6 @@ class SaleOrderLine(models.Model):
     )
     product_tmpl_id_rel = fields.Many2one(
         "product.template",
-        string="Plantilla producto (renting)",
         related="product_id.product_tmpl_id",
         store=False,
     )

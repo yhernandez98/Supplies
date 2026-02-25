@@ -665,11 +665,10 @@ class StockMoveLine(models.Model):
 
             if principal_lots:
                 vals_pl = {"is_principal": True}
-                # CORRECCIÓN: Odoo 19 puede no tener move_ids_without_package; usar move_ids
+                # CORRECCIÓN: Validar que move_ids_without_package existe antes de acceder
                 ptr = False
-                moves = getattr(picking, 'move_ids_without_package', None) or picking.move_ids
-                if moves and len(moves) > 0:
-                    ptr = moves[0].purchase_tracking_ref or False
+                if picking.move_ids_without_package and len(picking.move_ids_without_package) > 0:
+                    ptr = picking.move_ids_without_package[0].purchase_tracking_ref or False
                 if ptr:
                     vals_pl["purchase_tracking_ref"] = ptr
                 if principal_product:
@@ -688,11 +687,10 @@ class StockMoveLine(models.Model):
                 continue
 
             single_principal_lot = principal_lots[0] if len(principal_lots) == 1 and principal_lots[0] and principal_lots[0].exists() else False
-            # CORRECCIÓN: Odoo 19 puede no tener move_ids_without_package; usar move_ids
+            # CORRECCIÓN: Validar que move_ids_without_package existe antes de acceder
             purchase_ref = False
-            moves = getattr(picking, 'move_ids_without_package', None) or picking.move_ids
-            if moves and len(moves) > 0:
-                purchase_ref = moves[0].purchase_tracking_ref or False
+            if picking.move_ids_without_package and len(picking.move_ids_without_package) > 0:
+                purchase_ref = picking.move_ids_without_package[0].purchase_tracking_ref or False
 
             for ml in child_lines:
                 # CORRECCIÓN: Validar que lot_id existe antes de acceder

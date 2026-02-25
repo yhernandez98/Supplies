@@ -153,8 +153,7 @@ class HelpdeskTicket(models.Model):
                 else:
                     ticket.custom_timer_display = _('Pausado. Acumulado: %s') % _format_duration(ticket.custom_timer_accumulated_hours)
             else:
-                # Siempre mostrar un tiempo (0 min si no hay cronómetro usado)
-                ticket.custom_timer_display = _('Parado. Acumulado: 0 min')
+                ticket.custom_timer_display = _('Parado')
 
     def _get_stage_name_lower(self, stage_id=None):
         """Nombre de la etapa en minúsculas (stage_id o el del ticket)."""

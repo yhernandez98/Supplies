@@ -11,7 +11,7 @@
             <field name="horas_trabajo_mes_default">240</field>
             <field name="dias_trabajo_mes_default">30</field>
             <field name="horas_trabajo_dia_default">8</field>
-            <field name="anos_depreciacion_vehiculo">7</field>
+            <field name="años_depreciacion_vehiculo">7</field>
         </record>
     </data>
 </odoo>

@@ -27,8 +27,7 @@
                     <field name="name" string="Número de Serie"/>
                     <field name="inventory_plate" string="Placa de Inventario"/>
                     <field name="product_id" string="Producto"/>
-                    <separator string="Agrupar por"/>
-                    <group>
+                    <group expand="0" string="Agrupar por">
                         <filter string="Contacto" name="group_contact" context="{'group_by': 'display_contact_id'}"/>
                         <filter string="Categoría de Activo" name="group_category" context="{'group_by': 'product_asset_category_id'}"/>
                         <filter string="Clase de Activo" name="group_class" context="{'group_by': 'product_asset_class_id'}"/>

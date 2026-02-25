@@ -64,34 +64,36 @@ class LicenseAssignment(models.Model):
         store=True,
     )
     
-    # Almacenado para agrupar y mostrar (Odoo 19: mismo compute_sudo y store para evitar warnings)
-    license_display_name_stored = fields.Char(
-        string='Tipo de Licencia (agrupar)',
-        compute='_compute_license_display_name_stored',
-        store=True,
-        compute_sudo=False,
-        index=True,
-        help='Nombre completo categoría - producto para agrupar por tipo real.',
-    )
-    # Solo lectura desde el almacenado para vistas (evita inconsistencia store/compute_sudo)
+    # Campo computed para mostrar mejor información en la vista
     license_display_name = fields.Char(
         string='Licencia (Completo)',
-        related='license_display_name_stored',
-        readonly=True,
+        compute='_compute_license_display_name',
         store=False,
         help='Muestra el código y nombre de la licencia para fácil identificación'
     )
+    # Almacenado para poder agrupar por "Tipo de Licencia" (categoría - producto)
+    license_display_name_stored = fields.Char(
+        string='Tipo de Licencia (agrupar)',
+        compute='_compute_license_display_name',
+        store=True,
+        index=True,
+        help='Mismo valor que Tipo de Licencia; almacenado para agrupar por tipo real, no por categoría.',
+    )
 
     @api.depends('license_id', 'license_id.name', 'license_id.product_id', 'license_id.product_id.name')
-    def _compute_license_display_name_stored(self):
-        """Calcula el nombre completo de la licencia (categoría - producto)."""
+    def _compute_license_display_name(self):
+        """Calcula el nombre completo de la licencia para mostrar (categoría - producto)."""
         for rec in self:
             if rec.license_id:
                 category_name = rec.license_id.name.name if rec.license_id.name else 'Sin Categoría'
                 product_name = rec.license_id.product_id.name if rec.license_id.product_id else ''
-                val = f"{category_name} - {product_name}" if product_name else category_name
+                if product_name:
+                    val = f"{category_name} - {product_name}"
+                else:
+                    val = category_name
             else:
                 val = ''
+            rec.license_display_name = val
             rec.license_display_name_stored = val
     partner_id = fields.Many2one(
         'res.partner',

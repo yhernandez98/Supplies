@@ -368,8 +368,7 @@
                     <filter string="En Progreso" name="in_progress" domain="[('state', '=', 'in_progress')]"/>
                     <filter string="Completada" name="completed" domain="[('state', '=', 'completed')]"/>
                     <filter string="Cancelada" name="cancelled" domain="[('state', '=', 'cancelled')]"/>
-                    <separator string="Agrupar por"/>
-                    <group>
+                    <group expand="0" string="Agrupar por">
                         <filter string="Tipo de Actividad" name="group_activity_type" context="{'group_by': 'activity_type'}"/>
                         <filter string="Cliente" name="group_partner" context="{'group_by': 'partner_id'}"/>
                         <!-- Agrupación por técnico no aplicable con Many2many -->

@@ -108,21 +108,11 @@ class PermissionManager(models.TransientModel):
         help='Módulos instalados en el sistema'
     )
     
-    role_ids = fields.Many2many(
+    role_id = fields.Many2one(
         'permission.role',
-        'permission_manager_role_rel',
-        'manager_id',
-        'role_id',
-        string='Roles Predefinidos',
-        help='Seleccione uno o más roles predefinidos para aplicar permisos rápidamente'
+        string='Rol Predefinido',
+        help='Seleccione un rol predefinido para aplicar permisos rápidamente'
     )
-    
-    role_apply_mode = fields.Selection([
-        ('add', 'Agregar al Existente (Mantener permisos actuales y agregar los del rol)'),
-        ('replace', 'Reemplazar Todo (Eliminar todos los permisos y aplicar solo los del rol)'),
-    ], string='Modo de Aplicación de Roles',
-       default='add',
-       help='Agregar permisos del rol a los existentes o reemplazar todos los permisos con los del rol')
     
     allowed_modules = fields.Many2many(
         'ir.module.module',
@@ -215,11 +205,11 @@ class PermissionManager(models.TransientModel):
             # No cargar automáticamente para evitar conflictos con la vista original
             pass
     
-    @api.onchange('role_ids')
-    def _onchange_role_ids(self):
-        """Aplicar permisos de los roles seleccionados."""
-        if self.role_ids:
-            # Aquí se aplicarían los permisos de los roles
+    @api.onchange('role_id')
+    def _onchange_role_id(self):
+        """Aplicar permisos del rol seleccionado."""
+        if self.role_id:
+            # Aquí se aplicarían los permisos del rol
             # Por ahora solo mostramos información
             pass
     
@@ -313,19 +303,17 @@ class PermissionManager(models.TransientModel):
             debug_parts.append('')
         
         # Información sobre grupos de roles
-        if self.role_ids:
-            debug_parts.append('=== Grupos de los Roles Seleccionados ===')
-            debug_parts.append('Roles seleccionados: %s' % ', '.join(self.role_ids.mapped('name')))
-            debug_parts.append('Modo de aplicación: %s' % ('Reemplazar Todo' if self.role_apply_mode == 'replace' else 'Agregar al Existente'))
+        if self.role_id:
+            debug_parts.append('=== Grupos del Rol Seleccionado ===')
             role_groups_to_add, role_groups_to_remove = self._get_role_groups()
             essential_in_role_groups = role_groups_to_add & essential_groups
             if essential_in_role_groups:
-                debug_parts.append('⚠️ PROBLEMA: Los roles incluyen grupos de tipo de usuario:')
+                debug_parts.append('⚠️ PROBLEMA: El rol incluye grupos de tipo de usuario:')
                 for group in essential_in_role_groups:
                     debug_parts.append('  - %s (ID: %s)' % (group.name, group.id))
             else:
-                debug_parts.append('✅ Los roles NO incluyen grupos de tipo de usuario')
-            debug_parts.append('Total grupos de los roles: %d' % len(role_groups_to_add))
+                debug_parts.append('✅ El rol NO incluye grupos de tipo de usuario')
+            debug_parts.append('Total grupos del rol: %d' % len(role_groups_to_add))
             debug_parts.append('')
         
         # Simular cálculo de grupos finales
@@ -337,17 +325,10 @@ class PermissionManager(models.TransientModel):
             module_groups = self._get_groups_from_modules(self.allowed_modules)
             groups_to_add |= module_groups
         
-        if self.role_ids:
+        if self.role_id:
             role_groups_to_add, role_groups_to_remove = self._get_role_groups()
-            if self.role_apply_mode == 'replace':
-                # En modo reemplazar, se eliminan todos los grupos actuales excepto esenciales
-                groups_to_remove = current_groups - essential_groups
-                groups_to_add = role_groups_to_add
-                groups_to_remove |= role_groups_to_remove
-            else:
-                # En modo agregar, se mantienen los actuales y se agregan los del rol
-                groups_to_add |= role_groups_to_add
-                groups_to_remove |= role_groups_to_remove
+            groups_to_add |= role_groups_to_add
+            groups_to_remove |= role_groups_to_remove
         
         # Simular final_groups
         final_groups = current_groups | groups_to_add
@@ -400,18 +381,10 @@ class PermissionManager(models.TransientModel):
         if len(user_check) > 1:
             raise UserError(_('Error: Se encontraron múltiples usuarios con el mismo ID. Esto no debería ocurrir. ID: %s') % self.user_id.id)
         
-        # CRÍTICO: Definir target_user al inicio para usarlo en todo el método
-        target_user = self.env['res.users'].browse(self.user_id.id)
-        if not target_user.exists():
-            raise UserError(_('El usuario con ID %s no existe en la base de datos.') % self.user_id.id)
-        
-        if len(target_user) > 1:
-            raise UserError(_('Error crítico: Se encontraron múltiples usuarios con el mismo ID %s. Esto no debería ocurrir.') % self.user_id.id)
-        
         # VALIDACIÓN ESPECIAL: Verificar si el usuario fue duplicado y tiene relaciones compartidas
         # Cuando se duplica un usuario en Odoo, algunas relaciones many2many pueden no limpiarse correctamente
         # Verificar grupos compartidos de forma sospechosa (más de X grupos en común con otro usuario)
-        current_user_groups = target_user.groups_id
+        current_user_groups = self.user_id.groups_id
         if len(current_user_groups) > 0:
             # Buscar otros usuarios que tengan muchos grupos en común (posible duplicado)
             all_users = self.env['res.users'].search([
@@ -745,10 +718,7 @@ class PermissionManager(models.TransientModel):
                 # Agregar los grupos de bloqueo a los grupos finales para que no se pierdan
                 if block_groups:
                     groups_to_add |= block_groups
-                    _logger.info('✅ Grupos de bloqueo agregados a groups_to_add: %s', ', '.join(block_groups.mapped('name')))
-                    _logger.info('✅ IDs de grupos de bloqueo: %s', ', '.join([str(g.id) for g in block_groups]))
-                else:
-                    _logger.warning('⚠️ No se crearon grupos de bloqueo para los módulos bloqueados')
+                    _logger.info('Grupos de bloqueo agregados: %s', ', '.join(block_groups.mapped('name')))
                 
                 # Excluir grupos específicos que el usuario quiere remover (control fino)
                 if self.groups_to_exclude:
@@ -761,8 +731,8 @@ class PermissionManager(models.TransientModel):
                 if blocked_groups:
                     _logger.info('Grupos que se removerán: %s', ', '.join(blocked_groups.mapped('name')[:10]))
         
-        # 2. Aplicar permisos de los roles si están seleccionados
-        if self.role_ids:
+        # 2. Aplicar permisos del rol si está seleccionado
+        if self.role_id:
             role_groups_to_add, role_groups_to_remove = self._get_role_groups()
             
             # IMPORTANTE: Filtrar grupos de tipo de usuario conflictivos de los grupos de roles
@@ -773,34 +743,12 @@ class PermissionManager(models.TransientModel):
                                   ', '.join(removed_conflicts.mapped('name')))
                 role_groups_to_add = role_groups_to_add - conflicting_user_type_groups
             
-            if self.role_apply_mode == 'replace':
-                # Modo reemplazar: eliminar todos los grupos actuales excepto esenciales
-                _logger.info('Modo REEMPLAZAR: Se eliminarán todos los permisos excepto los esenciales y se aplicarán solo los del rol')
-                # Obtener todos los grupos actuales del usuario
-                current_user_groups = target_user.groups_id
-                # Remover todos excepto los esenciales
-                groups_to_remove = current_user_groups - essential_groups
-                # Agregar solo los grupos del rol
-                groups_to_add = role_groups_to_add
-                # CRÍTICO: Asegurar que base.group_user (Internal User) esté siempre presente
-                if internal_user_group and internal_user_group not in groups_to_add:
-                    groups_to_add |= internal_user_group
-                    _logger.info('CRÍTICO: Agregando Internal User al modo reemplazar para asegurar acceso al sistema')
-                # Los grupos a remover del rol se agregan a groups_to_remove
-                # PERO proteger grupos esenciales
-                role_groups_to_remove_protected = role_groups_to_remove - essential_groups
-                groups_to_remove |= role_groups_to_remove_protected
-            else:
-                # Modo agregar: mantener permisos actuales y agregar los del rol
-                _logger.info('Modo AGREGAR: Se mantendrán los permisos actuales y se agregarán los del rol')
-                groups_to_add |= role_groups_to_add
-                groups_to_remove |= role_groups_to_remove
+            groups_to_add |= role_groups_to_add
+            groups_to_remove |= role_groups_to_remove
         
         # 2.5. Siempre remover grupos excluidos manualmente (incluso si no hay restricción de módulos)
-        # PERO proteger grupos esenciales
         if self.groups_to_exclude:
-            groups_to_exclude_protected = self.groups_to_exclude - essential_groups
-            groups_to_remove |= groups_to_exclude_protected
+            groups_to_remove |= self.groups_to_exclude
         
         # 3. Proteger grupos básicos esenciales que no se deben remover
         # Estos grupos son necesarios para que el usuario pueda usar Odoo
@@ -854,20 +802,6 @@ class PermissionManager(models.TransientModel):
         final_groups = current_groups | groups_to_add
         # Luego remover los grupos que deben ser bloqueados (excepto esenciales)
         final_groups = final_groups - groups_to_remove
-        
-        # Verificar que los grupos de bloqueo estén en final_groups
-        block_groups_in_final = final_groups.filtered(lambda g: 'Blocked:' in g.name)
-        if block_groups_in_final:
-            _logger.info('✅ Grupos de bloqueo en final_groups: %s', ', '.join(block_groups_in_final.mapped('name')))
-        else:
-            # Buscar grupos de bloqueo en groups_to_add
-            block_groups_in_to_add = groups_to_add.filtered(lambda g: 'Blocked:' in g.name)
-            if block_groups_in_to_add:
-                _logger.warning('⚠️ ADVERTENCIA: Grupos de bloqueo en groups_to_add pero no en final_groups: %s', 
-                             ', '.join(block_groups_in_to_add.mapped('name')))
-                _logger.warning('⚠️ Esto puede causar que el usuario siga teniendo acceso. Verificando...')
-            else:
-                _logger.warning('⚠️ ADVERTENCIA: No se encontraron grupos de bloqueo en groups_to_add ni en final_groups.')
         
         # FILTRADO FINAL DE SEGURIDAD: Asegurar que final_groups NO tenga grupos de tipo de usuario conflictivos
         # Esto es crítico para evitar el error "El usuario no puede tener más de un tipo de usuario"
@@ -951,8 +885,9 @@ class PermissionManager(models.TransientModel):
             _logger.critical('VERIFICACIÓN FINAL: final_groups no contiene ningún tipo de usuario. Agregando Internal User como último recurso.')
         
         # 4. Aplicar cambios con manejo de errores
-        # CRÍTICO: target_user ya está definido al inicio del método
-        # Verificación adicional de seguridad
+        # CRÍTICO: Asegurar que solo se modifique el usuario específico
+        # Usar browse para obtener el registro exacto y evitar problemas con duplicados
+        target_user = self.env['res.users'].browse(self.user_id.id)
         if not target_user.exists():
             raise UserError(_('El usuario con ID %s no existe en la base de datos.') % self.user_id.id)
         
@@ -1106,16 +1041,6 @@ class PermissionManager(models.TransientModel):
         message_parts = []
         message_parts.append(_('Permisos aplicados correctamente al usuario %s (ID: %s).') % (target_user.name, target_user.id))
         message_parts.append('')
-        
-        # Información sobre roles aplicados
-        if self.role_ids:
-            message_parts.append(_('✅ Roles aplicados: %s') % ', '.join(self.role_ids.mapped('name')))
-            message_parts.append(_('📋 Modo de aplicación: %s') % ('Reemplazar Todo' if self.role_apply_mode == 'replace' else 'Agregar al Existente'))
-            if self.role_apply_mode == 'replace':
-                message_parts.append(_('⚠️ NOTA: Todos los permisos anteriores fueron eliminados (excepto los esenciales) y se aplicaron solo los permisos de los roles seleccionados.'))
-            else:
-                message_parts.append(_('ℹ️ NOTA: Se mantuvieron los permisos actuales y se agregaron los permisos de los roles seleccionados.'))
-            message_parts.append('')
         
         if self.apply_restriction:
             if self.restriction_mode == 'allow_list' and self.allowed_modules:
@@ -1336,19 +1261,17 @@ class PermissionManager(models.TransientModel):
         return groups
     
     def _block_module_menus(self, modules):
-        """Bloquear acceso a menús relacionados con los módulos bloqueados.
+        """Bloquear acceso a menús relacionados con los módulos bloqueados SOLO para el usuario específico.
         
-        Estrategia:
-        1. Buscar todos los menús del módulo a través de ir.model.data
-        2. Ocultar los menús globalmente (active=False) para bloquear el acceso
-        3. Los menús se reactivarán cuando se desbloquee el módulo
+        IMPORTANTE: NO ocultamos los menús globalmente (active=False) porque eso afectaría a TODOS los usuarios.
+        En su lugar, el control de acceso se hace mediante:
+        1. Grupos de bloqueo específicos por usuario (creados en _create_restrictive_ir_rules)
+        2. Reglas ir.rule que bloquean el acceso a los modelos
+        3. Los menús se ocultan automáticamente para usuarios sin permisos a través de los grupos
         
-        NOTA: Esta es una solución temporal. Idealmente, los menús deberían ocultarse
-        solo para usuarios específicos, pero Odoo no soporta esto nativamente.
-        La solución definitiva es usar grupos de bloqueo y reglas ir.rule.
+        Los menús permanecen activos en la base de datos, pero el usuario bloqueado no podrá verlos
+        porque no tiene los grupos necesarios para acceder a ellos.
         """
-        menus_hidden = 0
-        
         # VALIDACIÓN CRÍTICA: Asegurar que solo se afecte al usuario específico
         if not self.user_id or not self.user_id.id:
             _logger.warning('⚠️ No se puede bloquear menús: usuario no válido')
@@ -1365,62 +1288,15 @@ class PermissionManager(models.TransientModel):
             return 0
         
         _logger.info('🔒 BLOQUEANDO ACCESO A MENÚS - Usuario específico: %s (ID: %s)', target_user.name, target_user.id)
+        _logger.info('ℹ️ NOTA: Los menús NO se ocultan globalmente. El control de acceso se hace mediante grupos y reglas ir.rule.')
+        _logger.info('ℹ️ Los menús permanecen activos, pero el usuario %s (ID: %s) no podrá verlos porque no tiene los grupos necesarios.', 
+                    target_user.name, target_user.id)
         
-        for module in modules:
-            module_name = module.name or ''
-            try:
-                # Buscar menús del módulo a través de ir.model.data
-                menu_data = self.env['ir.model.data'].search([
-                    ('module', '=', module_name),
-                    ('model', '=', 'ir.ui.menu')
-                ])
-                
-                if menu_data:
-                    menu_ids = [data.res_id for data in menu_data if data.res_id and data.res_id > 0]
-                    if menu_ids:
-                        menus = self.env['ir.ui.menu'].browse(menu_ids).exists()
-                        # Ocultar menús que estén activos
-                        active_menus = menus.filtered(lambda m: m.active)
-                        if active_menus:
-                            active_menus.sudo().write({'active': False})
-                            menus_hidden += len(active_menus)
-                            _logger.info('Módulo %s: %d menús ocultos', module_name, len(active_menus))
-                
-                # También buscar menús hijos recursivamente del menú raíz del módulo
-                root_menu_xml_ids = [
-                    f'{module_name}.menu_licenses_root',
-                    f'{module_name}.menu_{module_name}',
-                    f'{module_name}.menu_calculadora_costos_root',
-                    f'{module_name}.menu_calculadora',
-                    f'{module_name}.menu_helpdesk_inventory_root',
-                ]
-                for xml_id in root_menu_xml_ids:
-                    try:
-                        root_menu = self.env.ref(xml_id, raise_if_not_found=False)
-                        if root_menu and root_menu.active:
-                            # Buscar todos los menús hijos recursivamente
-                            def get_all_children(menu):
-                                children = self.env['ir.ui.menu'].search([('parent_id', '=', menu.id)])
-                                all_children = children
-                                for child in children:
-                                    all_children |= get_all_children(child)
-                                return all_children
-                            
-                            children = get_all_children(root_menu)
-                            all_menus_to_hide = root_menu | children
-                            active_menus_to_hide = all_menus_to_hide.filtered(lambda m: m.active)
-                            if active_menus_to_hide:
-                                active_menus_to_hide.sudo().write({'active': False})
-                                menus_hidden += len(active_menus_to_hide)
-                                _logger.info('Módulo %s: Menú raíz y %d menús hijos ocultos', module_name, len(active_menus_to_hide))
-                    except Exception as e:
-                        _logger.warning('Error buscando menú raíz %s: %s', xml_id, str(e))
-                        
-            except Exception as e:
-                _logger.warning('Error buscando menús para bloquear en %s: %s', module_name, str(e))
+        # NO ocultar menús globalmente - esto afectaría a todos los usuarios
+        # El bloqueo se hace mediante grupos de permisos y reglas ir.rule
+        # que se crean en _create_restrictive_ir_rules
         
-        _logger.info('✅ Total menús ocultos: %d para usuario %s (ID: %s)', menus_hidden, target_user.name, target_user.id)
-        return menus_hidden
+        return 0  # Retornar 0 porque no ocultamos menús globalmente
     
     def _create_restrictive_ir_rules(self, modules):
         """Crear reglas de dominio (ir.rule) para bloquear acceso a modelos del módulo SOLO para el usuario específico.
@@ -1465,10 +1341,8 @@ class PermissionManager(models.TransientModel):
         for module in modules:
             module_name = module.name or ''
             
-            # Obtener modelos del módulo usando múltiples métodos
+            # Obtener modelos del módulo
             model_names = []
-            
-            # Método 1: Buscar modelos conocidos para módulos específicos
             if 'subscription_licenses' in module_name or 'subscription.licenses' in module_name:
                 known_models = [
                     'license.trm', 'license.template', 'license.assignment', 
@@ -1501,64 +1375,16 @@ class PermissionManager(models.TransientModel):
                 for model_name in known_models:
                     if self.env['ir.model'].search([('model', '=', model_name)], limit=1):
                         model_names.append(model_name)
-            
-            # Método 2: Buscar modelos a través de ir.model.data (más confiable para módulos personalizados)
-            try:
-                # Buscar todos los ir.model.data del módulo que sean de tipo ir.model
-                model_data = self.env['ir.model.data'].search([
-                    ('module', '=', module_name),
-                    ('model', '=', 'ir.model')
-                ])
-                
-                if model_data:
-                    # Obtener los modelos reales desde ir.model
-                    for data in model_data:
-                        if data.res_id:
-                            model = self.env['ir.model'].browse(data.res_id)
-                            if model.exists() and model.model and model.model not in model_names:
+            else:
+                # Para otros módulos, buscar modelos que contengan palabras clave
+                all_models = self.env['ir.model'].search([])
+                module_words = module_name.replace('_', ' ').split()
+                for model in all_models:
+                    if model.model:
+                        for word in module_words:
+                            if word and len(word) > 3 and word.lower() in model.model.lower():
                                 model_names.append(model.model)
-                    _logger.info('Módulo %s: %d modelos encontrados por ir.model.data', module_name, len(model_data))
-            except Exception as e:
-                _logger.warning('Error buscando modelos por ir.model.data para %s: %s', module_name, str(e))
-            
-            # Método 3: Buscar modelos a través de ir.model.access (reglas de acceso del módulo)
-            try:
-                # Buscar reglas de acceso que tengan el nombre del módulo
-                access_rules = self.env['ir.model.access'].search([
-                    ('name', 'like', module_name)
-                ])
-                
-                if access_rules:
-                    # Obtener los modelos únicos de las reglas de acceso
-                    access_models = access_rules.mapped('model_id.model')
-                    for model_name in access_models:
-                        if model_name and model_name not in model_names:
-                            # Verificar que el modelo existe
-                            if self.env['ir.model'].search([('model', '=', model_name)], limit=1):
-                                model_names.append(model_name)
-                    _logger.info('Módulo %s: %d modelos encontrados por ir.model.access', module_name, len(access_models))
-            except Exception as e:
-                _logger.warning('Error buscando modelos por ir.model.access para %s: %s', module_name, str(e))
-            
-            # Método 4: Buscar modelos por palabras clave (fallback)
-            if not model_names:
-                try:
-                    all_models = self.env['ir.model'].search([])
-                    module_words = module_name.replace('_', ' ').split()
-                    for model in all_models:
-                        if model.model and model.model not in model_names:
-                            for word in module_words:
-                                if word and len(word) > 3 and word.lower() in model.model.lower():
-                                    model_names.append(model.model)
-                                    break
-                    if model_names:
-                        _logger.info('Módulo %s: %d modelos encontrados por palabras clave', module_name, len(model_names))
-                except Exception as e:
-                    _logger.warning('Error buscando modelos por palabras clave para %s: %s', module_name, str(e))
-            
-            # Eliminar duplicados
-            model_names = list(set(model_names))
-            _logger.info('Módulo %s: Total %d modelos únicos encontrados para bloquear', module_name, len(model_names))
+                                break
             
             # Crear un grupo específico para identificar usuarios bloqueados en este módulo
             # Usar target_user para asegurar que solo se afecte al usuario específico
@@ -1587,11 +1413,7 @@ class PermissionManager(models.TransientModel):
             # Agregar el grupo de bloqueo a la lista para que se asigne al usuario específico
             if block_group:
                 block_groups |= block_group
-                _logger.info('✅ Grupo de bloqueo preparado para asignar al usuario %s (ID: %s): %s (ID: %s)', 
-                           target_user.name, target_user.id, block_group.name, block_group.id)
-            else:
-                _logger.error('❌ No se pudo crear el grupo de bloqueo para el módulo %s y usuario %s (ID: %s)', 
-                            module_name, target_user.name, target_user.id)
+                _logger.info('✅ Grupo de bloqueo preparado para asignar al usuario %s (ID: %s)', target_user.name, target_user.id)
             
             # Crear reglas de dominio que bloqueen el acceso SOLO para usuarios con el grupo de bloqueo
             for model_name in model_names:
@@ -1791,18 +1613,10 @@ class PermissionManager(models.TransientModel):
     
     def _get_role_groups(self):
         """Obtener grupos del rol."""
-        if not self.role_ids:
+        if not self.role_id:
             return self.env['res.groups'], self.env['res.groups']
         
-        # Agregar grupos de todos los roles seleccionados
-        groups_to_add = self.env['res.groups']
-        groups_to_remove = self.env['res.groups']
-        
-        for role in self.role_ids:
-            groups_to_add |= role.group_ids
-            groups_to_remove |= role.excluded_group_ids
-        
-        return groups_to_add, groups_to_remove
+        return self.role_id.group_ids, self.role_id.excluded_group_ids
     
     def _apply_permissions_from_lines(self):
         """Aplicar permisos desde las líneas de módulos y grupos."""
@@ -2095,28 +1909,13 @@ class PermissionManager(models.TransientModel):
         message = '\n'.join(diagnostic_info)
         _logger.info(message)
         
-        # Si hay usuarios con 100% de similitud, mostrar advertencia adicional
-        if '100% similitud' in message:
-            diagnostic_info.append('')
-            diagnostic_info.append('⚠️ PROBLEMA CRÍTICO DETECTADO:')
-            diagnostic_info.append('Este usuario tiene exactamente los mismos grupos que otros usuarios.')
-            diagnostic_info.append('Esto causa que los cambios de permisos se repliquen a todos.')
-            diagnostic_info.append('')
-            diagnostic_info.append('RECOMENDACIÓN:')
-            diagnostic_info.append('1. Revisa cada usuario y ajusta sus permisos según su rol')
-            diagnostic_info.append('2. Usa el gestor de permisos para cada usuario individualmente')
-            diagnostic_info.append('3. Asegúrate de que cada usuario tenga solo los grupos necesarios para su trabajo')
-            diagnostic_info.append('')
-            diagnostic_info.append('=' * 80)
-            message = '\n'.join(diagnostic_info)
-        
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',
             'params': {
                 'title': _('Diagnóstico de Usuario - ID: %s') % target_user.id,
                 'message': message,
-                'type': 'warning' if 'PROBLEMA DETECTADO' in message or 'ADVERTENCIA' in message or '100% similitud' in message else 'info',
+                'type': 'warning' if 'PROBLEMA DETECTADO' in message or 'ADVERTENCIA' in message else 'info',
                 'sticky': True,
             }
         }

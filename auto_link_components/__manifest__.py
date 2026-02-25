@@ -1,7 +1,6 @@
 {
     'name': 'Product Supplies Auto Relations',
-    'version': '19.0.1.0.0',
-    'author': 'Supplies De Colombia SAS',
+    'version': '1.0',
     'category': 'Inventory',
     'summary': 'Automatiza la creación de relaciones entre componentes basándose en el número de lote',
     'description': """
@@ -18,5 +17,4 @@
     'installable': True,
     'auto_install': False,
     'application': False,
-    'license': 'LGPL-3',
 }

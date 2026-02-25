@@ -15,8 +15,7 @@ class StockPicking(models.Model):
         # Agrupar movimientos por número de lote
         lot_groups = {}
         
-        moves = getattr(self, 'move_ids_without_package', None) or self.move_ids
-        for move in moves:
+        for move in self.move_ids_without_package:
             if not move.lot_ids:
                 continue
                 

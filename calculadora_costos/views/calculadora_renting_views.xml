@@ -157,11 +157,9 @@
                 <filter string="Activos" name="active" domain="[('active', '=', True)]"/>
                 <filter string="Inactivos" name="inactive" domain="[('active', '=', False)]"/>
                 <separator/>
-                <filter string="12 Meses" name="plazo_12" domain="[('plazo_meses', '=', '12')]"/>
-                <filter string="24 Meses" name="plazo_24" domain="[('plazo_meses', '=', '24')]"/>
-                <filter string="36 Meses" name="plazo_36" domain="[('plazo_meses', '=', '36')]"/>
-                <filter string="48 Meses" name="plazo_48" domain="[('plazo_meses', '=', '48')]"/>
-                <filter string="60 Meses" name="plazo_60" domain="[('plazo_meses', '=', '60')]"/>
+                <filter string="24 Meses" name="plazo_24" domain="[('plazo_meses', '=', 24)]"/>
+                <filter string="36 Meses" name="plazo_36" domain="[('plazo_meses', '=', 36)]"/>
+                <filter string="48 Meses" name="plazo_48" domain="[('plazo_meses', '=', 48)]"/>
                 <group expand="0" string="Agrupar por">
                     <filter string="Cliente" name="group_partner" context="{'group_by': 'partner_id'}"/>
                     <filter string="Plazo" name="group_plazo" context="{'group_by': 'plazo_meses'}"/>
@@ -179,7 +177,7 @@
                 Crea una nueva calculadora de renting
             </p>
             <p>
-                Calcula los costos y pagos mensuales para contratos de renting
+                Calcula los costos y pagos mensuales para contratos de renting/leasing
                 con diferentes plazos y opciones de compra. Puedes asociar un cliente
                 para ver sus suscripciones no contables activas.
             </p>

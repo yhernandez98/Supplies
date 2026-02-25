@@ -290,8 +290,7 @@ class ProductCompositeLine(models.Model):
     component_qty = fields.Float(string="Cantidad (por 1 compuesto)", required=True, default=1.0, digits="Product Unit of Measure")
     component_uom_id = fields.Many2one(
         "uom.uom", string="Unidad componente",
-        # Odoo 19: uom.uom ya no tiene category_id; el onchange asigna la UdM del producto.
-        domain=[],
+        domain="[('category_id','=', component_product_id and component_product_id.uom_id and component_product_id.uom_id.category_id)]",
     )
 
     @api.onchange("component_product_id")
@@ -313,7 +312,7 @@ class ProductPeripheralLine(models.Model):
     peripheral_qty = fields.Float(string="Cantidad (por 1 producto)", required=True, default=1.0, digits="Product Unit of Measure")
     peripheral_uom_id = fields.Many2one(
         "uom.uom", string="Unidad periférico",
-        domain=[],
+        domain="[('category_id','=', peripheral_product_id and peripheral_product_id.uom_id and peripheral_product_id.uom_id.category_id)]",
     )
 
     @api.onchange("peripheral_product_id")
@@ -335,7 +334,7 @@ class ProductComplementLine(models.Model):
     complement_qty = fields.Float(string="Cantidad (por 1 producto)", required=True, default=1.0, digits="Product Unit of Measure")
     complement_uom_id = fields.Many2one(
         "uom.uom", string="Unidad complemento",
-        domain=[],
+        domain="[('category_id','=', complement_product_id and complement_product_id.uom_id and complement_product_id.uom_id.category_id)]",
     )
 
     @api.onchange("complement_product_id")
