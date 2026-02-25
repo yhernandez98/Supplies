@@ -65,6 +65,7 @@
     <record id="view_subscription_license_serial_line_search" model="ir.ui.view">
         <field name="name">subscription.license.serial.line.search</field>
         <field name="model">subscription.license.serial.line</field>
+        <field name="type">search</field>
         <field name="arch" type="xml">
             <search string="Series con licencias">
                 <field name="location_id"/>
