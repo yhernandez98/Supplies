@@ -23,8 +23,8 @@ class SubscriptionLicenseAssignment(models.Model):
     
     # TRM y conversión
     trm_rate = fields.Float(string='TRM', compute='_compute_trm_and_amounts', store=True, digits=(16, 2))
-    amount_usd = fields.Monetary(string='Valor USD', compute='_compute_trm_and_amounts', store=True, currency_field='usd_currency_id', digits=(16, 0))
-    amount_local = fields.Monetary(string='Valor Total', compute='_compute_trm_and_amounts', store=True, currency_field='currency_id', digits=(16, 0))
+    amount_usd = fields.Monetary(string='Valor USD', compute='_compute_trm_and_amounts', store=True, currency_field='usd_currency_id')
+    amount_local = fields.Monetary(string='Valor Total', compute='_compute_trm_and_amounts', store=True, currency_field='currency_id')
     usd_currency_id = fields.Many2one('res.currency', string='Moneda USD', compute='_compute_usd_currency', store=False)
     
     @api.depends()

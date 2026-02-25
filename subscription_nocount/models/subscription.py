@@ -51,7 +51,7 @@ class SubscriptionSubscription(models.Model):
     )
     reference_year = fields.Integer(string='Año consulta', help='Para consultar o guardar el facturable de un mes concreto (ej. facturación mes vencido).')
     reference_month = fields.Integer(string='Mes consulta', help='Mes (1-12) para consultar o guardar el facturable.')
-    monthly_amount = fields.Monetary(string='Total Mensual', compute='_compute_monthly_amount', store=True, currency_field='currency_id', digits=(16, 0))
+    monthly_amount = fields.Monetary(string='Total Mensual', compute='_compute_monthly_amount', store=True, currency_field='currency_id')
     monthly_amount_usd = fields.Float(
         string='Total Mensual USD',
         compute='_compute_monthly_amount',
@@ -69,7 +69,6 @@ class SubscriptionSubscription(models.Model):
         compute='_compute_total_esperado_y_mes_anterior',
         store=False,
         currency_field='currency_id',
-        digits=(16, 2),
         help='Total como si fueran los días completos del mes (cuánto esperas recibir en el mes).',
     )
     total_mes_anterior = fields.Monetary(
@@ -77,7 +76,6 @@ class SubscriptionSubscription(models.Model):
         compute='_compute_total_esperado_y_mes_anterior',
         store=False,
         currency_field='currency_id',
-        digits=(16, 2),
         help='Total del facturable guardado del mes anterior (si existe).',
     )
     generate_accounting = fields.Boolean(string='Generar contabilidad', default=False, tracking=True)
@@ -3342,8 +3340,8 @@ class SubscriptionSubscriptionLine(models.Model):
             else:
                 line.business_line_id = False
     quantity = fields.Float(string='Cantidad', default=1.0)
-    price_monthly = fields.Monetary(string='Precio mensual', currency_field='currency_id', digits=(16, 0))
-    subtotal_monthly = fields.Monetary(string='Subtotal Mensual', compute='_compute_subtotal_monthly', store=True, currency_field='currency_id', digits=(16, 0))
+    price_monthly = fields.Monetary(string='Precio mensual', currency_field='currency_id')
+    subtotal_monthly = fields.Monetary(string='Subtotal Mensual', compute='_compute_subtotal_monthly', store=True, currency_field='currency_id')
     currency_id = fields.Many2one(related='subscription_id.currency_id', store=True, readonly=True)
     location_id = fields.Many2one('stock.location', string='Ubicación específica')
     usage_ids = fields.One2many('subscription.subscription.usage', 'line_id', string='Usos')
@@ -3369,8 +3367,8 @@ class SubscriptionSubscriptionLine(models.Model):
     component_date_start = fields.Datetime(string='Fecha inicio componente', readonly=True)
     component_date_end = fields.Datetime(string='Fecha fin componente', readonly=True)
     component_days_active = fields.Integer(string='Días activos comp.', readonly=True)
-    component_daily_rate = fields.Monetary(string='Tarifa diaria comp.', currency_field='currency_id', readonly=True, digits=(16, 0))
-    component_amount = fields.Monetary(string='Importe comp.', currency_field='currency_id', readonly=True, digits=(16, 0))
+    component_daily_rate = fields.Monetary(string='Tarifa diaria comp.', currency_field='currency_id', readonly=True)
+    component_amount = fields.Monetary(string='Importe comp.', currency_field='currency_id', readonly=True)
 
     @api.onchange('product_id')
     def _onchange_product_id(self):
@@ -3797,10 +3795,10 @@ class SubscriptionSubscriptionUsage(models.Model):
     quantity = fields.Float(string='Cantidad', default=1.0)
     invoiced = fields.Boolean(string='Facturado', default=False)
     days_open = fields.Integer(string='Días activos', compute='_compute_usage_metrics', store=True)
-    amount = fields.Monetary(string='Importe calculado', currency_field='currency_id', digits=(16, 0))
-    price_monthly_snapshot = fields.Monetary(string='Precio mensual usado', currency_field='currency_id', digits=(16, 0))
+    amount = fields.Monetary(string='Importe calculado', currency_field='currency_id')
+    price_monthly_snapshot = fields.Monetary(string='Precio mensual usado', currency_field='currency_id')
     currency_id = fields.Many2one(related='line_id.currency_id', store=True, readonly=True)
-    daily_rate = fields.Monetary(string='Tarifa diaria', currency_field='currency_id', compute='_compute_usage_metrics', store=True, digits=(16, 0))
+    daily_rate = fields.Monetary(string='Tarifa diaria', currency_field='currency_id', compute='_compute_usage_metrics', store=True)
     component_item_type = fields.Selection(
         related='line_id.component_item_type',
         string='Tipo componente',
@@ -4040,7 +4038,6 @@ class SubscriptionProductGrouped(models.Model):
         store=True,
         readonly=True,
         currency_field='cost_currency_id',
-        digits=(16, 2),
         help='Costo total (en COP o USD según corresponda; solo COP se suma en Total Mensual)'
     )
     cost_currency_id = fields.Many2one(
@@ -4057,7 +4054,6 @@ class SubscriptionProductGrouped(models.Model):
         store=False,
         readonly=True,
         currency_field='currency_id',
-        digits=(16, 2),
         help='Total proyectado por línea: licencias con TRM del mes en curso; servicios/equipos igual al Costo.'
     )
     currency_id = fields.Many2one(
@@ -4746,11 +4742,10 @@ class SubscriptionEquipmentSerialLine(models.TransientModel):
     product_name = fields.Char(string='Producto', readonly=True)
     inventory_plate = fields.Char(string='Placa de Inventario', readonly=True)
     lot_name = fields.Char(string='Número de serie/lote', readonly=True)
-    cost_renting = fields.Monetary(string='Costo Renting', currency_field='currency_id', readonly=True, digits=(16, 2))
+    cost_renting = fields.Monetary(string='Costo Renting', currency_field='currency_id', readonly=True)
     cost_additional = fields.Monetary(
         string='Costo Adicional',
         currency_field='currency_id',
-        digits=(16, 2),
         readonly=True,
         compute='_compute_cost_additional',
         help='Suma de los costos de los elementos asociados con costo (Elementos Con Costo del serial).',
@@ -4758,7 +4753,6 @@ class SubscriptionEquipmentSerialLine(models.TransientModel):
     cost_renting_total = fields.Monetary(
         string='Costo Renting (total)',
         currency_field='currency_id',
-        digits=(16, 2),
         readonly=True,
         compute='_compute_cost_additional',
         help='Costo Renting base + Costo adicional.',
@@ -4781,8 +4775,8 @@ class SubscriptionEquipmentSerialLine(models.TransientModel):
         compute='_compute_tiempo_displays',
         help='Tiempo restante hasta fecha finalización en "X meses y Y días".',
     )
-    cost_daily = fields.Monetary(string='Costo Diario', currency_field='currency_id', readonly=True, digits=(16, 2))
-    cost_to_date = fields.Monetary(string='Costo Días En Servicio', currency_field='currency_id', readonly=True, digits=(16, 2))
+    cost_daily = fields.Monetary(string='Costo Diario', currency_field='currency_id', readonly=True)
+    cost_to_date = fields.Monetary(string='Costo Días En Servicio', currency_field='currency_id', readonly=True)
     currency_id = fields.Many2one('res.currency', string='Moneda', readonly=True)
 
     @api.depends('lot_id', 'lot_id.lot_supply_line_ids', 'lot_id.lot_supply_line_ids.has_cost', 'lot_id.lot_supply_line_ids.cost')
