@@ -3888,7 +3888,7 @@ class SubscriptionProductGrouped(models.Model):
     is_license = fields.Boolean(string='Es Licencia', readonly=True, default=False, help='Indica si este registro representa una licencia')
     license_name = fields.Char(string='Nombre de Licencia', readonly=True, help='Nombre de la licencia cuando is_license=True')
     license_category = fields.Char(string='Categoría de Licencia', readonly=True, help='Categoría para agrupar licencias (ej: Office 365, Google Workspace)')
-    license_type_id = fields.Many2one('product.license.type', string='Tipo de Licencia', readonly=True, help='Tipo de licencia asociado')
+    # license_type_id se define en subscription_licenses (product.license.type) para evitar carga antes del comodel
     # Campo computed para mostrar el nombre correcto (producto o licencia)
     product_display_name = fields.Char(string='Producto', compute='_compute_product_display_name', store=False, help='Nombre del producto o licencia para mostrar')
     
@@ -4035,12 +4035,13 @@ class SubscriptionProductGrouped(models.Model):
     )
     location_id = fields.Many2one('stock.location', string='Ubicación', readonly=True)
 
-    @api.depends('product_id', 'product_id.business_line_id', 'product_id.product_tmpl_id.business_line_id', 'is_license', 'license_type_id')
+    @api.depends('product_id', 'product_id.business_line_id', 'product_id.product_tmpl_id.business_line_id', 'is_license')
     def _compute_business_line_id(self):
         """Calcula la línea de negocio desde el product_id (servicio o producto físico) o desde la licencia."""
         for record in self:
+            license_type_id = getattr(record, 'license_type_id', None)
             # Si es una licencia, intentar obtener la línea de negocio
-            if record.is_license and record.license_type_id:
+            if record.is_license and license_type_id:
                 # Si la licencia tiene un product_id asociado (buscado por nombre), usar su línea de negocio
                 if record.product_id:
                     if 'product.business.line' in self.env:
@@ -4107,7 +4108,7 @@ class SubscriptionProductGrouped(models.Model):
             else:
                 record.pricelist_id = False
 
-    @api.depends('subscription_id', 'product_id', 'quantity', 'lot_id', 'lot_id.entry_date', 'lot_id.exit_date', 'lot_id.lot_supply_line_ids', 'lot_id.lot_supply_line_ids.has_cost', 'lot_id.lot_supply_line_ids.cost', 'lot_ids', 'lot_ids.entry_date', 'lot_ids.exit_date', 'lot_ids.lot_supply_line_ids', 'lot_ids.lot_supply_line_ids.has_cost', 'lot_ids.lot_supply_line_ids.cost', 'subscription_id.partner_id', 'subscription_id.partner_id.property_product_pricelist', 'subscription_id.plan_id', 'pricelist_id', 'has_subscription', 'is_license', 'license_type_id', 'license_category', 'subscription_id.location_id', 'subscription_id.reference_year', 'subscription_id.reference_month')
+    @api.depends('subscription_id', 'product_id', 'quantity', 'lot_id', 'lot_id.entry_date', 'lot_id.exit_date', 'lot_id.lot_supply_line_ids', 'lot_id.lot_supply_line_ids.has_cost', 'lot_id.lot_supply_line_ids.cost', 'lot_ids', 'lot_ids.entry_date', 'lot_ids.exit_date', 'lot_ids.lot_supply_line_ids', 'lot_ids.lot_supply_line_ids.has_cost', 'lot_ids.lot_supply_line_ids.cost', 'subscription_id.partner_id', 'subscription_id.partner_id.property_product_pricelist', 'subscription_id.plan_id', 'pricelist_id', 'has_subscription', 'is_license', 'license_category', 'subscription_id.location_id', 'subscription_id.reference_year', 'subscription_id.reference_month')
     def _compute_cost(self):
         """Calcula el costo basado en la lista de precios del cliente y la cantidad.
         Solo busca precios recurrentes si el producto tiene una suscripción asignada (has_subscription=True).
