@@ -9,13 +9,8 @@
             <field name="inherit_id" ref="product_suppiles.view_production_lot_form_inherit_supplies"/>
             <field name="priority" eval="16"/>
             <field name="arch" type="xml">
-                <!-- Columna derecha: Odoo 19 base = sheet/group[1]/group[2] (Inventory) -->
-                <xpath expr="//sheet/group[1]/group[2]" position="attributes">
-                    <attribute name="class" add="o_lot_right_col" separator=" "/>
-                </xpath>
-                <!-- company_currency_id lo hace visible product_suppiles (heredando de stock_account); aquí no existe aún -->
-                <!-- Imagen + botón Generar Hoja de Vida (columna derecha, antes del primer campo) -->
-                <xpath expr="//sheet/group[1]/group[2]/*[1]" position="before">
+                <!-- Imagen + botón: antes de location_id (campo que existe en vista base/supplies) -->
+                <xpath expr="//field[@name='location_id']" position="before">
                     <div class="o_lot_photo_block o_lot_photo_below_costo">
                         <field name="lot_image" widget="image" 
                                options="{'preview_image': 'lot_image', 'size': [140, 140]}"/>
@@ -28,8 +23,7 @@
                                 title="Generar PDF con la hoja de vida completa del equipo"/>
                     </div>
                 </xpath>
-                
-                <!-- Agregar pestañas de mantenimientos e historial (nivel principal) -->
+                <!-- Pestañas de mantenimientos e historial (notebook lo crea product_suppiles) -->
                 <xpath expr="//sheet/notebook" position="inside">
                     <page string="Mantenimientos y Revisiones" name="maintenance_history">
                         <field name="maintenance_ids" nolabel="1" context="{'default_lot_id': id}"/>

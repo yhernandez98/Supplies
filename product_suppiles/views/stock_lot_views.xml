@@ -1,17 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-  <!-- Heredar de stock_account: hacer visible company_currency_id para que columnas derecho alineen -->
-  <record id="view_production_lot_form_inherit_stock_account_currency" model="ir.ui.view">
-    <field name="name">stock.lot.form.stock_account.currency.visible</field>
-    <field name="model">stock.lot</field>
-    <field name="inherit_id" ref="stock_account.view_production_lot_form_stock_account"/>
-    <field name="arch" type="xml">
-      <xpath expr="//field[@name='company_currency_id']" position="attributes">
-        <attribute name="invisible">0</attribute>
-      </xpath>
-    </field>
-  </record>
+  <!-- NOTA: La vista que heredaba de stock_account para hacer visible company_currency_id
+       se quitó porque si falla (ref o xpath) impide cargar la vista de supplies.
+       Si necesitas esa modificación, añádela en un XML aparte que cargue después. -->
 
   <record id="view_production_lot_form_inherit_supplies" model="ir.ui.view">
     <field name="name">production.lot.form.supplies.inherit</field>
@@ -19,52 +11,35 @@
     <field name="inherit_id" ref="stock.view_production_lot_form"/>
     <field name="priority" eval="15"/>
     <field name="arch" type="xml">
-      <!-- Clase para estilos pastel + reflejo (igual que suscripciones) -->
+      <!-- Solo xpaths que apuntan a elementos que existen en la vista base (como módulos nativos) -->
       <xpath expr="//form" position="attributes">
         <attribute name="class" add="o_stock_lot_pastel_form" separator=" "/>
       </xpath>
-      <!-- Columnas: Odoo 19 base = sheet > group[1](main) > group[1]=Info, group[2]=Inventory; sin depender de name -->
-      <xpath expr="//sheet/group[1]/group[1]" position="attributes">
-        <attribute name="class" add="o_stock_lot_left_col" separator=" "/>
-      </xpath>
-      <xpath expr="//sheet/group[1]/group[2]" position="attributes">
-        <attribute name="class" add="o_stock_lot_right_col" separator=" "/>
-      </xpath>
-
-      <!-- Cambiar etiqueta del campo name (solo Número de serie en header) -->
       <xpath expr="//sheet//field[@name='name'][not(ancestor::notebook)]" position="attributes">
         <attribute name="string">Número de serie</attribute>
         <attribute name="placeholder">Ingrese el número de serie</attribute>
       </xpath>
-      
-      <!-- Placa de Inventario, Placa de Seguridad, Hostname (columna izquierda, antes del primer campo) -->
-      <xpath expr="//sheet/group[1]/group[1]/*[1]" position="before">
+      <!-- Campos izquierda: antes de product_id y después de ref (siempre existen en base) -->
+      <xpath expr="//field[@name='product_id']" position="before">
         <field name="inventory_plate" string="Placa de Inventario" placeholder="Ingrese la placa de inventario"/>
         <field name="security_plate" string="Placa de Seguridad" placeholder="Ingrese la placa de seguridad"/>
         <field name="hostname" string="Hostname" placeholder="Ingrese el hostname del equipo"/>
       </xpath>
-      
-      <!-- Modelo y Código de facturación en columna izquierda -->
-      <xpath expr="//sheet/group[1]/group[1]" position="inside">
+      <xpath expr="//field[@name='ref']" position="after">
         <field name="model_name"/>
         <field name="billing_code"/>
-      </xpath>
-      <!-- Fechas para facturación prorrateada (solo productos/servicios, no aplica a licencias) -->
-      <xpath expr="//field[@name='billing_code']" position="after">
         <field name="entry_date" string="Fecha Activacion Renting" help="Fecha en que el producto llegó al cliente (para cobro por días)"/>
-        <field name="entry_date_display" string="Fecha activación (visible en suscripción)" invisible="1" help="Lo que se muestra en la suscripción: igual que arriba si hay fecha; si la borraste, aquí sigue la última guardada."/>
+        <field name="entry_date_display" string="Fecha activación (visible en suscripción)" invisible="1"/>
         <field name="exit_date" string="Fecha Finalizacion Renting" help="Fecha en que el producto salió del cliente (para cobro por días)"/>
-        <field name="exit_date_display" string="Fecha finalización (visible en suscripción)" invisible="1" help="Lo que se muestra en la suscripción: igual que arriba si hay fecha; si la borraste, aquí sigue la última guardada hasta la limpieza."/>
+        <field name="exit_date_display" string="Fecha finalización (visible en suscripción)" invisible="1"/>
       </xpath>
-      
-      <!-- Plazo Renting en columna derecha (segundo group dentro del primer group del sheet) -->
-      <xpath expr="//sheet/group[1]/group[2]" position="inside">
+      <!-- Columna derecha: después de location_id (estándar Odoo 19) -->
+      <xpath expr="//field[@name='location_id']" position="after">
         <field name="reining_plazo" string="Plazo Renting" help="Plazo en meses o fecha personalizada"/>
         <field name="reining_plazo_custom_months" string="Meses (personalizado)" invisible="reining_plazo != 'custom'" optional="show"/>
       </xpath>
-
-      <!-- Odoo 19: la vista base no tiene notebook; sheet tiene group[1]=main, group[2]=description -->
-      <xpath expr="//sheet/group[2]" position="after">
+      <!-- Notebook después del group que contiene note (Description); evita depender de group[2] -->
+      <xpath expr="//field[@name='note']/parent::group" position="after">
         <notebook>
         <!-- Pestaña Información: agrupa Información de Asociación, Elementos Asociados, etc. como subpestañas -->
         <page string="Información" name="info_group">

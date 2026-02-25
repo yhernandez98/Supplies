@@ -829,8 +829,8 @@
                 </header>
             </xpath>
             
-            <!-- Servicio y Suscripción Activa en columna derecha (Odoo 19: sheet/group[1]/group[2]) -->
-            <xpath expr="//sheet/group[1]/group[2]" position="inside">
+            <!-- Servicio y Suscripción Activa: después de location_id (campo estándar) -->
+            <xpath expr="//field[@name='location_id']" position="after">
                 <field name="subscription_service_product_id"
                        string="Servicio"
                        options="{'no_create': False}"
