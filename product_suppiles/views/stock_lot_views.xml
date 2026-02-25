@@ -46,8 +46,8 @@
         <field name="reining_plazo" string="Plazo Renting" help="Plazo en meses o fecha personalizada"/>
         <field name="reining_plazo_custom_months" string="Meses (personalizado)" invisible="reining_plazo != 'custom'" optional="show"/>
       </xpath>
-      <!-- Odoo 19 base puede no tener note en un group: insertar notebook después del último group del sheet -->
-      <xpath expr="//sheet/group[last()]" position="after">
+      <!-- Notebook justo después de location_id (campo que siempre existe en la vista base stock.lot) -->
+      <xpath expr="//field[@name='location_id']" position="after">
         <notebook>
         <!-- Pestaña Información: agrupa Información de Asociación, Elementos Asociados, etc. como subpestañas -->
         <page string="Información" name="info_group">
