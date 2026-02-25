@@ -29,12 +29,13 @@ class StockPicking(models.Model):
         help='Solo muestra movimientos con supply_kind = parent'
     )
     
-    @api.depends('move_ids_without_package', 'move_ids_without_package.supply_kind')
+    @api.depends('move_ids', 'move_ids.supply_kind')
     def _compute_move_ids_main_only(self):
-        """Calcular movimientos principales (solo supply_kind = 'parent')"""
+        """Calcular movimientos principales (solo supply_kind = 'parent'). Odoo 19 usa move_ids."""
         for picking in self:
             try:
-                picking.move_ids_main_only = picking.move_ids_without_package.filtered(
+                moves = getattr(picking, 'move_ids_without_package', picking.move_ids)
+                picking.move_ids_main_only = moves.filtered(
                     lambda m: hasattr(m, 'supply_kind') and m.supply_kind == 'parent'
                 )
             except Exception:
@@ -50,12 +51,13 @@ class StockPicking(models.Model):
         help='Solo muestra move_line_ids con supply_kind = parent'
     )
     
-    @api.depends('move_line_ids_without_package', 'move_line_ids_without_package.supply_kind')
+    @api.depends('move_line_ids', 'move_line_ids.supply_kind')
     def _compute_move_line_ids_main_only(self):
-        """Calcular move_line_ids principales (solo supply_kind = 'parent')"""
+        """Calcular move_line_ids principales (solo supply_kind = 'parent'). Odoo 19 usa move_line_ids."""
         for picking in self:
             try:
-                picking.move_line_ids_main_only = picking.move_line_ids_without_package.filtered(
+                lines = getattr(picking, 'move_line_ids_without_package', picking.move_line_ids)
+                picking.move_line_ids_main_only = lines.filtered(
                     lambda ml: hasattr(ml, 'supply_kind') and ml.supply_kind == 'parent'
                 )
             except Exception:

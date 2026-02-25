@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Creación Automática de Almacenes',
-    'version': '18.0.1.0.5',
+    'version': '19.0.1.0.5',
     'category': 'Warehouse',
     'summary': 'Crea automáticamente almacenes desde contactos',
     'description': """
