@@ -228,6 +228,7 @@
     <record id="view_license_assignment_search" model="ir.ui.view">
         <field name="name">license.assignment.search</field>
         <field name="model">license.assignment</field>
+        <field name="type">search</field>
         <field name="arch" type="xml">
             <search string="Buscar Asignaciones">
                 <field name="license_id"/>
@@ -249,13 +250,6 @@
                         domain="[('equipment_ids', '=', False)]"/>
                 <filter string="Con equipos asignados" name="with_equipment" 
                         domain="[('equipment_ids', '!=', False)]"/>
-                <group expand="0" string="Agrupar por">
-                    <filter string="Tipo de Licencia" name="group_license_display" context="{'group_by': 'license_display_name_stored'}"/>
-                    <filter string="Por categoría (Licencia)" name="group_license" context="{'group_by': 'license_id'}"/>
-                    <filter string="Cliente" name="group_partner" context="{'group_by': 'partner_id'}"/>
-                    <filter string="Proveedor" name="group_provider" context="{'group_by': 'license_provider_id'}"/>
-                    <filter string="Estado" name="group_state" context="{'group_by': 'state'}"/>
-                </group>
             </search>
         </field>
     </record>
@@ -264,7 +258,7 @@
         <field name="name">Asignaciones de Licencias</field>
         <field name="res_model">license.assignment</field>
         <field name="view_mode">list,form</field>
-        <field name="context">{'search_default_active': 1, 'search_default_group_partner': 1}</field>
+        <field name="context">{'search_default_active': 1}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
                 Cree una nueva asignación de licencia
