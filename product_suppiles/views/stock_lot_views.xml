@@ -46,8 +46,8 @@
         <field name="reining_plazo" string="Plazo Renting" help="Plazo en meses o fecha personalizada"/>
         <field name="reining_plazo_custom_months" string="Meses (personalizado)" invisible="reining_plazo != 'custom'" optional="show"/>
       </xpath>
-      <!-- Notebook justo después de location_id (campo que siempre existe en la vista base stock.lot) -->
-      <xpath expr="//field[@name='location_id']" position="after">
+      <!-- Odoo 19: sheet tiene group name="description" con note. Insertar notebook después (siempre existe). -->
+      <xpath expr="//group[@name='description']" position="after">
         <notebook>
         <!-- Pestaña Información: agrupa Información de Asociación, Elementos Asociados, etc. como subpestañas -->
         <page string="Información" name="info_group">
