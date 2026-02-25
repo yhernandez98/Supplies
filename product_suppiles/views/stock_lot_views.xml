@@ -23,11 +23,11 @@
       <xpath expr="//form" position="attributes">
         <attribute name="class" add="o_stock_lot_pastel_form" separator=" "/>
       </xpath>
-      <!-- Columnas: Odoo 19 base tiene main_group con group[1]=Information, group[2]=inventory_group -->
-      <xpath expr="//group[@name='main_group']/group[1]" position="attributes">
+      <!-- Columnas: Odoo 19 base = sheet > group[1](main) > group[1]=Info, group[2]=Inventory; sin depender de name -->
+      <xpath expr="//sheet/group[1]/group[1]" position="attributes">
         <attribute name="class" add="o_stock_lot_left_col" separator=" "/>
       </xpath>
-      <xpath expr="//group[@name='inventory_group']" position="attributes">
+      <xpath expr="//sheet/group[1]/group[2]" position="attributes">
         <attribute name="class" add="o_stock_lot_right_col" separator=" "/>
       </xpath>
 
@@ -38,14 +38,14 @@
       </xpath>
       
       <!-- Placa de Inventario, Placa de Seguridad, Hostname (columna izquierda, antes del primer campo) -->
-      <xpath expr="//group[@name='main_group']/group[1]/*[1]" position="before">
+      <xpath expr="//sheet/group[1]/group[1]/*[1]" position="before">
         <field name="inventory_plate" string="Placa de Inventario" placeholder="Ingrese la placa de inventario"/>
         <field name="security_plate" string="Placa de Seguridad" placeholder="Ingrese la placa de seguridad"/>
         <field name="hostname" string="Hostname" placeholder="Ingrese el hostname del equipo"/>
       </xpath>
       
       <!-- Modelo y Código de facturación en columna izquierda -->
-      <xpath expr="//group[@name='main_group']/group[1]" position="inside">
+      <xpath expr="//sheet/group[1]/group[1]" position="inside">
         <field name="model_name"/>
         <field name="billing_code"/>
       </xpath>
@@ -57,14 +57,14 @@
         <field name="exit_date_display" string="Fecha finalización (visible en suscripción)" invisible="1" help="Lo que se muestra en la suscripción: igual que arriba si hay fecha; si la borraste, aquí sigue la última guardada hasta la limpieza."/>
       </xpath>
       
-      <!-- Plazo Renting en columna derecha (inventory_group en Odoo 19) -->
-      <xpath expr="//group[@name='inventory_group']" position="inside">
+      <!-- Plazo Renting en columna derecha (segundo group dentro del primer group del sheet) -->
+      <xpath expr="//sheet/group[1]/group[2]" position="inside">
         <field name="reining_plazo" string="Plazo Renting" help="Plazo en meses o fecha personalizada"/>
         <field name="reining_plazo_custom_months" string="Meses (personalizado)" invisible="reining_plazo != 'custom'" optional="show"/>
       </xpath>
 
-      <!-- Odoo 19: la vista base no tiene notebook; insertar uno después del group Description -->
-      <xpath expr="//group[@name='description']" position="after">
+      <!-- Odoo 19: la vista base no tiene notebook; sheet tiene group[1]=main, group[2]=description -->
+      <xpath expr="//sheet/group[2]" position="after">
         <notebook>
         <!-- Pestaña Información: agrupa Información de Asociación, Elementos Asociados, etc. como subpestañas -->
         <page string="Información" name="info_group">
