@@ -1,7 +1,0 @@
-/* Números y texto en negro en filas de agrupación (list view group by) */
-.o_list_view .o_group_header,
-.o_list_view .o_group_header td,
-.o_list_view .o_group_header td *,
-.o_list_view tr.o_group_header {
-    color: #000000 !important;
-}
