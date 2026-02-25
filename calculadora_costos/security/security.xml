@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<odoo>
-    <!-- Regla ir.rule eliminada: causaba pérdida de conexión al abrir Parámetros Financieros.
-         Los permisos de solo lectura ya están en ir.model.access.csv.
-         Si ya tenías el módulo instalado, elimina manualmente la regla en:
-         Ajustes > Técnico > Reglas de registro > "Parámetros Financieros: Solo lectura para usuarios" -->
-</odoo>
