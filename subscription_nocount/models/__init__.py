@@ -9,4 +9,5 @@ from . import equipment_change_wizard
 from . import stock_lot
 from . import stock_quant
 from . import ir_ui_menu
+# Odoo 19: heredamos product.pricelist.item (precios recurrentes) en lugar de sale.subscription.pricing.
 from . import subscription_pricing
