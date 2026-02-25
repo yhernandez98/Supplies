@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Búsqueda en líneas de reporte: permite agrupar por Cliente (solo funciona en vista lista abierta por acción, no en One2many embebido) -->
+    <record id="view_license_provider_report_line_search" model="ir.ui.view">
+        <field name="name">license.provider.report.line.search</field>
+        <field name="model">license.provider.report.line</field>
+        <field name="arch" type="xml">
+            <search string="Líneas de reporte">
+                <filter string="Cliente" name="group_partner" context="{'group_by': 'partner_id'}"/>
+                <filter string="Licenciamiento" name="group_product" context="{'group_by': 'product_id'}"/>
+            </search>
+        </field>
+    </record>
+    <!-- Líneas de reporte del proveedor (unificación de reportes Excel) -->
+    <record id="view_license_provider_report_line_tree" model="ir.ui.view">
+        <field name="name">license.provider.report.line.tree</field>
+        <field name="model">license.provider.report.line</field>
+        <field name="arch" type="xml">
+            <list create="1" delete="1" edit="1" default_group_by="partner_id">
+                <field name="partner_id" string="Cliente" options="{'no_create': True}"/>
+                <field name="client_name" optional="hide"/>
+                <field name="product_name" string="Producto / Oferta"/>
+                <field name="start_date" string="Fecha Inicio"/>
+                <field name="end_date" string="Fecha Fin"/>
+                <field name="cut_off_date" string="Fecha Corte" optional="show"/>
+                <field name="contract_type" string="Contrato"/>
+                <field name="quantity" string="Cantidad"/>
+                <field name="provider_cost_usd" string="Costo Proveedor" sum="Total"/>
+                <field name="total_provider_cost_usd" string="Costo Total Proveedor" sum="Total"/>
+                <field name="unit_price_pricelist_usd" string="Precio al Cliente" sum="Total"/>
+                <field name="total_price_pricelist_usd" string="Total Precio Cliente" sum="Total"/>
+                <field name="profit_unit_usd" string="Ganancia" sum="Total"/>
+                <field name="profit_total_usd" string="Ganancia Total" sum="Total"/>
+                <field name="auto_renewal" string="Renovación automática" optional="show"/>
+            </list>
+        </field>
+    </record>
+    <!-- Vista lista para detalle por cliente: sin agrupamiento, sin columna Cliente, Producto = Licencias -->
+    <record id="view_license_provider_report_line_tree_by_client" model="ir.ui.view">
+        <field name="name">license.provider.report.line.tree.by.client</field>
+        <field name="model">license.provider.report.line</field>
+        <field name="arch" type="xml">
+            <list create="1" delete="1" edit="1" editable="bottom">
+                <field name="partner_id" optional="hide"/>
+                <field name="client_name" optional="hide"/>
+                <field name="product_id" optional="hide"/>
+                <field name="product_name" string="Licencias"/>
+                <field name="start_date" string="Fecha Inicio"/>
+                <field name="end_date" string="Fecha Fin"/>
+                <field name="cut_off_date" string="Fecha Corte" optional="show"/>
+                <field name="contract_type" string="Contrato"/>
+                <field name="quantity" string="Cantidad"/>
+                <field name="provider_cost_usd" string="Costo Proveedor" sum="Total" options="{'type': 'number'}"/>
+                <field name="total_provider_cost_usd" string="Costo Total Proveedor" sum="Total"/>
+                <field name="unit_price_pricelist_usd" string="Precio al Cliente" sum="Total"/>
+                <field name="total_price_pricelist_usd" string="Total Precio Cliente" sum="Total"/>
+                <field name="profit_unit_usd" string="Ganancia" sum="Total"/>
+                <field name="profit_total_usd" string="Ganancia Total" sum="Total"/>
+                <field name="auto_renewal" string="Renovación automática" optional="show"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_license_provider_report_line_form" model="ir.ui.view">
+        <field name="name">license.provider.report.line.form</field>
+        <field name="model">license.provider.report.line</field>
+        <field name="arch" type="xml">
+            <form string="Línea de reporte">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="provider_partner_id"/>
+                            <field name="report_period"/>
+                            <field name="client_name"/>
+                            <field name="partner_id"/>
+                            <field name="product_name"/>
+                            <field name="product_id"/>
+                            <field name="quantity"/>
+                            <field name="start_date" help="Misma fecha inicio que la asignación al cliente."/>
+                            <field name="end_date" help="Misma fecha fin que la asignación al cliente."/>
+                            <field name="cut_off_date"/>
+                        </group>
+                        <group>
+                            <field name="contract_type"/>
+                            <field name="movement_type"/>
+                            <field name="provider_cost_usd"/>
+                            <field name="total_provider_cost_usd" readonly="1"/>
+                            <field name="unit_price_pricelist_usd" readonly="1"/>
+                            <field name="total_price_pricelist_usd" readonly="1"/>
+                            <field name="profit_unit_usd" readonly="1"/>
+                            <field name="profit_total_usd" readonly="1"/>
+                            <field name="external_order_id"/>
+                            <field name="subscription_id"/>
+                            <field name="assignment_id"/>
+                            <field name="auto_renewal" string="Renovación automática"/>
+                            <field name="notes"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Lista de proveedores: aspecto consistente con el módulo -->
+    <record id="view_license_provider_partner_tree" model="ir.ui.view">
+        <field name="name">license.provider.partner.tree</field>
+        <field name="model">license.provider.partner</field>
+        <field name="arch" type="xml">
+            <list string="Proveedores" create="1" edit="1" delete="1" class="o_license_provider_list" default_order="partner_id">
+                <field name="partner_id" string="Proveedor" options="{'no_create': False}"/>
+                <field name="partner_phone" string="Teléfono" optional="show"/>
+                <field name="partner_city" string="Ciudad" optional="hide"/>
+                <field name="provided_licenses_count" string="Tipos de licencia"/>
+                <field name="assignments_cut_off_count" string="Asignaciones" optional="show"/>
+                <field name="cut_off_date" string="Fecha de corte" optional="hide"/>
+                <button name="action_view_provided_licenses" type="object" string="Ver licencias" class="btn-link" icon="fa-list" invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_license_provider_partner_form" model="ir.ui.view">
+        <field name="name">license.provider.partner.form</field>
+        <field name="model">license.provider.partner</field>
+        <field name="arch" type="xml">
+            <form string="Proveedor" class="o_subscription_form o_license_provider_form">
+                <sheet>
+                    <div class="oe_title mb-3">
+                        <h1><field name="partner_name" readonly="1" placeholder="Proveedor"/></h1>
+                    </div>
+                    <div class="alert alert-info mb-3" role="alert" style="border-radius: 8px;">
+                        <strong>Proveedor de licencias.</strong> Configure aquí el contacto, las licencias que ofrece con sus costos, y los reportes de facturación por cliente.
+                    </div>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_assignments_cut_off" type="object" class="oe_stat_button" icon="fa-list-alt">
+                            <div class="o_stat_info">
+                                <span class="o_stat_value"><field name="assignments_cut_off_count"/></span>
+                                <span class="o_stat_text">Asignaciones</span>
+                            </div>
+                        </button>
+                        <button name="action_view_provided_licenses" type="object" class="oe_stat_button" icon="fa-cubes">
+                            <div class="o_stat_info">
+                                <span class="o_stat_value"><field name="provided_licenses_count"/></span>
+                                <span class="o_stat_text">Tipos de licencia</span>
+                            </div>
+                        </button>
+                    </div>
+                    <group>
+                        <group string="Datos del proveedor">
+                            <field name="partner_id" options="{'no_create': False}" placeholder="Seleccione el contacto que actúa como proveedor"/>
+                            <field name="assignments_cut_off_count" invisible="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Licencias" name="provider_stock_page">
+                            <div class="mb-3 p-2 bg-light rounded" style="border-radius: 8px;">
+                                <button name="action_sync_stock_from_provider" type="object" string="Traer licencias por este proveedor" class="btn-link" icon="fa-refresh"/>
+                                <span class="text-muted ms-1">Si añadió licencias desde otro menú con este proveedor, pulse para que aparezcan aquí.</span>
+                            </div>
+                            <field name="stock_ids" nolabel="1" context="{'default_provider_partner_id': id, 'default_provider_id': partner_id, 'license_provider_stock_select': 1}">
+                                <list string="Licencias ofrecidas por este proveedor" create="1" delete="1" edit="1">
+                                    <field name="license_product_id" string="Licencia (Servicio)" context="{'license_provider_stock_select': 1}"/>
+                                    <field name="license_category_id" string="Categoría"/>
+                                    <field name="is_unlimited" string="Ilimitado" widget="boolean_toggle"/>
+                                    <field name="quantity" string="Cantidad" sum="Total"/>
+                                    <field name="assigned_quantity" string="Asignada" optional="show"/>
+                                    <field name="available_quantity_display" string="Disponible" optional="show"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Consolidado" name="report_consolidated_page">
+                            <div class="mb-3 p-2 bg-light rounded" style="border-radius: 8px;">
+                                <button name="action_export_consolidated_excel" type="object" string="Exportar Excel" class="btn btn-sm btn-link" icon="fa-file-excel-o"/>
+                                <span class="text-muted ms-2">Líneas de reporte (se actualizan solas al asignar licencias). Edite <strong>Costo Proveedor</strong> aquí; no se sobrescribirá.</span>
+                            </div>
+                            <field name="report_line_ids" nolabel="1" context="{'default_provider_partner_id': id}">
+                                <list create="1" delete="1" edit="1" editable="bottom" class="o_list_consolidado_top_scroll">
+                                    <field name="partner_id" string="Cliente" options="{'no_create': True}"/>
+                                    <field name="client_name" optional="hide"/>
+                                    <field name="product_name" string="Producto / Oferta"/>
+                                    <field name="start_date" string="Fecha Inicio"/>
+                                    <field name="end_date" string="Fecha Fin"/>
+                                    <field name="cut_off_date" string="Fecha Corte" optional="show"/>
+                                    <field name="contract_type" string="Contrato"/>
+                                    <field name="quantity" string="Cantidad"/>
+                                    <field name="provider_cost_usd" string="Costo Proveedor" sum="Total" options="{'type': 'number'}"/>
+                                    <field name="total_provider_cost_usd" string="Costo Total Proveedor" sum="Total"/>
+                                    <field name="unit_price_pricelist_usd" string="Precio al Cliente" sum="Total"/>
+                                    <field name="total_price_pricelist_usd" string="Total Precio Cliente" sum="Total"/>
+                                    <field name="profit_unit_usd" string="Ganancia" sum="Total"/>
+                                    <field name="profit_total_usd" string="Ganancia Total" sum="Total"/>
+                                    <field name="auto_renewal" string="Renovación automática" optional="show"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Resumen por cliente" name="report_lines_page">
+                            <div class="mb-3 p-2 bg-light rounded" style="border-radius: 8px;">
+                                <button name="action_sync_report_groups" type="object" string="Actualizar lista de clientes" class="btn-primary" icon="fa-refresh"/>
+                                <span class="text-muted ms-2">Si agregó una asignación y no aparece aquí, pulse <strong>Actualizar lista de clientes</strong>. Defina el Costo proveedor en Consolidado o en «Ver licencias contratadas»; no se sobrescribirá.</span>
+                            </div>
+                            <field name="report_group_ids" nolabel="1">
+                                <list create="0" delete="0" edit="0" string="Clientes en reporte">
+                                    <field name="client_name" string="Cliente"/>
+                                    <button name="action_view_contracted_licenses" type="object" string="Ver licencias contratadas" class="btn-link" icon="fa-external-link"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_license_providers_partners" model="ir.actions.act_window">
+        <field name="name">Proveedores</field>
+        <field name="res_model">license.provider.partner</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_id" ref="view_license_provider_partner_tree"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Aún no hay proveedores de licencias.
+            </p>
+            <p>
+                Pulse <strong>Nuevo</strong> y seleccione un contacto de su agenda (o créelo) para registrarlo como proveedor. Luego podrá definir las licencias que ofrece, costos y reportes de facturación.
+            </p>
+        </field>
+    </record>
+</odoo>

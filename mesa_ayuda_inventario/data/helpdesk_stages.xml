@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Estados para Tickets -->
+        <record id="helpdesk_stage_new" model="helpdesk.ticket.stage">
+            <field name="name">Nuevo</field>
+            <field name="sequence">1</field>
+            <field name="fold">False</field>
+            <field name="closed">False</field>
+        </record>
+        
+        <record id="helpdesk_stage_in_progress" model="helpdesk.ticket.stage">
+            <field name="name">En Progreso</field>
+            <field name="sequence">2</field>
+            <field name="fold">False</field>
+            <field name="closed">False</field>
+        </record>
+
+        <record id="helpdesk_stage_en_espera" model="helpdesk.ticket.stage">
+            <field name="name">En espera</field>
+            <field name="sequence">2.5</field>
+            <field name="fold">False</field>
+            <field name="closed">False</field>
+        </record>
+        
+        <record id="helpdesk_stage_resolved" model="helpdesk.ticket.stage">
+            <field name="name">Resuelto</field>
+            <field name="sequence">3</field>
+            <field name="fold">False</field>
+            <field name="closed">False</field>
+        </record>
+        
+        <record id="helpdesk_stage_closed" model="helpdesk.ticket.stage">
+            <field name="name">Cerrado</field>
+            <field name="sequence">4</field>
+            <field name="fold">False</field>
+            <field name="closed">True</field>
+        </record>
+    </data>
+</odoo>
+

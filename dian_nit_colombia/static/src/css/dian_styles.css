@@ -1,0 +1,243 @@
+/* Estilos para modulo DIAN NIT Colombia */
+
+/* Contenedor de campos NIT */
+.dian_nit_fields_container {
+    display: block !important;
+}
+
+.dian_nit_fields_container > * {
+    display: block !important;
+    clear: both !important;
+}
+
+/* Estilo para campos NIT: cada uno con 40% de ancho en su propia línea */
+.dian_nit_field,
+.o_field_widget[name="dian_nit_number"],
+field[name="dian_nit_number"],
+.o_field_widget[name="dian_nit_dv"],
+field[name="dian_nit_dv"],
+.o_field_widget[name="dian_nit_full"],
+field[name="dian_nit_full"] {
+    width: 40% !important;
+    max-width: 40% !important;
+    min-width: 200px !important;
+    display: block !important;
+    margin-bottom: 15px !important;
+    clear: both !important;
+    float: none !important;
+}
+
+/* Aplicar ancho al input dentro de cada campo */
+.dian_nit_field .o_input,
+.dian_nit_field input,
+.o_field_widget[name="dian_nit_number"] .o_input,
+.o_field_widget[name="dian_nit_number"] input,
+field[name="dian_nit_number"] .o_input,
+field[name="dian_nit_number"] input,
+.dian_nit_number_field .o_input,
+.dian_nit_number_field input,
+.o_field_widget[name="dian_nit_dv"] .o_input,
+.o_field_widget[name="dian_nit_dv"] input,
+field[name="dian_nit_dv"] .o_input,
+field[name="dian_nit_dv"] input,
+.dian_nit_dv_field .o_input,
+.dian_nit_dv_field input,
+.o_field_widget[name="dian_nit_full"] .o_input,
+.o_field_widget[name="dian_nit_full"] input,
+field[name="dian_nit_full"] .o_input,
+field[name="dian_nit_full"] input,
+.dian_nit_full_field .o_input,
+.dian_nit_full_field input {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+/* Asegurar que los labels también se ajusten */
+.dian_nit_field label,
+.o_field_widget[name="dian_nit_number"] label,
+field[name="dian_nit_number"] label,
+.o_field_widget[name="dian_nit_dv"] label,
+field[name="dian_nit_dv"] label,
+.o_field_widget[name="dian_nit_full"] label,
+field[name="dian_nit_full"] label {
+    width: auto !important;
+    display: block !important;
+    margin-bottom: 5px !important;
+}
+
+/* Estilo para campos NIT destacados */
+.oe_highlight .dian_nit_number {
+    font-weight: bold;
+    font-size: 14px;
+    color: #2E86AB;
+}
+
+/* Estilo para campos readonly */
+.oe_read_only {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    padding: 8px;
+    border-radius: 4px;
+}
+
+/* Estilo para botones DIAN */
+.btn-dian-primary {
+    background-color: #2E86AB;
+    border-color: #2E86AB;
+    color: white;
+}
+
+.btn-dian-primary:hover {
+    background-color: #1e5f7a;
+    border-color: #1e5f7a;
+}
+
+.btn-dian-secondary {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    color: white;
+}
+
+.btn-dian-info {
+    background-color: #17a2b8;
+    border-color: #17a2b8;
+    color: white;
+}
+
+.btn-dian-warning {
+    background-color: #ffc107;
+    border-color: #ffc107;
+    color: #212529;
+}
+
+/* Estilo para alertas DIAN */
+.alert-dian {
+    background-color: #d1ecf1;
+    border-color: #bee5eb;
+    color: #0c5460;
+    padding: 12px;
+    border-radius: 4px;
+    margin: 10px 0;
+}
+
+/* Estilo para grupos DIAN */
+.group-dian {
+    border: 2px solid #2E86AB;
+    border-radius: 8px;
+    padding: 15px;
+    margin: 10px 0;
+    background-color: #f8f9fa;
+}
+
+/* Estilo para campos validados */
+.field-dian-validated {
+    border-left: 4px solid #28a745;
+    padding-left: 8px;
+}
+
+/* Estilo para campos con error */
+.field-dian-error {
+    border-left: 4px solid #dc3545;
+    padding-left: 8px;
+}
+
+/* Estilo para pestana DIAN */
+.page-dian {
+    background-color: #f8f9fa;
+}
+
+/* Estilo para botones de estadistica */
+.oe_stat_button .dian-stat-icon {
+    font-size: 18px;
+    color: #2E86AB;
+}
+
+/* Estilo para toggle buttons */
+.boolean_toggle.dian-toggle {
+    background-color: #2E86AB;
+}
+
+/* Estilo para campos de información DIAN: cada uno en su propia línea */
+.dian_info_fields_container {
+    display: block !important;
+}
+
+.dian_info_fields_container > * {
+    display: block !important;
+    clear: both !important;
+}
+
+.dian_info_field,
+.o_field_widget[name="dian_responsibility_code"],
+field[name="dian_responsibility_code"],
+.o_field_widget[name="dian_tax_regime"],
+field[name="dian_tax_regime"],
+.o_field_widget[name="dian_commercial_name"],
+field[name="dian_commercial_name"],
+.o_field_widget[name="dian_economic_activity"],
+field[name="dian_economic_activity"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: block !important;
+    margin-bottom: 15px !important;
+    clear: both !important;
+    float: none !important;
+}
+
+/* Aplicar ancho al input dentro de cada campo de información */
+.dian_info_field .o_input,
+.dian_info_field input,
+.dian_info_field select,
+.o_field_widget[name="dian_responsibility_code"] .o_input,
+.o_field_widget[name="dian_responsibility_code"] input,
+field[name="dian_responsibility_code"] .o_input,
+field[name="dian_responsibility_code"] input,
+.o_field_widget[name="dian_tax_regime"] .o_input,
+.o_field_widget[name="dian_tax_regime"] select,
+field[name="dian_tax_regime"] .o_input,
+field[name="dian_tax_regime"] select,
+.o_field_widget[name="dian_commercial_name"] .o_input,
+.o_field_widget[name="dian_commercial_name"] input,
+field[name="dian_commercial_name"] .o_input,
+field[name="dian_commercial_name"] input,
+.o_field_widget[name="dian_economic_activity"] .o_input,
+.o_field_widget[name="dian_economic_activity"] input,
+field[name="dian_economic_activity"] .o_input,
+field[name="dian_economic_activity"] input {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+/* Asegurar que los labels también se ajusten */
+.dian_info_field label,
+.o_field_widget[name="dian_responsibility_code"] label,
+field[name="dian_responsibility_code"] label,
+.o_field_widget[name="dian_tax_regime"] label,
+field[name="dian_tax_regime"] label,
+.o_field_widget[name="dian_commercial_name"] label,
+field[name="dian_commercial_name"] label,
+.o_field_widget[name="dian_economic_activity"] label,
+field[name="dian_economic_activity"] label {
+    width: auto !important;
+    display: block !important;
+    margin-bottom: 5px !important;
+}
+
+/* Responsive para moviles */
+@media (max-width: 768px) {
+    .group-dian {
+        padding: 10px;
+        margin: 5px 0;
+    }
+    
+    .btn-dian-primary,
+    .btn-dian-secondary,
+    .btn-dian-info,
+    .btn-dian-warning {
+        width: 100%;
+        margin: 2px 0;
+    }
+}
+

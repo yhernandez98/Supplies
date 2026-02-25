@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista de lista de plantillas -->
+    <record id="view_leasing_contract_template_list" model="ir.ui.view">
+        <field name="name">leasing.contract.template.list</field>
+        <field name="model">leasing.contract.template</field>
+        <field name="arch" type="xml">
+            <list string="Plantillas de Contratos">
+                <field name="name"/>
+                <field name="active" widget="boolean_toggle"/>
+                <field name="usage_count" string="Veces Usada"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Vista de formulario de plantillas -->
+    <record id="view_leasing_contract_template_form" model="ir.ui.view">
+        <field name="name">leasing.contract.template.form</field>
+        <field name="model">leasing.contract.template</field>
+        <field name="arch" type="xml">
+            <form string="Plantilla de Contrato">
+                <header>
+                    <button name="action_view_contracts_using_template" 
+                            type="object" 
+                            string="Ver Contratos" 
+                            class="oe_highlight"
+                            icon="fa-list"
+                            invisible="usage_count == 0"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="active"/>
+                            <field name="usage_count" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="template_pdf" widget="binary" filename="template_pdf_filename"/>
+                            <field name="template_pdf_filename" invisible="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Descripción">
+                            <field name="description" placeholder="Describe cuándo y cómo usar esta plantilla..."/>
+                        </page>
+                        <page string="Contenido del Contrato">
+                            <field name="contract_content" widget="html" 
+                                   placeholder="Escribe aquí el contenido del contrato usando variables"/>
+                            <div class="alert alert-info" role="alert">
+                                <strong>Variables disponibles en las plantillas:</strong><br/>
+                                <br/>
+                                <p><strong>1. [[contract_name]]</strong> - Número del contrato de leasing (ej: LEAS-00001)</p>
+                                <p><strong>2. [[partner_name]]</strong> - Nombre completo del cliente que firma el contrato</p>
+                                <p><strong>3. [[brand_names]]</strong> - Nombres de las marcas incluidas en el contrato, separadas por comas (ej: HP, Dell, Lenovo)</p>
+                                <p><strong>4. [[start_date]]</strong> - Fecha de inicio del contrato en formato DD/MM/YYYY</p>
+                                <p><strong>5. [[end_date]]</strong> - Fecha de fin del contrato en formato DD/MM/YYYY (vacío si no está definida)</p>
+                                <p><strong>6. [[provider_names]]</strong> - Nombres de los proveedores asignados, separados por comas</p>
+                                <p><strong>7. [[notes]]</strong> - Notas adicionales del contrato (vacío si no hay notas)</p>
+                                <br/>
+                                <p><strong>💡 Ejemplo de uso:</strong></p>
+                                <p>Use las variables entre dobles corchetes en el contenido del contrato. Por ejemplo:</p>
+                                <p><code>El contrato [[contract_name]] fue firmado por [[partner_name]] el día [[start_date]]</code></p>
+                                <p>Se convertirá en: <em>"El contrato LEAS-00001 fue firmado por Empresa XYZ el día 12/12/2025"</em></p>
+                                <p><small><strong>Nota:</strong> También puede usar el formato Python estándar (porcentaje y paréntesis) si prefiere, ambos formatos funcionan igual.</small></p>
+                            </div>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Vista de búsqueda de plantillas -->
+    <record id="view_leasing_contract_template_search" model="ir.ui.view">
+        <field name="name">leasing.contract.template.search</field>
+        <field name="model">leasing.contract.template</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Plantillas">
+                <field name="name"/>
+                <filter string="Activas" name="active" domain="[('active', '=', True)]"/>
+                <filter string="Inactivas" name="inactive" domain="[('active', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- Acción para plantillas -->
+    <record id="action_leasing_contract_template" model="ir.actions.act_window">
+        <field name="name">Plantillas de Contratos</field>
+        <field name="res_model">leasing.contract.template</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('active', '=', True)]</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Crea tu primera plantilla de contrato
+            </p>
+            <p>
+                Las plantillas te permiten definir el formato y contenido de los contratos de leasing,
+                usando variables que se reemplazan automáticamente con los datos del contrato.
+            </p>
+        </field>
+    </record>
+
+</odoo>
+

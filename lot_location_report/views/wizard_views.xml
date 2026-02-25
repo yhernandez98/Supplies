@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista del wizard para generar reporte -->
+    <record id="view_lot_location_report_wizard_form" model="ir.ui.view">
+        <field name="name">lot.location.report.wizard.form</field>
+        <field name="model">lot.location.report.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Reporte de Lotes y Ubicaciones">
+                <header>
+                    <button name="generate_excel_report" 
+                            string="Generar Reporte Excel" 
+                            type="object" 
+                            class="btn-primary"
+                            invisible="excel_file"
+                            confirm="¿Desea generar el reporte con los filtros seleccionados?"/>
+                    <button name="action_download_excel" 
+                            string="Descargar Excel" 
+                            type="object" 
+                            class="btn-success"
+                            invisible="not excel_file"
+                            icon="fa-download"/>
+                    <button string="Cerrar" 
+                            class="btn-secondary" 
+                            special="cancel"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="excel_filename" invisible="not excel_file"/>
+                            <span invisible="excel_file">Configurar Filtros del Reporte</span>
+                        </h1>
+                    </div>
+                    
+                    <group invisible="excel_file">
+                        <group string="Filtros de Fecha">
+                            <field name="date_from"/>
+                            <field name="date_to"/>
+                        </group>
+                        
+                        <group string="Filtros de Ubicación">
+                            <field name="location_ids" 
+                                   widget="many2many_tags" 
+                                   options="{'no_create_edit': false}"
+                                   placeholder="Seleccionar ubicaciones específicas (opcional)"/>
+                        </group>
+                    </group>
+                    
+                    <group invisible="excel_file">
+                        <group string="Filtros de Producto">
+                            <field name="product_ids" 
+                                   widget="many2many_tags" 
+                                   options="{'no_create_edit': false}"
+                                   placeholder="Seleccionar productos específicos (opcional)"/>
+                        </group>
+                        
+                        <group string="Opciones Adicionales">
+                            <field name="include_zero_stock"/>
+                            <field name="only_tracked_lots"/>
+                        </group>
+                    </group>
+                    
+                    <group invisible="not excel_file">
+                        <group string="Información del Archivo">
+                            <field name="excel_filename" readonly="1"/>
+                            <field name="excel_file" invisible="1"/>
+                        </group>
+                    </group>
+                    
+                    <div invisible="not excel_file" class="alert alert-info">
+                        <strong>¡Reporte generado exitosamente!</strong><br/>
+                        El archivo Excel ha sido generado con los filtros aplicados. 
+                        Puede descargarlo haciendo clic en el botón "Descargar Excel".
+                    </div>
+                    
+                    <div invisible="excel_file" class="alert alert-warning">
+                        <strong>Información:</strong><br/>
+                        • Deje los filtros vacíos para incluir todos los registros<br/>
+                        • El reporte incluirá información detallada de cada lote/serie y su ubicación actual<br/>
+                        • Se generará un archivo Excel con todos los datos solicitados
+                    </div>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Acción para abrir el wizard -->
+    <record id="action_lot_location_report_wizard" model="ir.actions.act_window">
+        <field name="name">Reporte de Lotes y Ubicaciones</field>
+        <field name="res_model">lot.location.report.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="context">{}</field>
+    </record>
+
+</odoo>
+

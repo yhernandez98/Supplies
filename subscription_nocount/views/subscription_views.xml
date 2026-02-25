@@ -1,0 +1,1016 @@
+<odoo>
+    <record id="view_subscription_subscription_list" model="ir.ui.view">
+        <field name="name">subscription.subscription.list</field>
+        <field name="model">subscription.subscription</field>
+        <field name="type">list</field>
+        <field name="arch" type="xml">
+            <list string="Suscripciones">
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="location_id"/>
+                <field name="start_date"/>
+                <field name="end_date"/>
+                <field name="state"/>
+                <field name="monthly_amount"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_subscription_quant_simple_tree" model="ir.ui.view">
+        <field name="name">subscription.quant.simple.tree</field>
+        <field name="model">stock.quant</field>
+        <field name="type">list</field>
+        <field name="arch" type="xml">
+            <list string="Inventario simplificado" create="false" edit="false" delete="false">
+                <field name="location_id" string="Ubicación"/>
+                <field name="product_id" string="Producto"/>
+                <field name="lot_id" string="Número de serie/lote"/>
+                <field name="inventory_plate" string="Placa de Inventario"/>
+                <field name="principal_product_id" string="Asociado a"/>
+                <field name="principal_lot_name" string="Serial Producto Asociado"/>
+                <field name="principal_lot_inventory_plate" string="Placa Producto Asociado"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_subscription_quant_main_product_tree" model="ir.ui.view">
+        <field name="name">subscription.quant.main.product.tree</field>
+        <field name="model">stock.quant</field>
+        <field name="type">list</field>
+        <field name="arch" type="xml">
+            <list string="Producto Principal" create="false" edit="false" delete="false">
+                <field name="product_id" string="Producto"/>
+                <field name="lot_id" string="Número de serie/lote"/>
+                <field name="inventory_plate" string="Placa de Inventario"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_subscription_quant_license_tree" model="ir.ui.view">
+        <field name="name">subscription.quant.license.tree</field>
+        <field name="model">stock.quant</field>
+        <field name="type">list</field>
+        <field name="arch" type="xml">
+            <list string="Series con Licencias" create="false" edit="false" delete="false">
+                <field name="location_id" string="Ubicación"/>
+                <field name="product_id" string="Producto"/>
+                <field name="lot_id" string="Número de serie/lote"/>
+                <field name="inventory_plate" string="Placa de Inventario"/>
+                <field name="license_service_name" string="Licencia/Servicio Asignado"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Búsqueda para Series con licencias: agrupar por asignadas / no asignadas -->
+    <record id="view_subscription_license_serial_line_search" model="ir.ui.view">
+        <field name="name">subscription.license.serial.line.search</field>
+        <field name="model">subscription.license.serial.line</field>
+        <field name="arch" type="xml">
+            <search string="Series con licencias">
+                <field name="location_id"/>
+                <field name="product_id"/>
+                <field name="lot_id"/>
+                <field name="license_service_name"/>
+                <separator string="Agrupar por"/>
+                <group>
+                    <filter string="Por tipo de licencia" name="group_by_license_type" context="{'group_by': 'license_service_name'}"/>
+                    <filter string="Licencias asignadas / No asignadas" name="group_assignment" context="{'group_by': 'assignment_group'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Misma estructura que «Series con licencias» para cuando no hay seriales: filas según cantidad -->
+    <record id="view_subscription_license_serial_line_tree" model="ir.ui.view">
+        <field name="name">subscription.license.serial.line.tree</field>
+        <field name="model">subscription.license.serial.line</field>
+        <field name="type">list</field>
+        <field name="arch" type="xml">
+            <list string="Series con Licencias" create="false" edit="false" delete="false">
+                <field name="location_id" string="Ubicación"/>
+                <field name="product_id" string="Producto"/>
+                <field name="lot_id" string="Número de serie/lote"/>
+                <field name="inventory_plate" string="Placa de Inventario"/>
+                <field name="license_service_name" string="Licencia/Servicio Asignado"/>
+                <field name="assignment_group" column_invisible="True"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Vista de series por servicio: Producto, Placa, Serial, costos y fechas -->
+    <record id="view_subscription_quant_serials_tree" model="ir.ui.view">
+        <field name="name">subscription.quant.serials.tree</field>
+        <field name="model">stock.quant</field>
+        <field name="type">list</field>
+        <field name="arch" type="xml">
+            <list string="Series" create="false" edit="false" delete="false" default_order="product_id, inventory_plate, lot_id">
+                <field name="product_id" string="Producto"/>
+                <field name="inventory_plate" string="Placa de Inventario"/>
+                <field name="lot_id" string="Número de serie/lote"/>
+                <field name="lot_cost_renting_month" string="Costo Renting" optional="show" widget="monetary" options="{'currency_field': 'lot_cost_to_date_currency_id'}"/>
+                <field name="lot_month_name" string="Mes" optional="hide"/>
+                <field name="lot_days_total_month" string="Días total del mes" optional="hide"/>
+                <field name="lot_current_day_of_month_display" string="Día del mes en curso" optional="hide"/>
+                <field name="lot_entry_date" string="Fecha Activacion Renting" optional="show"/>
+                <field name="lot_exit_date" string="Fecha Finalizacion Renting" optional="show"/>
+                <field name="lot_reining_plazo" string="Plazo Renting" optional="show"/>
+                <field name="lot_days_total_on_site" string="Tiempo En Sitio (días)"/>
+                <field name="lot_days_used_in_month" string="Días En Servicio"/>
+                <field name="lot_cost_daily" string="Costo Diario" widget="monetary" options="{'currency_field': 'lot_cost_to_date_currency_id'}"/>
+                <field name="lot_cost_to_date_current" string="Costo Días En Servicio" widget="monetary" options="{'currency_field': 'lot_cost_to_date_currency_id'}"/>
+                <field name="location_id" string="Ubicación" optional="hide"/>
+                <field name="lot_cost_to_date_currency_id" column_invisible="True"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Vista transiente de detalles (equipos) para Ver Detalles en Facturable en vivo -->
+    <record id="view_subscription_equipment_serial_line_tree" model="ir.ui.view">
+        <field name="name">subscription.equipment.serial.line.tree</field>
+        <field name="model">subscription.equipment.serial.line</field>
+        <field name="type">list</field>
+        <field name="arch" type="xml">
+            <list string="Detalles (equipos)" create="false" edit="false" delete="false" default_order="product_name, inventory_plate, lot_name">
+                <field name="product_name" string="Producto"/>
+                <field name="inventory_plate" string="Placa de Inventario"/>
+                <field name="lot_name" string="Número de serie/lote"/>
+                <field name="cost_renting_total" string="Costo Renting" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                <field name="cost_additional" string="Costo Adicional" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                <field name="entry_date" string="Fecha Activación Renting"/>
+                <field name="exit_date" string="Fecha Finalización Renting"/>
+                <field name="reining_plazo" string="Plazo Renting"/>
+                <field name="tiempo_en_sitio_display" string="Tiempo En Sitio"/>
+                <field name="tiempo_restante_display" string="Tiempo Restante"/>
+                <field name="days_in_service" string="Días En Servicio"/>
+                <field name="cost_daily" string="Costo Diario" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                <field name="cost_to_date" string="Costo Días En Servicio" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                <button name="action_ver_detalles_elementos_costo" string="Ver Detalles" type="object" class="btn-link" icon="fa-list" invisible="cost_additional &lt;= 0"/>
+                <field name="days_total_month" string="Días total del mes" optional="hide"/>
+                <field name="current_day_of_month" string="Día del mes" optional="hide"/>
+                <field name="month_display" string="Mes" optional="hide"/>
+                <field name="location_id" string="Ubicación" optional="hide"/>
+                <field name="subscription_id" string="Suscripción" optional="hide"/>
+                <field name="currency_id" column_invisible="True"/>
+                <field name="lot_id" column_invisible="True"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Wizard: Elementos Con Costo del serial -->
+    <record id="view_subscription_equipment_cost_detail_wizard_form" model="ir.ui.view">
+        <field name="name">subscription.equipment.cost.detail.wizard.form</field>
+        <field name="model">subscription.equipment.cost.detail.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Elementos Con Costo">
+                <group>
+                    <field name="lot_id" readonly="1" options="{'no_open': True}"/>
+                </group>
+                <field name="line_ids" nolabel="1" readonly="1">
+                    <list create="false" edit="false" delete="false">
+                        <field name="product_name" string="Producto"/>
+                        <field name="serial_name" string="Número de serie"/>
+                        <field name="item_type" string="Tipo"/>
+                        <field name="quantity" string="Cantidad"/>
+                        <field name="cost" string="Costo"/>
+                    </list>
+                </field>
+                <footer>
+                    <button string="Cerrar" class="btn-primary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- TEMPORALMENTE COMENTADO PARA DEBUG
+    <record id="view_subscription_product_grouped_tree" model="ir.ui.view">
+        <field name="name">subscription.product.grouped.tree</field>
+        <field name="model">subscription.product.grouped</field>
+        <field name="type">list</field>
+        <field name="arch" type="xml">
+            <list string="Productos Agrupados" create="false" edit="false" delete="false" default_order="has_subscription desc, product_id">
+                <field name="has_subscription" invisible="1" column_invisible="1"/>
+                <field name="product_id" string="Producto"/>
+                <field name="business_line_id" string="Línea de negocio"/>
+                <field name="quantity" string="Cantidad" sum="Total"/>
+                <field name="cost" string="Costo" widget="monetary" options="{'currency_field': 'currency_id'}" sum="Total"/>
+                <button name="action_view_serials" type="object" string="Ver Detalles" class="btn-link" icon="fa-list"/>
+            </list>
+        </field>
+    </record>
+    -->
+
+    <!-- Formulario Productos Agrupados (al hacer clic en la línea): colores normales, sin verde -->
+    <record id="view_subscription_product_grouped_form" model="ir.ui.view">
+        <field name="name">subscription.product.grouped.form</field>
+        <field name="model">subscription.product.grouped</field>
+        <field name="type">form</field>
+        <field name="arch" type="xml">
+            <form string="Productos Agrupados" class="o_grouped_products_normal_form">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="subscription_id" options="{'no_open': True}"/>
+                            <field name="product_id" options="{'no_open': True}"/>
+                            <field name="lot_id" invisible="1"/>
+                            <field name="quantity"/>
+                            <field name="has_subscription"/>
+                            <field name="subscription_service" options="{'no_open': True}"/>
+                            <field name="is_license"/>
+                            <field name="show_view_details"/>
+                        </group>
+                        <group>
+                            <field name="license_name"/>
+                            <!-- license_type_id se muestra en subscription_licenses (vista heredada) -->
+                            <field name="license_category"/>
+                            <field name="business_line_id" options="{'no_open': True}"/>
+                            <field name="business_line_name" column_invisible="1"/>
+                            <field name="cost_currency_id" invisible="1"/>
+                            <field name="cost" widget="monetary" options="{'currency_field': 'cost_currency_id'}"/>
+                            <field name="proyectado" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                            <field name="currency_id" invisible="1"/>
+                            <field name="location_id" options="{'no_open': True}"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Seriales" name="serials">
+                            <field name="lot_ids" nolabel="1" readonly="1" options="{'no_create': True, 'no_edit': True}">
+                                <list create="false" edit="false" delete="false" default_order="inventory_plate, name">
+                                    <field name="name" string="Número de serie"/>
+                                    <field name="product_id" string="Producto"/>
+                                    <field name="inventory_plate" string="Placa Inventario"/>
+                                    <field name="security_plate" string="Placa Seguridad"/>
+                                    <field name="model_name" string="Modelo"/>
+                                    <field name="billing_code" string="Código Facturación" optional="hide"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <footer>
+                    <button string="Cerrar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_subscription_subscription_form" model="ir.ui.view">
+        <field name="name">subscription.subscription.form</field>
+        <field name="model">subscription.subscription</field>
+        <field name="type">form</field>
+        <field name="arch" type="xml">
+            <form string="Suscripción" class="o_subscription_form">
+                <header>
+                    <button name="action_activate" type="object" string="Activar" class="btn-primary"
+                            invisible="state == 'active'"/>
+                    <button name="action_open_cancel_wizard" type="object" string="Cancelar" class="btn-secondary"
+                            invisible="state == 'cancelled'"/>
+                    <button name="action_generate_proforma" type="object" string="Generar Proforma" class="btn-secondary"/>
+                    <button name="action_sync_from_location" type="object" string="Actualizar Productos" data-display="record.location_id"/>
+                    <button name="action_equipment_change" type="object" string="Cambio de Equipo" class="btn-secondary" 
+                            invisible="state != 'active'"
+                            help="Realizar cambio de equipo sin afectar el valor facturado"/>
+                    <button name="action_save_monthly_billable" type="object" string="Guardar Facturable" class="btn-secondary"
+                            invisible="state != 'active'"
+                            help="Guarda el facturable del mes indicado (total + líneas) para facturación mes vencido"/>
+                    <button name="action_open_monthly_billable" type="object" string="Consultar Facturable" class="btn-link"
+                            help="Ver facturables mensuales guardados para esta suscripción"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,active,cancelled" class="o_subscription_statusbar"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="partner_id" options="{'no_open': False}"/>
+                            <field name="location_id"/>
+                            <field name="currency_id" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="start_date"/>
+                            <field name="end_date"/>
+                            <field name="plan_id" required="1" options="{'no_create': True, 'no_create_edit': True}"/>
+                            <field name="pricelist_id" readonly="1"/>
+                            <field name="generate_accounting"/>
+                        </group>
+                    </group>
+                    <group string="Montos de la suscripción">
+                        <group>
+                            <field name="monthly_amount" readonly="1" widget="monetary" options="{'currency_field': 'currency_id', 'decimal_places': 0}"/>
+                            <field name="total_esperado" readonly="1" widget="monetary" options="{'currency_field': 'currency_id', 'decimal_places': 0}"/>
+                        </group>
+                        <group>
+                            <field name="monthly_amount_usd_display" readonly="1"/>
+                            <field name="total_mes_anterior" readonly="1" widget="monetary" options="{'currency_field': 'currency_id', 'decimal_places': 0}"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Facturable">
+                            <group string="Productos Agrupados" help="Incluye equipos que salieron del cliente en el mes (se mantienen hasta fin de mes; al comenzar el mes siguiente desaparecen si no están en la ubicación).">
+                                <field name="grouped_product_ids"
+                                       nolabel="1"
+                                       readonly="1"
+                                       context="{'default_subscription_id': id}"
+                                       options="{'no_create': True, 'no_edit': True, 'no_open': True}">
+                                    <list create="false" edit="false" delete="false" default_order="business_line_name asc, is_license desc, has_subscription desc, product_id">
+                                        <field name="has_subscription" invisible="1" column_invisible="1"/>
+                                        <field name="is_license" invisible="1" column_invisible="1"/>
+                                        <field name="show_view_details" column_invisible="1"/>
+                                        <field name="business_line_name" column_invisible="1"/>
+                                        <field name="product_id" column_invisible="1"/>
+                                        <field name="product_display_name" string="Producto"/>
+                                        <field name="business_line_id" string="Línea de negocio"/>
+                                        <field name="quantity" string="Cantidad" sum="Total"/>
+                                        <field name="proyectado" string="Proyectado" widget="monetary" options="{'currency_field': 'currency_id'}" sum="Total"/>
+                                        <field name="cost" string="Costo" widget="monetary" options="{'currency_field': 'cost_currency_id'}" sum="Total"/>
+                                        <field name="cost_currency_id" string="Moneda" options="{'no_create': True}"/>
+                                        <button name="action_view_serials" type="object" string="Ver Detalles" class="btn-link" icon="fa-list" invisible="not show_view_details"/>
+                                    </list>
+                                </field>
+                            </group>
+                        </page>
+                        <page string="Producto Principal">
+                            <group string="Inventario sin clasificación">
+                                <field name="other_quant_ids"
+                                       nolabel="1"
+                                       readonly="1"
+                                       widget="many2many"
+                                       options="{'no_create': True, 'no_edit': True, 'no_open': True}"
+                                       context="{'default_view_mode': 'list', 'list_view_ref': 'subscription_nocount.view_subscription_quant_main_product_tree'}"/>
+                            </group>
+                        </page>
+                        <page string="Componentes/Periféricos/Complementos">
+                            <notebook>
+                                <page string="Componentes">
+                                    <group>
+                                        <field name="component_quant_ids"
+                                               nolabel="1"
+                                               readonly="1"
+                                               widget="many2many"
+                                               options="{'no_create': True, 'no_edit': True, 'no_open': True}"
+                                               context="{'default_view_mode': 'list', 'list_view_ref': 'subscription_nocount.view_subscription_quant_simple_tree'}"/>
+                                    </group>
+                                </page>
+                                <page string="Periféricos">
+                                    <group>
+                                        <field name="peripheral_quant_ids"
+                                               nolabel="1"
+                                               readonly="1"
+                                               widget="many2many"
+                                               options="{'no_create': True, 'no_edit': True, 'no_open': True}"
+                                               context="{'default_view_mode': 'list', 'list_view_ref': 'subscription_nocount.view_subscription_quant_simple_tree'}"/>
+                                    </group>
+                                </page>
+                                <page string="Complementos">
+                                    <group>
+                                        <field name="complement_quant_ids"
+                                               nolabel="1"
+                                               readonly="1"
+                                               widget="many2many"
+                                               options="{'no_create': True, 'no_edit': True, 'no_open': True}"
+                                               context="{'default_view_mode': 'list', 'list_view_ref': 'subscription_nocount.view_subscription_quant_simple_tree'}"/>
+                                    </group>
+                                </page>
+                            </notebook>
+                        </page>
+                        <page string="Proformas">
+                            <field name="proforma_move_ids" nolabel="1">
+                                <list>
+                                    <field name="name"/>
+                                    <field name="invoice_date"/>
+                                    <field name="amount_total" widget="monetary" options="{'currency_field': 'currency_id', 'decimal_places': 0}"/>
+                                    <field name="state"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Cambios de Equipo">
+                            <field name="equipment_change_history_ids" nolabel="1" readonly="1">
+                                <list default_order="change_date desc">
+                                    <field name="change_date" string="Fecha"/>
+                                    <field name="user_id" string="Usuario"/>
+                                    <field name="old_equipment_inventory_plate" string="Equipo Anterior (Placa)"/>
+                                    <field name="old_equipment_name" string="Equipo Anterior (Serie)"/>
+                                    <field name="new_equipment_inventory_plate" string="Equipo Nuevo (Placa)"/>
+                                    <field name="new_equipment_name" string="Equipo Nuevo (Serie)"/>
+                                    <field name="price_preserved" string="Precio Preservado"/>
+                                    <field name="notes" string="Notas"/>
+                                </list>
+                                <form>
+                                    <sheet>
+                                        <group>
+                                            <group string="Información General">
+                                                <field name="subscription_id" readonly="1" options="{'no_create': True, 'no_open': True}"/>
+                                                <field name="subscription_line_id" readonly="1" options="{'no_create': True, 'no_open': True}"/>
+                                                <field name="change_date" readonly="1"/>
+                                                <field name="user_id" readonly="1"/>
+                                            </group>
+                                            <group string="Precio">
+                                                <field name="price_preserved" readonly="1"/>
+                                                <field name="currency_id" readonly="1"/>
+                                            </group>
+                                        </group>
+                                        <notebook>
+                                            <page string="Equipo Anterior">
+                                                <group>
+                                                    <field name="old_equipment_lot_id" readonly="1" options="{'no_create': True}"/>
+                                                    <field name="old_equipment_inventory_plate" readonly="1"/>
+                                                    <field name="old_equipment_name" readonly="1"/>
+                                                    <field name="old_equipment_product_id" readonly="1"/>
+                                                    <field name="old_location_id" readonly="1"/>
+                                                </group>
+                                            </page>
+                                            <page string="Equipo Nuevo">
+                                                <group>
+                                                    <field name="new_equipment_lot_id" readonly="1" options="{'no_create': True}"/>
+                                                    <field name="new_equipment_inventory_plate" readonly="1"/>
+                                                    <field name="new_equipment_name" readonly="1"/>
+                                                    <field name="new_equipment_product_id" readonly="1"/>
+                                                    <field name="new_location_id" readonly="1"/>
+                                                </group>
+                                            </page>
+                                            <page string="Notas">
+                                                <field name="notes" readonly="1" nolabel="1" placeholder="Sin notas adicionales"/>
+                                            </page>
+                                        </notebook>
+                                    </sheet>
+                                </form>
+                            </field>
+                        </page>
+                        <page string="Ajustes de fechas por serial" name="lot_date_overrides">
+                            <field name="lot_date_override_ids" nolabel="1">
+                                <list create="1" delete="1" edit="1">
+                                    <field name="lot_id" options="{'no_create': True}"/>
+                                    <field name="entry_date"/>
+                                    <field name="exit_date"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_subscription_subscription" model="ir.actions.act_window">
+        <field name="name">Suscripciones (sin contabilidad)</field>
+        <field name="res_model">subscription.subscription</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Crea tu primera suscripción.
+            </p>
+        </field>
+    </record>
+
+    <record id="view_subscription_usage_proforma_wizard" model="ir.ui.view">
+        <field name="name">subscription.usage.proforma.wizard.form</field>
+        <field name="model">subscription.usage.proforma.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Confirmar retiros a proformar">
+                <sheet>
+                    <group>
+                        <field name="subscription_id" readonly="1"/>
+                    </group>
+                    <group string="Retiros pendientes">
+                        <field name="line_ids" nolabel="1">
+                            <list editable="bottom" create="false" delete="false">
+                                <field name="charge"/>
+                                <field name="product_id"/>
+                                <field name="description" readonly="1"/>
+                                <field name="date_start" readonly="1"/>
+                                <field name="date_end" readonly="1"/>
+                                <field name="quantity" readonly="1"/>
+                                <field name="suggested_amount" readonly="1"/>
+                                <field name="amount"/>
+                            </list>
+                        </field>
+                    </group>
+                </sheet>
+                <footer>
+                    <button string="Generar proforma" type="object" name="action_confirm" class="btn-primary"/>
+                    <button string="Cancelar" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_subscription_usage_proforma_wizard" model="ir.actions.act_window">
+        <field name="name">Confirmar proforma por uso</field>
+        <field name="res_model">subscription.usage.proforma.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <record id="view_subscription_usage_tree" model="ir.ui.view">
+        <field name="name">subscription.subscription.usage.tree</field>
+        <field name="model">subscription.subscription.usage</field>
+        <field name="type">list</field>
+        <field name="arch" type="xml">
+            <list string="Histórico de devoluciones">
+                <field name="subscription_id"/>
+                <field name="lot_id"/>
+                <field name="date_start"/>
+                <field name="date_end"/>
+                <field name="days_open" string="Días activos"/>
+                <field name="daily_rate" string="Tarifa diaria"/>
+                <field name="amount"/>
+                <field name="invoiced"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_subscription_usage_search" model="ir.ui.view">
+        <field name="name">subscription.subscription.usage.search</field>
+        <field name="model">subscription.subscription.usage</field>
+        <field name="type">search</field>
+        <field name="arch" type="xml">
+            <search string="Buscar devoluciones">
+                <field name="lot_id"/>
+                <field name="subscription_id"/>
+                <filter name="filter_active" string="En curso" domain="[('date_end', '=', False)]"/>
+                <filter name="filter_completed" string="Finalizadas" domain="[('date_end', '!=', False)]"/>
+                <separator string="Agrupar"/>
+                <group>
+                    <filter name="group_by_month" string="Por mes" context="{'group_by': 'date_start:month'}"/>
+                    <filter name="group_by_subscription" string="Por suscripción" context="{'group_by': 'subscription_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_subscription_usage_history" model="ir.actions.act_window">
+        <field name="name">Histórico de devoluciones</field>
+        <field name="res_model">subscription.subscription.usage</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_id" ref="view_subscription_usage_tree"/>
+        <field name="search_view_id" ref="view_subscription_usage_search"/>
+    </record>
+
+    <!-- Vistas del historial de cambios de equipo (definidas antes de la acción) -->
+    <record id="view_equipment_change_history_list" model="ir.ui.view">
+        <field name="name">subscription.equipment.change.history.list</field>
+        <field name="model">subscription.equipment.change.history</field>
+        <field name="type">list</field>
+        <field name="arch" type="xml">
+            <list string="Historial de Cambios de Equipo" default_order="change_date desc">
+                <field name="change_date" string="Fecha"/>
+                <field name="user_id" string="Usuario"/>
+                <field name="subscription_id" string="Suscripción"/>
+                <field name="old_equipment_inventory_plate" string="Equipo Anterior (Placa)"/>
+                <field name="old_equipment_name" string="Equipo Anterior (Serie)"/>
+                <field name="new_equipment_inventory_plate" string="Equipo Nuevo (Placa)"/>
+                <field name="new_equipment_name" string="Equipo Nuevo (Serie)"/>
+                <field name="price_preserved" string="Precio Preservado"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_equipment_change_history_form" model="ir.ui.view">
+        <field name="name">subscription.equipment.change.history.form</field>
+        <field name="model">subscription.equipment.change.history</field>
+        <field name="type">form</field>
+        <field name="arch" type="xml">
+            <form string="Historial de Cambio de Equipo">
+                <sheet>
+                    <group>
+                        <group string="Información General">
+                            <field name="subscription_id" readonly="1" options="{'no_create': True, 'no_open': True}"/>
+                            <field name="subscription_line_id" readonly="1" options="{'no_create': True, 'no_open': True}"/>
+                            <field name="change_date" readonly="1"/>
+                            <field name="user_id" readonly="1"/>
+                        </group>
+                        <group string="Precio">
+                            <field name="price_preserved" readonly="1"/>
+                            <field name="currency_id" readonly="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Equipo Anterior">
+                            <group>
+                                <field name="old_equipment_lot_id" readonly="1" options="{'no_create': True}"/>
+                                <field name="old_equipment_inventory_plate" readonly="1"/>
+                                <field name="old_equipment_name" readonly="1"/>
+                                <field name="old_equipment_product_id" readonly="1"/>
+                                <field name="old_location_id" readonly="1"/>
+                            </group>
+                        </page>
+                        <page string="Equipo Nuevo">
+                            <group>
+                                <field name="new_equipment_lot_id" readonly="1" options="{'no_create': True}"/>
+                                <field name="new_equipment_inventory_plate" readonly="1"/>
+                                <field name="new_equipment_name" readonly="1"/>
+                                <field name="new_equipment_product_id" readonly="1"/>
+                                <field name="new_location_id" readonly="1"/>
+                            </group>
+                        </page>
+                        <page string="Notas">
+                            <field name="notes" readonly="1" nolabel="1" placeholder="Sin notas adicionales"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_equipment_change_history_search" model="ir.ui.view">
+        <field name="name">subscription.equipment.change.history.search</field>
+        <field name="model">subscription.equipment.change.history</field>
+        <field name="type">search</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Cambios de Equipo">
+                <field name="subscription_id"/>
+                <field name="user_id"/>
+                <field name="old_equipment_inventory_plate"/>
+                <field name="old_equipment_name"/>
+                <field name="new_equipment_inventory_plate"/>
+                <field name="new_equipment_name"/>
+                <field name="change_date"/>
+                <separator string="Agrupar"/>
+                <group>
+                    <filter name="group_by_subscription" string="Por Suscripción" context="{'group_by': 'subscription_id'}"/>
+                    <filter name="group_by_user" string="Por Usuario" context="{'group_by': 'user_id'}"/>
+                    <filter name="group_by_date" string="Por Fecha" context="{'group_by': 'change_date:day'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Acción para ver el historial de cambios de equipo -->
+    <record id="action_equipment_change_history" model="ir.actions.act_window">
+        <field name="name">Historial de Cambios de Equipo</field>
+        <field name="res_model">subscription.equipment.change.history</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_id" ref="view_equipment_change_history_list"/>
+        <field name="search_view_id" ref="view_equipment_change_history_search"/>
+        <field name="context">{}</field>
+    </record>
+
+    <!-- Como en la copia de ayer (subscription_nocount1): bajo Suscripciones oficial para que salga en la barra superior -->
+    <menuitem id="menu_subscription_root" name="Suscripciones" parent="sale_subscription.menu_sale_subscription_root" action="action_subscription_dashboard" sequence="1"/>
+    <menuitem id="menu_subscription" name="Suscripciones sin contabilidad" parent="menu_subscription_root" action="action_subscription_subscription" sequence="10"/>
+    <menuitem id="menu_subscription_force_proforma"
+              name="Generar proformas"
+              parent="menu_subscription_root"
+              action="subscription_nocount.action_force_generate_subscription_proformas"
+              groups="sales_team.group_sale_manager"
+              sequence="90"/>
+    <menuitem id="menu_subscription_equipment_change_history"
+              name="Historial de Cambios de Equipo"
+              parent="menu_subscription_root"
+              action="action_equipment_change_history"
+              groups="sales_team.group_sale_manager"
+              sequence="70"/>
+
+    <!-- Vista simplificada de stock.lot para el wizard -->
+    <record id="view_stock_lot_equipment_change_tree" model="ir.ui.view">
+        <field name="name">stock.lot.equipment.change.tree</field>
+        <field name="model">stock.lot</field>
+        <field name="type">list</field>
+        <field name="arch" type="xml">
+            <list string="Equipos" default_order="inventory_plate, name">
+                <field name="inventory_plate" string="Placa de Inventario"/>
+                <field name="name" string="Número de Serie"/>
+                <field name="product_id" string="Producto"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Vista del wizard de cambio de equipo -->
+    <record id="view_equipment_change_wizard_form" model="ir.ui.view">
+        <field name="name">subscription.equipment.change.wizard.form</field>
+        <field name="model">subscription.equipment.change.wizard</field>
+        <field name="type">form</field>
+        <field name="arch" type="xml">
+            <form string="Cambio de Equipo">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="subscription_id" readonly="1"/>
+                            <field name="partner_id" readonly="1"/>
+                            <field name="customer_location_id" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="change_date"/>
+                        </group>
+                    </group>
+                    
+                    <notebook>
+                        <page string="Equipo a Cambiar">
+                            <group>
+                                <group string="Selección de Equipo">
+                                    <field name="old_equipment_inventory_plate_search" 
+                                           string="Placa de Inventario"
+                                           options="{'no_create': True}"
+                                           widget="many2one"
+                                           required="1"
+                                           context="{'equipment_change_wizard': True, 'search_by_inventory_plate_only': True, 'active_model': 'subscription.equipment.change.wizard'}"
+                                           domain="[('id', 'in', available_old_equipment_ids), ('inventory_plate', '!=', False)]"
+                                           placeholder="Buscar por placa de inventario..."/>
+                                    <field name="old_equipment_lot_id" invisible="1"/>
+                                    <field name="old_equipment_product_id" invisible="1"/>
+                                </group>
+                                <group string="Información del Equipo">
+                                    <field name="old_equipment_inventory_plate" 
+                                           readonly="1" 
+                                           string="Placa de Inventario"
+                                           widget="statinfo"
+                                           invisible="not old_equipment_lot_id"/>
+                                    <field name="old_equipment_name" 
+                                           readonly="1" 
+                                           string="Número de Serie"
+                                           invisible="not old_equipment_lot_id"/>
+                                    <field name="old_equipment_product_id" 
+                                           readonly="1" 
+                                           string="Producto"
+                                           invisible="not old_equipment_lot_id"/>
+                                    <field name="old_equipment_supply_line_ids" 
+                                           readonly="1" 
+                                           string="Elementos Asociados"
+                                           nolabel="1"
+                                           invisible="not old_equipment_lot_id or not old_equipment_supply_line_ids">
+                                        <list create="false" edit="false" delete="false">
+                                            <field name="item_type" string="Tipo"/>
+                                            <field name="product_id" string="Producto"/>
+                                            <field name="quantity" string="Cantidad"/>
+                                            <field name="related_lot_id" string="Lote/Serie"/>
+                                            <field name="uom_id" string="UdM"/>
+                                        </list>
+                                    </field>
+                                </group>
+                            </group>
+                        </page>
+                        
+                        <page string="Equipo Nuevo">
+                            <group>
+                                <group string="Selección de Equipo Nuevo">
+                                    <field name="new_equipment_inventory_plate_search" 
+                                           string="Placa de Inventario"
+                                           options="{'no_create': True}"
+                                           widget="many2one"
+                                           required="1"
+                                           context="{'equipment_change_wizard': True, 'search_by_inventory_plate_only': True, 'active_model': 'subscription.equipment.change.wizard'}"
+                                           domain="[('id', 'in', available_new_equipment_ids), ('inventory_plate', '!=', False)]"
+                                           placeholder="Buscar por placa de inventario..."/>
+                                    <field name="new_equipment_lot_id" invisible="1"/>
+                                    <field name="new_equipment_product_id" invisible="1"/>
+                                </group>
+                                <group string="Información del Equipo Nuevo">
+                                    <field name="new_equipment_inventory_plate" 
+                                           readonly="1" 
+                                           string="Placa de Inventario"
+                                           widget="statinfo"
+                                           invisible="not new_equipment_lot_id"/>
+                                    <field name="new_equipment_name" 
+                                           readonly="1" 
+                                           string="Número de Serie"
+                                           invisible="not new_equipment_lot_id"/>
+                                    <field name="new_equipment_product_id" 
+                                           readonly="1" 
+                                           string="Producto"
+                                           invisible="not new_equipment_lot_id"/>
+                                    <field name="new_equipment_supply_line_ids" 
+                                           readonly="1" 
+                                           string="Elementos Asociados"
+                                           nolabel="1"
+                                           invisible="not new_equipment_lot_id or not new_equipment_supply_line_ids">
+                                        <list create="false" edit="false" delete="false">
+                                            <field name="item_type" string="Tipo"/>
+                                            <field name="product_id" string="Producto"/>
+                                            <field name="quantity" string="Cantidad"/>
+                                            <field name="related_lot_id" string="Lote/Serie"/>
+                                            <field name="uom_id" string="UdM"/>
+                                        </list>
+                                    </field>
+                                </group>
+                            </group>
+                        </page>
+                        
+                        <page string="Notas">
+                            <field name="notes" placeholder="Ingrese notas adicionales sobre el cambio de equipo..."/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <footer>
+                    <button string="Confirmar Cambio" type="object" name="action_confirm_change" class="btn-primary"/>
+                    <button string="Cancelar" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_equipment_change_wizard" model="ir.actions.act_window">
+        <field name="name">Cambio de Equipo</field>
+        <field name="res_model">subscription.equipment.change.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="context">{'equipment_change_wizard': True, 'search_by_inventory_plate_only': True}</field>
+    </record>
+
+    <!-- Vista personalizada para formulario de proforma - ocultar columna Cuenta -->
+    <record id="view_account_move_proforma_form" model="ir.ui.view">
+        <field name="name">account.move.proforma.form</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_move_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='invoice_line_ids']//field[@name='account_id']" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+            <xpath expr="//field[@name='invoice_line_ids']//field[@name='discount']" position="attributes">
+                <attribute name="optional">hide</attribute>
+            </xpath>
+            <xpath expr="//field[@name='invoice_line_ids']//field[@name='product_uom_id']" position="attributes">
+                <attribute name="optional">hide</attribute>
+            </xpath>
+            <xpath expr="//field[@name='invoice_line_ids']//field[@name='price_subtotal']" position="attributes">
+                <attribute name="widget">monetary</attribute>
+                <attribute name="options">{'currency_field': 'currency_id', 'decimal_places': 0}</attribute>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Vista heredada de stock.lot para agregar botón de Cambios de Equipo en el header -->
+    <record id="view_production_lot_form_inherit_subscription" model="ir.ui.view">
+        <field name="name">production.lot.form.subscription.inherit</field>
+        <field name="model">stock.lot</field>
+        <field name="inherit_id" ref="product_suppiles.view_production_lot_form_inherit_supplies"/>
+        <field name="priority" eval="25"/>
+        <field name="arch" type="xml">
+            <!-- Agregar header antes del sheet -->
+            <xpath expr="//sheet" position="before">
+                <header>
+                    <button name="action_open_subscription_equipment_changes" 
+                            type="object" 
+                            string="Cambios de Equipo" 
+                            class="btn-secondary"
+                            invisible="not id"/>
+                </header>
+            </xpath>
+            
+            <!-- Servicio y Suscripción Activa en columna derecha (acorta la lista izquierda) -->
+            <xpath expr="//group[@name='main_group']/group[2]" position="inside">
+                <field name="subscription_service_product_id"
+                       string="Servicio"
+                       options="{'no_create': False}"
+                       domain="[('type', '=', 'service')]"
+                       help="Servicio que se utilizará en las líneas de suscripción cuando este serial se sincronice desde inventario. Si no se especifica, se usará el producto directamente." />
+                <field name="available_subscription_ids" invisible="1"/>
+                <field name="active_subscription_id"
+                       string="Suscripción Activa"
+                       options="{'no_create': True, 'no_create_edit': True}"
+                       domain="[('id', 'in', available_subscription_ids), ('state', 'in', ('draft', 'active'))]"
+                       help="Suscripción a la que está asignado este serial. Solo se mostrará en la suscripción asignada. Si está vacío, aparecerá en todas las suscripciones de la ubicación." />
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Wizard: Guardar facturable del mes -->
+    <record id="view_subscription_monthly_billable_wizard_form" model="ir.ui.view">
+        <field name="name">subscription.monthly.billable.wizard.form</field>
+        <field name="model">subscription.monthly.billable.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Guardar Facturable">
+                <sheet>
+                    <group>
+                        <group string="Mes a guardar">
+                            <field name="subscription_id" invisible="1"/>
+                            <field name="reference_year" widget="selection" options="{'no_create': True}"/>
+                            <field name="reference_month" widget="selection" options="{'no_create': True}"/>
+                        </group>
+                    </group>
+                </sheet>
+                <footer>
+                    <button name="action_confirm" type="object" string="Guardar" class="btn-primary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Wizard: Confirmar cancelación de suscripción -->
+    <record id="view_subscription_cancel_wizard_form" model="ir.ui.view">
+        <field name="name">subscription.cancel.wizard.form</field>
+        <field name="model">subscription.cancel.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Confirmar cancelación">
+                <sheet>
+                    <div class="alert alert-warning mb-3" role="alert">
+                        <strong>¿Cancelar esta suscripción?</strong>
+                        <p class="mb-0 mt-2">Esta acción marcará la suscripción como <strong>Cancelada</strong>. Podrá seguir consultando los datos pero ya no estará activa. Si está seguro, haga clic en "Confirmar cancelación".</p>
+                    </div>
+                    <group>
+                        <field name="subscription_id" readonly="1"/>
+                        <field name="reason" placeholder="Motivo de la cancelación (opcional)"/>
+                    </group>
+                </sheet>
+                <footer>
+                    <button name="action_confirm_cancel" type="object" string="Confirmar cancelación" class="btn-danger"/>
+                    <button string="Volver" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Facturables mensuales guardados: lista y formulario -->
+    <record id="view_subscription_monthly_billable_list" model="ir.ui.view">
+        <field name="name">subscription.monthly.billable.list</field>
+        <field name="model">subscription.monthly.billable</field>
+        <field name="arch" type="xml">
+            <list string="Facturables mensuales" create="false" edit="false" delete="true">
+                <field name="name"/>
+                <field name="subscription_id" optional="hide"/>
+                <field name="reference_year"/>
+                <field name="reference_month"/>
+                <field name="total_amount" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                <field name="currency_id" column_invisible="True"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_subscription_monthly_billable_form" model="ir.ui.view">
+        <field name="name">subscription.monthly.billable.form</field>
+        <field name="model">subscription.monthly.billable</field>
+        <field name="arch" type="xml">
+            <form string="Facturable mensual guardado">
+                <header>
+                    <button name="action_apply_trm" type="object" string="Aplicar TRM" class="btn-primary"
+                            title="Recalcular importes de licencias con la TRM del mes siguiente (mes vencido: aplica desde el día 6 del mes siguiente)"/>
+                    <button name="action_generate_proforma" type="object" string="Generar proforma" class="btn-secondary"
+                            title="Generar proforma a partir de este facturable guardado"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name" readonly="1"/>
+                            <field name="subscription_id" readonly="1"/>
+                            <field name="reference_year" readonly="1"/>
+                            <field name="reference_month" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="total_amount" readonly="1" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Líneas">
+                            <field name="line_ids" nolabel="1">
+                                <list create="false" edit="false" delete="false" default_order="is_license asc, business_line_id, product_display_name">
+                                    <field name="product_display_name" string="Producto"/>
+                                    <field name="business_line_id" string="Línea de negocio"/>
+                                    <field name="quantity" string="Cantidad" sum="Total"/>
+                                    <field name="cost" string="Costo" widget="monetary" options="{'currency_field': 'currency_id'}" sum="Total"/>
+                                    <button name="action_view_details" type="object" string="Ver Detalles" class="btn-link" icon="fa-list"/>
+                                    <field name="currency_id" column_invisible="True"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Detalle por serial: vista LICENCIAS (4 columnas) -->
+    <record id="view_subscription_monthly_billable_line_detail_list" model="ir.ui.view">
+        <field name="name">subscription.monthly.billable.line.detail.list</field>
+        <field name="model">subscription.monthly.billable.line.detail</field>
+        <field name="arch" type="xml">
+            <list string="Detalles (licencias)" create="false" edit="false" delete="false">
+                <field name="product_name" string="Producto"/>
+                <field name="lot_name" string="Número de serie/lote"/>
+                <field name="inventory_plate" string="Placa de inventario"/>
+                <field name="license_service_name" string="Licencia/Servicio Asignado"/>
+                <field name="currency_id" column_invisible="True"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Detalle por serial: vista EQUIPOS (columnas como imagen: Producto, Placa, Serial, Costo, Fechas, Plazo, Días, Costo diario) -->
+    <record id="view_subscription_monthly_billable_line_detail_equipment_list" model="ir.ui.view">
+        <field name="name">subscription.monthly.billable.line.detail.equipment.list</field>
+        <field name="model">subscription.monthly.billable.line.detail</field>
+        <field name="arch" type="xml">
+            <list string="Detalles (equipos)" create="false" edit="false" delete="false">
+                <field name="product_name" string="Producto"/>
+                <field name="inventory_plate" string="Placa de Inventario"/>
+                <field name="lot_name" string="Número de serie/lote"/>
+                <field name="cost_renting_total" string="Costo Renting" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                <field name="cost_additional" string="Costo Adicional" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                <field name="entry_date" string="Fecha Activación Renting"/>
+                <field name="exit_date" string="Fecha Finalización Renting"/>
+                <field name="reining_plazo" string="Plazo Renting"/>
+                <field name="tiempo_en_sitio_display" string="Tiempo En Sitio"/>
+                <field name="tiempo_restante_display" string="Tiempo Restante"/>
+                <field name="days_in_service" string="Días En Servicio"/>
+                <field name="cost_daily" string="Costo Diario" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                <field name="cost_to_date" string="Costo Días En Servicio" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                <button name="action_ver_detalles_elementos_costo" string="Ver Detalles" type="object" class="btn-link" icon="fa-list" invisible="cost_additional &lt;= 0"/>
+                <field name="license_service_name" string="Licencia/Servicio Asignado" optional="hide"/>
+                <field name="location_id" string="Ubicación" optional="hide"/>
+                <field name="days_total_month" string="Días total del mes" optional="hide"/>
+                <field name="current_day_of_month" string="Día del mes" optional="hide"/>
+                <field name="month_display" string="Mes" optional="hide"/>
+                <field name="currency_id" column_invisible="True"/>
+            </list>
+        </field>
+    </record>
+
+</odoo>

@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Vista que extiende el formulario de stock.lot para agregar imagen y mantenimientos -->
+        <record id="view_production_lot_form_inherit_maintenance" model="ir.ui.view">
+            <field name="name">production.lot.form.maintenance.inherit</field>
+            <field name="model">stock.lot</field>
+            <field name="inherit_id" ref="stock.view_production_lot_form"/>
+            <field name="priority" eval="16"/>
+            <field name="arch" type="xml">
+                <!-- Columna derecha: Odoo 19 usa name="inventory_group"; fallback por quantity/product_qty -->
+                <xpath expr="//group[@name='inventory_group']" position="attributes">
+                    <attribute name="class" add="o_lot_right_col" separator=" "/>
+                </xpath>
+                <xpath expr="//group[.//field[@name='quantity'] or .//field[@name='product_qty']]" position="attributes">
+                    <attribute name="class" add="o_lot_right_col" separator=" "/>
+                </xpath>
+                <!-- Imagen + botón Hoja de Vida: Odoo 19 tiene group name="inventory_group"; insertar antes del primer hijo -->
+                <xpath expr="//group[@name='inventory_group']/*[1]" position="before">
+                    <div class="o_lot_photo_block o_lot_photo_below_costo" style="margin-bottom: 12px;">
+                        <field name="lot_image" widget="image" 
+                               options="{'preview_image': 'lot_image', 'size': [140, 140]}"/>
+                        <button name="action_generate_life_sheet" 
+                                type="object" 
+                                string="Generar Hoja de Vida" 
+                                class="btn btn-primary"
+                                style="width: 100%; margin-top: 8px;"
+                                icon="fa-file-pdf"
+                                title="Generar PDF con la hoja de vida completa del equipo"/>
+                    </div>
+                </xpath>
+                
+                <!-- Pestañas: en Odoo 18 suele existir //sheet/notebook; en 19 a veces no -->
+                <xpath expr="//sheet/notebook" position="inside">
+                    <page string="Mantenimientos y Revisiones" name="maintenance_history">
+                        <field name="maintenance_ids" nolabel="1" context="{'default_lot_id': id}"/>
+                    </page>
+                    <page string="Historial de Componentes" name="component_change_history">
+                        <div class="alert alert-info" role="alert" style="margin-bottom: 15px; padding: 10px 15px; background-color: #d1ecf1; border: 1px solid #0c5460; border-radius: 4px;">
+                            <strong>📋 Historial de Cambios de Componentes:</strong> Esta pestaña muestra todos los cambios de componentes registrados en los mantenimientos de este equipo, incluyendo componentes retirados e instalados.
+                        </div>
+                        <group>
+                            <button name="action_view_component_changes" 
+                                    type="object" 
+                                    string="Ver Historial Completo de Cambios de Componentes" 
+                                    class="btn-primary"
+                                    icon="fa-list"/>
+                        </group>
+                        <div style="margin-top: 20px;">
+                            <p>Para ver el historial completo de cambios de componentes, haz clic en el botón arriba.</p>
+                        </div>
+                    </page>
+                </xpath>
+            </field>
+        </record>
+
+        <!-- Odoo 19: si la vista base no tiene notebook, añadirlo con las mismas pestañas -->
+        <record id="view_production_lot_form_inherit_maintenance_no_notebook" model="ir.ui.view">
+            <field name="name">production.lot.form.maintenance.notebook.fallback</field>
+            <field name="model">stock.lot</field>
+            <field name="inherit_id" ref="stock.view_production_lot_form"/>
+            <field name="priority">20</field>
+            <field name="arch" type="xml">
+                <xpath expr="//sheet[not(notebook)]" position="inside">
+                    <notebook>
+                        <page string="Mantenimientos y Revisiones" name="maintenance_history">
+                            <field name="maintenance_ids" nolabel="1" context="{'default_lot_id': id}"/>
+                        </page>
+                        <page string="Historial de Componentes" name="component_change_history">
+                            <div class="alert alert-info" role="alert" style="margin-bottom: 15px; padding: 10px 15px; background-color: #d1ecf1; border: 1px solid #0c5460; border-radius: 4px;">
+                                <strong>📋 Historial de Cambios de Componentes:</strong> Esta pestaña muestra todos los cambios de componentes registrados en los mantenimientos de este equipo, incluyendo componentes retirados e instalados.
+                            </div>
+                            <group>
+                                <button name="action_view_component_changes" 
+                                        type="object" 
+                                        string="Ver Historial Completo de Cambios de Componentes" 
+                                        class="btn-primary"
+                                        icon="fa-list"/>
+                            </group>
+                            <div style="margin-top: 20px;">
+                                <p>Para ver el historial completo de cambios de componentes, haz clic en el botón arriba.</p>
+                            </div>
+                        </page>
+                    </notebook>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</odoo>

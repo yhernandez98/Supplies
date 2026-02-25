@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Extender vista de Sale Order -->
+        <record id="view_sale_order_form_sales_supplies" model="ir.ui.view">
+            <field name="name">sale.order.form.sales.supplies</field>
+            <field name="model">sale.order</field>
+            <field name="inherit_id" ref="sale.view_order_form"/>
+            <field name="arch" type="xml">
+                <!-- Agregar campos en el encabezado -->
+                <xpath expr="//field[@name='state']" position="after">
+                    <field name="has_stock_issues" invisible="1"/>
+                    <field name="stock_availability_summary" invisible="1"/>
+                    <field name="has_physical_products" invisible="1"/>
+                    <field name="generate_accounting" invisible="state != 'draft'"/>
+                </xpath>
+
+                        <!-- Agregar botones para compras -->
+                        <xpath expr="//header" position="inside">
+                            <button name="action_request_purchase_quotation" 
+                                    string="Solicitar Cotización de Compra" 
+                                    type="object" 
+                                    class="btn-warning"
+                                    invisible="state != 'draft'"
+                                    title="Crear alerta de cotización y asignar actividad a compras"/>
+                            <button name="action_view_purchase_alerts" 
+                                    string="Ver Alertas Por Cotización" 
+                                    type="object" 
+                                    class="btn-info"
+                                    invisible="purchase_alert_count == 0"
+                                    title="Ver las alertas de compra relacionadas con esta orden de venta"/>
+                            <button name="action_view_all_purchase_alerts" 
+                                    string="📋 Todas las Alertas" 
+                                    type="object" 
+                                    class="btn-secondary"
+                                    title="Ver todas las alertas por cotización del sistema"/>
+                        </xpath>
+
+                <!-- Mostrar resumen de disponibilidad de stock -->
+                <xpath expr="//sheet" position="before">
+                    <div class="alert alert-warning" role="alert" invisible="not has_stock_issues">
+                        <strong>⚠️ Advertencia:</strong> Esta orden tiene productos sin stock suficiente.
+                        <div class="mt-2" invisible="not stock_availability_summary">
+                            <field name="stock_availability_summary" readonly="1" nolabel="1" invisible="not stock_availability_summary"/>
+                        </div>
+                    </div>
+                </xpath>
+
+                <!-- Ocultar pestaña "Líneas de Renting" -->
+                <xpath expr="//page[@name='renting_lines_page']" position="attributes">
+                    <attribute name="invisible">1</attribute>
+                </xpath>
+
+                <!-- Ocultar columna "UdM" (product_uom) en las líneas de la orden -->
+                <xpath expr="//field[@name='order_line']/list/field[@name='product_uom']" position="attributes">
+                    <attribute name="column_invisible">1</attribute>
+                </xpath>
+
+                <!-- Ocultar columna "Aplica a (Renting)" en las líneas de la orden -->
+                <xpath expr="//field[@name='order_line']/list/field[@name='renting_applies_to_tmpl_id']" position="attributes">
+                    <attribute name="column_invisible">1</attribute>
+                </xpath>
+
+                <!-- Ocultar columna "Importe" (price_subtotal) en las líneas de la orden -->
+                <xpath expr="//field[@name='order_line']/list/field[@name='price_subtotal']" position="attributes">
+                    <attribute name="column_invisible">1</attribute>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</odoo>
+

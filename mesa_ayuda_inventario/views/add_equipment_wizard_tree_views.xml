@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Vista list simple para stock.lot en el wizard de agregar equipos -->
+        <record id="view_stock_lot_tree_simple_wizard" model="ir.ui.view">
+            <field name="name">stock.lot.tree.simple.wizard</field>
+            <field name="model">stock.lot</field>
+            <field name="type">list</field>
+            <field name="arch" type="xml">
+                <list string="Equipos de la Empresa" default_order="inventory_plate">
+                    <field name="inventory_plate" string="Placa de Inventario"/>
+                    <field name="name" string="Número de Serie"/>
+                    <field name="product_id" string="Producto"/>
+                    <field name="customer_id" string="Cliente"/>
+                </list>
+            </field>
+        </record>
+    </data>
+</odoo>
+

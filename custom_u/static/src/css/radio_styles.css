@@ -1,0 +1,74 @@
+/* Estilos personalizados para radio buttons */
+.oe_radio_small {
+    font-size: 12px;
+}
+
+.oe_radio_small .o_radio_input {
+    margin-right: 5px;
+}
+
+.oe_radio_small .o_radio_label {
+    font-weight: normal;
+    color: #666;
+}
+
+
+/* Estilos para página de contacto automático */
+.auto_contact_page .oe_button_box {
+    margin-top: 10px;
+}
+
+.auto_contact_page .oe_stat_button {
+    margin-right: 5px;
+    margin-bottom: 5px;
+}
+
+/* Estilos para campos de plantilla */
+.field_contact_name_template,
+.field_contact_email_template {
+    margin-top: 10px;
+}
+
+.field_contact_name_template .o_input,
+.field_contact_email_template .o_input {
+    font-family: monospace;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 8px 12px;
+}
+
+/* Estilos para tipo de contacto */
+.field_tipo_contacto {
+    margin-bottom: 15px;
+}
+
+.field_tipo_contacto .o_radio_input {
+    margin-right: 8px;
+}
+
+.field_tipo_contacto .o_radio_label {
+    font-weight: 500;
+    color: #495057;
+}
+
+/* Estilos para tipo de producto */
+.field_tipo_producto {
+    margin-bottom: 15px;
+}
+
+.field_tipo_producto .o_radio_input {
+    margin-right: 8px;
+}
+
+.field_tipo_producto .o_radio_label {
+    font-weight: 500;
+    color: #495057;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .oe_radio_small {
+        font-size: 11px;
+    }
+}
