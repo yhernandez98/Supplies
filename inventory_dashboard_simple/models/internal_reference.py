@@ -43,7 +43,7 @@ class InternalReference(models.Model):
         store=True
     )
 
-    name_product_unique = models.Constraint(
+    _name_product_unique = models.Constraint(
         'UNIQUE(name, product_id)',
         'La referencia interna debe ser única por producto.',
     )

@@ -281,7 +281,7 @@ class LeasingContractProductLine(models.Model):
         help='Si está desactivado, este producto ya no está incluido en el contrato'
     )
 
-    unique_product_contract = models.Constraint(
+    _unique_product_contract = models.Constraint(
         'unique(contract_id, product_id)',
         'El producto ya está incluido en este contrato.',
     )

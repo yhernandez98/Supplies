@@ -120,7 +120,7 @@ class LicenseTemplate(models.Model):
             else:
                 rec.display_name_full = category_name
     
-    unique_code = models.Constraint(
+    _unique_code = models.Constraint(
         'unique(code)',
         'El código de la licencia debe ser único.',
     )

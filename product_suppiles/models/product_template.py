@@ -381,7 +381,7 @@ class ProductProduct(models.Model):
         related="product_tmpl_id.classification", readonly=False
     )
 
-    serial_cc_unique = models.Constraint(
+    _serial_cc_unique = models.Constraint(
         "unique(serial_cc)",
         "El Serial (Único) debe ser único en todas las variantes.",
     )

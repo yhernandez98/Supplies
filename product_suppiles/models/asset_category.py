@@ -9,7 +9,7 @@ class ProductAssetCategory(models.Model):
     _rec_name = "name"
     _inherit = ['mail.thread', 'mail.activity.mixin'] 
 
-    asset_cat_code_uniq = models.Constraint(
+    _asset_cat_code_uniq = models.Constraint(
         "unique(code)",
         "El código de la categoría de activo debe ser único.",
     )
@@ -58,7 +58,7 @@ class ProductAssetClass(models.Model):
 
     _check_company_auto = True
 
-    asset_class_code_uniq = models.Constraint(
+    _asset_class_code_uniq = models.Constraint(
         "unique(code, company_id, category_id)",
         "El código de la clase de activo debe ser único dentro de la categoría y la compañía.",
     )

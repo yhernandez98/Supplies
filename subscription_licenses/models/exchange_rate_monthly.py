@@ -30,7 +30,7 @@ class ExchangeRateMonthly(models.Model):
     active = fields.Boolean(string='Activo', default=True, index=True)
     display_name = fields.Char(string='Nombre', compute='_compute_display_name', store=True, index=True)
 
-    unique_year_month_company = models.Constraint(
+    _unique_year_month_company = models.Constraint(
         'unique(year, month, company_id)',
         'Ya existe un TRM para este mes y año en esta compañía.',
     )

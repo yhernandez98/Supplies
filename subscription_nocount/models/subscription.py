@@ -3213,7 +3213,7 @@ class SubscriptionLotDateOverride(models.Model):
                 )
         return res
 
-    unique_sub_lot = models.Constraint(
+    _unique_sub_lot = models.Constraint(
         'unique(subscription_id, lot_id)',
         'Ya existe un ajuste de fechas para este serial en esta suscripción.',
     )

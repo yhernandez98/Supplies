@@ -184,11 +184,11 @@ class LicenseEquipment(models.Model):
                 # Si no hay ni usuario ni equipo, dejar vacío (None)
                 rec.assignment_type = None
 
-    unique_lot_assignment = models.Constraint(
+    _unique_lot_assignment = models.Constraint(
         'unique(assignment_id, lot_id, state)',
         'Este equipo ya está asignado a esta licencia. Solo puede haber una asignación activa por equipo.',
     )
-    unique_contact_license_assigned = models.Constraint(
+    _unique_contact_license_assigned = models.Constraint(
         "unique(contact_id, license_id) WHERE state = 'assigned'",
         'Este contacto ya tiene una asignación activa de este tipo de licencia. No se puede duplicar.',
     )

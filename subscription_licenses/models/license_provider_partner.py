@@ -372,7 +372,7 @@ class LicenseProviderPartner(models.Model):
             'target': 'self',
         }
 
-    partner_uniq = models.Constraint(
+    _partner_uniq = models.Constraint(
         'unique(partner_id)',
         'Este contacto ya está en la lista de proveedores.',
     )

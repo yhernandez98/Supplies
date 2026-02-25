@@ -168,7 +168,7 @@ class LicenseProviderStock(models.Model):
             else:
                 rec.license_category_id = False
 
-    unique_provider_license = models.Constraint(
+    _unique_provider_license = models.Constraint(
         'unique(provider_id, license_product_id)',
         'Ya existe un registro para este proveedor y esta licencia. Edite el existente en lugar de crear uno nuevo.',
     )
