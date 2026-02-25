@@ -20,6 +20,7 @@
         'purchase_stock',
         'sale_stock',
         'product',
+        'uom',
         'mail',
     ],
     'data': [
