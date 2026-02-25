@@ -614,11 +614,6 @@
                 <field name="new_equipment_inventory_plate"/>
                 <field name="new_equipment_name"/>
                 <field name="change_date"/>
-                <group expand="0" string="Agrupar">
-                    <filter name="group_by_subscription" string="Por Suscripción" context="{'group_by': 'subscription_id'}"/>
-                    <filter name="group_by_user" string="Por Usuario" context="{'group_by': 'user_id'}"/>
-                    <filter name="group_by_date" string="Por Fecha" context="{'group_by': 'change_date:day'}"/>
-                </group>
             </search>
         </field>
     </record>
