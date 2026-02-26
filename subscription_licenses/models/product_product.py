@@ -8,7 +8,11 @@ class ProductProduct(models.Model):
     @api.model
     def name_search(self, name='', args=None, domain=None, limit=100, operator='ilike', order=None, **kwargs):
         """En el selector de Licencia (Servicio) del stock de proveedor, solo mostrar productos que son licencias del módulo."""
-        search_domain = list(domain if domain is not None else (args or []))
+        # Asegurar que domain es lista de tuplas (el frontend a veces pasa algo no válido y Domain() falla con 'e')
+        if isinstance(domain, list) and (not domain or isinstance(domain[0], (list, tuple))):
+            search_domain = list(domain)
+        else:
+            search_domain = list(args or []) if isinstance(args, list) else []
         if self.env.context.get('license_provider_stock_select'):
             Template = self.env['license.template']
             license_product_ids = Template.search([]).mapped('product_id').ids
