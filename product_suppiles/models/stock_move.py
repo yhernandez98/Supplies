@@ -136,11 +136,8 @@ class StockMove(models.Model):
         if self.picking_id and self.picking_id.state == 'done':
             raise UserError(_('No se pueden editar los elementos asociados de un picking ya validado.'))
         
-        # Obtener la vista del formulario de stock.lot
-        form_view_id = self.env.ref('product_suppiles.view_production_lot_form_inherit_supplies', raise_if_not_found=False)
-        if not form_view_id:
-            form_view_id = self.env.ref('stock.view_production_lot_form', raise_if_not_found=False)
-        
+        # Usar siempre la vista raíz: Odoo fusiona herencias (pestañas, campos) automáticamente.
+        form_view_id = self.env.ref('stock.view_production_lot_form', raise_if_not_found=False)
         # Abrir la vista del lote como wizard (modal) para que no se salgan de la vista del picking
         return {
             'type': 'ir.actions.act_window',
