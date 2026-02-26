@@ -430,13 +430,12 @@ class QuantEditorWizard(models.TransientModel):
             
             self.lot_id = lot.id
         
-        # Actualizar cantidad usando el método estándar de Odoo (lot_id como id para evitar problemas)
-        lot_id = self.lot_id.id if self.lot_id else None
+        # Actualizar cantidad usando el método estándar de Odoo (stock espera recordset en lot_id)
         self.env['stock.quant']._update_available_quantity(
             self.product_id,
             self.location_id,
             self.quantity,
-            lot_id=lot_id,
+            lot_id=self.lot_id,
             owner_id=self.owner_id,
             in_date=False
         )
