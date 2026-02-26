@@ -314,6 +314,13 @@ class QuantEditorWizard(models.TransientModel):
         if not self.product_id:
             raise UserError(_('Debe seleccionar un producto.'))
         
+        # Limpiar transacción abortada de una petición anterior (evita InFailedSqlTransaction)
+        try:
+            if self.env.cr.connection and getattr(self.env.cr.connection, 'transaction_status', 0) == 4:
+                self.env.cr.rollback()
+        except Exception:
+            pass
+        
         savepoint = None
         try:
             savepoint = self.env.cr.savepoint()
@@ -423,12 +430,13 @@ class QuantEditorWizard(models.TransientModel):
             
             self.lot_id = lot.id
         
-        # Actualizar cantidad usando el método estándar de Odoo
+        # Actualizar cantidad usando el método estándar de Odoo (lot_id como id para evitar problemas)
+        lot_id = self.lot_id.id if self.lot_id else None
         self.env['stock.quant']._update_available_quantity(
             self.product_id,
             self.location_id,
             self.quantity,
-            lot_id=self.lot_id,
+            lot_id=lot_id,
             owner_id=self.owner_id,
             in_date=False
         )
