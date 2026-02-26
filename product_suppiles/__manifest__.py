@@ -25,6 +25,7 @@
     ],
     'data': [
         'security/ir.model.access.csv',
+        'data/actions.xml',
         'views/asset_category_views.xml',
         'views/product_views.xml',
         'views/purchase_views.xml',
