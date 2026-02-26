@@ -314,10 +314,9 @@ class QuantEditorWizard(models.TransientModel):
         if not self.product_id:
             raise UserError(_('Debe seleccionar un producto.'))
         
-        # Limpiar transacción abortada de una petición anterior (evita InFailedSqlTransaction)
+        # Limpiar transacción abortada (evita InFailedSqlTransaction al reutilizar la conexión)
         try:
-            if self.env.cr.connection and getattr(self.env.cr.connection, 'transaction_status', 0) == 4:
-                self.env.cr.rollback()
+            self.env.cr.rollback()
         except Exception:
             pass
         
