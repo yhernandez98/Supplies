@@ -31,6 +31,7 @@
         'wizard/wizard_views.xml',
         'wizard/lot_supply_editor_wizard_views.xml',
         'views/sale_views.xml',
+        'views/stock_lot_form_supplies_inherit.xml',
         'views/stock_lot_views.xml',
         'views/stock_picking_views.xml',
         'views/menuitems.xml',
