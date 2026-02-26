@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-  <record id="action_product_business_line" model="ir.actions.act_window">
+  <data>
+    <record id="action_product_business_line" model="ir.actions.act_window">
     <field name="name">Lineas de negocio</field>
     <field name="res_model">product.business.line</field>
     <field name="view_mode">list,form</field>
@@ -13,4 +14,5 @@
     <field name="state">code</field>
     <field name="code" type="py">action = env['stock.lot'].action_log_supplies_view_debug()</field>
   </record>
+  </data>
 </odoo>
