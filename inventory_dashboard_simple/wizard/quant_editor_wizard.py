@@ -314,6 +314,18 @@ class QuantEditorWizard(models.TransientModel):
         if not self.product_id:
             raise UserError(_('Debe seleccionar un producto.'))
         
+        savepoint = None
+        try:
+            savepoint = self.env.cr.savepoint()
+            return self._action_update_quantity_impl()
+        except Exception:
+            if savepoint is not None:
+                savepoint.rollback()
+            raise
+
+    def _action_update_quantity_impl(self):
+        """Implementación de la actualización (para uso con savepoint)."""
+        self.ensure_one()
         # Crear o actualizar el lote si hay número de serie
         lot = None
         if self.lot_serial_number and self.lot_serial_number.strip():
