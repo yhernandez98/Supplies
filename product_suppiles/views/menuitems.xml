@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <menuitem id="menu_debug_stock_lot_views" name="Debug vistas Lote/Serial" parent="stock.menu_stock_config_settings" action="product_suppiles.action_debug_stock_lot_views" sequence="1"/>
-    <menuitem id="menu_product_business_setting" name="Configuracion Lineas de negocio" parent="stock.menu_stock_config_settings" action="" />
-    <menuitem id="menu_product_business_line" name="Lineas de negocio" parent="menu_product_business_setting" action="product_suppiles.action_product_business_line" sequence="100" />
+    <!-- Menús Líneas de negocio se crean en post_init_hook (acción también) -->
 
 
 </odoo>
