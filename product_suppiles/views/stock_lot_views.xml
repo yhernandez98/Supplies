@@ -17,7 +17,7 @@
     <field name="name">production.lot.form.supplies.inherit</field>
     <field name="model">stock.lot</field>
     <field name="inherit_id" ref="stock.view_production_lot_form"/>
-    <field name="priority" eval="15"/>
+    <field name="priority" eval="5"/>
     <field name="arch" type="xml">
       <!-- Solo xpaths que apuntan a elementos que existen en la vista base (como módulos nativos) -->
       <xpath expr="//form" position="attributes">
