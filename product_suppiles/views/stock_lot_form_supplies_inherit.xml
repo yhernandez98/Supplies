@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-  <!-- Vista formulario lote: carga en archivo propio y primero (Odoo 19 base: group name="description"). -->
+  <!-- Vista formulario lote. Insertar notebook antes del chatter (siempre existe; no depende de groups). -->
   <record id="view_production_lot_form_inherit_supplies" model="ir.ui.view">
     <field name="name">production.lot.form.supplies.inherit</field>
     <field name="model">stock.lot</field>
     <field name="inherit_id" ref="stock.view_production_lot_form"/>
-    <field name="priority" eval="15"/>
+    <field name="priority" eval="99"/>
     <field name="arch" type="xml">
       <xpath expr="//form" position="attributes">
         <attribute name="class" add="o_stock_lot_pastel_form" separator=" "/>
@@ -31,7 +31,7 @@
         <field name="reining_plazo" string="Plazo Renting" help="Plazo en meses o fecha personalizada"/>
         <field name="reining_plazo_custom_months" string="Meses (personalizado)" invisible="reining_plazo != 'custom'" optional="show"/>
       </xpath>
-      <xpath expr="//group[@name='description']" position="after">
+      <xpath expr="//chatter" position="before">
         <notebook>
         <page string="Información" name="info_group">
           <notebook>

@@ -3,7 +3,77 @@ from odoo import api, fields, models, _
 import logging
 from dateutil.relativedelta import relativedelta
 
+try:
+    from lxml import etree
+except ImportError:
+    etree = None
+
 _logger = logging.getLogger(__name__)
+
+
+def _inject_supplies_notebook_into_form_arch(env, arch):
+    """Si la vista XML no aplicó nuestro notebook, lo inyectamos antes del chatter (fallback)."""
+    if etree is None:
+        return arch
+    arch_str = arch.decode('utf-8') if isinstance(arch, bytes) else (arch if isinstance(arch, str) else None)
+    if arch_str is None:
+        try:
+            arch_str = etree.tostring(arch, encoding='unicode')
+        except Exception:
+            return arch
+    if 'name="info_group"' in arch_str or 'name=\'info_group\'' in arch_str:
+        return arch
+    view = env['ir.ui.view'].search([
+        ('model', '=', 'stock.lot'), ('type', '=', 'form'),
+        ('name', '=', 'production.lot.form.supplies.inherit')
+    ], limit=1)
+    if not view:
+        return arch
+    if not (getattr(view, 'arch_db', None) or getattr(view, 'arch', None)):
+        return arch
+    view = view.sudo()
+    try:
+        raw = view.arch_db if view.arch_db else (getattr(view, 'arch', None) or '')
+        if not raw:
+            return arch
+        raw = raw.encode('utf-8') if isinstance(raw, str) else raw
+        root_supplies = etree.fromstring(raw)
+    except Exception as e:
+        _logger.warning("stock.lot form fallback: could not parse supplies view arch: %s", e)
+        return arch
+    xpath_before_chatter = root_supplies.xpath("//*[contains(@expr, 'chatter') and @position='before']")
+    if not xpath_before_chatter:
+        xpath_before_chatter = root_supplies.xpath("//*[contains(@expr, 'chatter')]")
+    notebook_node = None
+    for xp in xpath_before_chatter:
+        for child in xp:
+            tag = child.tag if hasattr(child, 'tag') else None
+            local_tag = (tag.split('}')[-1] if tag and '}' in tag else tag) or ''
+            if local_tag == 'notebook':
+                notebook_node = child
+                break
+        if notebook_node is not None:
+            break
+    if notebook_node is None:
+        return arch
+    try:
+        root = etree.fromstring(arch_str.encode('utf-8') if isinstance(arch_str, str) else arch_str)
+    except Exception as e:
+        _logger.warning("stock.lot form fallback: could not parse combined arch: %s", e)
+        return arch
+    chatter_list = root.xpath("//chatter") or root.xpath("//*[local-name()='chatter']")
+    if not chatter_list:
+        return arch
+    parent = chatter_list[0].getparent()
+    idx = list(parent).index(chatter_list[0])
+    import copy
+    new_notebook = copy.deepcopy(notebook_node)
+    parent.insert(idx, new_notebook)
+    try:
+        return etree.tostring(root, encoding='unicode')
+    except Exception:
+        return arch
+
 
 class StockLot(models.Model):
     _inherit = "stock.lot"
@@ -76,6 +146,13 @@ class StockLot(models.Model):
         help="Nombre de host o nombre del equipo en la red",
         tracking=True
     )
+
+    @api.model
+    def _get_view(self, view_id=None, view_type='form', **options):
+        arch, view = super()._get_view(view_id=view_id, view_type=view_type, **options)
+        if view_type == 'form':
+            arch = _inject_supplies_notebook_into_form_arch(self.env, arch)
+        return (arch, view)
 
     def _get_exit_date_from_plazo(self, entry_date, reining_plazo, custom_months=0):
         """Calcula Fecha Finalizacion Renting a partir de Fecha Activacion y Plazo Renting.
