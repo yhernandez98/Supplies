@@ -10,6 +10,9 @@
       <xpath expr="//form" position="attributes">
         <attribute name="class" add="o_stock_lot_pastel_form" separator=" "/>
       </xpath>
+      <xpath expr="//div[@name='button_box']" position="inside">
+        <button name="action_log_supplies_view_debug" type="object" string="🔍 Debug vistas" class="btn-link" title="Escribe en el log del servidor el estado de las vistas (busca [product_supplies] en el log)"/>
+      </xpath>
       <xpath expr="//sheet//field[@name='name'][not(ancestor::notebook)]" position="attributes">
         <attribute name="string">Número de serie</attribute>
         <attribute name="placeholder">Ingrese el número de serie</attribute>
