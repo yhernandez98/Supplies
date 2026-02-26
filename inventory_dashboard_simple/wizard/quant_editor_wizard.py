@@ -2,6 +2,12 @@
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError, ValidationError
 
+try:
+    import psycopg2
+    PG_TX_ABORTED = getattr(psycopg2, 'extensions', None) and getattr(psycopg2.extensions, 'TRANSACTION_STATUS_INERROR', 4)
+except Exception:
+    PG_TX_ABORTED = 4
+
 
 class QuantEditorWizard(models.TransientModel):
     """Wizard para actualizar cantidades de inventario por producto y serial/lote."""
@@ -314,19 +320,34 @@ class QuantEditorWizard(models.TransientModel):
         if not self.product_id:
             raise UserError(_('Debe seleccionar un producto.'))
         
-        # Limpiar transacción abortada (evita InFailedSqlTransaction al reutilizar la conexión)
+        # Limpiar transacción abortada de una petición anterior
         try:
-            self.env.cr.rollback()
+            if getattr(self.env.cr.connection, 'transaction_status', 0) == PG_TX_ABORTED:
+                self.env.cr.rollback()
         except Exception:
-            pass
+            try:
+                self.env.cr.rollback()
+            except Exception:
+                pass
         
         savepoint = None
         try:
             savepoint = self.env.cr.savepoint()
             return self._action_update_quantity_impl()
-        except Exception:
+        except Exception as e:
             if savepoint is not None:
-                savepoint.rollback()
+                try:
+                    savepoint.rollback()
+                except Exception:
+                    pass
+            # Si la transacción quedó abortada, hacer rollback y reintentar una vez
+            err_msg = str(e) if e else ''
+            if 'InFailedSqlTransaction' in err_msg or (getattr(e, 'pgcode', None) == '25P02'):
+                try:
+                    self.env.cr.rollback()
+                    return self._action_update_quantity_impl()
+                except Exception:
+                    pass
             raise
 
     def _action_update_quantity_impl(self):
