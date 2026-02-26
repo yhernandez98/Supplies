@@ -1,18 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-  <!-- Mantener esta vista evita que Odoo la borre en upgrade (el unlink dispara errores en cascada). -->
-  <record id="view_production_lot_form_inherit_stock_account_currency" model="ir.ui.view">
-    <field name="name">stock.lot.form.stock_account.currency.visible</field>
-    <field name="model">stock.lot</field>
-    <field name="inherit_id" ref="stock_account.view_production_lot_form_stock_account"/>
-    <field name="arch" type="xml">
-      <xpath expr="//field[@name='company_currency_id']" position="attributes">
-        <attribute name="invisible">0</attribute>
-      </xpath>
-    </field>
-  </record>
-
+  <!-- Vista principal: formulario de lote con pestañas y campos custom. Debe ir primero para que cargue siempre. -->
   <record id="view_production_lot_form_inherit_supplies" model="ir.ui.view">
     <field name="name">production.lot.form.supplies.inherit</field>
     <field name="model">stock.lot</field>
