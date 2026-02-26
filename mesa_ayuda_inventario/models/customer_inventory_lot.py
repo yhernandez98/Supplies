@@ -890,7 +890,7 @@ class StockLotCustomerInventory(models.Model):
                     AND sp.state = 'done'
                     AND spt.code = 'outgoing'
                     AND sp.partner_id IS NOT NULL
-                ORDER BY ml.lot_id, sp.date desc, sp.id desc
+                ORDER BY ml.lot_id, sp.date_done desc, sp.id desc
             """, (tuple(lot_ids),))
             
             for row in self._cr.dictfetchall():

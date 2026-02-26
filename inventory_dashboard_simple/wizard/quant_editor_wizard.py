@@ -450,9 +450,6 @@ class QuantEditorWizard(models.TransientModel):
             
             self.lot_id = lot.id
         
-        # Hacer commit del lote para evitar transacción abortada antes de _update_available_quantity
-        self.env.cr.commit()
-        
         # Actualizar cantidad usando el método estándar de Odoo (stock espera recordset en lot_id)
         self.env['stock.quant']._update_available_quantity(
             self.product_id,
