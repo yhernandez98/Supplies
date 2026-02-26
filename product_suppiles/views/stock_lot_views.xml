@@ -9,6 +9,12 @@
     <field name="inherit_id" ref="stock.view_production_lot_tree"/>
     <field name="priority" eval="15"/>
     <field name="arch" type="xml">
+      <!-- Botón debug: en la lista de lotes (no depende del formulario). Header al inicio. -->
+      <xpath expr="//list/field[1]" position="before">
+        <header>
+          <button name="action_log_supplies_view_debug" type="object" string="🔍 Debug vistas form" class="btn-link" title="Escribe en el log del servidor. Busca [product_supplies]"/>
+        </header>
+      </xpath>
       <!-- Mostrar campo product_qty siempre visible -->
       <xpath expr="//field[@name='product_qty']" position="attributes">
         <attribute name="optional">show</attribute>

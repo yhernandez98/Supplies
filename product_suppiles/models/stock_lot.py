@@ -170,6 +170,7 @@ class StockLot(models.Model):
             arch = _inject_supplies_notebook_into_form_arch(self.env, arch)
         return (arch, view)
 
+    @api.model
     def action_log_supplies_view_debug(self):
         """Escribe en el log del servidor el estado de las vistas de formulario stock.lot (para depurar)."""
         View = self.env['ir.ui.view'].sudo()

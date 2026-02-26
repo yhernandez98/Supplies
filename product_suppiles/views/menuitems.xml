@@ -1,6 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
+    <!-- Acción para escribir en el log el estado de las vistas del formulario de lote (depuración). -->
+    <record id="action_debug_stock_lot_views" model="ir.actions.server">
+        <field name="name">🔍 Debug vistas formulario Lote/Serial</field>
+        <field name="model_id" ref="stock.model_stock_lot"/>
+        <field name="state">code</field>
+        <field name="code" type="py">action = env['stock.lot'].action_log_supplies_view_debug()</field>
+    </record>
+    <menuitem id="menu_debug_stock_lot_views" name="Debug vistas Lote/Serial" parent="stock.menu_stock_config_settings" action="action_debug_stock_lot_views" sequence="1"/>
+
     <record id="action_product_business_line" model="ir.actions.act_window">
         <field name="name">Lineas de negocio</field>
         <field name="res_model">product.business.line</field>

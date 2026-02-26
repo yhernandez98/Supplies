@@ -14,5 +14,5 @@ class ProductProduct(models.Model):
             license_product_ids = Template.search([]).mapped('product_id').ids
             if license_product_ids:
                 search_domain = search_domain + [('id', 'in', license_product_ids)]
-        # El padre en esta versión solo acepta: name, args, operator, limit
-        return super().name_search(name=name, args=search_domain, operator=operator, limit=limit)
+        # Odoo 16+: el parámetro es domain (no args)
+        return super().name_search(name=name, domain=search_domain, operator=operator, limit=limit)
