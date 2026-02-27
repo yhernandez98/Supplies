@@ -838,14 +838,17 @@ class ProductTransferWizard(models.TransientModel):
         # Confirmar y validar ambos pickings
         picking.action_confirm()
         picking.action_assign()
-        for move_line in picking.move_line_ids_without_package:
+        # Odoo 19: move_line_ids_without_package fue eliminado; usar move_line_ids
+        pick_lines = getattr(picking, 'move_line_ids_without_package', picking.move_line_ids)
+        for move_line in pick_lines:
             if move_line.qty_done <= 0:
                 move_line.qty_done = move_line.reserved_uom_qty
         picking.button_validate()
 
         picking_in.action_confirm()
         picking_in.action_assign()
-        for move_line in picking_in.move_line_ids_without_package:
+        pick_in_lines = getattr(picking_in, 'move_line_ids_without_package', picking_in.move_line_ids)
+        for move_line in pick_in_lines:
             if move_line.qty_done <= 0:
                 move_line.qty_done = move_line.reserved_uom_qty
         picking_in.button_validate()
@@ -1415,17 +1418,19 @@ class ProductTransferWizard(models.TransientModel):
 
         move_in = self.env['stock.move'].create(move_in_vals)
 
-        # Confirmar y validar ambos pickings
+        # Confirmar y validar ambos pickings (Odoo 19: move_line_ids_without_package -> move_line_ids)
         picking.action_confirm()
         picking.action_assign()
-        for move_line in picking.move_line_ids_without_package:
+        pick_lines = getattr(picking, 'move_line_ids_without_package', picking.move_line_ids)
+        for move_line in pick_lines:
             if move_line.qty_done <= 0:
                 move_line.qty_done = move_line.reserved_uom_qty
         picking.button_validate()
 
         picking_in.action_confirm()
         picking_in.action_assign()
-        for move_line in picking_in.move_line_ids_without_package:
+        pick_in_lines = getattr(picking_in, 'move_line_ids_without_package', picking_in.move_line_ids)
+        for move_line in pick_in_lines:
             move_line.qty_done = self.quantity
             # Si el producto destino tiene seguimiento, crear un lote nuevo
             if self.destination_product_id.tracking != 'none':
@@ -1616,10 +1621,11 @@ class ProductTransferWizard(models.TransientModel):
         
         self.env['stock.move.line'].create(move_line_out_vals)
         
-        # Validar el picking de salida para reducir el stock
+        # Validar el picking de salida para reducir el stock (Odoo 19: move_line_ids_without_package -> move_line_ids)
         picking_out.action_confirm()
         picking_out.action_assign()
-        for move_line in picking_out.move_line_ids_without_package:
+        pick_out_lines = getattr(picking_out, 'move_line_ids_without_package', picking_out.move_line_ids)
+        for move_line in pick_out_lines:
             if move_line.qty_done <= 0:
                 move_line.qty_done = move_line.reserved_uom_qty
         picking_out.button_validate()
