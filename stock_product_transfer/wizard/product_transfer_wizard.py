@@ -463,9 +463,9 @@ class ProductTransferWizard(models.TransientModel):
 
             lot_quantities[lot.id] = quant.quantity
 
-        # Crear movimiento de salida (producto origen)
+        # Crear movimiento de salida (producto origen) (Odoo 19: stock.move usa description_picking, no name)
         move_out_vals = {
-            'name': _('Transferencia: %s -> %s') % (
+            'description_picking': _('Transferencia: %s -> %s') % (
                 self.source_product_id.display_name,
                 self.destination_product_id.display_name
             ),
@@ -506,9 +506,9 @@ class ProductTransferWizard(models.TransientModel):
 
         picking_in = self.env['stock.picking'].create(picking_in_vals)
 
-        # Crear movimiento de entrada (producto destino)
+        # Crear movimiento de entrada (producto destino) (Odoo 19: stock.move usa description_picking, no name)
         move_in_vals = {
-            'name': _('Transferencia: %s -> %s') % (
+            'description_picking': _('Transferencia: %s -> %s') % (
                 self.source_product_id.display_name,
                 self.destination_product_id.display_name
             ),
@@ -1369,9 +1369,9 @@ class ProductTransferWizard(models.TransientModel):
 
         picking = self.env['stock.picking'].create(picking_vals)
 
-        # Crear movimiento de salida (producto origen)
+        # Crear movimiento de salida (producto origen) (Odoo 19: stock.move usa description_picking, no name)
         move_out_vals = {
-            'name': _('Transferencia: %s -> %s') % (
+            'description_picking': _('Transferencia: %s -> %s') % (
                 self.source_product_id.display_name,
                 self.destination_product_id.display_name
             ),
@@ -1399,9 +1399,9 @@ class ProductTransferWizard(models.TransientModel):
 
         picking_in = self.env['stock.picking'].create(picking_in_vals)
 
-        # Crear movimiento de entrada (producto destino)
+        # Crear movimiento de entrada (producto destino) (Odoo 19: stock.move usa description_picking, no name)
         move_in_vals = {
-            'name': _('Transferencia: %s -> %s') % (
+            'description_picking': _('Transferencia: %s -> %s') % (
                 self.source_product_id.display_name,
                 self.destination_product_id.display_name
             ),
@@ -1590,9 +1590,9 @@ class ProductTransferWizard(models.TransientModel):
         
         picking_out = self.env['stock.picking'].create(picking_out_vals)
         
-        # Crear movimiento de salida
+        # Crear movimiento de salida (Odoo 19: stock.move usa description_picking, no name)
         move_out_vals = {
-            'name': _('Reducción de stock: %s') % self.source_product_id.display_name,
+            'description_picking': _('Reducción de stock: %s') % self.source_product_id.display_name,
             'product_id': self.source_product_id.id,
             'product_uom': self.source_product_id.uom_id.id,
             'product_uom_qty': quantity_to_convert,
@@ -1805,9 +1805,9 @@ class ProductTransferWizard(models.TransientModel):
                 
                 picking = self.env['stock.picking'].create(picking_vals)
                 
-                # Crear movimiento ya completado
+                # Crear movimiento ya completado (Odoo 19: stock.move usa description_picking, no name)
                 move_vals = {
-                    'name': _('Conversión: %s → %s') % (
+                    'description_picking': _('Conversión: %s → %s') % (
                         self.source_product_id.display_name,
                         self.destination_product_id.display_name
                     ),
