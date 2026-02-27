@@ -392,7 +392,8 @@ class StockPicking(models.Model):
                     default_date = picking.date_done or fields.Datetime.now()
                     partner = picking.partner_id
 
-                    for move in picking.move_ids_without_package:
+                    moves = getattr(picking, 'move_ids_without_package', picking.move_ids)
+                    for move in moves:
                         try:
                             kind = move.supply_kind
                             if kind not in ("component", "peripheral", "complement"):
@@ -446,7 +447,8 @@ class StockPicking(models.Model):
         MoveLine = self.env["stock.move.line"]
 
         # CORRECCIÓN: Filtrar movimientos padres y asegurar que cada uno se procese independientemente
-        parent_moves = self.move_ids_without_package.filtered(
+        moves = getattr(self, 'move_ids_without_package', self.move_ids)
+        parent_moves = moves.filtered(
             lambda m: m.state in ("draft", "confirmed", "waiting", "assigned") and 
                      m.supply_kind == "parent" and
                      m.product_id and m.product_id.exists()
@@ -536,7 +538,7 @@ class StockPicking(models.Model):
             
             # Verificar si ya existen movimientos de complementos antes de eliminar
             # Esto evita eliminar y recrear complementos que ya fueron recibidos
-            existing_complement_moves = self.move_ids_without_package.filtered(
+            existing_complement_moves = moves.filtered(
                 lambda m: m.supply_kind == "complement" and 
                          m.internal_parent_move_id and m.internal_parent_move_id.id == parent.id
             )

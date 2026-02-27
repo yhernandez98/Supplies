@@ -9,6 +9,10 @@ _logger = logging.getLogger(__name__)
 class StockPicking(models.Model):
     _inherit = 'stock.picking'
 
+    def _get_moves_for_route_check(self):
+        """Odoo 19: move_ids_without_package fue eliminado; usar move_ids."""
+        return getattr(self, 'move_ids_without_package', self.move_ids)
+
     def _check_and_update_picking_type_for_transport_route(self):
         """
         Verifica si alguna ruta asociada tiene la regla 'Salida - Transporte'
@@ -37,8 +41,9 @@ class StockPicking(models.Model):
         if self.picking_type_id.id == 43:
             return False
         
+        moves = self._get_moves_for_route_check()
         # OPTIMIZACIÓN: Verificar que tenga movimientos antes de iterar
-        if not self.move_ids_without_package:
+        if not moves:
             return False
         
         # OPTIMIZACIÓN: Verificar que el tipo de operación 43 existe UNA SOLA VEZ al inicio
@@ -53,12 +58,12 @@ class StockPicking(models.Model):
         
         # OPTIMIZACIÓN: Usar mapped() para obtener rutas de forma más eficiente
         # Obtener rutas de los productos de los movimientos
-        product_routes = self.move_ids_without_package.mapped('product_id.route_ids')
+        product_routes = moves.mapped('product_id.route_ids')
         if product_routes:
             routes_to_check.update(product_routes.ids)
         
         # También verificar rutas de la orden de venta si existe
-        sale_routes = self.move_ids_without_package.filtered('sale_line_id.order_id.route_id').mapped('sale_line_id.order_id.route_id')
+        sale_routes = moves.filtered('sale_line_id.order_id.route_id').mapped('sale_line_id.order_id.route_id')
         if sale_routes:
             routes_to_check.update(sale_routes.ids)
         
@@ -202,7 +207,7 @@ class StockPicking(models.Model):
                     continue
                 
                 # OPTIMIZACIÓN 4: Solo verificar si tiene movimientos (evita búsquedas en pickings vacíos)
-                if not picking.move_ids_without_package:
+                if not picking._get_moves_for_route_check():
                     continue
                 
                 # Solo ahora hacer la verificación costosa
@@ -270,9 +275,9 @@ class StockPicking(models.Model):
         
         for picking in pickings_to_update:
             routes_to_check = set()
-            
+            moves = picking._get_moves_for_route_check()
             # Obtener rutas de los productos de los movimientos
-            for move in picking.move_ids_without_package:
+            for move in moves:
                 if move.product_id and move.product_id.route_ids:
                     product_routes = move.product_id.route_ids.filtered(lambda r: r.id in route_ids)
                     if product_routes:
