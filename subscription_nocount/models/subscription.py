@@ -1282,6 +1282,52 @@ class SubscriptionSubscription(models.Model):
         _logger.debug('💰 Usando precio de lista del producto: %s', product.lst_price)
         return product.lst_price
 
+    def _get_currency_for_product_price(self, product, plan=None):
+        """Devuelve la moneda en que está definido el precio del producto en la lista de precios.
+        Usado para mostrar cost_currency_id correcto (USD/COP) en PRODUCTOS AGRUPADOS."""
+        self.ensure_one()
+        partner = self.partner_id
+        pricelist = partner.property_product_pricelist if partner else False
+        if not pricelist:
+            return self.currency_id or self.env.company.currency_id
+
+        use_recurring = bool(plan) or getattr(product, 'recurring_invoice', False)
+        if use_recurring:
+            template = product.product_tmpl_id if product else None
+            if template and hasattr(template, '_get_recurring_pricing'):
+                try:
+                    pricing_item = template._get_recurring_pricing(
+                        pricelist=pricelist,
+                        variant=product,
+                        plan_id=plan.id if plan else None,
+                        quantity=1.0,
+                    )
+                    if pricing_item:
+                        item_currency = getattr(pricing_item, 'currency_id', None) and pricing_item.currency_id
+                        if item_currency:
+                            return item_currency
+                except Exception:
+                    pass
+            PricelistItem = self.env['product.pricelist.item']
+            if plan and 'plan_id' in PricelistItem._fields and 'pricelist_id' in PricelistItem._fields:
+                try:
+                    domain_19 = [
+                        ('pricelist_id', '=', pricelist.id),
+                        ('plan_id', '=', plan.id),
+                    ]
+                    item_19 = PricelistItem.search(
+                        domain_19 + [('product_tmpl_id', '=', product.product_tmpl_id.id)], limit=1
+                    )
+                    if not item_19 and 'product_id' in PricelistItem._fields:
+                        item_19 = PricelistItem.search(domain_19 + [('product_id', '=', product.id)], limit=1)
+                    if item_19:
+                        item_currency = getattr(item_19[0], 'currency_id', None) and item_19[0].currency_id
+                        if item_currency:
+                            return item_currency
+                except Exception:
+                    pass
+        return pricelist.currency_id or self.currency_id or self.env.company.currency_id
+
     def _sync_subscription_lines(self, products, remove_missing=False, track_usage=False, sync_datetime=None):
         """Update or create lines based on provided products data."""
         self.ensure_one()
@@ -4321,7 +4367,13 @@ class SubscriptionProductGrouped(models.Model):
                     _logger.error('❌ Error obteniendo precio para producto %s (ID: %s): %s',
                                   record.product_id.display_name, record.product_id.id, str(e), exc_info=True)
                     price_monthly = record.product_id.lst_price or 0.0
-                
+
+                # Moneda del precio según la lista de precios (USD/COP del ítem recurrente)
+                price_currency = record.subscription_id._get_currency_for_product_price(
+                    record.product_id, record.subscription_id.plan_id if record.subscription_id else None
+                )
+                cost_currency_id = price_currency.id if price_currency else (record.subscription_id.currency_id.id if record.subscription_id else False)
+
                 # Prorrateo por días: productos (no licencias) con lot_ids/lot_id.
                 # Misma fórmula que "Ver Detalles" (Costo Días En Sitio): costo = suma de (costo_diario × días_servicio) por serial,
                 # con costo_diario = (costo_renting_base + costo_adicional) / días_mes, para que el total coincida con el detalle.
@@ -4371,13 +4423,13 @@ class SubscriptionProductGrouped(models.Model):
                         cost_to_date_lot = cost_daily_lot * float(days_used)
                         total_cost += cost_to_date_lot
                     record.cost = float_round(total_cost, precision_digits=2)
-                    record.cost_currency_id = record.subscription_id.currency_id.id
+                    record.cost_currency_id = cost_currency_id
                     _logger.info('💰 Prorrateo producto %s: %s seriales, mes %s/%s, costo total=%s (suma Costo Días En Sitio)',
                                  record.product_id.display_name, len(lots_for_prorate), month, year, record.cost)
                 else:
                     # Sin prorrateo: costo = precio unitario mensual * cantidad (price_monthly ya es por 1 unidad)
                     record.cost = float_round((price_monthly or 0.0) * float(record.quantity), precision_digits=2)
-                    record.cost_currency_id = record.subscription_id.currency_id.id
+                    record.cost_currency_id = cost_currency_id
                     _logger.info('💰 Costo producto %s: %s (precio unit. mensual: %s, cantidad: %s)',
                                 record.product_id.display_name, record.cost, price_monthly, record.quantity)
             except Exception:
