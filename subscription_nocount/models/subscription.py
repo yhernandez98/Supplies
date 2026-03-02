@@ -4446,18 +4446,26 @@ class SubscriptionProductGrouped(models.Model):
                             base_domain.append(('plan_id', '=', plan.id))
                         else:
                             base_domain.append(('plan_id', '!=', False))
-                        # Buscar por variante primero, luego por plantilla; entre varios ítems preferir el que tenga currency_id
+                        # Buscar ítem: 1) por variante 2) por plantilla 3) por categoría (Aplicar a = Categoría)
+                        # Entre varios, preferir el que tenga currency_id (USD/COP del ítem)
                         candidates = self.env['product.pricelist.item'].with_context(active_test=False)
                         if 'product_id' in self.env['product.pricelist.item']._fields:
                             by_variant = self.env['product.pricelist.item'].with_context(active_test=False).search(
-                                base_domain + [('product_id', '=', record.product_id.id)], limit=5
+                                base_domain + [('product_id', '=', record.product_id.id)], limit=10
                             )
                             candidates = by_variant
                         if not candidates:
                             by_tmpl = self.env['product.pricelist.item'].with_context(active_test=False).search(
-                                base_domain + [('product_tmpl_id', '=', record.product_id.product_tmpl_id.id)], limit=5
+                                base_domain + [('product_tmpl_id', '=', record.product_id.product_tmpl_id.id)], limit=10
                             )
                             candidates = by_tmpl
+                        if not candidates and 'categ_id' in self.env['product.pricelist.item']._fields:
+                            prod_categ = (record.product_id.product_tmpl_id.categ_id or record.product_id.categ_id) if record.product_id else None
+                            if prod_categ and prod_categ.id:
+                                by_categ = self.env['product.pricelist.item'].with_context(active_test=False).search(
+                                    base_domain + [('categ_id', 'parent_of', prod_categ.id)], limit=10
+                                )
+                                candidates = by_categ
                         for item in candidates:
                             item_currency_id = None
                             if 'currency_id' in item._fields:
