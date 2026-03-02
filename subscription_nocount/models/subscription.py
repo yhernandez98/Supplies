@@ -1812,11 +1812,11 @@ class SubscriptionSubscription(models.Model):
 
     def _get_lot_entry_date(self, lot, location, product=None, default_dt=None):
         MoveLine = self.env['stock.move.line'].sudo()
+        # Odoo 19: qty_done no es stored, no usar en dominio SQL; filtrar en Python
         domain = [
             ('state', '=', 'done'),
             ('lot_id', '=', lot.id),
             ('product_id', '=', (product.id if product else lot.product_id.id)),
-            ('qty_done', '>', 0),
         ]
         child_ids = set()
         if location:
@@ -1825,6 +1825,9 @@ class SubscriptionSubscription(models.Model):
         candidates = MoveLine.search(domain, order='date desc', limit=10)
         for move_line in candidates:
             if location and move_line.location_id.id in child_ids:
+                continue
+            qty_done = getattr(move_line, 'qty_done', 0) or 0
+            if float(qty_done) <= 0:
                 continue
             return move_line.date or move_line.write_date or move_line.create_date
         return default_dt
@@ -3746,10 +3749,10 @@ class SubscriptionSubscriptionLine(models.Model):
 
     def _get_removal_date(self, lot_id, sync_datetime, prefer_dates=None):
         location = self.location_id or self.subscription_id.location_id
+        # Odoo 19: qty_done no es stored, no usar en dominio SQL; filtrar en Python
         domain = [
             ('state', '=', 'done'),
             ('product_id', '=', (self.stock_product_id.id if self.stock_product_id else self.product_id.id)),
-            ('qty_done', '>', 0),
             ('date', '<=', sync_datetime),
         ]
         child_ids = set()
@@ -3764,6 +3767,9 @@ class SubscriptionSubscriptionLine(models.Model):
         candidates = self.env['stock.move.line'].sudo().search(domain, order='date desc', limit=10)
         for move_line in candidates:
             if location and move_line.location_dest_id.id in child_ids:
+                continue
+            qty_done = getattr(move_line, 'qty_done', 0) or 0
+            if float(qty_done) <= 0:
                 continue
             return move_line.date or move_line.write_date or move_line.create_date or sync_datetime
         if prefer_dates:
