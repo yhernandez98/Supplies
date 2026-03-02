@@ -2197,6 +2197,91 @@ class SubscriptionSubscription(models.Model):
             'context': {'default_subscription_id': self.id},
         }
 
+    def action_fill_lot_date_overrides_current_month(self):
+        """Rellena Ajustes de fechas por serial con lotes que salieron de esta suscripción en el mes en curso.
+        Sirve para ver y confirmar movimientos ya hechos (ej. ayer) sin depender del write en el momento."""
+        self.ensure_one()
+        if not self.location_id:
+            return {'type': 'ir.actions.client', 'tag': 'display_notification', 'params': {
+                'title': _('Sin ubicación'),
+                'message': _('Defina la ubicación del cliente en la suscripción.'),
+                'type': 'warning',
+                'sticky': False,
+            }}
+        today = fields.Date.context_today(self)
+        first = datetime.date(today.year, today.month, 1)
+        last = datetime.date(today.year, today.month, calendar.monthrange(today.year, today.month)[1])
+        Lot = self.env['stock.lot'].sudo()
+        Override = self.env['subscription.lot.date.override'].sudo()
+        existing = Override.search([('subscription_id', '=', self.id)]).mapped('lot_id').ids
+        created = 0
+        # Lotes que salieron de esta suscripción (last_subscription_id = self) con fecha salida en el mes
+        left_this_month = Lot.search([
+            ('last_subscription_id', '=', self.id),
+            ('last_subscription_exit_date', '>=', first),
+            ('last_subscription_exit_date', '<=', last),
+            ('id', 'not in', existing),
+        ])
+        for lot in left_this_month:
+            entry_val = getattr(lot, 'last_subscription_entry_date', None) or getattr(lot, 'entry_date', None) or getattr(lot, 'last_entry_date_display', None)
+            exit_val = getattr(lot, 'last_subscription_exit_date', None) or getattr(lot, 'exit_date', None) or getattr(lot, 'last_exit_date_display', None)
+            if not exit_val:
+                continue
+            Override.create({
+                'subscription_id': self.id,
+                'lot_id': lot.id,
+                'entry_date': entry_val,
+                'exit_date': exit_val,
+            })
+            created += 1
+            existing.append(lot.id)
+        # Lotes con exit_date este mes que siguen asignados a esta suscripción (devolución reciente)
+        with_exit = Lot.search([
+            ('active_subscription_id', '=', self.id),
+            ('exit_date', '>=', first),
+            ('exit_date', '<=', last),
+            ('id', 'not in', existing),
+        ])
+        for lot in with_exit:
+            entry_val = getattr(lot, 'entry_date', None) or getattr(lot, 'last_entry_date_display', None)
+            exit_val = getattr(lot, 'exit_date', None)
+            if not exit_val:
+                continue
+            Override.create({
+                'subscription_id': self.id,
+                'lot_id': lot.id,
+                'entry_date': entry_val,
+                'exit_date': exit_val,
+            })
+            created += 1
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Ajustes del mes'),
+                'message': _('Se añadieron %s línea(s) en Ajustes de fechas por serial para el mes en curso.') % created,
+                'type': 'success' if created else 'info',
+                'sticky': False,
+            },
+        }
+
+    def action_confirm_lot_date_overrides(self):
+        """Confirma los ajustes de fechas. Ver Detalles y el facturable usan las fechas de esta tabla al abrirlos (no se invalida la lista para evitar "Registro faltante")."""
+        self.ensure_one()
+        self.flush_recordset()
+        for ov in self.lot_date_override_ids:
+            ov.flush_recordset()
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Fechas confirmadas'),
+                'message': _('Ver Detalles y el facturable usarán las fechas de esta tabla. Abra de nuevo Ver Detalles para verlas.'),
+                'type': 'success',
+                'sticky': False,
+            },
+        }
+
     def action_open_monthly_billable(self):
         """Abre la lista de facturables mensuales guardados de esta suscripción."""
         self.ensure_one()
@@ -2429,7 +2514,8 @@ class SubscriptionSubscription(models.Model):
         return (entry, exit_)
 
     def _save_monthly_billable_license_details(self, billable_line, grouped_product, Detail):
-        """Guarda detalles por licencia: asignados + filas vacías (igual que Ver Detalles)."""
+        """Guarda detalles por licencia: misma lógica que Ver Detalles (por asignación, así cada tipo de licencia conserva su nombre).
+        Ej.: Microsoft y Office 365 muestra líneas por tipo: Exchange Basic, Exchange Standard, Office 365 E3, etc."""
         category_name = grouped_product.license_category or ''
         total_qty = max(1, int(grouped_product.quantity or 0))
         cost_per_unit = (grouped_product.cost or 0) / float(total_qty) if total_qty else 0
@@ -2450,66 +2536,74 @@ class SubscriptionSubscription(models.Model):
         if self.location_id:
             license_domain.append(('location_id', '=', self.location_id.id))
         active_licenses = self.env['license.assignment'].search(license_domain)
-        lot_ids = []
+        Quant = self.env['stock.quant']
+        assigned_count = 0
+        default_service_name = category_name
+        # Igual que Ver Detalles: por cada asignación de la categoría, nombre = producto de esa asignación (tipo: Exchange Basic, etc.)
         for la in active_licenses:
             if not la.license_id:
                 continue
             lic_cat = (la.license_id.name.name if la.license_id.name else 'Sin Categoría')
             if lic_cat != category_name:
                 continue
+            product = la.license_id.product_id
+            service_name = (product.display_name or product.name or category_name) if product else category_name
+            if default_service_name == category_name and product:
+                default_service_name = product.display_name or product.name or category_name
+            qty = int(la.quantity or 0)
+            if qty <= 0:
+                continue
+            equipment_lots = []
             if 'license.equipment' in self.env:
                 for eq in self.env['license.equipment'].search([
                     ('assignment_id', '=', la.id),
                     ('state', '=', 'assigned'),
                     ('lot_id', '!=', False),
                 ]):
-                    if eq.lot_id and eq.lot_id.id not in lot_ids:
-                        lot_ids.append(eq.lot_id.id)
-        service_line_name = category_name
-        for la in active_licenses:
-            if not la.license_id or (la.license_id.name.name if la.license_id.name else '') != category_name:
-                continue
-            if la.license_id.product_id:
-                service_line_name = la.license_id.product_id.display_name or la.license_id.product_id.name
-                break
-        Quant = self.env['stock.quant']
-        assigned_count = 0
-        if lot_ids:
-            quants = Quant.search([
-                ('location_id', 'child_of', self.location_id.id),
-                ('lot_id', 'in', lot_ids),
-                ('quantity', '>', 0),
-            ])
-            for q in quants:
-                svc = getattr(q, 'license_service_name', None) or category_name
-                if svc and service_line_name == category_name:
-                    service_line_name = svc
-                lot = q.lot_id
-                hardware_name = q.product_id.display_name if q.product_id else ''
+                    if eq.lot_id:
+                        equipment_lots.append(eq.lot_id)
+            # Una fila por lote asignado a esta asignación (mismo tipo que en vivo)
+            if equipment_lots:
+                quants = Quant.search([
+                    ('location_id', 'child_of', self.location_id.id),
+                    ('lot_id', 'in', [l.id for l in equipment_lots]),
+                    ('quantity', '>', 0),
+                ])
+                seen_lot_ids = set()
+                for q in quants:
+                    if not q.lot_id or q.lot_id.id in seen_lot_ids:
+                        continue
+                    seen_lot_ids.add(q.lot_id.id)
+                    lot = q.lot_id
+                    hardware_name = q.product_id.display_name if q.product_id else ''
+                    Detail.create({
+                        'billable_line_id': billable_line.id,
+                        'location_id': q.location_id.id if q.location_id else self.location_id.id,
+                        'lot_id': lot.id,
+                        'lot_name': lot.name or '',
+                        'product_name': hardware_name,
+                        'license_service_name': service_name,
+                        'inventory_plate': getattr(lot, 'inventory_plate', None) or '',
+                        'cost_renting': cost_per_unit,
+                    })
+                    assigned_count += 1
+            # Filas no asignadas para esta licencia (mismo tipo)
+            num_assigned = len(equipment_lots)
+            missing = qty - num_assigned
+            for _dummy in range(missing):
                 Detail.create({
                     'billable_line_id': billable_line.id,
-                    'location_id': q.location_id.id if q.location_id else self.location_id.id,
-                    'lot_id': lot.id if lot else False,
-                    'lot_name': lot.name if lot else '',
-                    'product_name': hardware_name,
-                    'license_service_name': svc,
-                    'inventory_plate': getattr(lot, 'inventory_plate', None) or '',
+                    'location_id': location_id,
+                    'license_service_name': service_name,
                     'cost_renting': cost_per_unit,
                 })
                 assigned_count += 1
-            if not quants and active_licenses:
-                for la in active_licenses:
-                    if not la.license_id or (la.license_id.name.name if la.license_id.name else '') != category_name:
-                        continue
-                    if la.license_id.product_id:
-                        service_line_name = la.license_id.product_id.display_name or la.license_id.product_id.name
-                        break
-        location_id = self.location_id.id if self.location_id else False
+        # Si no hubo ninguna asignación con cantidad, filas genéricas
         for _dummy in range(total_qty - assigned_count):
             Detail.create({
                 'billable_line_id': billable_line.id,
                 'location_id': location_id,
-                'license_service_name': service_line_name,
+                'license_service_name': default_service_name,
                 'cost_renting': cost_per_unit,
             })
 

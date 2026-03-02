@@ -28,6 +28,7 @@ class SubscriptionMonthlyBillable(models.Model):
     total_amount = fields.Monetary(
         string='Total Mensual',
         currency_field='currency_id',
+        digits=(16, 2),
         readonly=True,
     )
     currency_id = fields.Many2one(
@@ -228,7 +229,7 @@ class SubscriptionMonthlyBillableLine(models.Model):
             'view_mode': 'list',
             'views': [(view_id, 'list')],
             'domain': [('billable_line_id', '=', self.id)],
-            'context': {'create': False, 'edit': False, 'delete': False},
+            'context': {'create': False, 'edit': False, 'delete': True},
         }
 
 

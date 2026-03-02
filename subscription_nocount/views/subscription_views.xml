@@ -430,6 +430,11 @@
                             </field>
                         </page>
                         <page string="Ajustes de fechas por serial" name="lot_date_overrides">
+                            <div class="text-muted mb-2" style="margin-bottom: 8px;">
+                                Cuando un producto sale de la ubicación del cliente (devolución o cambio de suscripción), aquí aparece una línea con fecha de activación y final. Solo confirme o corrija las fechas; Ver Detalles y el facturable usan estos valores. Si ya hizo movimientos este mes antes de actualizar, use el botón «Rellenar ajustes del mes en curso» para cargarlos aquí.
+                            </div>
+                            <button name="action_fill_lot_date_overrides_current_month" string="Rellenar ajustes del mes en curso" type="object" class="btn-secondary"/>
+                            <button name="action_confirm_lot_date_overrides" string="Confirmar fechas" type="object" class="btn-primary"/>
                             <field name="lot_date_override_ids" nolabel="1">
                                 <list create="1" delete="1" edit="1">
                                     <field name="lot_id" options="{'no_create': True}"/>
@@ -972,7 +977,7 @@
         <field name="name">subscription.monthly.billable.line.detail.equipment.list</field>
         <field name="model">subscription.monthly.billable.line.detail</field>
         <field name="arch" type="xml">
-            <list string="Detalles (equipos)" create="false" edit="false" delete="false">
+            <list string="Detalles (equipos)" create="false" edit="false" delete="true">
                 <field name="product_name" string="Producto"/>
                 <field name="inventory_plate" string="Placa de Inventario"/>
                 <field name="lot_name" string="Número de serie/lote"/>
