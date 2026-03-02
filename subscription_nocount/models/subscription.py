@@ -1039,14 +1039,41 @@ class SubscriptionSubscription(models.Model):
             _logger.debug('No hay lista de precios para el cliente, usando precio de lista del producto')
             return product.lst_price
         
-        # PRIORIDAD 1: Si hay plan recurrente, buscar precio recurrente específico en sale.subscription.pricing
+        # PRIORIDAD 1: Si hay plan recurrente, buscar precio recurrente
         if plan:
             _logger.info('🔍 Buscando precio recurrente para producto %s con plan %s en pricelist %s', 
                         product.display_name, plan.name, pricelist.display_name)
             
             recurring_price = False
+
+            # Odoo 19: precios recurrentes están en product.pricelist.item con plan_id (no en sale.subscription.pricing)
+            PricelistItem = self.env['product.pricelist.item']
+            if 'plan_id' in PricelistItem._fields and 'pricelist_id' in PricelistItem._fields:
+                try:
+                    domain_19 = [
+                        ('pricelist_id', '=', pricelist.id),
+                        ('plan_id', '=', plan.id),
+                    ]
+                    if 'product_tmpl_id' in PricelistItem._fields:
+                        item_19 = PricelistItem.search(domain_19 + [('product_tmpl_id', '=', product.product_tmpl_id.id)], limit=1)
+                    else:
+                        item_19 = PricelistItem.search(domain_19 + [('product_id', '=', product.id)], limit=1)
+                    if item_19 and item_19[0].price is not None:
+                        price_value = float(item_19[0].price)
+                        pricing_currency = getattr(item_19[0], 'currency_id', None) and item_19[0].currency_id or pricelist.currency_id
+                        if pricing_currency and pricing_currency.id != pricelist.currency_id.id and price_value > 0:
+                            try:
+                                price_value = pricing_currency._convert(
+                                    price_value, pricelist.currency_id, self.env.company, fields.Date.today()
+                                )
+                            except Exception:
+                                pass
+                        _logger.info('✅ Precio recurrente (Odoo 19 product.pricelist.item): %s para producto %s', price_value, product.display_name)
+                        return price_value
+                except Exception as e:
+                    _logger.debug('Búsqueda Odoo 19 product.pricelist.item: %s', str(e))
             
-            # Buscar en sale.subscription.pricing (modelo estándar de Odoo para precios recurrentes)
+            # Buscar en sale.subscription.pricing (Odoo 18; en Odoo 19 no existe)
             if 'sale.subscription.pricing' in self.env:
                 try:
                     PricingModel = self.env['sale.subscription.pricing']
@@ -4310,15 +4337,11 @@ class SubscriptionProductGrouped(models.Model):
                     _logger.info('💰 Prorrateo producto %s: %s seriales, mes %s/%s, costo total=%s (suma Costo Días En Sitio)',
                                  record.product_id.display_name, len(lots_for_prorate), month, year, record.cost)
                 else:
-                    # Sin prorrateo: costo = precio mensual * cantidad
-                    price = record.subscription_id._get_price_for_product(
-                        record.product_id,
-                        float(record.quantity)
-                    ) or price_monthly * float(record.quantity)
-                    record.cost = float_round(price * float(record.quantity), precision_digits=2)
+                    # Sin prorrateo: costo = precio unitario mensual * cantidad (price_monthly ya es por 1 unidad)
+                    record.cost = float_round((price_monthly or 0.0) * float(record.quantity), precision_digits=2)
                     record.cost_currency_id = record.subscription_id.currency_id.id
-                    _logger.info('💰 Costo producto %s: %s (precio: %s, cantidad: %s)',
-                                record.product_id.display_name, record.cost, price, record.quantity)
+                    _logger.info('💰 Costo producto %s: %s (precio unit. mensual: %s, cantidad: %s)',
+                                record.product_id.display_name, record.cost, price_monthly, record.quantity)
             except Exception:
                 # Si hay cualquier error, dejar en 0
                 record.cost = 0.0
