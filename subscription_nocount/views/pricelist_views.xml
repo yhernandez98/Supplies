@@ -1,23 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Odoo 19: Precios recurrentes = product.pricelist.item con plan_id (pestaña Recurring Prices en lista de precios).
-         Añadimos columnas Cantidad y Moneda a esa lista. -->
+    <!-- Odoo 19: Precios recurrentes = product.pricelist.item con plan_id (pestaña Recurring Prices).
+         Añadimos columnas Cantidad y Moneda para discriminar COP/USD (suscripciones dependen de esto). -->
     <record id="view_pricelist_form_inherit_currency" model="ir.ui.view">
         <field name="name">product.pricelist.form.subscription_nocount.currency</field>
         <field name="model">product.pricelist</field>
         <field name="inherit_id" ref="sale_subscription.product_pricelist_view"/>
         <field name="priority" eval="25"/>
         <field name="arch" type="xml">
-            <!-- Columna Cantidad (client_quantity) después de plan_id -->
-            <xpath expr="//list[.//field[@name='plan_id']]//field[@name='plan_id']" position="after">
+            <!-- Lista dentro de la pestaña "Recurring Prices" (subscription_item_ids) -->
+            <xpath expr="//field[@name='subscription_item_ids']/list/field[@name='plan_id']" position="after">
                 <field name="client_quantity" string="Cantidad" readonly="1"/>
             </xpath>
-            <!-- Columna Moneda después de price -->
-            <xpath expr="//list[.//field[@name='plan_id']]//field[@name='price']" position="after">
-                <field name="currency_id" string="Moneda"
-                       domain="[('name', 'in', ['COP', 'USD'])]"
-                       options="{'no_create': True}"/>
+            <xpath expr="//field[@name='subscription_item_ids']/list/field[@name='price']" position="after">
+                <field name="currency_id" string="Moneda" optional="show"
+                       options="{'no_create': True, 'no_open': True}"/>
             </xpath>
+        </field>
+    </record>
+
+    <!-- Formulario de línea de precio recurrente: mostrar Moneda para poder editar COP/USD al abrir una línea -->
+    <record id="view_pricelist_item_form_recurring_currency" model="ir.ui.view">
+        <field name="name">product.pricelist.item.form.recurring.currency</field>
+        <field name="model">product.pricelist.item</field>
+        <field name="inherit_id" ref="sale_subscription.product_pricelist_item_form_view_recurring"/>
+        <field name="arch" type="xml">
+            <field name="plan_id" position="after">
+                <field name="currency_id" string="Moneda" domain="[('name', 'in', ['COP', 'USD'])]" options="{'no_create': True}"/>
+            </field>
         </field>
     </record>
 </odoo>
