@@ -2582,6 +2582,7 @@ class SubscriptionSubscription(models.Model):
                         'lot_id': lot.id,
                         'lot_name': lot.name or '',
                         'product_name': hardware_name,
+                        'license_product_id': product.id if product else False,
                         'license_service_name': service_name,
                         'inventory_plate': getattr(lot, 'inventory_plate', None) or '',
                         'cost_renting': cost_per_unit,
@@ -2594,6 +2595,7 @@ class SubscriptionSubscription(models.Model):
                 Detail.create({
                     'billable_line_id': billable_line.id,
                     'location_id': location_id,
+                    'license_product_id': product.id if product else False,
                     'license_service_name': service_name,
                     'cost_renting': cost_per_unit,
                 })
@@ -2697,6 +2699,18 @@ class SubscriptionSubscription(models.Model):
             active_id=self.id,
             active_ids=[self.id],
         ).create(move_vals)
+        # TRM del mes siguiente al facturable (misma lógica que facturable guardado / Aplicar TRM)
+        trm_rate = None
+        if billable.reference_year and billable.reference_month and 1 <= billable.reference_month <= 12:
+            trm_month = billable.reference_month + 1
+            trm_year = billable.reference_year
+            if trm_month > 12:
+                trm_month = 1
+                trm_year += 1
+            trm_date = datetime.date(trm_year, trm_month, 1)
+            if 'license.trm' in self.env:
+                trm_rate = self.env['license.trm'].get_trm_for_date(trm_date)
+        trm_rate = (trm_rate or 0.0) if trm_rate else 0.0
         # Añadir líneas con contexto explícito de suscripción (las líneas heredan subscription_id del move)
         grouped_by_business = {}
         for line in billable.line_ids:
@@ -2705,7 +2719,6 @@ class SubscriptionSubscription(models.Model):
             if key not in grouped_by_business:
                 grouped_by_business[key] = {'business_line': bl, 'lines': []}
             grouped_by_business[key]['lines'].append(line)
-        # Crear líneas sin subscription_id: la FK en account.move.line apunta a sale_order, no a subscription.subscription
         MoveLine = self.env['account.move.line'].with_context(
             active_model='account.move',
             active_id=move.id,
@@ -2719,7 +2732,7 @@ class SubscriptionSubscription(models.Model):
                     'name': g['business_line'].name,
                 })
             for line in g['lines']:
-                # Licencias con detalles: una línea de factura por tipo (Exchange Basic, Office 365 E3, etc.)
+                # Licencias con detalles: una línea por tipo; nombre y precio desde lista del cliente + TRM (igual que facturable guardado)
                 if line.is_license and line.detail_ids:
                     by_type = {}
                     for d in line.detail_ids:
@@ -2730,14 +2743,24 @@ class SubscriptionSubscription(models.Model):
                     for type_name, details in by_type.items():
                         qty = len(details)
                         total = sum((d.cost_renting or 0.0) for d in details)
-                        price_unit = total / float(qty) if qty else 0.0
+                        fallback_price = total / float(qty) if qty else 0.0
+                        # Producto del tipo (guardado al crear el detalle): para nombre y precio desde lista + TRM
+                        product = None
+                        if hasattr(details[0], 'license_product_id') and details[0].license_product_id:
+                            product = details[0].license_product_id
+                        if product:
+                            price_unit = self._get_license_unit_price_cop(product, trm_rate) if trm_rate and trm_rate > 0 else fallback_price
+                            name_display = product.display_name or type_name
+                        else:
+                            price_unit = fallback_price
+                            name_display = type_name
                         tax_ids = []
-                        if line.product_id and line.product_id.taxes_id:
-                            tax_ids = [(6, 0, line.product_id.taxes_id.ids)]
+                        if (product or line.product_id) and (product or line.product_id).taxes_id:
+                            tax_ids = [(6, 0, (product or line.product_id).taxes_id.ids)]
                         MoveLine.create({
                             'move_id': move.id,
-                            'product_id': line.product_id.id if line.product_id else False,
-                            'name': type_name,
+                            'product_id': (product.id if product else line.product_id.id) if (product or line.product_id) else False,
+                            'name': name_display,
                             'quantity': float_round(float(qty), precision_digits=2),
                             'price_unit': float_round(price_unit, precision_digits=2),
                             'tax_ids': tax_ids,

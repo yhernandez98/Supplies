@@ -254,6 +254,12 @@ class SubscriptionMonthlyBillableLineDetail(models.Model):
     lot_id = fields.Many2one('stock.lot', string='Serial/Lote', readonly=True)
     lot_name = fields.Char(string='Número de serie/lote', readonly=True)
     product_name = fields.Char(string='Producto', readonly=True, help='Equipo/hardware (licencias) o producto (equipos renting).')
+    license_product_id = fields.Many2one(
+        'product.product',
+        string='Producto licencia',
+        readonly=True,
+        help='Producto del tipo de licencia (proforma: nombre y precio desde lista del cliente + TRM).',
+    )
     license_service_name = fields.Char(
         string='Licencia/Servicio Asignado',
         readonly=True,
