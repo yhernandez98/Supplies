@@ -1325,7 +1325,7 @@ class SubscriptionSubscription(models.Model):
             except Exception:
                 pass
 
-        # 3) Búsqueda directa
+        # 3) Búsqueda directa: product_tmpl_id → product_id → categoría (mismo orden que precio)
         PricelistItem = self.env['product.pricelist.item']
         if 'plan_id' in PricelistItem._fields and 'pricelist_id' in PricelistItem._fields:
             try:
@@ -1334,17 +1334,25 @@ class SubscriptionSubscription(models.Model):
                     domain_base.append(('plan_id', '=', plan.id))
                 else:
                     domain_base.append(('plan_id', '!=', False))
-                item = PricelistItem.search(
+                item = PricelistItem.with_context(active_test=False).search(
                     domain_base + [('product_tmpl_id', '=', product.product_tmpl_id.id)],
                     order='plan_id',
                     limit=1,
                 )
                 if not item and 'product_id' in PricelistItem._fields:
-                    item = PricelistItem.search(
+                    item = PricelistItem.with_context(active_test=False).search(
                         domain_base + [('product_id', '=', product.id)],
                         order='plan_id',
                         limit=1,
                     )
+                if not item and 'categ_id' in PricelistItem._fields:
+                    prod_categ = (product.product_tmpl_id.categ_id or getattr(product, 'categ_id', None)) if product else None
+                    if prod_categ and prod_categ.id:
+                        item = PricelistItem.with_context(active_test=False).search(
+                            domain_base + [('categ_id', 'parent_of', prod_categ.id)],
+                            order='plan_id',
+                            limit=1,
+                        )
                 return item[0] if item else None
             except Exception:
                 pass
@@ -1356,8 +1364,23 @@ class SubscriptionSubscription(models.Model):
         item = self._get_recurring_pricelist_item(product, plan)
         if item and 'currency_id' in item._fields and item.currency_id and item.currency_id.id:
             return item.currency_id
+        # Ítem encontrado pero sin currency_id: intentar ítem por categoría que sí tenga moneda (Precios recurrentes)
         partner = self.partner_id
         pricelist = partner.property_product_pricelist if partner else False
+        if pricelist and plan and 'plan_id' in self.env['product.pricelist.item']._fields and 'categ_id' in self.env['product.pricelist.item']._fields:
+            prod_categ = (product.product_tmpl_id.categ_id or getattr(product, 'categ_id', None)) if product else None
+            if prod_categ and prod_categ.id:
+                try:
+                    by_categ = self.env['product.pricelist.item'].with_context(active_test=False).search([
+                        ('pricelist_id', '=', pricelist.id),
+                        ('plan_id', '=', plan.id),
+                        ('categ_id', 'parent_of', prod_categ.id),
+                    ], limit=5)
+                    for c in by_categ:
+                        if getattr(c, 'currency_id', None) and c.currency_id.id:
+                            return c.currency_id
+                except Exception:
+                    pass
         if pricelist:
             return pricelist.currency_id or self.currency_id or self.env.company.currency_id
         return self.currency_id or self.env.company.currency_id
@@ -4435,52 +4458,15 @@ class SubscriptionProductGrouped(models.Model):
                                   record.product_id.display_name, record.product_id.id, str(e), exc_info=True)
                     price_monthly = record.product_id.lst_price or 0.0
 
-                # Moneda: igual que Odoo 18 con sale.subscription.pricing, pero en Odoo 19 es product.pricelist.item
-                # Buscar ítem recurrente (pricelist_id + plan_id + producto) y leer currency_id del ítem
-                cost_currency_id = record.subscription_id.currency_id.id if record.subscription_id and record.subscription_id.currency_id else company_currency_id
+                # Moneda: mismo ítem que el precio (única fuente: _get_currency_for_product_price)
                 plan = record.subscription_id.plan_id if record.subscription_id else None
-                if pricelist and ('plan_id' in self.env['product.pricelist.item']._fields):
-                    try:
-                        base_domain = [('pricelist_id', '=', pricelist.id)]
-                        if plan:
-                            base_domain.append(('plan_id', '=', plan.id))
-                        else:
-                            base_domain.append(('plan_id', '!=', False))
-                        # Buscar ítem: 1) por variante 2) por plantilla 3) por categoría (Aplicar a = Categoría)
-                        # Entre varios, preferir el que tenga currency_id (USD/COP del ítem)
-                        candidates = self.env['product.pricelist.item'].with_context(active_test=False)
-                        if 'product_id' in self.env['product.pricelist.item']._fields:
-                            by_variant = self.env['product.pricelist.item'].with_context(active_test=False).search(
-                                base_domain + [('product_id', '=', record.product_id.id)], limit=10
-                            )
-                            candidates = by_variant
-                        if not candidates:
-                            by_tmpl = self.env['product.pricelist.item'].with_context(active_test=False).search(
-                                base_domain + [('product_tmpl_id', '=', record.product_id.product_tmpl_id.id)], limit=10
-                            )
-                            candidates = by_tmpl
-                        if not candidates and 'categ_id' in self.env['product.pricelist.item']._fields:
-                            prod_categ = (record.product_id.product_tmpl_id.categ_id or record.product_id.categ_id) if record.product_id else None
-                            if prod_categ and prod_categ.id:
-                                by_categ = self.env['product.pricelist.item'].with_context(active_test=False).search(
-                                    base_domain + [('categ_id', 'parent_of', prod_categ.id)], limit=10
-                                )
-                                candidates = by_categ
-                        for item in candidates:
-                            item_currency_id = None
-                            if 'currency_id' in item._fields:
-                                if item.currency_id and item.currency_id.id:
-                                    item_currency_id = item.currency_id.id
-                                if item_currency_id is None:
-                                    row = item.read(['currency_id'])[0]
-                                    raw = row.get('currency_id')
-                                    if raw:
-                                        item_currency_id = raw[0] if isinstance(raw, (list, tuple)) else int(raw)
-                            if item_currency_id:
-                                cost_currency_id = item_currency_id
-                                break
-                    except Exception:
-                        pass
+                cost_currency_id = record.subscription_id.currency_id.id if record.subscription_id and record.subscription_id.currency_id else company_currency_id
+                try:
+                    cost_curr = record.subscription_id._get_currency_for_product_price(record.product_id, plan)
+                    if cost_curr and cost_curr.id:
+                        cost_currency_id = cost_curr.id
+                except Exception:
+                    pass
                 # Nunca dejar cost_currency_id False (evita error en lista computeAggregates: .id de undefined)
                 if not cost_currency_id:
                     cost_currency_id = record.subscription_id.currency_id.id if record.subscription_id and record.subscription_id.currency_id else company_currency_id
