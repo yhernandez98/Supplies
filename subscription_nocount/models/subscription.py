@@ -1282,44 +1282,50 @@ class SubscriptionSubscription(models.Model):
         _logger.debug('💰 Usando precio de lista del producto: %s', product.lst_price)
         return product.lst_price
 
-    def _get_currency_for_product_price(self, product, plan=None):
-        """Devuelve la moneda en que está definido el precio del producto en la lista de precios.
-        Usado para mostrar cost_currency_id correcto (USD/COP) en PRODUCTOS AGRUPADOS.
-        Lee desde subscription_item_ids de la pricelist (mismos ítems que ve el usuario) o por búsqueda."""
+    def _get_recurring_pricelist_item(self, product, plan=None):
+        """Devuelve el ítem de lista de precios (product.pricelist.item) usado para el precio recurrente
+        de este producto y plan, o None. Misma lógica que el cálculo del precio para garantizar
+        que precio y moneda salgan del mismo ítem (Odoo 19)."""
         self.ensure_one()
         partner = self.partner_id
         pricelist = partner.property_product_pricelist if partner else False
         if not pricelist:
-            return self.currency_id or self.env.company.currency_id
+            return None
+        use_recurring = bool(plan) or getattr(product, 'recurring_invoice', False)
+        if not use_recurring:
+            return None
 
-        def _currency_from_item(item):
-            """Lee currency_id del ítem (campo de subscription_nocount)."""
-            if not item:
-                return None
-            if 'currency_id' not in item._fields:
-                return None
-            c = item.currency_id
-            return c if (c and c.id) else None
+        plan_id = plan.id if plan else None
 
-        # 1) Mismo origen que la UI: ítems recurrentes de la pricelist (subscription_item_ids)
-        if hasattr(pricelist, 'subscription_item_ids') and pricelist.subscription_item_ids:
+        # 1) API nativa Odoo 19 (mismo origen que el precio)
+        template = product.product_tmpl_id if product else None
+        if template and hasattr(template, '_get_recurring_pricing'):
             try:
-                plan_id = plan.id if plan else None
-                for item in pricelist.subscription_item_ids:
-                    if item.product_tmpl_id and item.product_tmpl_id.id == product.product_tmpl_id.id:
-                        if plan_id is None or (item.plan_id and item.plan_id.id == plan_id):
-                            curr = _currency_from_item(item)
-                            if curr:
-                                return curr
-                    if getattr(item, 'product_id', None) and item.product_id and item.product_id.id == product.id:
-                        if plan_id is None or (item.plan_id and item.plan_id.id == plan_id):
-                            curr = _currency_from_item(item)
-                            if curr:
-                                return curr
+                pricing_item = template._get_recurring_pricing(
+                    pricelist=pricelist,
+                    variant=product,
+                    plan_id=plan_id,
+                    quantity=1.0,
+                )
+                if pricing_item:
+                    return pricing_item
             except Exception:
                 pass
 
-        # 2) Búsqueda directa en product.pricelist.item (por si no hay subscription_item_ids)
+        # 2) Ítems recurrentes de la pricelist (subscription_item_ids = lo que ve el usuario)
+        if hasattr(pricelist, 'subscription_item_ids') and pricelist.subscription_item_ids:
+            try:
+                for item in pricelist.subscription_item_ids:
+                    if item.product_tmpl_id and item.product_tmpl_id.id == product.product_tmpl_id.id:
+                        if plan_id is None or (item.plan_id and item.plan_id.id == plan_id):
+                            return item
+                    if getattr(item, 'product_id', None) and item.product_id and item.product_id.id == product.id:
+                        if plan_id is None or (item.plan_id and item.plan_id.id == plan_id):
+                            return item
+            except Exception:
+                pass
+
+        # 3) Búsqueda directa
         PricelistItem = self.env['product.pricelist.item']
         if 'plan_id' in PricelistItem._fields and 'pricelist_id' in PricelistItem._fields:
             try:
@@ -1339,14 +1345,22 @@ class SubscriptionSubscription(models.Model):
                         order='plan_id',
                         limit=1,
                     )
-                if item:
-                    curr = _currency_from_item(item[0])
-                    if curr:
-                        return curr
+                return item[0] if item else None
             except Exception:
                 pass
+        return None
 
-        return pricelist.currency_id or self.currency_id or self.env.company.currency_id
+    def _get_currency_for_product_price(self, product, plan=None):
+        """Devuelve la moneda del precio (para cost_currency_id). Usa el mismo ítem que el precio."""
+        self.ensure_one()
+        item = self._get_recurring_pricelist_item(product, plan)
+        if item and 'currency_id' in item._fields and item.currency_id and item.currency_id.id:
+            return item.currency_id
+        partner = self.partner_id
+        pricelist = partner.property_product_pricelist if partner else False
+        if pricelist:
+            return pricelist.currency_id or self.currency_id or self.env.company.currency_id
+        return self.currency_id or self.env.company.currency_id
 
     def _sync_subscription_lines(self, products, remove_missing=False, track_usage=False, sync_datetime=None):
         """Update or create lines based on provided products data."""
@@ -4383,22 +4397,52 @@ class SubscriptionProductGrouped(models.Model):
                 if not pricelist and record.subscription_id.partner_id:
                     pricelist = record.subscription_id.partner_id.property_product_pricelist
                 
-                # Precio mensual unitario (para 1 unidad)
-                try:
-                    price_monthly = record.subscription_id._get_price_for_product(
-                        record.product_id,
-                        1.0
-                    ) or 0.0
-                except Exception as e:
-                    _logger.error('❌ Error obteniendo precio para producto %s (ID: %s): %s',
-                                  record.product_id.display_name, record.product_id.id, str(e), exc_info=True)
-                    price_monthly = record.product_id.lst_price or 0.0
-
-                # Moneda del precio según la lista de precios (USD/COP del ítem recurrente)
-                price_currency = record.subscription_id._get_currency_for_product_price(
-                    record.product_id, record.subscription_id.plan_id if record.subscription_id else None
-                )
-                cost_currency_id = price_currency.id if price_currency else (record.subscription_id.currency_id.id if record.subscription_id else False)
+                # Precio mensual y moneda desde el MISMO ítem recurrente (Odoo 19: así la moneda coincide)
+                plan = record.subscription_id.plan_id if record.subscription_id else None
+                recurring_item = record.subscription_id._get_recurring_pricelist_item(
+                    record.product_id, plan
+                ) if record.subscription_id else None
+                price_monthly = 0.0
+                cost_currency_id = record.subscription_id.currency_id.id if record.subscription_id else False
+                got_from_recurring_item = False
+                if recurring_item and hasattr(recurring_item, '_compute_price'):
+                    try:
+                        price_monthly = recurring_item._compute_price(
+                            record.product_id,
+                            1.0,
+                            uom=record.product_id.uom_id,
+                            date=fields.Datetime.now(),
+                            currency=pricelist.currency_id,
+                            plan_id=plan.id if plan else None,
+                        )
+                        if price_monthly is not None:
+                            try:
+                                price_monthly = float(price_monthly)
+                            except (TypeError, ValueError):
+                                price_monthly = 0.0
+                        else:
+                            price_monthly = 0.0
+                        got_from_recurring_item = True
+                        # Moneda del mismo ítem (subscription_nocount añade currency_id a product.pricelist.item)
+                        if getattr(recurring_item, 'currency_id', None) and recurring_item.currency_id.id:
+                            cost_currency_id = recurring_item.currency_id.id
+                        else:
+                            cost_currency_id = pricelist.currency_id.id if pricelist else cost_currency_id
+                    except Exception as e:
+                        _logger.debug('Precio/moneda desde ítem recurrente: %s', str(e))
+                if not got_from_recurring_item:
+                    try:
+                        price_monthly = record.subscription_id._get_price_for_product(
+                            record.product_id, 1.0
+                        ) or 0.0
+                    except Exception as e:
+                        _logger.error('❌ Error obteniendo precio para producto %s (ID: %s): %s',
+                                      record.product_id.display_name, record.product_id.id, str(e), exc_info=True)
+                        price_monthly = record.product_id.lst_price or 0.0
+                    price_currency = record.subscription_id._get_currency_for_product_price(
+                        record.product_id, plan
+                    )
+                    cost_currency_id = price_currency.id if price_currency else cost_currency_id
 
                 # Prorrateo por días: productos (no licencias) con lot_ids/lot_id.
                 # Misma fórmula que "Ver Detalles" (Costo Días En Sitio): costo = suma de (costo_diario × días_servicio) por serial,
