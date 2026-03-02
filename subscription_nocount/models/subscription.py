@@ -4360,6 +4360,25 @@ class SubscriptionProductGrouped(models.Model):
                                         price_currency = pricing_rec[0].currency_id
                                 except Exception:
                                     pass
+                            # Odoo 19: precios recurrentes en product.pricelist.item (no sale.subscription.pricing)
+                            if not price_currency and pricelist and record.subscription_id.plan_id and 'plan_id' in self.env['product.pricelist.item']._fields:
+                                try:
+                                    domain_pl = [
+                                        ('pricelist_id', '=', pricelist.id),
+                                        ('plan_id', '=', record.subscription_id.plan_id.id),
+                                        ('product_tmpl_id', '=', product.product_tmpl_id.id),
+                                    ]
+                                    pl_item = self.env['product.pricelist.item'].with_context(active_test=False).search(domain_pl, limit=1)
+                                    if not pl_item and 'product_id' in self.env['product.pricelist.item']._fields:
+                                        pl_item = self.env['product.pricelist.item'].with_context(active_test=False).search([
+                                            ('pricelist_id', '=', pricelist.id),
+                                            ('plan_id', '=', record.subscription_id.plan_id.id),
+                                            ('product_id', '=', product.id),
+                                        ], limit=1)
+                                    if pl_item and getattr(pl_item, 'currency_id', None) and pl_item.currency_id:
+                                        price_currency = pl_item.currency_id
+                                except Exception:
+                                    pass
                             if not price_currency:
                                 price_currency = pricelist.currency_id
                             unit_price_cop = unit_price
@@ -4445,11 +4464,19 @@ class SubscriptionProductGrouped(models.Model):
                             item = self.env['product.pricelist.item'].with_context(active_test=False).search(
                                 domain, limit=1
                             )
-                        if item and 'currency_id' in item._fields:
-                            row = item.read(['currency_id'])[0]
-                            raw = row.get('currency_id')
-                            if raw:
-                                cost_currency_id = raw[0] if isinstance(raw, (list, tuple)) else int(raw)
+                        if item:
+                            # Leer moneda del ítem: 1) directo del registro 2) por read() por si hay prefetch
+                            item_currency_id = None
+                            if 'currency_id' in item._fields:
+                                if item.currency_id and item.currency_id.id:
+                                    item_currency_id = item.currency_id.id
+                                if item_currency_id is None:
+                                    row = item.read(['currency_id'])[0]
+                                    raw = row.get('currency_id')
+                                    if raw:
+                                        item_currency_id = raw[0] if isinstance(raw, (list, tuple)) else int(raw)
+                            if item_currency_id:
+                                cost_currency_id = item_currency_id
                     except Exception:
                         pass
                 # Nunca dejar cost_currency_id False (evita error en lista computeAggregates: .id de undefined)

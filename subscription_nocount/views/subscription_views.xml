@@ -314,7 +314,7 @@
                                         <field name="product_display_name" string="Producto"/>
                                         <field name="business_line_id" string="Línea de negocio"/>
                                         <field name="quantity" string="Cantidad" sum="Total"/>
-                                        <field name="proyectado" string="Proyectado" widget="monetary" options="{'currency_field': 'currency_id'}" sum="Total"/>
+                                        <field name="proyectado" string="Proyectado" widget="monetary" options="{'currency_field': 'currency_id'}"/>
                                         <field name="cost" string="Costo" widget="monetary" options="{'currency_field': 'cost_currency_id'}"/>
                                         <field name="cost_currency_id" string="Moneda" options="{'no_create': True}"/>
                                         <button name="action_view_serials" type="object" string="Ver Detalles" class="btn-link" icon="fa-list" invisible="not show_view_details"/>
@@ -940,7 +940,7 @@
                                     <field name="product_display_name" string="Producto"/>
                                     <field name="business_line_id" string="Línea de negocio"/>
                                     <field name="quantity" string="Cantidad" sum="Total"/>
-                                    <field name="cost" string="Costo" widget="monetary" options="{'currency_field': 'currency_id'}" sum="Total"/>
+                                    <field name="cost" string="Costo" widget="monetary" options="{'currency_field': 'currency_id'}"/>
                                     <button name="action_view_details" type="object" string="Ver Detalles" class="btn-link" icon="fa-list"/>
                                     <field name="currency_id" column_invisible="True"/>
                                 </list>
