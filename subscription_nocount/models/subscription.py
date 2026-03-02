@@ -4265,18 +4265,27 @@ class SubscriptionProductGrouped(models.Model):
         Solo busca precios recurrentes si el producto tiene una suscripción asignada (has_subscription=True).
         Los productos sin suscripción usan el precio estándar de la lista de precios.
         Las licencias usan el costo directamente de amount_local."""
+        company_currency_id = self.env.company.currency_id.id if self.env.company else False
         for record in self:
-            # Inicializar por defecto (cost_currency_id: solo COP se suma en Total Mensual)
+            # Inicializar por defecto; nunca False para evitar error en lista (computeAggregates .id)
             record.cost = 0.0
-            record.cost_currency_id = record.subscription_id.currency_id.id if record.subscription_id else False
-            
+            record.cost_currency_id = (
+                record.subscription_id.currency_id.id
+                if record.subscription_id and record.subscription_id.currency_id
+                else company_currency_id
+            )
+
             # Si es una licencia: costo = precio unitario (TRM mes vencido) × cantidad de la línea (record.quantity)
             if record.is_license:
                 if not record.subscription_id or not record.license_category:
                     continue
                 if not record.quantity:
                     record.cost = 0.0
-                    record.cost_currency_id = record.subscription_id.currency_id.id if record.subscription_id else False
+                    record.cost_currency_id = (
+                        record.subscription_id.currency_id.id
+                        if record.subscription_id and record.subscription_id.currency_id
+                        else company_currency_id
+                    )
                     continue
                 try:
                     pricelist = record.pricelist_id
@@ -4367,16 +4376,16 @@ class SubscriptionProductGrouped(models.Model):
                     record.cost = float_round(total_cost, precision_digits=2) if total_cost > 0 else 0.0
                     if license_cost_in_usd and total_cost > 0:
                         usd_curr = self.env.ref('base.USD', raise_if_not_found=False) or self.env['res.currency'].search([('name', '=', 'USD')], limit=1)
-                        record.cost_currency_id = usd_curr.id if usd_curr else record.subscription_id.currency_id.id
+                        record.cost_currency_id = usd_curr.id if usd_curr else (record.subscription_id.currency_id.id if record.subscription_id and record.subscription_id.currency_id else company_currency_id)
                     else:
-                        record.cost_currency_id = record.subscription_id.currency_id.id
+                        record.cost_currency_id = record.subscription_id.currency_id.id if record.subscription_id and record.subscription_id.currency_id else company_currency_id
                     if total_cost > 0:
                         _logger.info('✅ Costo licencia %s: suma por asignación = %s %s',
                                      record.license_category, record.cost, 'USD' if license_cost_in_usd else 'COP')
                 except Exception as e:
                     _logger.error('❌ Error calculando costo de licencia %s: %s', record.license_category, str(e))
                     record.cost = 0.0
-                    record.cost_currency_id = record.subscription_id.currency_id.id if record.subscription_id else False
+                    record.cost_currency_id = record.subscription_id.currency_id.id if record.subscription_id and record.subscription_id.currency_id else company_currency_id
                 continue
             
             # Validaciones básicas para productos
@@ -4409,7 +4418,7 @@ class SubscriptionProductGrouped(models.Model):
 
                 # Moneda: igual que Odoo 18 con sale.subscription.pricing, pero en Odoo 19 es product.pricelist.item
                 # Buscar ítem recurrente (pricelist_id + plan_id + producto) y leer currency_id del ítem
-                cost_currency_id = record.subscription_id.currency_id.id if record.subscription_id else False
+                cost_currency_id = record.subscription_id.currency_id.id if record.subscription_id and record.subscription_id.currency_id else company_currency_id
                 plan = record.subscription_id.plan_id if record.subscription_id else None
                 if pricelist and ('plan_id' in self.env['product.pricelist.item']._fields):
                     try:
@@ -4443,9 +4452,9 @@ class SubscriptionProductGrouped(models.Model):
                                 cost_currency_id = raw[0] if isinstance(raw, (list, tuple)) else int(raw)
                     except Exception:
                         pass
-                # Nunca dejar cost_currency_id False si hay suscripción (evita error en lista: .id de undefined)
-                if not cost_currency_id and record.subscription_id and record.subscription_id.currency_id:
-                    cost_currency_id = record.subscription_id.currency_id.id
+                # Nunca dejar cost_currency_id False (evita error en lista computeAggregates: .id de undefined)
+                if not cost_currency_id:
+                    cost_currency_id = record.subscription_id.currency_id.id if record.subscription_id and record.subscription_id.currency_id else company_currency_id
 
                 # Prorrateo por días: productos (no licencias) con lot_ids/lot_id.
                 # Misma fórmula que "Ver Detalles" (Costo Días En Sitio): costo = suma de (costo_diario × días_servicio) por serial,
@@ -4506,9 +4515,9 @@ class SubscriptionProductGrouped(models.Model):
                     _logger.info('💰 Costo producto %s: %s (precio unit. mensual: %s, cantidad: %s)',
                                 record.product_id.display_name, record.cost, price_monthly, record.quantity)
             except Exception:
-                # Si hay cualquier error, dejar en 0
+                # Si hay cualquier error, dejar en 0; moneda nunca False
                 record.cost = 0.0
-                record.cost_currency_id = record.subscription_id.currency_id.id if record.subscription_id else False
+                record.cost_currency_id = record.subscription_id.currency_id.id if record.subscription_id and record.subscription_id.currency_id else company_currency_id
 
     @api.depends('subscription_id', 'product_id', 'quantity', 'is_license', 'license_category', 'subscription_id.location_id', 'cost',
                  'lot_ids', 'lot_id', 'has_subscription')
