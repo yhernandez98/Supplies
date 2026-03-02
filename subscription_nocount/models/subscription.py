@@ -4441,31 +4441,24 @@ class SubscriptionProductGrouped(models.Model):
                 plan = record.subscription_id.plan_id if record.subscription_id else None
                 if pricelist and ('plan_id' in self.env['product.pricelist.item']._fields):
                     try:
-                        domain = [
-                            ('pricelist_id', '=', pricelist.id),
-                            ('product_tmpl_id', '=', record.product_id.product_tmpl_id.id),
-                        ]
+                        base_domain = [('pricelist_id', '=', pricelist.id)]
                         if plan:
-                            domain.append(('plan_id', '=', plan.id))
+                            base_domain.append(('plan_id', '=', plan.id))
                         else:
-                            domain.append(('plan_id', '!=', False))
-                        item = self.env['product.pricelist.item'].with_context(active_test=False).search(
-                            domain, limit=1
-                        )
-                        if not item and 'product_id' in self.env['product.pricelist.item']._fields:
-                            domain = [
-                                ('pricelist_id', '=', pricelist.id),
-                                ('product_id', '=', record.product_id.id),
-                            ]
-                            if plan:
-                                domain.append(('plan_id', '=', plan.id))
-                            else:
-                                domain.append(('plan_id', '!=', False))
-                            item = self.env['product.pricelist.item'].with_context(active_test=False).search(
-                                domain, limit=1
+                            base_domain.append(('plan_id', '!=', False))
+                        # Buscar por variante primero, luego por plantilla; entre varios ítems preferir el que tenga currency_id
+                        candidates = self.env['product.pricelist.item'].with_context(active_test=False)
+                        if 'product_id' in self.env['product.pricelist.item']._fields:
+                            by_variant = self.env['product.pricelist.item'].with_context(active_test=False).search(
+                                base_domain + [('product_id', '=', record.product_id.id)], limit=5
                             )
-                        if item:
-                            # Leer moneda del ítem: 1) directo del registro 2) por read() por si hay prefetch
+                            candidates = by_variant
+                        if not candidates:
+                            by_tmpl = self.env['product.pricelist.item'].with_context(active_test=False).search(
+                                base_domain + [('product_tmpl_id', '=', record.product_id.product_tmpl_id.id)], limit=5
+                            )
+                            candidates = by_tmpl
+                        for item in candidates:
                             item_currency_id = None
                             if 'currency_id' in item._fields:
                                 if item.currency_id and item.currency_id.id:
@@ -4477,6 +4470,7 @@ class SubscriptionProductGrouped(models.Model):
                                         item_currency_id = raw[0] if isinstance(raw, (list, tuple)) else int(raw)
                             if item_currency_id:
                                 cost_currency_id = item_currency_id
+                                break
                     except Exception:
                         pass
                 # Nunca dejar cost_currency_id False (evita error en lista computeAggregates: .id de undefined)
