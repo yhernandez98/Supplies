@@ -4438,10 +4438,14 @@ class SubscriptionProductGrouped(models.Model):
                             )
                         if item and 'currency_id' in item._fields:
                             row = item.read(['currency_id'])[0]
-                            if row.get('currency_id'):
-                                cost_currency_id = row['currency_id']
+                            raw = row.get('currency_id')
+                            if raw:
+                                cost_currency_id = raw[0] if isinstance(raw, (list, tuple)) else int(raw)
                     except Exception:
                         pass
+                # Nunca dejar cost_currency_id False si hay suscripción (evita error en lista: .id de undefined)
+                if not cost_currency_id and record.subscription_id and record.subscription_id.currency_id:
+                    cost_currency_id = record.subscription_id.currency_id.id
 
                 # Prorrateo por días: productos (no licencias) con lot_ids/lot_id.
                 # Misma fórmula que "Ver Detalles" (Costo Días En Sitio): costo = suma de (costo_diario × días_servicio) por serial,
