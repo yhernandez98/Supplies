@@ -942,7 +942,8 @@ class SubscriptionSubscription(models.Model):
 
     def _get_license_unit_price_cop(self, product, trm_rate):
         """Devuelve el precio unitario en COP para un producto de licencia, usando la TRM dada.
-        Usado por el facturable guardado al aplicar TRM del mes."""
+        Usado por el facturable guardado al aplicar TRM del mes.
+        Si el precio está en USD, multiplica por trm_rate; si ya está en COP, devuelve el valor."""
         self.ensure_one()
         if not product or trm_rate is None:
             return 0.0
@@ -952,33 +953,8 @@ class SubscriptionSubscription(models.Model):
         unit_price = self._get_price_for_product(product, 1.0) or 0.0
         if unit_price <= 0:
             return 0.0
-        price_currency = None
-        if 'sale.subscription.pricing' in self.env and self.plan_id:
-            try:
-                PricingModel = self.env['sale.subscription.pricing']
-                pricing_domain = [
-                    ('pricelist_id', '=', pricelist.id),
-                    ('plan_id', '=', self.plan_id.id),
-                ]
-                if 'product_template_id' in PricingModel._fields:
-                    pricing_domain.append(('product_template_id', '=', product.product_tmpl_id.id))
-                    pricing_rec = PricingModel.search(pricing_domain, limit=1)
-                elif 'product_tmpl_id' in PricingModel._fields:
-                    pricing_domain.append(('product_tmpl_id', '=', product.product_tmpl_id.id))
-                    pricing_rec = PricingModel.search(pricing_domain, limit=1)
-                else:
-                    pricing_rec = self.env['sale.subscription.pricing']
-                if not pricing_rec and 'product_id' in PricingModel._fields:
-                    pricing_domain = [
-                        ('pricelist_id', '=', pricelist.id),
-                        ('plan_id', '=', self.plan_id.id),
-                        ('product_id', '=', product.id),
-                    ]
-                    pricing_rec = PricingModel.search(pricing_domain, limit=1)
-                if pricing_rec and len(pricing_rec) > 0 and hasattr(pricing_rec[0], 'currency_id') and pricing_rec[0].currency_id:
-                    price_currency = pricing_rec[0].currency_id
-            except Exception:
-                pass
+        # Moneda del precio: misma fuente que cost_currency_id (Odoo 18: sale.subscription.pricing; Odoo 19: product.pricelist.item)
+        price_currency = self._get_currency_for_product_price(product, self.plan_id)
         if not price_currency:
             price_currency = pricelist.currency_id
         if price_currency and price_currency.name == 'USD' and trm_rate and trm_rate > 0:
