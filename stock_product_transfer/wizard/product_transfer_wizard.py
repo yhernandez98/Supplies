@@ -211,7 +211,8 @@ class ProductTransferWizard(models.TransientModel):
                 self.lot_ids[0].name if self.lot_ids else 'N/A'
             )
             message += _('\nProducto específico creado: %s') % self.destination_product_id.display_name
-            if result.get('new_lot_name'):
+            # Odoo 19: asegurar que result es dict (evitar 'list' object has no attribute 'get')
+            if isinstance(result, dict) and result.get('new_lot_name'):
                 message += _('\nNuevo serial: %s') % result['new_lot_name']
 
             return {
@@ -1717,6 +1718,11 @@ class ProductTransferWizard(models.TransientModel):
         # PASO 7b: Restaurar asociaciones donde el genérico era COMPONENTE de otro producto (evitar doble trabajo al técnico)
         if relations_to_restore and 'stock.lot.supply.line' in self.env:
             for rel in relations_to_restore:
+                # Odoo 19: evitar .get sobre lista si el elemento no es dict
+                if not isinstance(rel, dict):
+                    _logger.warning('Saltando relación no-dict en relations_to_restore: %s', type(rel))
+                    continue
+                uom_id = rel.get('uom_id')
                 self.env.cr.execute("""
                     INSERT INTO stock_lot_supply_line 
                     (lot_id, item_type, product_id, quantity, uom_id, related_lot_id, create_uid, create_date, write_uid, write_date)
@@ -1726,7 +1732,7 @@ class ProductTransferWizard(models.TransientModel):
                     rel['item_type'],
                     rel['product_id'],
                     rel['quantity'],
-                    rel['uom_id'] if rel.get('uom_id') else None,
+                    uom_id if uom_id else None,
                     new_lot.id,
                     self.env.user.id,
                     self.env.user.id,
@@ -1866,6 +1872,9 @@ class ProductTransferWizard(models.TransientModel):
             _logger.info('🔗 Recreando %s relaciones donde el nuevo lote está asociado a productos principales (cualquier tipo)', len(relations_to_restore))
             
             for rel_data in relations_to_restore:
+                if not isinstance(rel_data, dict):
+                    _logger.warning('Saltando rel_data no-dict: %s', type(rel_data))
+                    continue
                 # Verificar que el lote principal aún existe
                 principal_lot = self.env['stock.lot'].browse(rel_data['lot_id'])
                 if not principal_lot.exists():
