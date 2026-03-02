@@ -1284,48 +1284,47 @@ class SubscriptionSubscription(models.Model):
 
     def _get_currency_for_product_price(self, product, plan=None):
         """Devuelve la moneda en que está definido el precio del producto en la lista de precios.
-        Usado para mostrar cost_currency_id correcto (USD/COP) en PRODUCTOS AGRUPADOS."""
+        Usado para mostrar cost_currency_id correcto (USD/COP) en PRODUCTOS AGRUPADOS.
+        Prioriza búsqueda directa en product.pricelist.item para leer currency_id del ítem (subscription_nocount)."""
         self.ensure_one()
         partner = self.partner_id
         pricelist = partner.property_product_pricelist if partner else False
         if not pricelist:
             return self.currency_id or self.env.company.currency_id
 
+        PricelistItem = self.env['product.pricelist.item']
+        if 'plan_id' not in PricelistItem._fields or 'pricelist_id' not in PricelistItem._fields:
+            return pricelist.currency_id or self.currency_id or self.env.company.currency_id
+
         use_recurring = bool(plan) or getattr(product, 'recurring_invoice', False)
         if use_recurring:
-            template = product.product_tmpl_id if product else None
-            if template and hasattr(template, '_get_recurring_pricing'):
-                try:
-                    pricing_item = template._get_recurring_pricing(
-                        pricelist=pricelist,
-                        variant=product,
-                        plan_id=plan.id if plan else None,
-                        quantity=1.0,
+            try:
+                # Búsqueda directa del ítem recurrente (misma lógica que el precio) para leer currency_id
+                domain_base = [('pricelist_id', '=', pricelist.id)]
+                if plan:
+                    domain_base.append(('plan_id', '=', plan.id))
+                else:
+                    domain_base.append(('plan_id', '!=', False))
+                # Por plantilla
+                item = PricelistItem.search(
+                    domain_base + [('product_tmpl_id', '=', product.product_tmpl_id.id)],
+                    order='plan_id',
+                    limit=1,
+                )
+                if not item and 'product_id' in PricelistItem._fields:
+                    item = PricelistItem.search(
+                        domain_base + [('product_id', '=', product.id)],
+                        order='plan_id',
+                        limit=1,
                     )
-                    if pricing_item:
-                        item_currency = getattr(pricing_item, 'currency_id', None) and pricing_item.currency_id
-                        if item_currency:
-                            return item_currency
-                except Exception:
-                    pass
-            PricelistItem = self.env['product.pricelist.item']
-            if plan and 'plan_id' in PricelistItem._fields and 'pricelist_id' in PricelistItem._fields:
-                try:
-                    domain_19 = [
-                        ('pricelist_id', '=', pricelist.id),
-                        ('plan_id', '=', plan.id),
-                    ]
-                    item_19 = PricelistItem.search(
-                        domain_19 + [('product_tmpl_id', '=', product.product_tmpl_id.id)], limit=1
-                    )
-                    if not item_19 and 'product_id' in PricelistItem._fields:
-                        item_19 = PricelistItem.search(domain_19 + [('product_id', '=', product.id)], limit=1)
-                    if item_19:
-                        item_currency = getattr(item_19[0], 'currency_id', None) and item_19[0].currency_id
-                        if item_currency:
-                            return item_currency
-                except Exception:
-                    pass
+                if item:
+                    # currency_id lo añade subscription_nocount en product.pricelist.item
+                    item_currency = getattr(item, 'currency_id', None)
+                    if item_currency and item_currency.id:
+                        return item_currency
+            except Exception:
+                pass
+
         return pricelist.currency_id or self.currency_id or self.env.company.currency_id
 
     def _sync_subscription_lines(self, products, remove_missing=False, track_usage=False, sync_datetime=None):
