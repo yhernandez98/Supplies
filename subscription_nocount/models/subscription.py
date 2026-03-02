@@ -1285,27 +1285,49 @@ class SubscriptionSubscription(models.Model):
     def _get_currency_for_product_price(self, product, plan=None):
         """Devuelve la moneda en que está definido el precio del producto en la lista de precios.
         Usado para mostrar cost_currency_id correcto (USD/COP) en PRODUCTOS AGRUPADOS.
-        Prioriza búsqueda directa en product.pricelist.item para leer currency_id del ítem (subscription_nocount)."""
+        Lee desde subscription_item_ids de la pricelist (mismos ítems que ve el usuario) o por búsqueda."""
         self.ensure_one()
         partner = self.partner_id
         pricelist = partner.property_product_pricelist if partner else False
         if not pricelist:
             return self.currency_id or self.env.company.currency_id
 
-        PricelistItem = self.env['product.pricelist.item']
-        if 'plan_id' not in PricelistItem._fields or 'pricelist_id' not in PricelistItem._fields:
-            return pricelist.currency_id or self.currency_id or self.env.company.currency_id
+        def _currency_from_item(item):
+            """Lee currency_id del ítem (campo de subscription_nocount)."""
+            if not item:
+                return None
+            if 'currency_id' not in item._fields:
+                return None
+            c = item.currency_id
+            return c if (c and c.id) else None
 
-        use_recurring = bool(plan) or getattr(product, 'recurring_invoice', False)
-        if use_recurring:
+        # 1) Mismo origen que la UI: ítems recurrentes de la pricelist (subscription_item_ids)
+        if hasattr(pricelist, 'subscription_item_ids') and pricelist.subscription_item_ids:
             try:
-                # Búsqueda directa del ítem recurrente (misma lógica que el precio) para leer currency_id
+                plan_id = plan.id if plan else None
+                for item in pricelist.subscription_item_ids:
+                    if item.product_tmpl_id and item.product_tmpl_id.id == product.product_tmpl_id.id:
+                        if plan_id is None or (item.plan_id and item.plan_id.id == plan_id):
+                            curr = _currency_from_item(item)
+                            if curr:
+                                return curr
+                    if getattr(item, 'product_id', None) and item.product_id and item.product_id.id == product.id:
+                        if plan_id is None or (item.plan_id and item.plan_id.id == plan_id):
+                            curr = _currency_from_item(item)
+                            if curr:
+                                return curr
+            except Exception:
+                pass
+
+        # 2) Búsqueda directa en product.pricelist.item (por si no hay subscription_item_ids)
+        PricelistItem = self.env['product.pricelist.item']
+        if 'plan_id' in PricelistItem._fields and 'pricelist_id' in PricelistItem._fields:
+            try:
                 domain_base = [('pricelist_id', '=', pricelist.id)]
                 if plan:
                     domain_base.append(('plan_id', '=', plan.id))
                 else:
                     domain_base.append(('plan_id', '!=', False))
-                # Por plantilla
                 item = PricelistItem.search(
                     domain_base + [('product_tmpl_id', '=', product.product_tmpl_id.id)],
                     order='plan_id',
@@ -1318,10 +1340,9 @@ class SubscriptionSubscription(models.Model):
                         limit=1,
                     )
                 if item:
-                    # currency_id lo añade subscription_nocount en product.pricelist.item
-                    item_currency = getattr(item, 'currency_id', None)
-                    if item_currency and item_currency.id:
-                        return item_currency
+                    curr = _currency_from_item(item[0])
+                    if curr:
+                        return curr
             except Exception:
                 pass
 
