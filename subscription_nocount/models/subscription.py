@@ -2719,7 +2719,30 @@ class SubscriptionSubscription(models.Model):
                     'name': g['business_line'].name,
                 })
             for line in g['lines']:
-                if line.product_id:
+                # Licencias con detalles: una línea de factura por tipo (Exchange Basic, Office 365 E3, etc.)
+                if line.is_license and line.detail_ids:
+                    by_type = {}
+                    for d in line.detail_ids:
+                        name = (d.license_service_name or line.product_display_name or _('Licencia')).strip() or _('Licencia')
+                        if name not in by_type:
+                            by_type[name] = []
+                        by_type[name].append(d)
+                    for type_name, details in by_type.items():
+                        qty = len(details)
+                        total = sum((d.cost_renting or 0.0) for d in details)
+                        price_unit = total / float(qty) if qty else 0.0
+                        tax_ids = []
+                        if line.product_id and line.product_id.taxes_id:
+                            tax_ids = [(6, 0, line.product_id.taxes_id.ids)]
+                        MoveLine.create({
+                            'move_id': move.id,
+                            'product_id': line.product_id.id if line.product_id else False,
+                            'name': type_name,
+                            'quantity': float_round(float(qty), precision_digits=2),
+                            'price_unit': float_round(price_unit, precision_digits=2),
+                            'tax_ids': tax_ids,
+                        })
+                else:
                     line_vals = line._prepare_invoice_line_values(self)
                     line_vals['move_id'] = move.id
                     MoveLine.create(line_vals)
