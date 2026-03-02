@@ -1039,37 +1039,75 @@ class SubscriptionSubscription(models.Model):
             _logger.debug('No hay lista de precios para el cliente, usando precio de lista del producto')
             return product.lst_price
         
-        # PRIORIDAD 1: Si hay plan recurrente, buscar precio recurrente
-        if plan:
-            _logger.info('🔍 Buscando precio recurrente para producto %s con plan %s en pricelist %s', 
-                        product.display_name, plan.name, pricelist.display_name)
-            
+        # PRIORIDAD 1: Precio recurrente (Odoo 19: API nativa; fallback búsqueda directa)
+        # Con plan o producto recurrente: usar _get_recurring_pricing + _compute_price (el .price del ítem puede ser etiqueta string)
+        use_recurring = bool(plan) or getattr(product, 'recurring_invoice', False)
+        if use_recurring:
+            _logger.info('🔍 Buscando precio recurrente para producto %s (plan: %s) en pricelist %s',
+                        product.display_name, plan.name if plan else 'cualquiera', pricelist.display_name)
             recurring_price = False
 
-            # Odoo 19: precios recurrentes están en product.pricelist.item con plan_id (no en sale.subscription.pricing)
+            # Odoo 19: API nativa en product.template (_get_recurring_pricing + _compute_price)
+            template = product.product_tmpl_id if product else None
+            if template and hasattr(template, '_get_recurring_pricing'):
+                try:
+                    pricing_item = template._get_recurring_pricing(
+                        pricelist=pricelist,
+                        variant=product,
+                        plan_id=plan.id if plan else None,
+                        quantity=qty,
+                    )
+                    if pricing_item and hasattr(pricing_item, '_compute_price'):
+                        date = fields.Datetime.now()
+                        price_value = pricing_item._compute_price(
+                            product,
+                            qty,
+                            uom=product.uom_id,
+                            date=date,
+                            currency=pricelist.currency_id,
+                            plan_id=plan.id if plan else None,
+                        )
+                        if price_value is not None:
+                            try:
+                                price_value = float(price_value)
+                            except (TypeError, ValueError):
+                                pass
+                            else:
+                                _logger.info('✅ Precio recurrente (Odoo 19 API): %s para producto %s', price_value, product.display_name)
+                                return price_value
+                except Exception as e:
+                    _logger.debug('Odoo 19 _get_recurring_pricing/_compute_price: %s', str(e))
+
+            # Fallback: búsqueda directa en product.pricelist.item y _compute_price (no usar .price, puede ser string)
             PricelistItem = self.env['product.pricelist.item']
-            if 'plan_id' in PricelistItem._fields and 'pricelist_id' in PricelistItem._fields:
+            if plan and 'plan_id' in PricelistItem._fields and 'pricelist_id' in PricelistItem._fields:
                 try:
                     domain_19 = [
                         ('pricelist_id', '=', pricelist.id),
                         ('plan_id', '=', plan.id),
                     ]
-                    if 'product_tmpl_id' in PricelistItem._fields:
-                        item_19 = PricelistItem.search(domain_19 + [('product_tmpl_id', '=', product.product_tmpl_id.id)], limit=1)
-                    else:
+                    item_19 = PricelistItem.search(
+                        domain_19 + [('product_tmpl_id', '=', product.product_tmpl_id.id)], limit=1
+                    )
+                    if not item_19 and 'product_id' in PricelistItem._fields:
                         item_19 = PricelistItem.search(domain_19 + [('product_id', '=', product.id)], limit=1)
-                    if item_19 and item_19[0].price is not None:
-                        price_value = float(item_19[0].price)
-                        pricing_currency = getattr(item_19[0], 'currency_id', None) and item_19[0].currency_id or pricelist.currency_id
-                        if pricing_currency and pricing_currency.id != pricelist.currency_id.id and price_value > 0:
+                    if item_19 and hasattr(item_19[0], '_compute_price'):
+                        price_value = item_19[0]._compute_price(
+                            product,
+                            qty,
+                            uom=product.uom_id,
+                            date=fields.Datetime.now(),
+                            currency=pricelist.currency_id,
+                            plan_id=plan.id,
+                        )
+                        if price_value is not None:
                             try:
-                                price_value = pricing_currency._convert(
-                                    price_value, pricelist.currency_id, self.env.company, fields.Date.today()
-                                )
-                            except Exception:
+                                price_value = float(price_value)
+                            except (TypeError, ValueError):
                                 pass
-                        _logger.info('✅ Precio recurrente (Odoo 19 product.pricelist.item): %s para producto %s', price_value, product.display_name)
-                        return price_value
+                            else:
+                                _logger.info('✅ Precio recurrente (Odoo 19 ítem directo): %s para producto %s', price_value, product.display_name)
+                                return price_value
                 except Exception as e:
                     _logger.debug('Búsqueda Odoo 19 product.pricelist.item: %s', str(e))
             
