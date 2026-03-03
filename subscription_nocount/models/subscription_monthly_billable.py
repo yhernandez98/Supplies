@@ -213,8 +213,6 @@ class SubscriptionMonthlyBillableLine(models.Model):
             'tax_ids': tax_ids,
             'subscription_billable_line_id': self.id,
             'subscription_business_line_id': self.business_line_id.id if self.business_line_id else False,
-            # No forzar cuenta: proforma se crea sin cuenta asignada; el usuario la define al confirmar si lo desea.
-            'account_id': False,
         }
         return vals
 
