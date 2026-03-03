@@ -2,6 +2,19 @@
 <odoo>
   <!-- Vista formulario en stock_lot_form_supplies_inherit.xml (carga primero). -->
 
+  <!-- Heredar de stock_account: hacer visible "Moneda de valoración" (company_currency_id) para que la columna derecha alinee bien con Valor total, Costo promedio, Costo. -->
+  <record id="view_production_lot_form_inherit_stock_account_currency" model="ir.ui.view">
+    <field name="name">stock.lot.form.stock_account.currency.visible</field>
+    <field name="model">stock.lot</field>
+    <field name="inherit_id" ref="stock_account.view_production_lot_form_stock_account"/>
+    <field name="active" eval="True"/>
+    <field name="arch" type="xml">
+      <xpath expr="//field[@name='company_currency_id']" position="attributes">
+        <attribute name="invisible">0</attribute>
+      </xpath>
+    </field>
+  </record>
+
   <!-- Heredar vista de lista para mostrar cantidad y agregar filtro -->
   <record id="view_production_lot_tree_inherit_supplies" model="ir.ui.view">
     <field name="name">production.lot.tree.supplies.inherit</field>
