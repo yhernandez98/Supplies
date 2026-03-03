@@ -7,7 +7,8 @@
             <field name="name">production.lot.form.maintenance.inherit</field>
             <field name="model">stock.lot</field>
             <field name="inherit_id" ref="product_suppiles.view_production_lot_form_inherit_supplies"/>
-            <field name="priority" eval="16"/>
+            <field name="priority" eval="17"/>
+            <field name="active" eval="True"/>
             <field name="arch" type="xml">
                 <!-- Imagen + botón: antes de location_id (campo que existe en vista base/supplies) -->
                 <xpath expr="//field[@name='location_id']" position="before">
