@@ -26,9 +26,11 @@ Equivalente al formulario de Odoo 18 (todos los campos y pestañas):
 - **Dentro de `//sheet`:** un **notebook** con:
   - Página `info_group` (Información) con notebook vacío (subscription_licenses añade Licenciamiento).
   - Página `supplies_components` (Elementos Asociados) para auto_link_components y listas de componentes.
-- **mesa_ayuda_inventario** añade dentro de `//sheet/notebook`: imagen + botón "Generar Hoja de Vida", y las pestañas "Mantenimientos y Revisiones" e "Historial de Componentes".
+- **mesa_ayuda_inventario** añade: bloque **foto** (campo `lot_image`) + botón "Generar Hoja de Vida" antes de `location_id`, y las pestañas "Mantenimientos y Revisiones" e "Historial de Componentes" dentro de `//sheet/notebook`. El campo `lot_image` lo define mesa_ayuda en su extensión de `stock.lot`.
 
-Con esto se evita el error de validación y el formulario queda como en Odoo 18 (sin depender de vistas activadas a mano).
+**Diseño visual:** La vista aplica la clase `o_stock_lot_pastel_form` al formulario y `o_stock_lot_left_col` / `o_stock_lot_right_col` a las columnas; el CSS `stock_lot_form_pastel.css` del módulo da el estilo tipo Odoo 18.
+
+Con esto se evita el error de validación y el formulario queda como en Odoo 18 (campos, pestañas completas, diseño pastel; la foto depende de tener instalado mesa_ayuda_inventario).
 
 ## Módulo que hereda de la vista base (no de supplies)
 
