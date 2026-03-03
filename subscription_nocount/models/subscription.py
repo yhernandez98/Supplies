@@ -2712,12 +2712,17 @@ class SubscriptionSubscription(models.Model):
             active_ids=[move.id],
         )
         for key, g in grouped_by_business.items():
+            # Siempre crear línea de sección por grupo para que no quede un producto como primera fila (se ve mal)
+            section_name = None
             if g['business_line']:
-                MoveLine.create({
-                    'move_id': move.id,
-                    'display_type': 'line_section',
-                    'name': g['business_line'].name,
-                })
+                section_name = g['business_line'].name
+            else:
+                section_name = (g['lines'][0].product_display_name if g['lines'] else None) or _('Otros')
+            MoveLine.create({
+                'move_id': move.id,
+                'display_type': 'line_section',
+                'name': section_name,
+            })
             for line in g['lines']:
                 # Una línea de factura por cada línea del facturable guardado (igual que la tabla: producto, cantidad, costo)
                 line_vals = line._prepare_invoice_line_values(self)

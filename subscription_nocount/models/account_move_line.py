@@ -24,6 +24,20 @@ class AccountMoveLine(models.Model):
         compute='_compute_subscription_line_display_name',
         help='En líneas de suscripción muestra la categoría (ej. MICROSOFT Y OFFICE 365); en el resto, producto o descripción.',
     )
+    is_section_or_note_line = fields.Boolean(
+        string='Es sección o nota',
+        compute='_compute_is_section_or_note_line',
+        help='True en líneas de tipo sección/nota para ocultar cantidad e importe en la vista (evita evaluar display_type en JS).',
+    )
+
+    @api.depends('display_type')
+    def _compute_is_section_or_note_line(self):
+        for line in self:
+            line.is_section_or_note_line = (
+                line.display_type in ('line_section', 'line_subsection', 'line_note')
+                if line.display_type
+                else False
+            )
 
     @api.depends('subscription_billable_line_id', 'subscription_billable_line_id.product_display_name', 'product_id', 'name')
     def _compute_subscription_line_display_name(self):

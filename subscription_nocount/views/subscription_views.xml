@@ -830,11 +830,21 @@
                 <attribute name="column_invisible">1</attribute>
                 <attribute name="optional">show</attribute>
             </xpath>
-            <!-- Orden: Producto, Línea de negocio, Cantidad, Importe, Ver Detalles -->
+            <!-- Orden: Producto, Línea de negocio, Cantidad, Importe, Ver Detalles. Ocultar cantidad/importe en secciones. -->
             <xpath expr="//field[@name='invoice_line_ids']//field[@name='product_id']" position="before">
                 <field name="subscription_line_display_name" string="Producto"/>
                 <field name="subscription_business_line_id" string="Línea de negocio"/>
                 <field name="subscription_billable_line_id" column_invisible="1"/>
+                <field name="is_section_or_note_line" column_invisible="1"/>
+            </xpath>
+            <xpath expr="//field[@name='invoice_line_ids']//field[@name='quantity']" position="attributes">
+                <attribute name="invisible">is_section_or_note_line</attribute>
+            </xpath>
+            <xpath expr="//field[@name='invoice_line_ids']//field[@name='price_subtotal']" position="attributes">
+                <attribute name="invisible">is_section_or_note_line</attribute>
+            </xpath>
+            <xpath expr="//field[@name='invoice_line_ids']//field[@name='price_total']" position="attributes">
+                <attribute name="invisible">is_section_or_note_line</attribute>
             </xpath>
             <xpath expr="//field[@name='invoice_line_ids']//field[@name='product_id']" position="attributes">
                 <attribute name="column_invisible">1</attribute>
@@ -843,9 +853,9 @@
             <xpath expr="//field[@name='invoice_line_ids']//field[@name='name']" position="attributes">
                 <attribute name="column_invisible">1</attribute>
             </xpath>
-            <!-- Ver Detalles al final, después de Importe -->
+            <!-- Ver Detalles al final, después de Importe (oculto en secciones/notas) -->
             <xpath expr="//field[@name='invoice_line_ids']//field[@name='price_total']" position="after">
-                <button name="action_view_billable_line_details" type="object" string="Ver Detalles" class="btn-link" icon="fa-list" invisible="display_type == 'line_section' or not subscription_billable_line_id"/>
+                <button name="action_view_billable_line_details" type="object" string="Ver Detalles" class="btn-link" icon="fa-list" invisible="is_section_or_note_line or not subscription_billable_line_id"/>
             </xpath>
         </field>
     </record>
