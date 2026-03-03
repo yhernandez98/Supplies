@@ -201,13 +201,13 @@ class SubscriptionMonthlyBillableLine(models.Model):
         """Prepara los valores para una línea de factura desde una línea del facturable guardado (misma columna que el facturable: producto, línea de negocio, cantidad, costo)."""
         self.ensure_one()
         price_unit = (self.cost / float(self.quantity)) if self.quantity and self.quantity > 0 else 0.0
-        name = self.product_display_name or (self.product_id.display_name if self.product_id else _('Línea'))
+        # Dejamos name vacío para que la columna Etiqueta no repita lo de Producto (evitar duplicación que no gusta al jefe)
         tax_ids = []
         if self.product_id and self.product_id.taxes_id:
             tax_ids = [(6, 0, self.product_id.taxes_id.ids)]
         vals = {
             'product_id': self.product_id.id if self.product_id else False,
-            'name': name,
+            'name': '',
             'quantity': float_round(float(self.quantity or 0), precision_digits=2),
             'price_unit': float_round(price_unit, precision_digits=2),
             'tax_ids': tax_ids,

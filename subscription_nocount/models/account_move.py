@@ -7,6 +7,13 @@ class AccountMove(models.Model):
     x_is_proforma = fields.Boolean(string='Es proforma', default=False)
     subscription_id = fields.Many2one('subscription.subscription', string='Suscripción')
 
+    def action_print_proforma_detailed(self):
+        """Abre el informe PDF detallado de la proforma (líneas + detalle por grupo/serial)."""
+        self.ensure_one()
+        if not self.x_is_proforma:
+            return
+        return self.env.ref('subscription_nocount.action_report_proforma_detailed').report_action(self)
+
     def unlink(self):
         """Registrar en el chatter de la suscripción cuando se elimina una proforma."""
         subs_to_log = {}
