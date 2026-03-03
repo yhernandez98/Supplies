@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-  <!-- Vista formulario lote. Insertar notebook antes del chatter (siempre existe; no depende de groups). -->
+  <!-- Vista formulario lote: mismo layout que Odoo 18 (dos columnas, pestañas Descripción/Información/Mantenimientos/Historial). -->
   <record id="view_production_lot_form_inherit_supplies" model="ir.ui.view">
     <field name="name">production.lot.form.supplies.inherit</field>
     <field name="model">stock.lot</field>
@@ -9,6 +9,13 @@
     <field name="arch" type="xml">
       <xpath expr="//form" position="attributes">
         <attribute name="class" add="o_stock_lot_pastel_form" separator=" "/>
+      </xpath>
+      <!-- Clases para dos columnas como en Odoo 18 (izq: producto/datos, der: ubicación/costos) -->
+      <xpath expr="//field[@name='product_id']/parent::group" position="attributes">
+        <attribute name="class" add="o_stock_lot_left_col" separator=" "/>
+      </xpath>
+      <xpath expr="//field[@name='location_id']/parent::group" position="attributes">
+        <attribute name="class" add="o_stock_lot_right_col" separator=" "/>
       </xpath>
       <xpath expr="//div[@name='button_box']" position="inside">
         <button name="action_log_supplies_view_debug" type="object" string="🔍 Debug vistas" class="btn-link" title="Escribe en el log del servidor el estado de las vistas (busca [product_supplies] en el log)"/>
@@ -36,6 +43,9 @@
       </xpath>
       <xpath expr="//chatter" position="before">
         <notebook>
+        <page string="Descripción" name="description_tab">
+          <group string="Descripción"/>
+        </page>
         <page string="Información" name="info_group">
           <notebook>
             <page string="Información de Asociación" name="associated_element_info" class="page-associated-info-red" invisible="not is_associated_element">
