@@ -49,6 +49,14 @@
                                         </div>
                                     </div>
                                 </t>
+                                <!-- Subtotal del grupo (line_note con texto "Subtotal X: $ Y") -->
+                                <t t-if="line.display_type == 'line_note' and line.name">
+                                    <div class="row mb-2">
+                                        <div class="col-12 text-end">
+                                            <strong><t t-esc="line.name"/></strong>
+                                        </div>
+                                    </div>
+                                </t>
                                 <!-- Línea de producto: resumen + tabla de detalles si aplica -->
                                 <t t-if="line.display_type not in ('line_section', 'line_subsection', 'line_note')">
                                     <div class="row mb-3">
@@ -142,10 +150,20 @@
                                 </t>
                             </t>
 
-                            <!-- Totales -->
+                            <!-- Totales (usa valor actual: con IVA si Aplicar IVA está marcado, sin IVA si no) -->
                             <div class="row mt-4">
                                 <div class="col-12 text-end">
                                     <table class="table table-sm w-auto ms-auto" style="max-width: 320px;">
+                                        <t t-if="doc.amount_untaxed != doc.amount_total">
+                                            <tr>
+                                                <td class="text-end">Subtotal:</td>
+                                                <td class="text-end"><t t-esc="doc.currency_id.format(doc.amount_untaxed or 0)"/></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-end">IVA:</td>
+                                                <td class="text-end"><t t-esc="doc.currency_id.format((doc.amount_total or 0) - (doc.amount_untaxed or 0))"/></td>
+                                            </tr>
+                                        </t>
                                         <tr>
                                             <td class="text-end"><strong>Total:</strong></td>
                                             <td class="text-end"><strong><t t-esc="doc.currency_id.format(doc.amount_total or 0)"/></strong></td>

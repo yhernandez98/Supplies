@@ -805,6 +805,10 @@
             <xpath expr="//header" position="inside">
                 <button name="action_print_proforma_detailed" type="object" string="Informe PDF detallado" invisible="not x_is_proforma" class="btn-secondary" title="Generar PDF con toda la información detallada por grupo (seriales, licencias, etc.)"/>
             </xpath>
+            <!-- Aplicar IVA: solo proformas; desmarcado = total sin IVA (el informe usa el valor actual) -->
+            <xpath expr="//group[@id='header_right_group']" position="inside">
+                <field name="x_apply_iva" string="Aplicar IVA" invisible="not x_is_proforma" widget="boolean_toggle"/>
+            </xpath>
             <!-- Cuenta: oculta por defecto, optional show para poder mostrarla desde el selector de columnas -->
             <xpath expr="//field[@name='invoice_line_ids']//field[@name='account_id']" position="attributes">
                 <attribute name="column_invisible">1</attribute>

@@ -2723,11 +2723,20 @@ class SubscriptionSubscription(models.Model):
                 'display_type': 'line_section',
                 'name': section_name,
             })
+            group_total = 0.0
             for line in g['lines']:
                 # Una línea de factura por cada línea del facturable guardado (igual que la tabla: producto, cantidad, costo)
                 line_vals = line._prepare_invoice_line_values(self)
                 line_vals['move_id'] = move.id
                 MoveLine.create(line_vals)
+                group_total += float(line.cost or 0)
+            # Línea de subtotal del grupo (total que suma ese agrupamiento)
+            if group_total != 0:
+                MoveLine.create({
+                    'move_id': move.id,
+                    'display_type': 'line_note',
+                    'name': _('Subtotal %s: %s') % (section_name, move.currency_id.format(group_total)),
+                })
         return move
 
     def _create_proforma_with_usages(self, wizard_lines):
