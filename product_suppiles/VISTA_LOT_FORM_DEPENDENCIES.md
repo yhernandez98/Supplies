@@ -17,13 +17,18 @@ Para que **ningún módulo** que herede esta vista tenga error de validación (�
 
 ## Contenido actual de la vista (product_suppiles)
 
-- **Campos** (después de `ref`): `inventory_plate`, `entry_date`.
-- **Estructura** (dentro de `//sheet`):
-  - Un **notebook** con:
-    - Página `info_group` (Información) con un notebook vacío (para subscription_licenses).
-    - Página `supplies_components` (Elementos Asociados) vacía (para auto_link_components y futuras extensiones).
+Equivalente al formulario de Odoo 18 (todos los campos y pestañas):
 
-Con esto se evita el error de validación en todos los módulos listados.
+- **Antes de `product_id`:** `inventory_plate`, `security_plate`, `hostname`.
+- **Después de `ref`:** `model_name`, `billing_code`, `entry_date`, `entry_date_display` (invisible), `exit_date`, `exit_date_display` (invisible).  
+  *(product_suppiles_partner inserta "Usuario" antes de `entry_date`.)_
+- **Después de `location_id`:** `reining_plazo`, `reining_plazo_custom_months`.
+- **Dentro de `//sheet`:** un **notebook** con:
+  - Página `info_group` (Información) con notebook vacío (subscription_licenses añade Licenciamiento).
+  - Página `supplies_components` (Elementos Asociados) para auto_link_components y listas de componentes.
+- **mesa_ayuda_inventario** añade dentro de `//sheet/notebook`: imagen + botón "Generar Hoja de Vida", y las pestañas "Mantenimientos y Revisiones" e "Historial de Componentes".
+
+Con esto se evita el error de validación y el formulario queda como en Odoo 18 (sin depender de vistas activadas a mano).
 
 ## Módulo que hereda de la vista base (no de supplies)
 

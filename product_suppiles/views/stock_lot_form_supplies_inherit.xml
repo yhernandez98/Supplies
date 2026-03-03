@@ -1,21 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
-        <!-- Igual que inventory_dashboard_simple: un solo xpath sobre campo que existe. Solo un campo para probar. -->
+        <!-- Formulario Número de serie/lote: mismos campos y pestañas que Odoo 18 (imagen 2).
+             product_suppiles_partner añade Usuario (before entry_date); mesa_ayuda añade imagen + pestañas Mantenimientos/Historial. -->
         <record id="view_production_lot_form_inherit_supplies" model="ir.ui.view">
             <field name="name">production.lot.form.supplies.inherit</field>
             <field name="model">stock.lot</field>
             <field name="inherit_id" ref="stock.view_production_lot_form"/>
             <field name="priority" eval="16"/>
             <field name="arch" type="xml">
-                <xpath expr="//field[@name='ref']" position="after">
+                <!-- Placa de Inventario, Placa de Seguridad, Hostname: antes de Producto (como Odoo 18) -->
+                <xpath expr="//field[@name='product_id']" position="before">
                     <field name="inventory_plate" string="Placa de Inventario" placeholder="Ingrese la placa de inventario"/>
-                    <field name="entry_date" string="Fecha Activación Renting" optional="show"/>
+                    <field name="security_plate" string="Placa de Seguridad" placeholder="Ingrese la placa de seguridad"/>
+                    <field name="hostname" string="Hostname" placeholder="Ingrese el hostname del equipo"/>
                 </xpath>
-                <!-- Estructura mínima para que no falle ningún módulo que hereda esta vista:
-                     - mesa_ayuda_inventario: //sheet/notebook
-                     - subscription_licenses: //page[@name='info_group']/notebook
-                     - auto_link_components: //page[@name='supplies_components'] -->
+                <!-- Modelo, Código Facturación y fechas Renting: después de ref -->
+                <xpath expr="//field[@name='ref']" position="after">
+                    <field name="model_name" string="Modelo"/>
+                    <field name="billing_code" string="Código de Facturación"/>
+                    <field name="entry_date" string="Fecha Activación Renting" help="Fecha en que el producto llegó al cliente (para cobro por días)"/>
+                    <field name="entry_date_display" string="Fecha activación (visible en suscripción)" invisible="1"/>
+                    <field name="exit_date" string="Fecha Finalización Renting" help="Fecha en que el producto salió del cliente (para cobro por días)"/>
+                    <field name="exit_date_display" string="Fecha finalización (visible en suscripción)" invisible="1"/>
+                </xpath>
+                <!-- Plazo Renting: después de Ubicación (columna derecha) -->
+                <xpath expr="//field[@name='location_id']" position="after">
+                    <field name="reining_plazo" string="Plazo Renting" help="Plazo en meses o fecha personalizada"/>
+                    <field name="reining_plazo_custom_months" string="Meses (personalizado)" invisible="reining_plazo != 'custom'" optional="show"/>
+                </xpath>
+                <!-- Pestañas: Descripción/Información/Elementos. Mesa_ayuda añade Mantenimientos y Historial de Componentes. -->
                 <xpath expr="//sheet" position="inside">
                     <notebook>
                         <page string="Información" name="info_group">
