@@ -849,10 +849,8 @@
             <xpath expr="//field[@name='invoice_line_ids']//field[@name='product_id']" position="attributes">
                 <attribute name="column_invisible">1</attribute>
             </xpath>
-            <!-- Columna name: visible solo en secciones/notas para mostrar el título; oculta en líneas de producto -->
-            <xpath expr="//field[@name='invoice_line_ids']//field[@name='name']" position="attributes">
-                <attribute name="column_invisible">not is_section_or_note_line</attribute>
-            </xpath>
+            <!-- No tocar la columna name: el widget evalúa column_invisible sin contexto de fila y da error.
+                 Dejamos name visible (estándar) para que las filas de sección muestren el título (COMOPRINT, RENTING DE EQUIPOS, etc.). -->
             <!-- Ver Detalles al final, después de Importe (oculto en secciones/notas) -->
             <xpath expr="//field[@name='invoice_line_ids']//field[@name='price_total']" position="after">
                 <button name="action_view_billable_line_details" type="object" string="Ver Detalles" class="btn-link" icon="fa-list" invisible="is_section_or_note_line or not subscription_billable_line_id"/>
