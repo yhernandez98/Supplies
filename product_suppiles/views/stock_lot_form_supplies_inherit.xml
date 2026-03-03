@@ -41,7 +41,8 @@
         <field name="reining_plazo" string="Plazo Renting" help="Plazo en meses o fecha personalizada"/>
         <field name="reining_plazo_custom_months" string="Meses (personalizado)" invisible="reining_plazo != 'custom'" optional="show"/>
       </xpath>
-      <xpath expr="//chatter" position="before">
+      <!-- Insertar notebook DENTRO del sheet (después del grupo Description) para que se renderice en Odoo 19 -->
+      <xpath expr="//sheet/group[@name='description']" position="after">
         <notebook>
         <page string="Descripción" name="description_tab">
           <group string="Descripción"/>
