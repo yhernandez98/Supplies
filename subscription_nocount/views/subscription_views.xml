@@ -813,6 +813,12 @@
                 <attribute name="widget">monetary</attribute>
                 <attribute name="options">{'currency_field': 'currency_id', 'decimal_places': 0}</attribute>
             </xpath>
+            <!-- Mismas columnas que facturable guardado: Línea de negocio + Ver Detalles -->
+            <xpath expr="//field[@name='invoice_line_ids']//field[@name='name']" position="after">
+                <field name="subscription_business_line_id" string="Línea de negocio"/>
+                <field name="subscription_billable_line_id" column_invisible="1"/>
+                <button name="action_view_billable_line_details" type="object" string="Ver Detalles" class="btn-link" icon="fa-list" invisible="display_type == 'line_section' or not subscription_billable_line_id"/>
+            </xpath>
         </field>
     </record>
 

@@ -198,22 +198,23 @@ class SubscriptionMonthlyBillableLine(models.Model):
     )
 
     def _prepare_invoice_line_values(self, subscription):
-        """Prepara los valores para una línea de factura desde una línea del facturable guardado."""
+        """Prepara los valores para una línea de factura desde una línea del facturable guardado (misma columna que el facturable: producto, línea de negocio, cantidad, costo)."""
         self.ensure_one()
         price_unit = (self.cost / float(self.quantity)) if self.quantity and self.quantity > 0 else 0.0
         name = self.product_display_name or (self.product_id.display_name if self.product_id else _('Línea'))
-        if self.quantity and self.quantity > 1:
-            name = '%s (%s %s)' % (name, _('Cantidad:'), self.quantity)
         tax_ids = []
         if self.product_id and self.product_id.taxes_id:
             tax_ids = [(6, 0, self.product_id.taxes_id.ids)]
-        return {
+        vals = {
             'product_id': self.product_id.id if self.product_id else False,
             'name': name,
             'quantity': float_round(float(self.quantity or 0), precision_digits=2),
             'price_unit': float_round(price_unit, precision_digits=2),
             'tax_ids': tax_ids,
+            'subscription_billable_line_id': self.id,
+            'subscription_business_line_id': self.business_line_id.id if self.business_line_id else False,
         }
+        return vals
 
     def action_view_details(self):
         """Abre la lista de seriales guardados. Licencias: 4 columnas. Equipos: columnas completas (imagen)."""
@@ -254,12 +255,6 @@ class SubscriptionMonthlyBillableLineDetail(models.Model):
     lot_id = fields.Many2one('stock.lot', string='Serial/Lote', readonly=True)
     lot_name = fields.Char(string='Número de serie/lote', readonly=True)
     product_name = fields.Char(string='Producto', readonly=True, help='Equipo/hardware (licencias) o producto (equipos renting).')
-    license_product_id = fields.Many2one(
-        'product.product',
-        string='Producto licencia',
-        readonly=True,
-        help='Producto del tipo de licencia (proforma: nombre y precio desde lista del cliente + TRM).',
-    )
     license_service_name = fields.Char(
         string='Licencia/Servicio Asignado',
         readonly=True,
