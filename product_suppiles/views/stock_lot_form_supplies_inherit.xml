@@ -10,6 +10,19 @@
             <field name="arch" type="xml">
                 <xpath expr="//field[@name='ref']" position="after">
                     <field name="inventory_plate" string="Placa de Inventario" placeholder="Ingrese la placa de inventario"/>
+                    <field name="entry_date" string="Fecha Activación Renting" optional="show"/>
+                </xpath>
+                <!-- Estructura mínima para que no falle ningún módulo que hereda esta vista:
+                     - mesa_ayuda_inventario: //sheet/notebook
+                     - subscription_licenses: //page[@name='info_group']/notebook
+                     - auto_link_components: //page[@name='supplies_components'] -->
+                <xpath expr="//sheet" position="inside">
+                    <notebook>
+                        <page string="Información" name="info_group">
+                            <notebook/>
+                        </page>
+                        <page string="Elementos Asociados" name="supplies_components"/>
+                    </notebook>
                 </xpath>
             </field>
         </record>
