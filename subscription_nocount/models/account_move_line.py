@@ -19,6 +19,23 @@ class AccountMoveLine(models.Model):
         ondelete='set null',
         help='Línea de negocio (igual que en el facturable guardado).',
     )
+    subscription_line_display_name = fields.Char(
+        string='Producto',
+        compute='_compute_subscription_line_display_name',
+        help='En líneas de suscripción muestra la categoría (ej. MICROSOFT Y OFFICE 365); en el resto, producto o descripción.',
+    )
+
+    @api.depends('subscription_billable_line_id', 'subscription_billable_line_id.product_display_name', 'product_id', 'name')
+    def _compute_subscription_line_display_name(self):
+        for line in self:
+            if line.subscription_billable_line_id:
+                line.subscription_line_display_name = (
+                    line.subscription_billable_line_id.product_display_name or line.name or ''
+                )
+            else:
+                line.subscription_line_display_name = (
+                    line.product_id.display_name if line.product_id else (line.name or '')
+                )
 
     @api.model_create_multi
     def create(self, vals_list):
