@@ -1,32 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
   <data>
-    <!-- Igual que inventory_dashboard_simple: heredar de stock.view_production_lot_form. Primero solo campos (sin notebook). -->
+    <!-- Solo creamos el notebook para que mesa_ayuda y subscription_nocount puedan añadir sus pestañas (//sheet/notebook). Sin campos propios para evitar fallos de validación. -->
     <record id="view_production_lot_form_inherit_supplies" model="ir.ui.view">
       <field name="name">production.lot.form.supplies.inherit</field>
       <field name="model">stock.lot</field>
       <field name="inherit_id" ref="stock.view_production_lot_form"/>
       <field name="priority" eval="16"/>
       <field name="arch" type="xml">
-        <!-- Campos antes de Producto (mismo estilo que la vista que sí aplica) -->
-        <xpath expr="//field[@name='product_id']" position="before">
-          <field name="inventory_plate" string="Placa de Inventario" placeholder="Ingrese la placa de inventario"/>
-          <field name="security_plate" string="Placa de Seguridad" placeholder="Ingrese la placa de seguridad"/>
-          <field name="hostname" string="Hostname" placeholder="Ingrese el hostname del equipo"/>
-        </xpath>
-        <!-- Campos después de Referencia (ref existe en la vista base; inventory_dashboard aplica después con priority 20) -->
-        <xpath expr="//field[@name='ref']" position="after">
-          <field name="model_name"/>
-          <field name="billing_code"/>
-          <field name="entry_date" string="Fecha Activacion Renting"/>
-          <field name="entry_date_display" invisible="1"/>
-          <field name="exit_date" string="Fecha Finalizacion Renting"/>
-          <field name="exit_date_display" invisible="1"/>
-        </xpath>
-        <!-- Campos después de Ubicación -->
-        <xpath expr="//field[@name='location_id']" position="after">
-          <field name="reining_plazo" string="Plazo Renting"/>
-          <field name="reining_plazo_custom_months" string="Meses (personalizado)" invisible="reining_plazo != 'custom'" optional="show"/>
+        <xpath expr="//group[@name='main_group']" position="after">
+          <notebook>
+            <page string="Supplies" name="supplies_tab">
+              <group string="Información Supplies"/>
+            </page>
+          </notebook>
         </xpath>
       </field>
     </record>
