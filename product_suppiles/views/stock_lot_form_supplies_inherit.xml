@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-  <!-- Vista formulario lote: mismo layout que Odoo 18 (dos columnas, pestañas Descripción/Información/Mantenimientos/Historial). -->
+  <!-- PRUEBA: solo clase del form + notebook mínimo. Si la vista aparece en Vistas heredadas y ves la pestaña "Supplies", el fallo está en los otros xpaths o campos. -->
   <record id="view_production_lot_form_inherit_supplies" model="ir.ui.view">
     <field name="name">production.lot.form.supplies.inherit</field>
     <field name="model">stock.lot</field>
@@ -10,42 +10,10 @@
       <xpath expr="//form" position="attributes">
         <attribute name="class" add="o_stock_lot_pastel_form" separator=" "/>
       </xpath>
-      <!-- Clases para dos columnas como en Odoo 18 (izq: producto/datos, der: ubicación/costos) -->
-      <xpath expr="//field[@name='product_id']/parent::group" position="attributes">
-        <attribute name="class" add="o_stock_lot_left_col" separator=" "/>
-      </xpath>
-      <xpath expr="//field[@name='location_id']/parent::group" position="attributes">
-        <attribute name="class" add="o_stock_lot_right_col" separator=" "/>
-      </xpath>
-      <xpath expr="//div[@name='button_box']" position="inside">
-        <button name="action_log_supplies_view_debug" type="object" string="🔍 Debug vistas" class="btn-link" title="Escribe en el log del servidor el estado de las vistas (busca [product_supplies] en el log)"/>
-      </xpath>
-      <xpath expr="//sheet//field[@name='name'][not(ancestor::notebook)]" position="attributes">
-        <attribute name="string">Número de serie</attribute>
-        <attribute name="placeholder">Ingrese el número de serie</attribute>
-      </xpath>
-      <xpath expr="//field[@name='product_id']" position="before">
-        <field name="inventory_plate" string="Placa de Inventario" placeholder="Ingrese la placa de inventario"/>
-        <field name="security_plate" string="Placa de Seguridad" placeholder="Ingrese la placa de seguridad"/>
-        <field name="hostname" string="Hostname" placeholder="Ingrese el hostname del equipo"/>
-      </xpath>
-      <xpath expr="//field[@name='ref']" position="after">
-        <field name="model_name"/>
-        <field name="billing_code"/>
-        <field name="entry_date" string="Fecha Activacion Renting" help="Fecha en que el producto llegó al cliente (para cobro por días)"/>
-        <field name="entry_date_display" string="Fecha activación (visible en suscripción)" invisible="1"/>
-        <field name="exit_date" string="Fecha Finalizacion Renting" help="Fecha en que el producto salió del cliente (para cobro por días)"/>
-        <field name="exit_date_display" string="Fecha finalización (visible en suscripción)" invisible="1"/>
-      </xpath>
-      <xpath expr="//field[@name='location_id']" position="after">
-        <field name="reining_plazo" string="Plazo Renting" help="Plazo en meses o fecha personalizada"/>
-        <field name="reining_plazo_custom_months" string="Meses (personalizado)" invisible="reining_plazo != 'custom'" optional="show"/>
-      </xpath>
-      <!-- PRUEBA: notebook mínimo. Si la vista se aplica y ves la pestaña "Supplies", el fallo estaba en el contenido completo. -->
       <xpath expr="//group[@name='description']" position="before">
         <notebook>
           <page string="Supplies" name="supplies_test_tab">
-            <group string="Prueba"><div class="text-muted">Si ves esta pestaña, la herencia funciona. Luego restauramos el notebook completo.</div></group>
+            <group string="Prueba"><div class="text-muted">Si ves esta pestaña, la herencia funciona.</div></group>
           </page>
         </notebook>
       </xpath>
