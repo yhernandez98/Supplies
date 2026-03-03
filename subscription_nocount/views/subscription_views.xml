@@ -813,6 +813,21 @@
                 <attribute name="widget">monetary</attribute>
                 <attribute name="options">{'currency_field': 'currency_id', 'decimal_places': 0}</attribute>
             </xpath>
+            <!-- Ocultar columna precio unitario en líneas -->
+            <xpath expr="//field[@name='invoice_line_ids']//field[@name='price_unit']" position="attributes">
+                <attribute name="column_invisible">1</attribute>
+            </xpath>
+            <!-- Impuestos: seleccionable, no visible por defecto -->
+            <xpath expr="//field[@name='invoice_line_ids']//field[@name='tax_ids']" position="attributes">
+                <attribute name="optional">show</attribute>
+            </xpath>
+            <!-- Columna analítica: seleccionable, no visible por defecto -->
+            <xpath expr="//field[@name='invoice_line_ids']//field[@name='analytic_distribution']" position="attributes">
+                <attribute name="optional">show</attribute>
+            </xpath>
+            <xpath expr="//field[@name='invoice_line_ids']//field[@name='account_analytic_id']" position="attributes">
+                <attribute name="optional">show</attribute>
+            </xpath>
             <!-- Mismas columnas que facturable guardado: Línea de negocio + Ver Detalles -->
             <xpath expr="//field[@name='invoice_line_ids']//field[@name='name']" position="after">
                 <field name="subscription_business_line_id" string="Línea de negocio"/>
