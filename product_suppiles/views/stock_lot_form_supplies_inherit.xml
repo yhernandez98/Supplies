@@ -23,10 +23,12 @@
                 <xpath expr="//sheet//field[@name='name'][not(ancestor::notebook)]" position="attributes">
                     <attribute name="string">Número de serie</attribute>
                     <attribute name="placeholder">Ingrese el número de serie</attribute>
+                </xpath>
+                <!-- Ocultar los dos campos debajo de Empresa (rectángulos vacíos marcados por el usuario) -->
+                <xpath expr="//sheet//field[@name='company_id'][not(ancestor::notebook)]/following-sibling::field[1]" position="attributes">
                     <attribute name="invisible">1</attribute>
                 </xpath>
-                <!-- Ocultar los dos campos superiores (Número de serie y Referencia) según petición del usuario -->
-                <xpath expr="//sheet//field[@name='ref'][not(ancestor::notebook)]" position="attributes">
+                <xpath expr="//sheet//field[@name='company_id'][not(ancestor::notebook)]/following-sibling::field[2]" position="attributes">
                     <attribute name="invisible">1</attribute>
                 </xpath>
                 <!-- Ocultar Cantidad a la mano en el formulario (como en Studio, sin depender de Studio) -->
