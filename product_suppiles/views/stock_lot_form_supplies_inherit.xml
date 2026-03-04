@@ -28,6 +28,10 @@
                 <xpath expr="//sheet//field[@name='company_id'][not(ancestor::notebook)]/following-sibling::field[1]" position="attributes">
                     <attribute name="invisible">1</attribute>
                 </xpath>
+                <!-- Ocultar el campo de texto grande debajo de Customer y encima de DESCRIPTION (el que Studio marcaba). En stock.lot suele ser "note". -->
+                <xpath expr="//sheet//field[@name='note'][not(ancestor::notebook)]" position="attributes">
+                    <attribute name="invisible">1</attribute>
+                </xpath>
                 <!-- Ocultar Cantidad a la mano en el formulario (como en Studio, sin depender de Studio) -->
                 <xpath expr="//field[@name='product_qty']" position="attributes">
                     <attribute name="invisible">1</attribute>
