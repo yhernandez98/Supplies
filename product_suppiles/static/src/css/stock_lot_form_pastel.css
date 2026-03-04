@@ -239,7 +239,41 @@
     box-sizing: border-box !important;
 }
 
-/* Foto en columna derecha */
+/* Columna derecha: solo campos en tabla para que etiquetas y valores alineen bien */
+.o_stock_lot_pastel_form .o_stock_lot_right_col table,
+.o_form_view:has(form.o_stock_lot_pastel_form) .o_stock_lot_right_col table {
+    table-layout: fixed !important;
+    width: 100% !important;
+}
+.o_stock_lot_pastel_form .o_stock_lot_right_col .o_td_label,
+.o_form_view:has(form.o_stock_lot_pastel_form) .o_stock_lot_right_col .o_td_label {
+    width: 1% !important;
+    white-space: nowrap !important;
+    vertical-align: top !important;
+}
+.o_stock_lot_pastel_form .o_stock_lot_right_col .o_td_value,
+.o_form_view:has(form.o_stock_lot_pastel_form) .o_stock_lot_right_col .o_td_value {
+    vertical-align: top !important;
+}
+
+/* Foto del equipo: grupo aparte debajo de las columnas (no dentro de la columna derecha) */
+.o_stock_lot_pastel_form .o_form_sheet .o_group.o_lot_photo_row,
+.o_form_view:has(form.o_stock_lot_pastel_form) .o_form_sheet .o_group.o_lot_photo_row {
+    width: 100% !important;
+    max-width: 100% !important;
+}
+.o_stock_lot_pastel_form .o_form_sheet .o_group.o_lot_photo_row .o_lot_photo_block.o_lot_photo_below_costo,
+.o_form_view:has(form.o_stock_lot_pastel_form) .o_form_sheet .o_group.o_lot_photo_row .o_lot_photo_block.o_lot_photo_below_costo {
+    display: inline-flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    padding: 12px !important;
+    background: #fff !important;
+    border: 1px solid rgba(74, 163, 201, 0.2) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06) !important;
+    box-sizing: border-box !important;
+}
 .o_lot_right_col .o_lot_photo_block.o_lot_photo_below_costo,
 .o_stock_lot_right_col .o_lot_photo_block.o_lot_photo_below_costo {
     display: flex !important;
@@ -256,7 +290,8 @@
     box-sizing: border-box !important;
 }
 .o_lot_right_col .o_lot_photo_below_costo .o_field_widget,
-.o_stock_lot_right_col .o_lot_photo_below_costo .o_field_widget {
+.o_stock_lot_right_col .o_lot_photo_below_costo .o_field_widget,
+.o_form_sheet .o_group.o_lot_photo_row .o_lot_photo_below_costo .o_field_widget {
     width: 140px !important;
     max-width: 140px !important;
     min-height: 140px !important;
@@ -275,7 +310,8 @@
     display: block !important;
 }
 .o_lot_right_col .o_lot_photo_below_costo .btn,
-.o_stock_lot_right_col .o_lot_photo_below_costo .btn {
+.o_stock_lot_right_col .o_lot_photo_below_costo .btn,
+.o_form_sheet .o_group.o_lot_photo_row .o_lot_photo_below_costo .btn {
     width: 100% !important;
     font-size: 0.85rem !important;
     padding: 0.5rem 0.75rem !important;
