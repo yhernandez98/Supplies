@@ -24,11 +24,8 @@
                     <attribute name="string">Número de serie</attribute>
                     <attribute name="placeholder">Ingrese el número de serie</attribute>
                 </xpath>
-                <!-- Ocultar los dos campos debajo de Empresa (rectángulos vacíos marcados por el usuario) -->
+                <!-- Ocultar el campo debajo de Empresa (rectángulo vacío). La vista base solo tiene un following-sibling field. -->
                 <xpath expr="//sheet//field[@name='company_id'][not(ancestor::notebook)]/following-sibling::field[1]" position="attributes">
-                    <attribute name="invisible">1</attribute>
-                </xpath>
-                <xpath expr="//sheet//field[@name='company_id'][not(ancestor::notebook)]/following-sibling::field[2]" position="attributes">
                     <attribute name="invisible">1</attribute>
                 </xpath>
                 <!-- Ocultar Cantidad a la mano en el formulario (como en Studio, sin depender de Studio) -->
