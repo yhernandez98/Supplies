@@ -256,42 +256,38 @@
     vertical-align: top !important;
 }
 
-/* Foto del equipo: bloque encima de INVENTARIO (dentro de la columna derecha, primero) */
-.o_stock_lot_pastel_form .o_form_sheet .o_group.o_lot_photo_block_above_inventory,
-.o_form_view:has(form.o_stock_lot_pastel_form) .o_form_sheet .o_group.o_lot_photo_block_above_inventory {
-    width: 100% !important;
-    margin-bottom: 0.5rem !important;
-    padding-bottom: 0.75rem !important;
-    border-bottom: 1px solid rgba(74, 163, 201, 0.15) !important;
-}
-
-/* Título INVENTARIO entre foto y campos: que no ocupe espacio extra y alinee bien los campos debajo */
-.o_stock_lot_pastel_form .o_form_sheet .o_group.o_inventory_after_photo,
-.o_form_view:has(form.o_stock_lot_pastel_form) .o_form_sheet .o_group.o_inventory_after_photo {
-    margin-bottom: 0.25rem !important;
-    padding-bottom: 0 !important;
-}
-.o_stock_lot_pastel_form .o_form_sheet .o_group.o_inventory_after_photo .o_td_label .o_form_label,
-.o_form_view:has(form.o_stock_lot_pastel_form) .o_form_sheet .o_group.o_inventory_after_photo .o_td_label .o_form_label {
-    font-weight: 700 !important;
-    font-size: 0.85rem !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.02em !important;
-}
-.o_stock_lot_pastel_form .o_form_sheet .o_group.o_lot_photo_block_above_inventory .o_lot_photo_block.o_lot_photo_below_costo,
-.o_form_view:has(form.o_stock_lot_pastel_form) .o_form_sheet .o_group.o_lot_photo_block_above_inventory .o_lot_photo_block.o_lot_photo_below_costo {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    width: 100% !important;
-    max-width: 220px !important;
-    margin: 0 auto !important;
-    padding: 12px !important;
+/* Derecha: bloque 1 = foto + botón (filas normales), bloque 2 = resto inventario */
+.o_stock_lot_pastel_form .o_stock_lot_right_col .o_lot_photo_field .o_td_value,
+.o_form_view:has(form.o_stock_lot_pastel_form) .o_stock_lot_right_col .o_lot_photo_field .o_td_value,
+.o_stock_lot_pastel_form .o_stock_lot_right_col tr:has(.o_lot_photo_field) .o_td_value,
+.o_form_view:has(form.o_stock_lot_pastel_form) .o_stock_lot_right_col tr:has(.o_lot_photo_field) .o_td_value {
+    padding: 10px !important;
     background: #fff !important;
     border: 1px solid rgba(74, 163, 201, 0.2) !important;
     border-radius: 12px !important;
     box-shadow: 0 1px 4px rgba(0,0,0,0.06) !important;
-    box-sizing: border-box !important;
+}
+.o_stock_lot_pastel_form .o_stock_lot_right_col .o_lot_photo_field .o_field_widget,
+.o_form_view:has(form.o_stock_lot_pastel_form) .o_stock_lot_right_col .o_lot_photo_field .o_field_widget {
+    display: flex !important;
+    justify-content: center !important;
+}
+.o_stock_lot_pastel_form .o_stock_lot_right_col .o_lot_photo_field img,
+.o_form_view:has(form.o_stock_lot_pastel_form) .o_stock_lot_right_col .o_lot_photo_field img {
+    max-width: 140px !important;
+    max-height: 140px !important;
+    border-radius: 8px !important;
+}
+.o_stock_lot_pastel_form .o_stock_lot_right_col .o_lot_life_sheet_btn,
+.o_form_view:has(form.o_stock_lot_pastel_form) .o_stock_lot_right_col .o_lot_life_sheet_btn {
+    max-width: 220px !important;
+}
+/* Separación entre bloque foto y bloque inventario */
+.o_stock_lot_pastel_form .o_stock_lot_right_col tr:has(.o_lot_life_sheet_btn) .o_td_value,
+.o_form_view:has(form.o_stock_lot_pastel_form) .o_stock_lot_right_col tr:has(.o_lot_life_sheet_btn) .o_td_value {
+    padding-bottom: 0.75rem !important;
+    border-bottom: 1px solid rgba(74, 163, 201, 0.2) !important;
+    margin-bottom: 0.25rem !important;
 }
 
 /* Grupo foto debajo de columnas (por si se usa en otra vista) */

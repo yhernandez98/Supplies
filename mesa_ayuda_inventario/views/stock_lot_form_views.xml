@@ -10,23 +10,18 @@
             <field name="priority" eval="17"/>
             <field name="active" eval="True"/>
             <field name="arch" type="xml">
-                <!-- Foto del equipo como bloque encima de INVENTARIO (primero en la columna derecha) -->
+                <!-- Bloque 1 derecha: solo foto + botón (filas normales para no romper la tabla) -->
                 <xpath expr="//field[@name='product_qty']" position="before">
-                    <group string="Foto del equipo" name="lot_photo_group" class="o_lot_photo_block_above_inventory">
-                        <div class="o_lot_photo_block o_lot_photo_below_costo">
-                            <field name="lot_image" widget="image" 
-                                   options="{'preview_image': 'lot_image', 'size': [140, 140]}"/>
-                            <button name="action_generate_life_sheet" 
-                                    type="object" 
-                                    string="Generar Hoja de Vida" 
-                                    class="btn btn-primary"
-                                    style="width: 100%; margin-top: 8px;"
-                                    icon="fa-file-pdf"
-                                    title="Generar PDF con la hoja de vida completa del equipo"/>
-                        </div>
-                    </group>
-                    <!-- Separador visual: título INVENTARIO entre la foto y los campos -->
-                    <group string="INVENTARIO" name="inventory_fields_group" class="o_inventory_after_photo"/>
+                    <field name="lot_image" string="Foto del equipo" widget="image" 
+                           options="{'preview_image': 'lot_image', 'size': [140, 140]}"
+                           class="o_lot_photo_field"/>
+                    <button name="action_generate_life_sheet" 
+                            type="object" 
+                            string="Generar Hoja de Vida" 
+                            class="btn btn-primary o_lot_life_sheet_btn"
+                            style="width: 100%; margin-top: 8px;"
+                            icon="fa-file-pdf"
+                            title="Generar PDF con la hoja de vida completa del equipo"/>
                 </xpath>
                 <!-- Pestañas de mantenimientos e historial (notebook lo crea product_suppiles) -->
                 <xpath expr="//sheet/notebook" position="inside">
