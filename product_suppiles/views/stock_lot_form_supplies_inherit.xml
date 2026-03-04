@@ -48,8 +48,8 @@
                     <field name="reining_plazo" string="Plazo Renting" help="Plazo en meses o fecha personalizada"/>
                     <field name="reining_plazo_custom_months" string="Meses (personalizado)" invisible="1" optional="show"/>
                 </xpath>
-                <!-- Reemplazar el notebook de la vista base (en Odoo 19 el notebook tiene string="Descripción" y se muestra como título arriba). Un solo notebook sin string = solo pestañas, como Odoo 18. Mesa_ayuda añade Mantenimientos e Historial. -->
-                <xpath expr="//sheet/notebook" position="replace">
+                <!-- Notebook con pestañas (Descripción, Información, Elementos y Licenciamiento). La vista base no tiene notebook bajo //sheet, por eso se añade aquí. Mesa_ayuda añade Mantenimientos e Historial. -->
+                <xpath expr="//sheet" position="inside">
                     <notebook>
                         <page string="Descripción" name="description">
                             <group string="Descripción o notas del equipo"/>
