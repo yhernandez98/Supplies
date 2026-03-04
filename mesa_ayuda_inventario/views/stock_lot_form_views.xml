@@ -10,9 +10,9 @@
             <field name="priority" eval="17"/>
             <field name="active" eval="True"/>
             <field name="arch" type="xml">
-                <!-- Foto + botón en grupo aparte debajo de las dos columnas para no romper la alineación de INVENTARIO -->
-                <xpath expr="//field[@name='location_id']/parent::group" position="after">
-                    <group string="Foto del equipo" name="lot_photo_group" class="o_lot_photo_row">
+                <!-- Foto del equipo como bloque encima de INVENTARIO (primero en la columna derecha) -->
+                <xpath expr="//field[@name='product_qty']" position="before">
+                    <group string="Foto del equipo" name="lot_photo_group" class="o_lot_photo_block_above_inventory">
                         <div class="o_lot_photo_block o_lot_photo_below_costo">
                             <field name="lot_image" widget="image" 
                                    options="{'preview_image': 'lot_image', 'size': [140, 140]}"/>

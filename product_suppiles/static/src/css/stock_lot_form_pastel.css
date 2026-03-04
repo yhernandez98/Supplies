@@ -256,7 +256,31 @@
     vertical-align: top !important;
 }
 
-/* Foto del equipo: grupo aparte debajo de las columnas (no dentro de la columna derecha) */
+/* Foto del equipo: bloque encima de INVENTARIO (dentro de la columna derecha, primero) */
+.o_stock_lot_pastel_form .o_form_sheet .o_group.o_lot_photo_block_above_inventory,
+.o_form_view:has(form.o_stock_lot_pastel_form) .o_form_sheet .o_group.o_lot_photo_block_above_inventory {
+    width: 100% !important;
+    margin-bottom: 1rem !important;
+    padding-bottom: 1rem !important;
+    border-bottom: 1px solid rgba(74, 163, 201, 0.15) !important;
+}
+.o_stock_lot_pastel_form .o_form_sheet .o_group.o_lot_photo_block_above_inventory .o_lot_photo_block.o_lot_photo_below_costo,
+.o_form_view:has(form.o_stock_lot_pastel_form) .o_form_sheet .o_group.o_lot_photo_block_above_inventory .o_lot_photo_block.o_lot_photo_below_costo {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    width: 100% !important;
+    max-width: 220px !important;
+    margin: 0 auto !important;
+    padding: 12px !important;
+    background: #fff !important;
+    border: 1px solid rgba(74, 163, 201, 0.2) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06) !important;
+    box-sizing: border-box !important;
+}
+
+/* Grupo foto debajo de columnas (por si se usa en otra vista) */
 .o_stock_lot_pastel_form .o_form_sheet .o_group.o_lot_photo_row,
 .o_form_view:has(form.o_stock_lot_pastel_form) .o_form_sheet .o_group.o_lot_photo_row {
     width: 100% !important;
