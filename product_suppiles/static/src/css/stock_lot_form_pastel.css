@@ -260,9 +260,23 @@
 .o_stock_lot_pastel_form .o_form_sheet .o_group.o_lot_photo_block_above_inventory,
 .o_form_view:has(form.o_stock_lot_pastel_form) .o_form_sheet .o_group.o_lot_photo_block_above_inventory {
     width: 100% !important;
-    margin-bottom: 1rem !important;
-    padding-bottom: 1rem !important;
+    margin-bottom: 0.5rem !important;
+    padding-bottom: 0.75rem !important;
     border-bottom: 1px solid rgba(74, 163, 201, 0.15) !important;
+}
+
+/* Título INVENTARIO entre foto y campos: que no ocupe espacio extra y alinee bien los campos debajo */
+.o_stock_lot_pastel_form .o_form_sheet .o_group.o_inventory_after_photo,
+.o_form_view:has(form.o_stock_lot_pastel_form) .o_form_sheet .o_group.o_inventory_after_photo {
+    margin-bottom: 0.25rem !important;
+    padding-bottom: 0 !important;
+}
+.o_stock_lot_pastel_form .o_form_sheet .o_group.o_inventory_after_photo .o_td_label .o_form_label,
+.o_form_view:has(form.o_stock_lot_pastel_form) .o_form_sheet .o_group.o_inventory_after_photo .o_td_label .o_form_label {
+    font-weight: 700 !important;
+    font-size: 0.85rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.02em !important;
 }
 .o_stock_lot_pastel_form .o_form_sheet .o_group.o_lot_photo_block_above_inventory .o_lot_photo_block.o_lot_photo_below_costo,
 .o_form_view:has(form.o_stock_lot_pastel_form) .o_form_sheet .o_group.o_lot_photo_block_above_inventory .o_lot_photo_block.o_lot_photo_below_costo {

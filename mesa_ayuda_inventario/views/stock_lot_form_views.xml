@@ -25,6 +25,8 @@
                                     title="Generar PDF con la hoja de vida completa del equipo"/>
                         </div>
                     </group>
+                    <!-- Separador visual: título INVENTARIO entre la foto y los campos -->
+                    <group string="INVENTARIO" name="inventory_fields_group" class="o_inventory_after_photo"/>
                 </xpath>
                 <!-- Pestañas de mantenimientos e historial (notebook lo crea product_suppiles) -->
                 <xpath expr="//sheet/notebook" position="inside">
