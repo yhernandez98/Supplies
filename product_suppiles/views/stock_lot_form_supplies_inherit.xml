@@ -23,6 +23,11 @@
                 <xpath expr="//sheet//field[@name='name'][not(ancestor::notebook)]" position="attributes">
                     <attribute name="string">Número de serie</attribute>
                     <attribute name="placeholder">Ingrese el número de serie</attribute>
+                    <attribute name="invisible">1</attribute>
+                </xpath>
+                <!-- Ocultar los dos campos superiores (Número de serie y Referencia) según petición del usuario -->
+                <xpath expr="//sheet//field[@name='ref'][not(ancestor::notebook)]" position="attributes">
+                    <attribute name="invisible">1</attribute>
                 </xpath>
                 <!-- Ocultar Cantidad a la mano en el formulario (como en Studio, sin depender de Studio) -->
                 <xpath expr="//field[@name='product_qty']" position="attributes">
@@ -48,12 +53,9 @@
                     <field name="reining_plazo" string="Plazo Renting" help="Plazo en meses o fecha personalizada"/>
                     <field name="reining_plazo_custom_months" string="Meses (personalizado)" invisible="1" optional="show"/>
                 </xpath>
-                <!-- Notebook con pestañas (Descripción, Información, Elementos y Licenciamiento). La vista base no tiene notebook bajo //sheet, por eso se añade aquí. Mesa_ayuda añade Mantenimientos e Historial. -->
+                <!-- Notebook con pestañas (Información, Elementos y Licenciamiento). Mesa_ayuda añade Mantenimientos e Historial. -->
                 <xpath expr="//sheet" position="inside">
                     <notebook>
-                        <page string="Descripción" name="description">
-                            <group string="Descripción o notas del equipo"/>
-                        </page>
                         <page string="Información" name="info_group">
                             <notebook>
                                 <page string="Información de Asociación" name="associated_element_info" class="page-associated-info-red" invisible="not is_associated_element">

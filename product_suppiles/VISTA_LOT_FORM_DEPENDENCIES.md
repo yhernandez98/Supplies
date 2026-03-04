@@ -24,7 +24,6 @@ Equivalente al formulario de Odoo 18 (todos los campos y pestañas):
   *(product_suppiles_partner inserta "Usuario" antes de `entry_date`.)_
 - **Después de `location_id`:** `reining_plazo`, `reining_plazo_custom_months`.
 - **Dentro de `//sheet`:** un **notebook** con:
-  - Página `description` (Descripción).
   - Página `info_group` (Información) con subpestañas: Información de Asociación, Recepción/Enlace principal.
   - Página `elementos_y_licencias` (Elementos y Licenciamiento) con notebook y 4 subpestañas: Elementos Sin Costo, Elementos Con Costo, Licencias del Equipo, Licencias del Usuario (las dos últimas las añade subscription_licenses).
 - **mesa_ayuda_inventario** añade: bloque **foto** (campo `lot_image`) + botón "Generar Hoja de Vida" antes de `location_id`, y las pestañas "Mantenimientos y Revisiones" e "Historial de Componentes" dentro de `//sheet/notebook`. El campo `lot_image` lo define mesa_ayuda en su extensión de `stock.lot`.
@@ -42,6 +41,6 @@ Con esto se evita el error de validación y el formulario queda como en Odoo 18 
 Al crear una vista que herede de `view_production_lot_form_inherit_supplies`, usa solo xpath sobre:
 
 - Campos que ya están en la vista: `ref`, `inventory_plate`, `entry_date`, y los de la vista base (`name`, `product_id`, `location_id`, etc.).
-- Nodos que ya existen: `//sheet`, `//sheet/notebook`, `//page[@name='description']`, `//page[@name='info_group']`, `//page[@name='info_group']/notebook`, `//page[@name='elementos_y_licencias']`, `//page[@name='elementos_y_licencias']/notebook`.
+- Nodos que ya existen: `//sheet`, `//sheet/notebook`, `//page[@name='info_group']`, `//page[@name='info_group']/notebook`, `//page[@name='elementos_y_licencias']`, `//page[@name='elementos_y_licencias']/notebook`.
 
 Si necesitas un nuevo nodo (p. ej. otra página o campo), añádelo primero en `stock_lot_form_supplies_inherit.xml` y luego úsalo en el módulo que hereda.
