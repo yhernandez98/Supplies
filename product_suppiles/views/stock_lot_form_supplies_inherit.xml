@@ -24,6 +24,10 @@
                     <attribute name="string">Número de serie</attribute>
                     <attribute name="placeholder">Ingrese el número de serie</attribute>
                 </xpath>
+                <!-- Ocultar Cantidad a la mano en el formulario (como en Studio, sin depender de Studio) -->
+                <xpath expr="//field[@name='product_qty']" position="attributes">
+                    <attribute name="invisible">1</attribute>
+                </xpath>
                 <!-- Placa de Inventario, Placa de Seguridad, Hostname: antes de Producto -->
                 <xpath expr="//field[@name='product_id']" position="before">
                     <field name="inventory_plate" string="Placa de Inventario" placeholder="Ingrese la placa de inventario"/>
@@ -42,7 +46,7 @@
                 <!-- Plazo Renting: después de Ubicación (columna derecha) -->
                 <xpath expr="//field[@name='location_id']" position="after">
                     <field name="reining_plazo" string="Plazo Renting" help="Plazo en meses o fecha personalizada"/>
-                    <field name="reining_plazo_custom_months" string="Meses (personalizado)" invisible="reining_plazo != 'custom'" optional="show"/>
+                    <field name="reining_plazo_custom_months" string="Meses (personalizado)" invisible="1" optional="show"/>
                 </xpath>
                 <!-- Pestañas completas como Odoo 18: Información (subpestañas Recepción/Enlace, Elementos Sin/Con Costo). Mesa_ayuda añade Mantenimientos e Historial. -->
                 <xpath expr="//sheet" position="inside">
