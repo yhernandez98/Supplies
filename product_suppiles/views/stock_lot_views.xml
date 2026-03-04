@@ -2,7 +2,7 @@
 <odoo>
   <!-- Vista formulario en stock_lot_form_supplies_inherit.xml (carga primero). -->
 
-  <!-- Heredar de stock_account: ocultar en formulario Moneda de valoración, Valor total y Costo promedio; solo visibles Ubicación, Servicio, Suscripción Activa, Plazo Renting, Costo (como en imagen). -->
+  <!-- Heredar de stock_account: ocultar "Moneda de la valoración" (company_currency_id) en el formulario. -->
   <record id="view_production_lot_form_inherit_stock_account_currency" model="ir.ui.view">
     <field name="name">stock.lot.form.stock_account.currency.invisible</field>
     <field name="model">stock.lot</field>
@@ -10,12 +10,6 @@
     <field name="active" eval="True"/>
     <field name="arch" type="xml">
       <xpath expr="//field[@name='company_currency_id']" position="attributes">
-        <attribute name="invisible">1</attribute>
-      </xpath>
-      <xpath expr="//field[@name='value_svl']" position="attributes">
-        <attribute name="invisible">1</attribute>
-      </xpath>
-      <xpath expr="//field[@name='unit_cost']" position="attributes">
         <attribute name="invisible">1</attribute>
       </xpath>
     </field>
