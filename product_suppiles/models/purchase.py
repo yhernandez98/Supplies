@@ -85,6 +85,9 @@ class PurchaseOrderLine(models.Model):
             return res
 
         base_vals = res[0].copy()
+        # Odoo 19: stock.move usa description_picking, no name
+        base_vals.pop("name", None)
+        base_desc = base_vals.get("description_picking") or product.display_name
         base_qty = base_vals.get("product_uom_qty", 0.0)
         base_uom = self.product_uom_id
         base_price_unit = base_vals.get("price_unit", 0.0)
@@ -176,7 +179,7 @@ class PurchaseOrderLine(models.Model):
 
             vals = base_vals.copy()
             vals.update({
-                "name": f"{base_vals.get('name') or product.display_name} - {comp.display_name}",
+                "description_picking": f"{base_desc} - {comp.display_name}",
                 "product_id": comp.id,
                 "product_uom": comp_uom.id,
                 "product_uom_qty": comp_qty,
@@ -190,7 +193,7 @@ class PurchaseOrderLine(models.Model):
             parent_price = 0.0 if getattr(tmpl, "parent_valuation_policy", "none") == "none" else base_price_unit
             parent_vals = base_vals.copy()
             parent_vals.update({
-                "name": base_vals.get("name") or product.display_name,
+                "description_picking": base_desc,
                 "product_id": product.id,
                 "product_uom": base_uom.id,
                 "product_uom_qty": base_qty,
