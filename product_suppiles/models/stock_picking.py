@@ -29,14 +29,17 @@ class StockPicking(models.Model):
         help='Solo muestra movimientos con supply_kind = parent'
     )
     
-    @api.depends('move_ids', 'move_ids.supply_kind')
+    @api.depends('move_ids', 'move_ids.supply_kind', 'move_ids.internal_parent_move_id')
     def _compute_move_ids_main_only(self):
-        """Calcular movimientos principales (solo supply_kind = 'parent'). Odoo 19 usa move_ids."""
+        """Solo movimientos principales: supply_kind = 'parent' y sin padre (no componentes/hijos)."""
         for picking in self:
             try:
                 moves = getattr(picking, 'move_ids_without_package', picking.move_ids)
                 picking.move_ids_main_only = moves.filtered(
-                    lambda m: hasattr(m, 'supply_kind') and m.supply_kind == 'parent'
+                    lambda m: (
+                        hasattr(m, 'supply_kind') and m.supply_kind == 'parent'
+                        and (not hasattr(m, 'internal_parent_move_id') or not m.internal_parent_move_id)
+                    )
                 )
             except Exception:
                 picking.move_ids_main_only = self.env['stock.move']
