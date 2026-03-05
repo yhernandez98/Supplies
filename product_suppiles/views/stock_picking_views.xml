@@ -4,6 +4,7 @@
     <field name="name">stock.picking.form.inherit.supplies.columns</field>
     <field name="model">stock.picking</field>
     <field name="inherit_id" ref="stock.view_picking_form"/>
+    <field name="priority">20</field>
     <field name="arch" type="xml">
       <xpath expr="//sheet" position="attributes">
         <attribute name="class" add="oe_stock_picking_sheet" separator=" "/>
@@ -15,15 +16,16 @@
         <button name="action_assign_supplies_relations" type="object" string="Asignar relaciones" class="btn-secondary" invisible="1"/>
       </xpath>
 
-      <!-- Agrupar como en Odoo 18: una fila por producto principal con columnas Componentes/Periféricos/Complementos.
-          XPath sin depender del nombre de la pestaña (en Odoo 19 puede ser distinto a "operations"). Igual que l10n_uy_edi_stock: //field[@name='move_ids']/list//field -->
-      <!-- Reemplazar movimientos con move_ids_main_only (muestra solo supply_kind=parent). Campo que tiene list con product_id = lista de operaciones. -->
-      <xpath expr="//field[@name='move_ids'][.//field[@name='product_id']]" position="attributes">
-        <attribute name="name">move_ids_main_only</attribute>
+      <!-- Odoo 19: pestaña Operaciones muestra move_line_ids. Reemplazar por move_line_ids_main_only para ver solo líneas padre (una fila por producto principal). Las columnas Componentes/Periféricos/Complementos se añaden en la vista tree heredada (view_stock_move_line_detailed_operation_tree_inherit_supplies). -->
+      <xpath expr="//field[@name='move_line_ids']" position="attributes">
+        <attribute name="name">move_line_ids_main_only</attribute>
       </xpath>
 
-      <!-- Añadir columnas Número de Serie, Componentes, Periféricos, Complementos después de Producto (como en Odoo 18) -->
-      <xpath expr="//field[@name='move_ids_main_only']/list//field[@name='product_id']" position="after">
+      <!-- Si la pestaña usa move_ids (stock.move): reemplazar por move_ids_main_only y añadir columnas. -->
+      <xpath expr="//field[@name='move_ids']" position="attributes">
+        <attribute name="name">move_ids_main_only</attribute>
+      </xpath>
+      <xpath expr="//field[@name='move_ids_main_only']//list/field[@name='product_id']" position="after">
         <!-- Campos ocultos que no queremos mostrar pero que pueden ser necesarios para el sistema -->
         <field name="supply_parent_product_id" string="Producto principal" readonly="1" column_invisible="1"/>
         <field name="supply_kind" string="Clasificación" readonly="1" column_invisible="1"/>
@@ -71,6 +73,21 @@
         <attribute name="column_invisible">1</attribute>
       </xpath>
 
+    </field>
+  </record>
+
+  <!-- Vista tree de operaciones detalladas (stock.move.line): añadir columnas Componentes, Periféricos, Complementos para agrupar como en Odoo 18. Usada en el formulario de picking cuando la pestaña Operaciones muestra move_line_ids_main_only. -->
+  <record id="view_stock_move_line_detailed_operation_tree_inherit_supplies" model="ir.ui.view">
+    <field name="name">stock.move.line.detailed.operation.tree.supplies</field>
+    <field name="model">stock.move.line</field>
+    <field name="inherit_id" ref="stock.view_stock_move_line_detailed_operation_tree"/>
+    <field name="arch" type="xml">
+      <xpath expr="//field[@name='product_id']" position="after">
+        <field name="supply_kind" column_invisible="1"/>
+        <field name="associated_components" string="Componentes" readonly="1" optional="show" invisible="supply_kind != 'parent'" widget="text"/>
+        <field name="associated_peripherals" string="Periféricos" readonly="1" optional="show" invisible="supply_kind != 'parent'" widget="text"/>
+        <field name="associated_complements" string="Complementos" readonly="1" optional="show" invisible="supply_kind != 'parent'" widget="text"/>
+      </xpath>
     </field>
   </record>
 
