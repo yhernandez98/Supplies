@@ -16,28 +16,14 @@
       </xpath>
 
       <!-- Agrupar como en Odoo 18: una fila por producto principal con columnas Componentes/Periféricos/Complementos.
-          Odoo 18: la pestaña Operaciones suele usar move_ids (o move_ids_without_package). 
-          Odoo 19: puede usar move_line_ids (operaciones detalladas). Se soportan ambos. Si falla la carga, comentar el bloque que no aplique (move_ids o move_line_ids). -->
-      <!-- Reemplazar movimientos con move_ids_main_only (Odoo 18: move_ids_without_package; Odoo 19: move_ids) -->
-      <xpath expr="//page[@name='operations']//field[@name='move_ids_without_package']" position="attributes">
-        <attribute name="name">move_ids_main_only</attribute>
-      </xpath>
-      <xpath expr="//page[@name='operations']//field[@name='move_ids']" position="attributes">
+          XPath sin depender del nombre de la pestaña (en Odoo 19 puede ser distinto a "operations"). Igual que l10n_uy_edi_stock: //field[@name='move_ids']/list//field -->
+      <!-- Reemplazar movimientos con move_ids_main_only (muestra solo supply_kind=parent). Campo que tiene list con product_id = lista de operaciones. -->
+      <xpath expr="//field[@name='move_ids'][.//field[@name='product_id']]" position="attributes">
         <attribute name="name">move_ids_main_only</attribute>
       </xpath>
 
-      <!-- Odoo 19: si la pestaña Operaciones muestra move_line_ids (líneas detalladas), usar move_line_ids_main_only para agrupar (solo padres) y añadir columnas Componentes/Periféricos/Complementos -->
-      <xpath expr="//page[@name='operations']//field[@name='move_line_ids']" position="attributes">
-        <attribute name="name">move_line_ids_main_only</attribute>
-      </xpath>
-      <xpath expr="//page[@name='operations']//field[@name='move_line_ids_main_only']//list/field[@name='product_id']" position="after">
-        <field name="supply_kind" column_invisible="1"/>
-        <field name="associated_components" string="Componentes" readonly="1" optional="show" invisible="supply_kind != 'parent'" widget="text"/>
-        <field name="associated_peripherals" string="Periféricos" readonly="1" optional="show" invisible="supply_kind != 'parent'" widget="text"/>
-        <field name="associated_complements" string="Complementos" readonly="1" optional="show" invisible="supply_kind != 'parent'" widget="text"/>
-      </xpath>
-
-      <xpath expr="//page[@name='operations']//field[@name='move_ids_main_only']//list/field[@name='product_id']" position="after">
+      <!-- Añadir columnas Número de Serie, Componentes, Periféricos, Complementos después de Producto (como en Odoo 18) -->
+      <xpath expr="//field[@name='move_ids_main_only']/list//field[@name='product_id']" position="after">
         <!-- Campos ocultos que no queremos mostrar pero que pueden ser necesarios para el sistema -->
         <field name="supply_parent_product_id" string="Producto principal" readonly="1" column_invisible="1"/>
         <field name="supply_kind" string="Clasificación" readonly="1" column_invisible="1"/>
@@ -75,13 +61,13 @@
                help="Complementos asociados al producto principal (Producto - Serial)"/>
       </xpath>
       
-      <!-- Ocultar columna de embalaje (product_packaging_id) si existe en la vista -->
-      <xpath expr="//page[@name='operations']//field[@name='move_ids_main_only']//list/field[@name='product_packaging_id']" position="attributes">
+      <!-- Ocultar columna de embalaje (product_packaging_id) si existe -->
+      <xpath expr="//field[@name='move_ids_main_only']/list//field[@name='product_packaging_id']" position="attributes">
         <attribute name="column_invisible">1</attribute>
       </xpath>
       
-      <!-- Ocultar cualquier campo relacionado con move_line_ids que pueda mostrar números de serie -->
-      <xpath expr="//page[@name='operations']//field[@name='move_ids_main_only']//list/field[@name='move_line_ids']" position="attributes">
+      <!-- Ocultar columna move_line_ids en la lista de movimientos -->
+      <xpath expr="//field[@name='move_ids_main_only']/list//field[@name='move_line_ids']" position="attributes">
         <attribute name="column_invisible">1</attribute>
       </xpath>
 
