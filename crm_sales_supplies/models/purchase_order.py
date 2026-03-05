@@ -214,17 +214,18 @@ class PurchaseOrder(models.Model):
         for order in self:
             order.sale_order_count = len(order.sale_order_ids)
 
+    @api.depends('sale_order_ids')
     def _compute_has_sale_order(self):
-        """Asegurar que has_sale_order tenga siempre un valor (evita ValueError en web_read/onchange)."""
+        """Asegurar que has_sale_order tenga siempre un valor (evita ValueError en web_read/onchange con NewId)."""
+        # Asignar valor por defecto a todos para que no falle el compute en registros nuevos (onchange).
         for order in self:
-            value = False
+            order.has_sale_order = False
+        for order in self:
             try:
-                # En registros nuevos (NewId) o en onchange, sale_order_ids puede fallar; no acceder si no hay id real.
-                if order.id and isinstance(order.id, (int,)):
-                    value = bool(order.sale_order_ids)
+                if order._origin and order.sale_order_ids:
+                    order.has_sale_order = True
             except Exception:
                 pass
-            order.has_sale_order = value
 
     @api.depends('sale_order_ids.partner_id')
     def _compute_partner_customer_ids(self):
