@@ -4,7 +4,8 @@
     <field name="name">stock.picking.form.inherit.supplies.columns</field>
     <field name="model">stock.picking</field>
     <field name="inherit_id" ref="stock.view_picking_form"/>
-    <field name="priority">20</field>
+    <!-- Prioridad &gt; 1000 para aplicarnos después de stock_picking_batch (secuencia 1000) y que move_ids_main_only no sea sobrescrito -->
+    <field name="priority">1001</field>
     <field name="arch" type="xml">
       <xpath expr="//sheet" position="attributes">
         <attribute name="class" add="oe_stock_picking_sheet" separator=" "/>
@@ -16,8 +17,11 @@
         <button name="action_assign_supplies_relations" type="object" string="Asignar relaciones" class="btn-secondary" invisible="1"/>
       </xpath>
 
-      <!-- Pestaña "Operaciones": en la arquitectura real es <page name="operations"><field name="move_ids"> (lista stock.move). Reemplazar por move_ids_main_only para mostrar solo productos principales (una fila por padre) y las columnas Componentes/Periféricos/Complementos. -->
+      <!-- Pestaña Operaciones: reemplazar move_ids por move_ids_main_only (solo padres). Probar ambos xpath por si la estructura varía. -->
       <xpath expr="//page[@name='operations']//field[@name='move_ids']" position="attributes">
+        <attribute name="name">move_ids_main_only</attribute>
+      </xpath>
+      <xpath expr="//field[@name='move_ids'][@widget='stock_move_one2many']" position="attributes">
         <attribute name="name">move_ids_main_only</attribute>
       </xpath>
 
