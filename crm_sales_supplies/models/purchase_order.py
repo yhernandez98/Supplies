@@ -55,6 +55,12 @@ class PurchaseOrder(models.Model):
         compute='_compute_sale_order_count',
         readonly=True,
     )
+    has_sale_order = fields.Boolean(
+        string='Tiene orden de venta',
+        compute='_compute_has_sale_order',
+        readonly=True,
+        help='Indica si esta orden de compra está vinculada a alguna orden de venta.',
+    )
     partner_customer_ids = fields.Many2many(
         'res.partner',
         'purchase_customer_rel',
@@ -216,16 +222,15 @@ class PurchaseOrder(models.Model):
 
     @api.depends('sale_order_ids')
     def _compute_has_sale_order(self):
-        """Asegurar que has_sale_order tenga siempre un valor (evita ValueError en web_read/onchange con NewId)."""
-        # Asignar valor por defecto a todos para que no falle el compute en registros nuevos (onchange).
+        """Siempre asigna un valor (evita ValueError en onchange con NewId)."""
         for order in self:
-            order.has_sale_order = False
-        for order in self:
+            value = False
             try:
                 if order._origin and order.sale_order_ids:
-                    order.has_sale_order = True
+                    value = True
             except Exception:
                 pass
+            order.has_sale_order = value
 
     @api.depends('sale_order_ids.partner_id')
     def _compute_partner_customer_ids(self):
