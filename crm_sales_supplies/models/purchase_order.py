@@ -215,9 +215,13 @@ class PurchaseOrder(models.Model):
             order.sale_order_count = len(order.sale_order_ids)
 
     def _compute_has_sale_order(self):
-        """Asegurar que has_sale_order tenga siempre un valor (evita ValueError en web_read)."""
+        """Asegurar que has_sale_order tenga siempre un valor (evita ValueError en web_read/onchange)."""
         for order in self:
-            order.has_sale_order = bool(order.sale_order_ids)
+            try:
+                order.has_sale_order = bool(order.sale_order_ids)
+            except Exception:
+                # Registros nuevos (NewId) o sin acceso a relación: devolver False
+                order.has_sale_order = False
 
     @api.depends('sale_order_ids.partner_id')
     def _compute_partner_customer_ids(self):
