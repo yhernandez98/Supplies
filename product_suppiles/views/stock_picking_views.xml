@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+  <!-- Heredamos de la vista de stock_picking_batch (la de secuencia 1000) para que nuestros xpath se apliquen después y move_ids -&gt; move_ids_main_only no sea sobrescrito -->
   <record id="view_picking_form_inherit_supplies_columns" model="ir.ui.view">
     <field name="name">stock.picking.form.inherit.supplies.columns</field>
     <field name="model">stock.picking</field>
-    <field name="inherit_id" ref="stock.view_picking_form"/>
-    <!-- Prioridad &gt; 1000 para aplicarnos después de stock_picking_batch (secuencia 1000) y que move_ids_main_only no sea sobrescrito -->
-    <field name="priority">1001</field>
+    <field name="inherit_id" ref="stock_picking_batch.view_picking_form_inherited"/>
     <field name="arch" type="xml">
       <xpath expr="//sheet" position="attributes">
         <attribute name="class" add="oe_stock_picking_sheet" separator=" "/>

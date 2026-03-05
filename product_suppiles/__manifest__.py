@@ -18,10 +18,11 @@
         'stock',
         'stock_account',
         'purchase_stock',
-        'sale_stock', 
+        'sale_stock',
         'product',
         'uom',
         'mail',
+        'stock_picking_batch',  # heredar su vista del picking para que nuestra modificación (move_ids_main_only) se aplique después
     ],
     'data': [
         'security/ir.model.access.csv',
