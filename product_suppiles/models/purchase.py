@@ -86,7 +86,7 @@ class PurchaseOrderLine(models.Model):
 
         base_vals = res[0].copy()
         base_qty = base_vals.get("product_uom_qty", 0.0)
-        base_uom = self.product_uom
+        base_uom = self.product_uom_id
         base_price_unit = base_vals.get("price_unit", 0.0)
 
         if float_is_zero(base_qty, precision_rounding=base_uom.rounding):
