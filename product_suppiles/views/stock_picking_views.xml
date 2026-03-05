@@ -16,19 +16,14 @@
         <button name="action_assign_supplies_relations" type="object" string="Asignar relaciones" class="btn-secondary" invisible="1"/>
       </xpath>
 
-      <!-- Odoo 19: pestaña Operaciones usa move_ids_without_package (lista de stock.move). Reemplazar por move_ids_main_only para ver solo productos principales (una fila por producto padre) con columnas Componentes/Periféricos/Complementos. -->
-      <xpath expr="//page[@name='operations']//field[@name='move_ids_without_package']" position="attributes">
+      <!-- Pestaña "Operaciones": en la arquitectura real es <page name="operations"><field name="move_ids"> (lista stock.move). Reemplazar por move_ids_main_only para mostrar solo productos principales (una fila por padre) y las columnas Componentes/Periféricos/Complementos. -->
+      <xpath expr="//page[@name='operations']//field[@name='move_ids']" position="attributes">
         <attribute name="name">move_ids_main_only</attribute>
       </xpath>
 
-      <!-- Por si en algún contexto se usa move_line_ids (operaciones detalladas): reemplazar por move_line_ids_main_only. -->
+      <!-- Operaciones detalladas (stock.move.line) por si se usa en otro contexto. -->
       <xpath expr="//field[@name='move_line_ids']" position="attributes">
         <attribute name="name">move_line_ids_main_only</attribute>
-      </xpath>
-
-      <!-- Por si en algún contexto se usa move_ids (stock.move) sin _without_package. -->
-      <xpath expr="//field[@name='move_ids']" position="attributes">
-        <attribute name="name">move_ids_main_only</attribute>
       </xpath>
       <xpath expr="//field[@name='move_ids_main_only']//list/field[@name='product_id']" position="after">
         <!-- Campos ocultos que no queremos mostrar pero que pueden ser necesarios para el sistema -->
