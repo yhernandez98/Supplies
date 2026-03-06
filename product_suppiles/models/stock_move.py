@@ -72,6 +72,26 @@ class StockMove(models.Model):
         store=False,
         help='Números de serie de complementos asociados al producto principal'
     )
+
+    # Resumen de lo definido en el producto (componentes/periféricos/complementos) para mostrar aunque no haya serial
+    product_components_definition = fields.Char(
+        string='Componentes (producto)',
+        compute='_compute_product_supplies_definition',
+        store=False,
+        help='Componentes definidos en la ficha del producto'
+    )
+    product_peripherals_definition = fields.Char(
+        string='Periféricos (producto)',
+        compute='_compute_product_supplies_definition',
+        store=False,
+        help='Periféricos definidos en la ficha del producto'
+    )
+    product_complements_definition = fields.Char(
+        string='Complementos (producto)',
+        compute='_compute_product_supplies_definition',
+        store=False,
+        help='Complementos definidos en la ficha del producto'
+    )
     
     # Campo helper para ocultar líneas no principales en la vista
     show_in_list = fields.Boolean(
@@ -86,6 +106,34 @@ class StockMove(models.Model):
         """Calcular si la línea debe mostrarse (solo líneas principales)"""
         for move in self:
             move.show_in_list = move.supply_kind == 'parent'
+
+    @api.depends('product_id', 'product_id.product_tmpl_id')
+    def _compute_product_supplies_definition(self):
+        """Mostrar componentes/periféricos/complementos definidos en el producto (aunque no haya serial)."""
+        for move in self:
+            move.product_components_definition = ''
+            move.product_peripherals_definition = ''
+            move.product_complements_definition = ''
+            if not move.product_id or not move.product_id.product_tmpl_id:
+                continue
+            tmpl = move.product_id.product_tmpl_id
+            if not hasattr(tmpl, 'composite_line_ids'):
+                continue
+            comps = []
+            for line in getattr(tmpl, 'composite_line_ids', []):
+                if line.component_product_id:
+                    comps.append(line.component_product_id.display_name or line.component_product_id.name)
+            peris = []
+            for line in getattr(tmpl, 'peripheral_line_ids', []):
+                if line.peripheral_product_id:
+                    peris.append(line.peripheral_product_id.display_name or line.peripheral_product_id.name)
+            compl = []
+            for line in getattr(tmpl, 'complement_line_ids', []):
+                if line.complement_product_id:
+                    compl.append(line.complement_product_id.display_name or line.complement_product_id.name)
+            move.product_components_definition = ', '.join(comps) if comps else ''
+            move.product_peripherals_definition = ', '.join(peris) if peris else ''
+            move.product_complements_definition = ', '.join(compl) if compl else ''
     
     principal_lot_serial = fields.Char(
         string='Número de Serie',
