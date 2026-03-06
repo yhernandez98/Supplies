@@ -31,10 +31,11 @@ class StockPicking(models.Model):
     
     @api.depends('move_ids', 'move_ids.supply_kind', 'move_ids.internal_parent_move_id')
     def _compute_move_ids_main_only(self):
-        """Solo movimientos principales: supply_kind = 'parent' y sin padre (no componentes/hijos)."""
+        """Odoo 19: usa move_ids (move_ids_without_package no existe en vista estándar). Solo padres: supply_kind='parent' y sin internal_parent_move_id."""
         for picking in self:
             try:
-                moves = getattr(picking, 'move_ids_without_package', picking.move_ids)
+                # Odoo 19: la vista usa move_ids; el modelo puede tener move_ids_without_package (stock) o no
+                moves = getattr(picking, 'move_ids_without_package', None) or picking.move_ids
                 picking.move_ids_main_only = moves.filtered(
                     lambda m: (
                         hasattr(m, 'supply_kind') and m.supply_kind == 'parent'
@@ -56,10 +57,10 @@ class StockPicking(models.Model):
     
     @api.depends('move_line_ids', 'move_line_ids.supply_kind')
     def _compute_move_line_ids_main_only(self):
-        """Calcular move_line_ids principales (solo supply_kind = 'parent'). Odoo 19 usa move_line_ids."""
+        """Odoo 19: usa move_line_ids. Solo líneas con supply_kind = 'parent'."""
         for picking in self:
             try:
-                lines = getattr(picking, 'move_line_ids_without_package', picking.move_line_ids)
+                lines = getattr(picking, 'move_line_ids_without_package', None) or picking.move_line_ids
                 picking.move_line_ids_main_only = lines.filtered(
                     lambda ml: hasattr(ml, 'supply_kind') and ml.supply_kind == 'parent'
                 )
