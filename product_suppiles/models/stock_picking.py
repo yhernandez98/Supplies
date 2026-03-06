@@ -34,30 +34,33 @@ PICKING_SUPPLIES_PAGE_XML = """<page name="supplies_main_only" string="Productos
 
 
 def _inject_picking_supplies_page(arch):
-    """Inyecta la pestaña 'Productos principales' en el form de stock.picking (por Python, sin depender de herencia XML)."""
+    """Inyecta la pestaña 'Productos principales' en el form de stock.picking. Devuelve elemento etree (no string)."""
     if etree is None:
         return arch
     try:
         if hasattr(arch, 'tag'):
-            # arch ya es un elemento etree
-            arch_str = etree.tostring(arch, encoding='unicode')
+            # arch ya es un elemento etree: usarlo y modificar in-place
+            root = arch
         elif isinstance(arch, bytes):
             arch_str = arch.decode('utf-8')
+            if arch_str.strip().startswith('<?xml'):
+                arch_str = arch_str.split('?>', 1)[-1].strip()
+            root = etree.fromstring(arch_str.encode('utf-8'))
         elif isinstance(arch, str):
             arch_str = arch
+            if arch_str.strip().startswith('<?xml'):
+                arch_str = arch_str.split('?>', 1)[-1].strip()
+            root = etree.fromstring(arch_str.encode('utf-8'))
         else:
             return arch
-        # Quitar declaración XML si existe para evitar fallos de parseo
-        if arch_str.strip().startswith('<?xml'):
-            arch_str = arch_str.split('?>', 1)[-1].strip()
-        root = etree.fromstring(arch_str.encode('utf-8') if isinstance(arch_str, str) else arch_str)
         notebooks = root.xpath('//notebook') or root.xpath('//*[local-name()="notebook"]')
         if not notebooks:
             _logger.warning("[product_suppiles] stock.picking form: no se encontró <notebook>, no se inyecta pestaña")
             return arch
         page_node = etree.fromstring(PICKING_SUPPLIES_PAGE_XML)
         notebooks[0].append(page_node)
-        return etree.tostring(root, encoding='unicode')
+        # Importante: devolver el elemento, no string (ir.ui.view espera .tag)
+        return root
     except Exception as e:
         _logger.exception("[product_suppiles] stock.picking form: error inyectando pestaña Productos principales: %s", e)
         return arch
