@@ -25,7 +25,6 @@ PICKING_SUPPLIES_PAGE_XML = """<page name="supplies_main_only" string="Productos
         <field name="associated_peripherals" string="Periféricos" readonly="1" optional="show" invisible="supply_kind != 'parent'" widget="text"/>
         <field name="associated_complements" string="Complementos" readonly="1" optional="show" invisible="supply_kind != 'parent'" widget="text"/>
         <field name="product_uom_qty"/>
-        <field name="product_packaging_id" column_invisible="1"/>
         <field name="move_line_ids" column_invisible="1"/>
       </list>
     </field>
