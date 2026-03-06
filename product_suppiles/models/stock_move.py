@@ -154,6 +154,24 @@ class StockMove(models.Model):
                 'form_view_initial_mode': 'edit',  # Abrir en modo edición
             },
         }
+
+    def action_open_assign_serial(self):
+        """Abre las operaciones detalladas de este movimiento para asignar número de serie (desde pestaña Productos principales)."""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Asignar serial - %s') % (self.product_id.display_name or _('Movimiento')),
+            'res_model': 'stock.move.line',
+            'view_mode': 'list,form',
+            'domain': [('move_id', '=', self.id)],
+            'context': {
+                'default_move_id': self.id,
+                'default_product_id': self.product_id.id,
+                'default_picking_id': self.picking_id.id if self.picking_id else False,
+                'default_location_id': self.location_id.id if self.location_id else False,
+                'default_location_dest_id': self.location_dest_id.id if self.location_dest_id else False,
+            },
+        }
     
     def name_get(self):
         """Sobrescribir name_get para que el campo principal_lot_id muestre el número de serie."""

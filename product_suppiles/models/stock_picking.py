@@ -14,12 +14,13 @@ _logger = logging.getLogger(__name__)
 PICKING_SUPPLIES_PAGE_XML = """<page name="supplies_main_only" string="Productos principales">
   <group string="Una fila por producto principal con componentes, periféricos y complementos en columnas">
     <field name="move_ids_main_only" nolabel="1">
-      <list create="0" delete="0" decoration-muted="supply_kind != 'parent'" editable="bottom">
+      <list create="0" delete="0" decoration-muted="supply_kind != 'parent'" editable="false">
         <field name="product_id"/>
         <field name="supply_parent_product_id" column_invisible="1"/>
         <field name="supply_kind" column_invisible="1"/>
         <field name="principal_lot_serial" column_invisible="1"/>
         <field name="principal_lot_id" string="Número de Serie" readonly="1" optional="show" invisible="supply_kind != 'parent' or not principal_lot_id" options="{'no_open': True, 'no_create': True}"/>
+        <button name="action_open_assign_serial" type="object" string="Detalles" icon="fa-list" class="btn-link" invisible="supply_kind != 'parent'" title="Asignar número de serie y ver operaciones detalladas"/>
         <button name="action_open_lot_wizard" type="object" string="✏️" invisible="supply_kind != 'parent' or not principal_lot_id or picking_id.state == 'done'" class="oe_link" title="Editar elementos asociados del lote"/>
         <field name="associated_components" string="Componentes" readonly="1" optional="show" invisible="supply_kind != 'parent'" widget="text"/>
         <field name="associated_peripherals" string="Periféricos" readonly="1" optional="show" invisible="supply_kind != 'parent'" widget="text"/>
