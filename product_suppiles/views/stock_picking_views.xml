@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-  <!-- Odoo 19: prioridad 99999 para aplicar después de todos (enterprise 16, batch 1000).
-      Dos xpath para renombrar move_ids -> move_ids_main_only (pestaña operations + fallback por widget). -->
+  <!-- Enfoque "estilo compra": en compra solo se AÑADE un botón (no se reemplaza el campo order_line).
+     Aquí no tocamos move_ids; AÑADIMOS un bloque con move_ids_main_only debajo en la misma pestaña Operaciones. -->
   <record id="view_picking_form_inherit_supplies_columns" model="ir.ui.view">
     <field name="name">stock.picking.form.inherit.supplies.columns</field>
     <field name="model">stock.picking</field>
@@ -18,39 +18,26 @@
         <button name="action_assign_supplies_relations" type="object" string="Asignar relaciones" class="btn-secondary" invisible="1"/>
       </xpath>
 
-      <!-- Plan B: atenuar filas que no son producto principal (supply_kind != 'parent'). Necesitamos supply_kind en la lista. -->
-      <xpath expr="//field[@name='move_ids']/list//field[@name='product_id']" position="before">
-        <field name="supply_kind" column_invisible="1"/>
-      </xpath>
-      <xpath expr="//field[@name='move_ids']/list" position="attributes">
-        <attribute name="decoration-muted">supply_kind != 'parent'</attribute>
-      </xpath>
-
-      <!-- Renombrar move_ids a move_ids_main_only: xpath por pestaña y por widget por si la estructura varía. -->
-      <xpath expr="//page[@name='operations']//field[@name='move_ids']" position="attributes">
-        <attribute name="name">move_ids_main_only</attribute>
-      </xpath>
-      <xpath expr="//field[@name='move_ids'][@widget='stock_move_one2many']" position="attributes">
-        <attribute name="name">move_ids_main_only</attribute>
-      </xpath>
-
-      <!-- Columnas Supplies después de product_id. -->
-      <xpath expr="//field[@name='move_ids_main_only']/list//field[@name='product_id']" position="after">
-        <field name="supply_parent_product_id" column_invisible="1"/>
-        <field name="supply_kind" column_invisible="1"/>
-        <field name="principal_lot_serial" column_invisible="1"/>
-        <field name="principal_lot_id" string="Número de Serie" readonly="1" optional="show" invisible="supply_kind != 'parent' or not principal_lot_id" options="{'no_open': True, 'no_create': True}"/>
-        <button name="action_open_lot_wizard" type="object" string="✏️" invisible="supply_kind != 'parent' or not principal_lot_id or picking_id.state == 'done'" class="oe_link" title="Editar elementos asociados del lote"/>
-        <field name="associated_components" string="Componentes" readonly="1" optional="show" invisible="supply_kind != 'parent'" widget="text"/>
-        <field name="associated_peripherals" string="Periféricos" readonly="1" optional="show" invisible="supply_kind != 'parent'" widget="text"/>
-        <field name="associated_complements" string="Complementos" readonly="1" optional="show" invisible="supply_kind != 'parent'" widget="text"/>
-      </xpath>
-
-      <xpath expr="//field[@name='move_ids_main_only']/list//field[@name='product_packaging_id']" position="attributes">
-        <attribute name="column_invisible">1</attribute>
-      </xpath>
-      <xpath expr="//field[@name='move_ids_main_only']/list//field[@name='move_line_ids']" position="attributes">
-        <attribute name="column_invisible">1</attribute>
+      <!-- Añadir bloque "Vista por productos principales" DENTRO de la pestaña Operaciones (sin tocar move_ids). -->
+      <xpath expr="//page[@name='operations']" position="inside">
+        <group string="Vista por productos principales (con componentes/periféricos/complementos)" name="supplies_main_only_group">
+          <field name="move_ids_main_only" nolabel="1">
+            <list create="0" delete="0" decoration-muted="supply_kind != 'parent'" editable="bottom">
+              <field name="product_id"/>
+              <field name="supply_parent_product_id" column_invisible="1"/>
+              <field name="supply_kind" column_invisible="1"/>
+              <field name="principal_lot_serial" column_invisible="1"/>
+              <field name="principal_lot_id" string="Número de Serie" readonly="1" optional="show" invisible="supply_kind != 'parent' or not principal_lot_id" options="{'no_open': True, 'no_create': True}"/>
+              <button name="action_open_lot_wizard" type="object" string="✏️" invisible="supply_kind != 'parent' or not principal_lot_id or picking_id.state == 'done'" class="oe_link" title="Editar elementos asociados del lote"/>
+              <field name="associated_components" string="Componentes" readonly="1" optional="show" invisible="supply_kind != 'parent'" widget="text"/>
+              <field name="associated_peripherals" string="Periféricos" readonly="1" optional="show" invisible="supply_kind != 'parent'" widget="text"/>
+              <field name="associated_complements" string="Complementos" readonly="1" optional="show" invisible="supply_kind != 'parent'" widget="text"/>
+              <field name="product_uom_qty"/>
+              <field name="product_packaging_id" column_invisible="1"/>
+              <field name="move_line_ids" column_invisible="1"/>
+            </list>
+          </field>
+        </group>
       </xpath>
     </field>
   </record>
