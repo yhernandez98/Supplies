@@ -22,7 +22,7 @@
             <xpath expr="//field[@name='l10n_latam_identification_type_id']" position="after">
                 <group string="NIT Colombiano DIAN" invisible="not dian_is_colombia or not is_company" class="dian_nit_fields_container">
                     <field name="dian_nit_number" 
-                           placeholder="Ej: 800123456"
+                           placeholder="Ej: 800123456 o cédula 11 dígitos"
                            size="15"
                            class="oe_highlight dian_nit_number_field dian_nit_field"/>
                     <field name="dian_nit_dv" 
