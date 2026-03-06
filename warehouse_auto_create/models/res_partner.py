@@ -150,7 +150,6 @@ class ResPartner(models.Model):
         - company_id: Supplies de Colombia (ID=1)
         - product_categ_selectable: False
         - product_selectable: True
-        - packaging_selectable: False
         - warehouse_selectable: False
         - sale_selectable: True
         """
@@ -214,7 +213,6 @@ class ResPartner(models.Model):
                 'company_id': company.id,
                 'product_categ_selectable': False,
                 'product_selectable': True,
-                'packaging_selectable': False,
                 'warehouse_selectable': False,
                 'sale_selectable': True,
                 'active': True,
@@ -726,7 +724,6 @@ class ResPartner(models.Model):
             'company_id': company.id,
             'product_categ_selectable': False,
             'product_selectable': True,
-            'packaging_selectable': False,
             'warehouse_selectable': False,
             'sale_selectable': False,
             'active': True,
