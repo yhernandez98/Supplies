@@ -6,33 +6,31 @@ Script de prueba para validar el algoritmo de cálculo del dígito de verificaci
 
 def calcular_dv_dian(nit_number):
     """
-    Calcula el dígito de verificación según el algoritmo oficial DIAN.
-    Soporta NIT empresa (9 dígitos) y cédula persona natural (hasta 15 dígitos).
-    
-    Algoritmo oficial DIAN:
-    1. Coeficientes: [3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71]
-    2. Se aplican de DERECHA A IZQUIERDA
-    3. Residuo % 11; si > 1: DV = 11 - residuo; si no: DV = residuo
+    Algoritmo oficial DIAN (Oracle ORA_CO_NIT).
+    NIT 9 dígitos: [41,37,29,23,19,17,13,7,3] IZQ→DER
+    NIT 10-15 dígitos: rellenar a 15, [71,67,59,53,47,43,41,37,29,23,19,17,13,7,3] IZQ→DER
     """
     if not nit_number or not nit_number.isdigit():
         return False
     
-    coeficientes = [3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71]
-    nit_reversed = nit_number[::-1]
+    nit_len = len(nit_number)
+    if nit_len <= 9:
+        coef = [41, 37, 29, 23, 19, 17, 13, 7, 3]
+        nit_pad = nit_number
+    else:
+        coef = [71, 67, 59, 53, 47, 43, 41, 37, 29, 23, 19, 17, 13, 7, 3]
+        nit_pad = nit_number.zfill(15)[-15:]
     
     total = 0
     detalles = []
-    for i, digit in enumerate(nit_reversed):
-        if i < len(coeficientes):
-            producto = int(digit) * coeficientes[i]
-            total += producto
-            detalles.append(f"{digit}×{coeficientes[i]}={producto}")
+    for i, digit in enumerate(nit_pad):
+        if i < len(coef):
+            p = int(digit) * coef[i]
+            total += p
+            detalles.append(f"{digit}×{coef[i]}={p}")
     
     remainder = total % 11
-    if remainder > 1:
-        dv = str(11 - remainder)
-    else:
-        dv = str(remainder)
+    dv = str(remainder) if remainder < 2 else str(11 - remainder)
     
     return {
         'nit': nit_number,
