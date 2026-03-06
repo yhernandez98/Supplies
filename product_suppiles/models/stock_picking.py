@@ -38,9 +38,18 @@ def _inject_picking_supplies_page(arch):
     if etree is None:
         return arch
     try:
-        arch_str = arch.decode('utf-8') if isinstance(arch, bytes) else (arch if isinstance(arch, str) else None)
-        if arch_str is None:
+        if hasattr(arch, 'tag'):
+            # arch ya es un elemento etree
             arch_str = etree.tostring(arch, encoding='unicode')
+        elif isinstance(arch, bytes):
+            arch_str = arch.decode('utf-8')
+        elif isinstance(arch, str):
+            arch_str = arch
+        else:
+            return arch
+        # Quitar declaración XML si existe para evitar fallos de parseo
+        if arch_str.strip().startswith('<?xml'):
+            arch_str = arch_str.split('?>', 1)[-1].strip()
         root = etree.fromstring(arch_str.encode('utf-8') if isinstance(arch_str, str) else arch_str)
         notebooks = root.xpath('//notebook') or root.xpath('//*[local-name()="notebook"]')
         if not notebooks:
@@ -119,10 +128,19 @@ class StockPicking(models.Model):
     @api.model
     def _get_view(self, view_id=None, view_type='form', **options):
         """Inyecta la pestaña 'Productos principales' en el form para que funcione aunque la herencia XML no aplique."""
-        arch, view = super()._get_view(view_id=view_id, view_type=view_type, **options)
-        if view_type == 'form':
-            arch = _inject_picking_supplies_page(arch)
-        return (arch, view)
+        try:
+            result = super()._get_view(view_id=view_id, view_type=view_type, **options)
+        except Exception as e:
+            _logger.exception("[product_suppiles] stock.picking _get_view: error en super: %s", e)
+            raise
+        # Odoo puede devolver (arch, view) o un dict
+        if isinstance(result, tuple) and len(result) >= 2:
+            arch, view = result[0], result[1]
+            if view_type == 'form':
+                arch = _inject_picking_supplies_page(arch)
+            return (arch, view)
+        # Si devuelve otra cosa (ej. dict), no modificar
+        return result
 
     def action_debug_consolidate_serial_lines(self):
         """
