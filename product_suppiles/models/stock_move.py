@@ -73,24 +73,25 @@ class StockMove(models.Model):
         help='Números de serie de complementos asociados al producto principal'
     )
 
-    # Resumen de lo definido en el producto (componentes/periféricos/complementos) para mostrar aunque no haya serial
-    product_components_definition = fields.Char(
-        string='Componentes (producto)',
+    # Resumen de lo definido en el producto (componentes/periféricos/complementos)
+    # Usamos contadores para que la tabla en el picking sea estable (sin scroll horizontal).
+    product_components_count = fields.Integer(
+        string='N° Comp. (prod.)',
         compute='_compute_product_supplies_definition',
         store=False,
-        help='Componentes definidos en la ficha del producto'
+        help='Cantidad de componentes definidos en la ficha del producto'
     )
-    product_peripherals_definition = fields.Char(
-        string='Periféricos (producto)',
+    product_peripherals_count = fields.Integer(
+        string='N° Perif. (prod.)',
         compute='_compute_product_supplies_definition',
         store=False,
-        help='Periféricos definidos en la ficha del producto'
+        help='Cantidad de periféricos definidos en la ficha del producto'
     )
-    product_complements_definition = fields.Char(
-        string='Complementos (producto)',
+    product_complements_count = fields.Integer(
+        string='N° Compl. (prod.)',
         compute='_compute_product_supplies_definition',
         store=False,
-        help='Complementos definidos en la ficha del producto'
+        help='Cantidad de complementos definidos en la ficha del producto'
     )
     
     # Campo helper para ocultar líneas no principales en la vista
@@ -103,37 +104,37 @@ class StockMove(models.Model):
     
     @api.depends('supply_kind')
     def _compute_show_in_list(self):
-        """Calcular si la línea debe mostrarse (solo líneas principales)"""
+        """Calcular si la línea debe mostrarse (solo líneas principales)."""
         for move in self:
             move.show_in_list = move.supply_kind == 'parent'
 
     @api.depends('product_id', 'product_id.product_tmpl_id')
     def _compute_product_supplies_definition(self):
-        """Mostrar componentes/periféricos/complementos definidos en el producto (aunque no haya serial)."""
+        """Contar componentes/periféricos/complementos definidos en el producto (aunque no haya serial)."""
         for move in self:
-            move.product_components_definition = ''
-            move.product_peripherals_definition = ''
-            move.product_complements_definition = ''
+            move.product_components_count = 0
+            move.product_peripherals_count = 0
+            move.product_complements_count = 0
             if not move.product_id or not move.product_id.product_tmpl_id:
                 continue
             tmpl = move.product_id.product_tmpl_id
             if not hasattr(tmpl, 'composite_line_ids'):
                 continue
-            comps = []
-            for line in getattr(tmpl, 'composite_line_ids', []):
-                if line.component_product_id:
-                    comps.append(line.component_product_id.display_name or line.component_product_id.name)
-            peris = []
-            for line in getattr(tmpl, 'peripheral_line_ids', []):
-                if line.peripheral_product_id:
-                    peris.append(line.peripheral_product_id.display_name or line.peripheral_product_id.name)
-            compl = []
-            for line in getattr(tmpl, 'complement_line_ids', []):
-                if line.complement_product_id:
-                    compl.append(line.complement_product_id.display_name or line.complement_product_id.name)
-            move.product_components_definition = ', '.join(comps) if comps else ''
-            move.product_peripherals_definition = ', '.join(peris) if peris else ''
-            move.product_complements_definition = ', '.join(compl) if compl else ''
+            comps = [
+                line for line in getattr(tmpl, 'composite_line_ids', [])
+                if getattr(line, 'component_product_id', False)
+            ]
+            peris = [
+                line for line in getattr(tmpl, 'peripheral_line_ids', [])
+                if getattr(line, 'peripheral_product_id', False)
+            ]
+            compl = [
+                line for line in getattr(tmpl, 'complement_line_ids', [])
+                if getattr(line, 'complement_product_id', False)
+            ]
+            move.product_components_count = len(comps)
+            move.product_peripherals_count = len(peris)
+            move.product_complements_count = len(compl)
     
     principal_lot_serial = fields.Char(
         string='Número de Serie',

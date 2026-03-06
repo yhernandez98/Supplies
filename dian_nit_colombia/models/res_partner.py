@@ -157,46 +157,40 @@ class ResPartner(models.Model):
     @api.model
     def _calculate_dian_dv(self, nit_number):
         """
-        Calcula el dígito de verificación según el algoritmo oficial DIAN
-        (Orden Administrativa 4 de 1989, documentación Oracle ORA_CO_NIT).
+        Calcula el dígito de verificación según el algoritmo oficial DIAN.
+        Soporta NIT empresa (9 dígitos) y cédula como NIT persona natural (hasta 15 dígitos).
         
-        Para NIT de 9 dígitos (empresas):
-        - Coeficientes: [41, 37, 29, 23, 19, 17, 13, 7, 3]
-        - Se aplican de IZQUIERDA A DERECHA (primer dígito × 41, segundo × 37, etc.)
+        Algoritmo oficial DIAN:
+        1. Coeficientes: [3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71]
+        2. Se aplican de DERECHA A IZQUIERDA (del dígito menos significativo al más significativo)
+        3. Se multiplica cada dígito por su coeficiente correspondiente
+        4. Se suman todos los productos
+        5. Se calcula el residuo de la división por 11
+        6. Si residuo > 1: DV = 11 - residuo
+        7. Si residuo es 0 o 1: DV = residuo
         
-        Para NIT de 10-15 dígitos (cédula persona natural):
-        - Se rellena con ceros a la izquierda hasta 15 dígitos
-        - Coeficientes: [71, 67, 59, 53, 47, 43, 41, 37, 29, 23, 19, 17, 13, 7, 3]
-        - Se aplican de IZQUIERDA A DERECHA
-        
-        Regla del residuo (suma % 11):
-        - Si residuo = 0 o 1: DV = residuo
-        - Si residuo > 1: DV = 11 - residuo
-        
-        Ejemplo Oracle: NIT 890321567 → (8×41)+(9×37)+... = 913, 913%11=0, DV=0
+        Ejemplos:
+        - NIT 800073584 (9 dígitos): DV = 4
+        - NIT 900877788 (9 dígitos): DV = 3
+        - Cédula 811026552 (9 dígitos): DV = 9
         """
         if not nit_number or not nit_number.isdigit():
             return False
         
-        nit_len = len(nit_number)
-        if nit_len <= 9:
-            # NIT empresa: 9 coeficientes [41, 37, 29, 23, 19, 17, 13, 7, 3] IZQ→DER
-            coeficientes = [41, 37, 29, 23, 19, 17, 13, 7, 3]
-            nit_padded = nit_number
-        else:
-            # Cédula: rellenar a 15 dígitos, coeficientes [71, 67, 59, 53, 47, 43, 41, 37, 29, 23, 19, 17, 13, 7, 3]
-            coeficientes = [71, 67, 59, 53, 47, 43, 41, 37, 29, 23, 19, 17, 13, 7, 3]
-            nit_padded = nit_number.zfill(15)[-15:]
+        # Algoritmo DIAN oficial: 15 coeficientes aplicados de DERECHA A IZQUIERDA
+        coeficientes = [3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71]
+        nit_reversed = nit_number[::-1]
         
         total = 0
-        for i, digit in enumerate(nit_padded):
+        for i, digit in enumerate(nit_reversed):
             if i < len(coeficientes):
                 total += int(digit) * coeficientes[i]
         
         remainder = total % 11
-        if remainder < 2:
+        if remainder > 1:
+            return str(11 - remainder)
+        else:
             return str(remainder)
-        return str(11 - remainder)
 
     @api.constrains('dian_nit_number', 'is_company')
     def _check_dian_nit_number(self):

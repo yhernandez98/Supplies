@@ -22,12 +22,9 @@ PICKING_SUPPLIES_PAGE_XML = """<page name="supplies_main_only" string="Productos
         <field name="principal_lot_id" string="Número de Serie" readonly="1" optional="show" invisible="supply_kind != 'parent' or not principal_lot_id" options="{'no_open': True, 'no_create': True}"/>
         <button name="action_open_assign_serial" type="object" string="Asignar serial" icon="fa-edit" class="btn-primary btn-sm" invisible="supply_kind != 'parent'" title="Abrir operaciones detalladas para asignar el número de serie"/>
         <button name="action_open_lot_wizard" type="object" string="✏️" invisible="supply_kind != 'parent' or not principal_lot_id or picking_id.state == 'done'" class="oe_link" title="Editar elementos asociados del lote"/>
-        <field name="product_components_definition" string="Componentes" readonly="1" optional="show" invisible="supply_kind != 'parent'" widget="text"/>
-        <field name="product_peripherals_definition" string="Periféricos" readonly="1" optional="show" invisible="supply_kind != 'parent'" widget="text"/>
-        <field name="product_complements_definition" string="Complementos" readonly="1" optional="show" invisible="supply_kind != 'parent'" widget="text"/>
-        <field name="associated_components" column_invisible="1"/>
-        <field name="associated_peripherals" column_invisible="1"/>
-        <field name="associated_complements" column_invisible="1"/>
+        <field name="product_components_count" string="Comp." readonly="1" optional="show" invisible="supply_kind != 'parent'"/>
+        <field name="product_peripherals_count" string="Perif." readonly="1" optional="show" invisible="supply_kind != 'parent'"/>
+        <field name="product_complements_count" string="Compl." readonly="1" optional="show" invisible="supply_kind != 'parent'"/>
         <field name="product_uom_qty"/>
         <field name="move_line_ids" column_invisible="1"/>
       </list>
