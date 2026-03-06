@@ -3,7 +3,55 @@ from odoo import api, fields, models, _
 from odoo.exceptions import UserError
 import logging
 
+try:
+    from lxml import etree
+except ImportError:
+    etree = None
+
 _logger = logging.getLogger(__name__)
+
+# XML de la pestaña "Productos principales" para inyectar en el form de picking (fallback si la herencia XML no aplica).
+PICKING_SUPPLIES_PAGE_XML = """<page name="supplies_main_only" string="Productos principales">
+  <group string="Una fila por producto principal con componentes, periféricos y complementos en columnas">
+    <field name="move_ids_main_only" nolabel="1">
+      <list create="0" delete="0" decoration-muted="supply_kind != 'parent'" editable="bottom">
+        <field name="product_id"/>
+        <field name="supply_parent_product_id" column_invisible="1"/>
+        <field name="supply_kind" column_invisible="1"/>
+        <field name="principal_lot_serial" column_invisible="1"/>
+        <field name="principal_lot_id" string="Número de Serie" readonly="1" optional="show" invisible="supply_kind != 'parent' or not principal_lot_id" options="{'no_open': True, 'no_create': True}"/>
+        <button name="action_open_lot_wizard" type="object" string="✏️" invisible="supply_kind != 'parent' or not principal_lot_id or picking_id.state == 'done'" class="oe_link" title="Editar elementos asociados del lote"/>
+        <field name="associated_components" string="Componentes" readonly="1" optional="show" invisible="supply_kind != 'parent'" widget="text"/>
+        <field name="associated_peripherals" string="Periféricos" readonly="1" optional="show" invisible="supply_kind != 'parent'" widget="text"/>
+        <field name="associated_complements" string="Complementos" readonly="1" optional="show" invisible="supply_kind != 'parent'" widget="text"/>
+        <field name="product_uom_qty"/>
+        <field name="product_packaging_id" column_invisible="1"/>
+        <field name="move_line_ids" column_invisible="1"/>
+      </list>
+    </field>
+  </group>
+</page>"""
+
+
+def _inject_picking_supplies_page(arch):
+    """Inyecta la pestaña 'Productos principales' en el form de stock.picking (por Python, sin depender de herencia XML)."""
+    if etree is None:
+        return arch
+    try:
+        arch_str = arch.decode('utf-8') if isinstance(arch, bytes) else (arch if isinstance(arch, str) else None)
+        if arch_str is None:
+            arch_str = etree.tostring(arch, encoding='unicode')
+        root = etree.fromstring(arch_str.encode('utf-8') if isinstance(arch_str, str) else arch_str)
+        notebooks = root.xpath('//notebook') or root.xpath('//*[local-name()="notebook"]')
+        if not notebooks:
+            _logger.warning("[product_suppiles] stock.picking form: no se encontró <notebook>, no se inyecta pestaña")
+            return arch
+        page_node = etree.fromstring(PICKING_SUPPLIES_PAGE_XML)
+        notebooks[0].append(page_node)
+        return etree.tostring(root, encoding='unicode')
+    except Exception as e:
+        _logger.exception("[product_suppiles] stock.picking form: error inyectando pestaña Productos principales: %s", e)
+        return arch
 
 
 def _run_consolidation_loop(picking, max_iter=10):
@@ -67,6 +115,14 @@ class StockPicking(models.Model):
             except Exception:
                 picking.move_line_ids_main_only = self.env['stock.move.line']
     
+
+    @api.model
+    def _get_view(self, view_id=None, view_type='form', **options):
+        """Inyecta la pestaña 'Productos principales' en el form para que funcione aunque la herencia XML no aplique."""
+        arch, view = super()._get_view(view_id=view_id, view_type=view_type, **options)
+        if view_type == 'form':
+            arch = _inject_picking_supplies_page(arch)
+        return (arch, view)
 
     def action_debug_consolidate_serial_lines(self):
         """
