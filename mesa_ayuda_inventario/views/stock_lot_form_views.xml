@@ -1,17 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
-<<<<<<< HEAD
         <!-- Vista que extiende el formulario de stock.lot para agregar imagen y mantenimientos.
              Heredamos de product_suppiles para que ya exista //sheet/notebook (Odoo 19 base no tiene notebook). -->
-=======
-        <!-- Hereda de product_suppiles para que ya exista //sheet/notebook (Odoo 19 base no tiene notebook). -->
->>>>>>> a0f9d7c2d7c33e41454952de2c46bb46e02b30c9
         <record id="view_production_lot_form_inherit_maintenance" model="ir.ui.view">
             <field name="name">production.lot.form.maintenance.inherit</field>
             <field name="model">stock.lot</field>
             <field name="inherit_id" ref="product_suppiles.view_production_lot_form_inherit_supplies"/>
-<<<<<<< HEAD
             <field name="priority" eval="17"/>
             <field name="active" eval="True"/>
             <field name="arch" type="xml">
@@ -28,25 +23,6 @@
                             icon="fa-file-pdf"
                             title="Generar PDF con la hoja de vida completa del equipo"/>
                 </xpath>
-=======
-            <field name="priority" eval="16"/>
-            <field name="arch" type="xml">
-                <!-- Imagen + botón: antes de location_id (campo estable en vista base/supplies) -->
-                <xpath expr="//field[@name='location_id']" position="before">
-                    <div class="o_lot_photo_block o_lot_photo_below_costo">
-                        <field name="lot_image" widget="image" 
-                               options="{'preview_image': 'lot_image', 'size': [140, 140]}"/>
-                        <button name="action_generate_life_sheet" 
-                                type="object" 
-                                string="Generar Hoja de Vida" 
-                                class="btn btn-primary"
-                                style="width: 100%; margin-top: 8px;"
-                                icon="fa-file-pdf"
-                                title="Generar PDF con la hoja de vida completa del equipo"/>
-                    </div>
-                </xpath>
-                
->>>>>>> a0f9d7c2d7c33e41454952de2c46bb46e02b30c9
                 <!-- Pestañas de mantenimientos e historial (notebook lo crea product_suppiles) -->
                 <xpath expr="//sheet/notebook" position="inside">
                     <page string="Mantenimientos y Revisiones" name="maintenance_history">

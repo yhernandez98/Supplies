@@ -272,16 +272,21 @@ class StockLot(models.Model):
                        WHERE id IN %s AND entry_date IS NOT NULL""",
                     (tuple(self.ids),),
                 )
-        # Conservar última fecha de salida al ponerla; al quitarla, limpiar también last_exit_date_display
-        # para que el producto vuelva a salir en listados (ej. si se puso fecha por error y se corrige).
+        # Conservar última fecha de salida para mostrar en suscripción hasta la limpieza
         if "exit_date" in vals:
             if vals["exit_date"]:
                 vals["last_exit_date_display"] = vals["exit_date"]
-            else:
-                vals["last_exit_date_display"] = False
-        # Si es un solo lote, exit_date ya está vacío y last_exit_date_display sigue con valor (se quitó la fecha antes), limpiarlo al guardar
-        if len(self) == 1 and "exit_date" not in vals and not self.exit_date and getattr(self, "last_exit_date_display", None):
-            vals = dict(vals, last_exit_date_display=False)
+            elif self.ids:
+                # Al borrar exit_date: copiar valor actual a last_exit_date_display ANTES del write
+                # para que la suscripción siga mostrando la fecha y el registro no "desaparezca"
+                self.env.cr.execute(
+                    """UPDATE stock_lot SET last_exit_date_display = exit_date
+                       WHERE id IN %s AND exit_date IS NOT NULL""",
+                    (tuple(self.ids),),
+                )
+                # No pasar last_exit_date_display en vals para que ningún otro write lo pise
+                if "last_exit_date_display" in vals:
+                    vals = {k: v for k, v in vals.items() if k != "last_exit_date_display"}
         res = super().write(vals)
         # Refrescar productos agrupados de la suscripción para que muestre last_exit_date_display
         if "exit_date" in vals and not vals.get("exit_date"):
