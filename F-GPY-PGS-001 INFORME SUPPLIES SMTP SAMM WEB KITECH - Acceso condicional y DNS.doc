@@ -1,0 +1,168 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">
+<head>
+<meta charset="utf-8">
+<meta name=ProgId content=Word.Document>
+<meta name=Generator content="Microsoft Word">
+<title>F-GPY-PGS-001 INFORME SUPPLIES SMTP SAMM WEB KITECH</title>
+<style>
+body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; }
+h1 { font-size: 14pt; }
+h2 { font-size: 12pt; margin-top: 12pt; }
+h3 { font-size: 11pt; margin-top: 10pt; }
+table { border-collapse: collapse; width: 100%; margin: 8pt 0; }
+th, td { border: 1px solid #000; padding: 4pt 6pt; text-align: left; }
+th { background: #f0f0f0; }
+p { margin: 6pt 0; }
+ul { margin: 6pt 0; }
+</style>
+</head>
+<body>
+
+<p><strong>PLANES GENERALES SUPPLIES</strong><br>
+<strong>F-GPY-PGS-001</strong><br>
+Versión: 01 — Fecha de Creación: Julio 2023<br>
+Página 1 de 5</p>
+
+<hr>
+
+<h2>TABLA DE CONTENIDO</h2>
+<p>1. CLIENTE ......................................................................................................................................... 1<br>
+2. FECHA ............................................................................................................................................ 1<br>
+3. CONTEXTO Y NECESIDAD DEL CLIENTE ............................................................................................ 1<br>
+&nbsp;&nbsp;&nbsp;&nbsp;3.1 Situación Inicial ....................................................................................................................... 1<br>
+&nbsp;&nbsp;&nbsp;&nbsp;3.2 Limitaciones Identificadas ......................................................................................................... 1<br>
+4. ANÁLISIS TÉCNICO Y CONFIGURACIÓN IMPLEMENTADA ..................................................................... 2<br>
+&nbsp;&nbsp;&nbsp;&nbsp;4.1 Evaluación del Entorno ............................................................................................................. 2<br>
+&nbsp;&nbsp;&nbsp;&nbsp;4.2 Directivas de Acceso Condicional Implementadas ..................................................................... 2<br>
+&nbsp;&nbsp;&nbsp;&nbsp;4.3 Estado de los Registros DNS (kitech.co) ................................................................................... 2<br>
+&nbsp;&nbsp;&nbsp;&nbsp;4.4 Solución Implementada ............................................................................................................ 3<br>
+5. PRUEBAS Y VALIDACIÓN .................................................................................................................. 3<br>
+&nbsp;&nbsp;&nbsp;&nbsp;5.1 Metodología de Pruebas ........................................................................................................... 3<br>
+&nbsp;&nbsp;&nbsp;&nbsp;5.2 Resultados Esperados .............................................................................................................. 3<br>
+6. SEGUIMIENTO POST-IMPLEMENTACIÓN ........................................................................................... 4<br>
+7. CONCLUSIÓN .................................................................................................................................. 4<br>
+8. RECOMENDACIONES ....................................................................................................................... 5<br>
+&nbsp;&nbsp;&nbsp;&nbsp;8.1 Recomendaciones de Seguridad ............................................................................................... 5<br>
+&nbsp;&nbsp;&nbsp;&nbsp;8.2 Recomendaciones Operativas .................................................................................................. 5<br>
+&nbsp;&nbsp;&nbsp;&nbsp;8.3 Consideraciones a Largo Plazo ................................................................................................. 5</p>
+
+<hr>
+
+<h2>1. CLIENTE</h2>
+<p><strong>KITECH</strong></p>
+
+<h2>2. FECHA</h2>
+<p>02/03/2026</p>
+
+<h2>3. CONTEXTO Y NECESIDAD DEL CLIENTE</h2>
+
+<h3>3.1 Situación Inicial</h3>
+<p>El cliente Kitech requiere que la cuenta <strong>kitechinfo@kitech.co</strong> pueda utilizarse para el envío de correos electrónicos desde el aplicativo SAMM Web mediante SMTP/SMB, sin que la autenticación multifactor (MFA) ni otras restricciones de acceso condicional impidan el funcionamiento de los envíos automatizados.</p>
+
+<h3>3.2 Limitaciones Identificadas</h3>
+<p>Durante el análisis se identificó que, al tener habilitadas directivas de acceso condicional que exigen MFA para usuarios o para administración, la cuenta de correo utilizada por el aplicativo podía verse afectada, impidiendo el envío de correos desde SAMM Web. Adicionalmente, se constató la necesidad de revisar el estado de los registros DNS del dominio <strong>kitech.co</strong> en el Centro de administración de Microsoft 365 para garantizar la correcta entrega y reputación del correo.</p>
+
+<hr>
+
+<h2>4. ANÁLISIS TÉCNICO Y CONFIGURACIÓN IMPLEMENTADA</h2>
+
+<h3>4.1 Evaluación del Entorno</h3>
+<p>Se realizó la evaluación del tenant de Microsoft 365 (Microsoft Entra ID) y del dominio <strong>kitech.co</strong> administrado en GoDaddy. Se verificó la existencia de directivas de acceso condicional y el estado de los registros DNS asociados a Microsoft Exchange Online.</p>
+
+<h3>4.2 Directivas de Acceso Condicional Implementadas</h3>
+<p>Se creó y configuró la directiva de acceso condicional <strong>SAMMWeb</strong> y se habilitaron las directivas de seguridad necesarias para el tenant. El estado final de directivas es el siguiente:</p>
+
+<table>
+<tr><th>Nombre de directiva</th><th>Estado</th><th>Descripción</th></tr>
+<tr><td><strong>SAMMWeb</strong></td><td>Activado</td><td>Directiva específica para permitir el uso de la cuenta <strong>kitechinfo@kitech.co</strong> en escenarios de envío de correo (SMTP/SMB) sin exigir autenticación multifactor. Incluye control de sesión por frecuencia de inicio de sesión (reautenticación periódica cada 365 días).</td></tr>
+<tr><td>Requerir autenticación multifactor a los administradores</td><td>Activado</td><td>Exige MFA para cuentas con roles administrativos.</td></tr>
+<tr><td>Requerir autenticación multifactor a todos los usuarios</td><td>Activado</td><td>Exige MFA para el resto de usuarios del tenant.</td></tr>
+<tr><td>Requerir autenticación multifactor para la administración de Azure</td><td>Activado</td><td>Exige MFA al acceder a la administración de Azure.</td></tr>
+<tr><td>Requerir la autenticación multifactor para los portales de administración de…</td><td>Activado</td><td>Exige MFA en el acceso a portales de administración de Microsoft.</td></tr>
+</table>
+
+<p>La directiva <strong>SAMMWeb</strong> se configuró con:</p>
+<ul>
+<li><strong>Usuarios:</strong> cuenta específica kitechinfo@kitech.co (o grupo que la contenga).</li>
+<li><strong>Recursos de destino:</strong> aplicaciones de correo/Exchange según corresponda al uso de SAMM Web.</li>
+<li><strong>Conceder:</strong> Conceder acceso, sin marcar "Requerir autenticación multifactor" ni otros controles restrictivos.</li>
+<li><strong>Sesión:</strong> Frecuencia de inicio de sesión — Reautenticación periódica cada <strong>365 días</strong>, para reducir solicitudes de inicio de sesión sin aplicar MFA a esta cuenta en dicho flujo.</li>
+</ul>
+<p>Con esta configuración, la cuenta <strong>kitechinfo@kitech.co</strong> queda exenta de la exigencia de MFA en el contexto definido por la directiva SAMMWeb, permitiendo el envío de correo vía SMTP/SMB desde el aplicativo.</p>
+
+<h3>4.3 Estado de los Registros DNS (kitech.co)</h3>
+<p>En el Centro de administración de Microsoft 365, en la sección <strong>Dominios &gt; kitech.co &gt; Registros de DNS</strong>, se verificó el estado de los registros para Microsoft Exchange:</p>
+
+<table>
+<tr><th>Tipo</th><th>Estado</th><th>Nombre</th><th>Valor</th></tr>
+<tr><td>MX</td><td>Aceptar</td><td>@</td><td>0 kitech-co.mail.protection.outlook.com</td></tr>
+<tr><td>TXT</td><td><strong>Error</strong></td><td>@</td><td>v=spf1 include:spf.protection.outlook.com -all</td></tr>
+<tr><td>CNAME</td><td>Aceptar</td><td>autodiscover</td><td>autodiscover.outlook.com</td></tr>
+</table>
+
+<p>• <strong>MX y CNAME:</strong> configurados correctamente; el sistema los reporta como aceptados.<br>
+• <strong>TXT (SPF):</strong> el registro SPF para el dominio aparece en estado <strong>Error</strong>. Es necesario que en el proveedor de DNS (GoDaddy) el registro TXT en la raíz (@) coincida exactamente con el valor esperado: <code>v=spf1 include:spf.protection.outlook.com -all</code></p>
+<p>El aviso "Posibles problemas de servicio" en la pestaña <strong>Información general</strong> del dominio se debe a este registro TXT incorrecto o no detectado. La corrección debe realizarse en el panel de DNS de GoDaddy; la propagación puede tardar hasta 48 horas según el proveedor.</p>
+
+<h3>4.4 Solución Implementada</h3>
+<p>Se implementó la directiva de acceso condicional <strong>SAMMWeb</strong> para la cuenta <strong>kitechinfo@kitech.co</strong>, de modo que el envío de correo desde SAMM Web (SMTP/SMB) no quede bloqueado por MFA. Se mantuvieron activas las directivas de MFA para administradores, para todos los usuarios, para administración de Azure y para portales de administración, garantizando seguridad en el resto de accesos. Se documentó el estado actual de los registros DNS del dominio <strong>kitech.co</strong> y la acción pendiente de corrección del registro TXT (SPF) en GoDaddy.</p>
+
+<hr>
+
+<h2>5. PRUEBAS Y VALIDACIÓN</h2>
+
+<h3>5.1 Metodología de Pruebas</h3>
+<ol>
+<li>Verificar que la directiva <strong>SAMMWeb</strong> esté en estado <strong>Activado</strong> en Acceso condicional (Microsoft Entra ID).</li>
+<li>Confirmar que las demás directivas MFA listadas permanecen activadas.</li>
+<li>Realizar envíos de correo de prueba desde el aplicativo SAMM Web con la cuenta <strong>kitechinfo@kitech.co</strong> y validar que no se solicite MFA en ese flujo.</li>
+<li>Tras corregir el TXT en GoDaddy, ejecutar <strong>Comprobar estado</strong> o <strong>Corregir registros DNS</strong> en el Centro de administración de Microsoft 365 para el dominio <strong>kitech.co</strong> y comprobar que el registro TXT pase a estado "Aceptar".</li>
+</ol>
+
+<h3>5.2 Resultados Esperados</h3>
+<ul>
+<li>La cuenta <strong>kitechinfo@kitech.co</strong> permite el envío de correo desde SAMM Web sin ser bloqueada por MFA en el ámbito de la directiva SAMMWeb.</li>
+<li>El resto de usuarios y administradores siguen sujetos a MFA según las directivas habilitadas.</li>
+<li>Una vez corregido el SPF en GoDaddy, el dominio <strong>kitech.co</strong> debe dejar de mostrar "Posibles problemas de servicio" por registros DNS incorrectos.</li>
+</ul>
+
+<hr>
+
+<h2>6. SEGUIMIENTO POST-IMPLEMENTACIÓN</h2>
+<ul>
+<li>Monitorear que los envíos desde SAMM Web con <strong>kitechinfo@kitech.co</strong> se realicen sin errores de autenticación.</li>
+<li>Tras actualizar el TXT en GoDaddy, verificar en Microsoft 365 que el estado del registro pase a "Aceptar" y que el aviso de problemas de servicio desaparezca.</li>
+<li>Revisar periódicamente que la directiva <strong>SAMMWeb</strong> siga activa y que no se hayan añadido condiciones que vuelvan a exigir MFA para dicha cuenta en el flujo de correo.</li>
+</ul>
+
+<hr>
+
+<h2>7. CONCLUSIÓN</h2>
+<p>Se creó y habilitó la directiva de acceso condicional <strong>SAMMWeb</strong> para permitir que la cuenta <strong>kitechinfo@kitech.co</strong> pueda utilizarse en el envío de correo desde el aplicativo SAMM Web (SMTP/SMB) sin verse afectada por la autenticación multifactor. Se mantuvieron activas las directivas de MFA para administradores, para todos los usuarios, para administración de Azure y para portales de administración. Se documentó el estado de los registros DNS del dominio <strong>kitech.co</strong>: los registros MX y CNAME están correctos; el registro TXT (SPF) presenta error y debe corregirse en el proveedor de DNS (GoDaddy) para eliminar el aviso de posibles problemas de servicio y mejorar la entrega y reputación del correo.</p>
+
+<hr>
+
+<h2>8. RECOMENDACIONES</h2>
+
+<h3>8.1 Recomendaciones de Seguridad</h3>
+<ol>
+<li>Limitar la directiva <strong>SAMMWeb</strong> únicamente a la cuenta <strong>kitechinfo@kitech.co</strong> (o al grupo de cuentas de servicio de correo) y al recurso/aplicación de correo correspondiente, sin ampliarla a "Todos los usuarios".</li>
+<li>Mantener las directivas de MFA activas para el resto de usuarios y administradores.</li>
+<li>Revisar de forma periódica los inicios de sesión y el uso de la cuenta <strong>kitechinfo@kitech.co</strong> en los registros de Entra ID y Exchange.</li>
+</ol>
+
+<h3>8.2 Recomendaciones Operativas</h3>
+<ol>
+<li>Corregir en GoDaddy el registro TXT (SPF) del dominio <strong>kitech.co</strong> con el valor exacto indicado por Microsoft 365 y comprobar el estado en el Centro de administración tras la propagación.</li>
+<li>Documentar la directiva <strong>SAMMWeb</strong> (usuarios, recursos, controles de concesión y sesión) en la documentación interna del cliente.</li>
+<li>Mantener un registro de cualquier cambio en directivas de acceso condicional que pueda afectar a la cuenta de envío de SAMM Web.</li>
+</ol>
+
+<h3>8.3 Consideraciones a Largo Plazo</h3>
+<p>Evaluar con el proveedor del aplicativo SAMM Web la posibilidad de migrar a autenticación moderna (OAuth 2.0) cuando esté disponible, alineado con las recomendaciones de Microsoft para reducir el uso de autenticación básica. Hasta entonces, la combinación de directiva SAMMWeb y contraseña de aplicación (o método actual) permite operar de forma segura y controlada.</p>
+
+<hr>
+<p><em>Documento generado con base en la estructura F-GPY-PGS-001 (Planes Generales Supplies). Omite referencias a configuración de zona horaria.</em></p>
+
+</body>
+</html>

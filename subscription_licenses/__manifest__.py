@@ -1,6 +1,6 @@
 {
     'name': 'Subscription Licenses',
-    'version': '19.0.1.0.1',
+    'version': '18.0.1.0.1',
     'author': 'Supplies De Colombia SAS',
     'category': 'Sales/Subscriptions',
     'depends': ['sale', 'stock', 'account', 'product', 'base', 'web', 'product_suppiles', 'subscription_nocount'],
@@ -18,6 +18,7 @@
         'views/license_provider_views.xml',  # Paso 1: Vistas del modelo básico (sin res_partner)
         'views/license_provider_partners_views.xml',  # Menú Proveedores (contactos con is_license_provider)
         'security/ir.model.access.csv',  # CSV después de que el modelo esté registrado
+        'views/license_category_views.xml',
         'views/trm_views.xml',
         'views/exchange_rate_monthly_views.xml',
         'views/product_license_type_views.xml',

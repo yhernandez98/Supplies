@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Módulo Unificado Personalizado',
-    'version': '19.0.3.1',
+    'version': '18.0.3.1',
     'summary': 'Módulo unificado completo con gestión de contactos, productos, productos serializados y reportes',
     'description': """
         Módulo unificado para Odoo 18.0 que combina todas las funcionalidades personalizadas:

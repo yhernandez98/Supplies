@@ -6,7 +6,7 @@
         <field name="model">stock.lot</field>
         <field name="inherit_id" ref="product_suppiles.view_production_lot_form_inherit_supplies"/>
         <field name="arch" type="xml">
-            <xpath expr="//page[@name='elementos_y_licencias']" position="inside">
+            <xpath expr="//page[@name='supplies_components']" position="inside">
                 <div class="oe_button_box" name="button_box">
                     <button name="action_link_same_lot_components" 
                             type="object" 

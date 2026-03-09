@@ -18,7 +18,6 @@
                 <t t-if="doc.x_is_proforma">
                     <t t-call="web.external_layout">
                         <div class="page">
-                            <!-- Título y datos del documento -->
                             <div class="row mb-4">
                                 <div class="col-12">
                                     <h2 class="text-center">Informe detallado - Proforma</h2>
@@ -39,9 +38,7 @@
                                 </div>
                             </div>
 
-                            <!-- Líneas agrupadas con detalle (secciones + líneas de producto + detalle por serial) -->
                             <t t-foreach="doc.invoice_line_ids" t-as="line">
-                                <!-- Línea de tipo sección: encabezado de grupo -->
                                 <t t-if="line.display_type == 'line_section'">
                                     <div class="row mt-4 mb-2">
                                         <div class="col-12">
@@ -49,7 +46,6 @@
                                         </div>
                                     </div>
                                 </t>
-                                <!-- Subtotal del grupo (line_note con texto "Subtotal X: $ Y") -->
                                 <t t-if="line.display_type == 'line_note' and line.name">
                                     <div class="row mb-2">
                                         <div class="col-12 text-end">
@@ -57,7 +53,6 @@
                                         </div>
                                     </div>
                                 </t>
-                                <!-- Línea de producto: resumen + tabla de detalles si aplica -->
                                 <t t-if="line.display_type not in ('line_section', 'line_subsection', 'line_note')">
                                     <div class="row mb-3">
                                         <div class="col-12">
@@ -90,7 +85,6 @@
                                                 </tbody>
                                             </table>
 
-                                            <!-- Detalle por serial / tipo (lo que muestra Ver Detalles) -->
                                             <t t-set="billable_line" t-value="line.subscription_billable_line_id"/>
                                             <t t-if="billable_line and billable_line.detail_ids">
                                                 <div class="ms-3 mb-2">
@@ -150,7 +144,6 @@
                                 </t>
                             </t>
 
-                            <!-- Totales (usa valor actual: con IVA si Aplicar IVA está marcado, sin IVA si no) -->
                             <div class="row mt-4">
                                 <div class="col-12 text-end">
                                     <table class="table table-sm w-auto ms-auto" style="max-width: 320px;">
@@ -174,7 +167,6 @@
                         </div>
                     </t>
                 </t>
-                <!-- Si no es proforma, página en blanco con mensaje -->
                 <t t-else="">
                     <t t-call="web.external_layout">
                         <div class="page">

@@ -1,0 +1,715 @@
+/**
+ * NIX Login - Supplies de Colombia
+ * Tema de login para GLPI 11.0.6 | Azul corporativo #0052b6
+ * Cargar solo en páginas anónimas (login).
+ */
+.nix-login-page {
+  --nix-corp: #0052b6;
+  --nix-corp-light: #1a6fd4;
+  --nix-corp-glow: rgba(0, 82, 182, 0.5);
+  --nix-corp-soft: rgba(0, 82, 182, 0.12);
+  --nix-dark: #0a0e17;
+  --nix-text: #f8fafc;
+  --nix-text-muted: #94a3b8;
+  --nix-white: #ffffff;
+  --nix-card-bg: rgba(10, 14, 23, 0.85);
+  --nix-card-border: rgba(255, 255, 255, 0.12);
+  --nix-input-bg: rgba(255, 255, 255, 0.10);
+  --nix-input-border: rgba(255, 255, 255, 0.1);
+  --nix-bg-from: rgba(0, 82, 182, 0.25);
+  --nix-bg-to: var(--nix-dark);
+  box-sizing: border-box;
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 2rem;
+  padding-bottom: 5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: var(--nix-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Tema claro */
+.nix-login-page.nix-theme-light {
+  --nix-dark: #f0f5ff;
+  --nix-text: #0f172a;
+  --nix-text-muted: #475569;
+  --nix-card-bg: rgba(255, 255, 255, 0.92);
+  --nix-card-border: rgba(0, 82, 182, 0.15);
+  --nix-input-bg: rgba(255, 255, 255, 0.85);
+  --nix-input-border: rgba(0, 82, 182, 0.25);
+  --nix-bg-from: rgba(0, 82, 182, 0.08);
+  --nix-bg-to: #f0f5ff;
+  --nix-corp-glow: rgba(0, 82, 182, 0.2);
+  --nix-corp-soft: rgba(0, 82, 182, 0.1);
+}
+
+.nix-login-page *,
+.nix-login-page *::before,
+.nix-login-page *::after {
+  box-sizing: border-box;
+}
+
+/* Área táctil mínima 44×44px y tooltip visible (title en HTML) */
+.nix-theme-btn {
+  position: fixed;
+  top: 1.25rem;
+  right: 1.25rem;
+  z-index: 100;
+  min-width: 44px;
+  min-height: 44px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--nix-text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-sizing: border-box;
+}
+
+.nix-theme-btn:hover {
+  background: var(--nix-corp-soft);
+  border-color: var(--nix-corp);
+  color: var(--nix-corp-light);
+  transform: scale(1.08);
+}
+
+.nix-login-page.nix-theme-light .nix-theme-btn {
+  background: rgba(0, 82, 182, 0.08);
+  border-color: rgba(0, 82, 182, 0.2);
+  color: #475569;
+}
+
+.nix-login-page.nix-theme-light .nix-theme-btn:hover {
+  background: var(--nix-corp-soft);
+  border-color: var(--nix-corp);
+  color: var(--nix-corp-light);
+}
+
+.nix-login-page .nix-bg-base {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse 120% 80% at 50% -20%, var(--nix-bg-from) 0%, transparent 50%),
+    radial-gradient(ellipse 80% 120% at 100% 50%, rgba(0, 82, 182, 0.15) 0%, transparent 45%),
+    radial-gradient(ellipse 80% 80% at 0% 100%, rgba(0, 82, 182, 0.1) 0%, transparent 45%),
+    var(--nix-bg-to);
+  z-index: 0;
+}
+
+.nix-login-page .nix-blob {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.4;
+  animation: nix-float 18s ease-in-out infinite;
+  z-index: 1;
+}
+
+.nix-login-page.nix-theme-light .nix-blob {
+  opacity: 0.2;
+  background: var(--nix-corp-light);
+}
+
+.nix-login-page .nix-blob-1 {
+  width: clamp(200px, 40vw, 400px);
+  height: clamp(200px, 40vw, 400px);
+  background: var(--nix-corp);
+  top: 10%;
+  left: 5%;
+  animation-duration: 22s;
+}
+
+.nix-login-page .nix-blob-2 {
+  width: clamp(180px, 35vw, 350px);
+  height: clamp(180px, 35vw, 350px);
+  background: var(--nix-corp-light);
+  top: 60%;
+  right: 10%;
+  animation-delay: -7s;
+  animation-duration: 20s;
+}
+
+.nix-login-page .nix-blob-3 {
+  width: clamp(120px, 25vw, 250px);
+  height: clamp(120px, 25vw, 250px);
+  background: var(--nix-corp);
+  bottom: 15%;
+  left: 25%;
+  animation-delay: -14s;
+  animation-duration: 16s;
+}
+
+.nix-login-page .nix-blob-4 {
+  width: clamp(100px, 20vw, 200px);
+  height: clamp(100px, 20vw, 200px);
+  background: var(--nix-corp-light);
+  top: 25%;
+  right: 25%;
+  animation-delay: -5s;
+  animation-duration: 24s;
+}
+
+@keyframes nix-float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(30px, -40px) scale(1.05); }
+  50% { transform: translate(-20px, 20px) scale(0.95); }
+  75% { transform: translate(40px, 30px) scale(1.02); }
+}
+
+.nix-login-page .nix-wrap {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 1000px;
+  margin-left: auto;
+  margin-right: auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3.5rem;
+  align-items: center;
+}
+
+@media (max-width: 800px) {
+  .nix-login-page .nix-wrap {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+  .nix-login-page .nix-panel-info {
+    display: none;
+  }
+  .nix-login-page .nix-card-outer {
+    width: 100%;
+    max-width: 440px;
+  }
+}
+
+.nix-login-page .nix-panel-info {
+  padding: 1rem 0;
+  padding-right: 2.5rem;
+  text-align: center;
+  max-width: 90%;
+}
+
+.nix-login-page .nix-panel-info .nix-logo-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+  color: var(--nix-text);
+  
+  margin-bottom: 2rem;
+}
+
+.nix-login-page .nix-panel-info .nix-logo-link img {
+  height: 52px;
+  width: auto;
+  max-width: 240px;
+  object-fit: contain;
+  display: block;
+}
+
+.nix-login-page .nix-panel-info .nix-title {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+  margin-bottom: 1.5rem;
+  color: var(--nix-text);
+  
+  text-align: center;
+}
+
+/* C02: texto alineado a la izquierda (evitar que GLPI base fuerce justify) */
+.nix-login-page .nix-configurable-content,
+.nix-login-page .nix-panel-info .nix-configurable-content {
+  font-size: 1rem;
+  line-height: 1.75;
+  color: var(--nix-text-muted);
+  text-align: left !important;
+}
+
+.nix-login-page .nix-configurable-content p,
+.nix-login-page .nix-panel-info .nix-configurable-content p {
+  margin-bottom: 1rem;
+  text-align: left !important;
+}
+
+/* Forzar left en todos los descendientes del texto (tema oscuro y claro) */
+.nix-login-page .nix-panel-info .nix-configurable-content * {
+  text-align: left !important;
+}
+
+/* Tema claro: legibilidad — color sólido y opacidad 1 (sin transparencia) */
+.nix-login-page.nix-theme-light .nix-configurable-content,
+.nix-login-page.nix-theme-light .nix-configurable-content p {
+  color: #1e3a5f !important;
+  opacity: 1 !important;
+}
+
+.nix-login-page.nix-theme-light .nix-panel-info .nix-title {
+  color: #0a1f3d !important;
+  opacity: 1 !important;
+}
+
+/* Borde solo en azul, efecto reflejo/brillo sin relleno interno */
+.nix-login-page .nix-card-outer {
+  position: relative;
+  border-radius: 24px;
+  background: transparent;
+  border: 1px solid rgba(0, 82, 182, 0.4);
+  box-shadow: 0 0 24px var(--nix-corp-glow),
+              0 0 48px rgba(0, 82, 182, 0.25),
+              inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  animation: nix-border-glow 6s ease-in-out infinite;
+}
+
+.nix-login-page.nix-theme-light .nix-card-outer {
+  border: 1px solid rgba(0, 82, 182, 0.15);
+  box-shadow: 0 8px 40px rgba(0, 82, 182, 0.12);
+  animation: none;
+}
+
+.nix-login-page .nix-card-inner {
+  position: relative;
+  border-radius: 21px;
+  background: var(--nix-card-bg);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--nix-card-border);
+  padding: 2.5rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.nix-login-page .nix-form-logo {
+  margin-bottom: 1.5rem;
+}
+
+.nix-login-page .nix-form-logo a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  text-decoration: none;
+  color: var(--nix-text);
+  
+}
+
+.nix-login-page .nix-form-logo img {
+  height: 44px;
+  width: auto;
+  max-width: 200px;
+  object-fit: contain;
+}
+
+.nix-login-page .nix-panel-info .nix-panel-logo {
+  height: 70px;
+  width: auto;
+  object-fit: contain;
+  margin-bottom: 1.25rem;
+  display: block;
+}
+
+.nix-login-page .nix-form-logo-header {
+  margin-bottom: 1rem;
+}
+
+.nix-login-page .nix-form-logo-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 1rem;
+  text-decoration: none;
+  color: var(--nix-text);
+  
+}
+
+.nix-login-page .nix-form-logo-img {
+  width: 56px;
+  height: auto;
+  flex-shrink: 0;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.25));
+}
+
+.nix-login-page .nix-form-logo-title {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--nix-text);
+  white-space: nowrap;
+}
+.nix-login-page .nix-form-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--nix-text);
+  
+  letter-spacing: -0.04em;
+  margin-bottom: 0.25rem;
+}
+
+.nix-login-page .nix-form-subtitle {
+  font-size: 0.9rem;
+  color: var(--nix-text-muted);
+  margin-bottom: 1.75rem;
+}
+
+.nix-login-page .nix-form .nix-field {
+  margin-bottom: 1.25rem;
+}
+
+.nix-login-page .nix-form .nix-field label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--nix-text-muted);
+  margin-bottom: 0.4rem;
+}
+
+.nix-login-page .nix-field-password-wrap {
+  position: relative;
+}
+
+.nix-login-page .nix-field-password-wrap .form-control {
+  padding-right: 2.75rem;
+}
+
+.nix-login-page .nix-toggle-pw {
+  position: absolute;
+  right: 0.875rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--nix-text-muted);
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nix-login-page .nix-toggle-pw:hover {
+  color: var(--nix-text);
+}
+
+.nix-login-page .nix-form .nix-field input.form-control {
+  width: 100%;
+  padding: 0.9rem 1rem;
+  font-size: 1rem;
+  font-family: inherit;
+  color: var(--nix-text);
+  background: var(--nix-input-bg);
+  border: 1px solid var(--nix-input-border);
+  border-radius: 14px;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+}
+
+.nix-login-page .nix-form .nix-field input.form-control::placeholder {
+  color: #cbd5e1;
+  opacity: 1;
+}
+
+.nix-login-page.nix-theme-light .nix-form .nix-field input.form-control::placeholder {
+  color: #64748b;
+}
+
+.nix-login-page .nix-form .nix-field input.form-control:hover {
+  background: var(--nix-input-bg);
+  border-color: var(--nix-corp);
+  filter: brightness(1.05);
+}
+
+.nix-login-page .nix-form .nix-field input.form-control:focus {
+  outline: none;
+  border-color: var(--nix-corp);
+  box-shadow: 0 0 0 3px var(--nix-corp-soft);
+  background: var(--nix-input-bg);
+}
+
+.nix-login-page .nix-form .btn-primary,
+.nix-login-page .nix-form .btn.btn-primary {
+  width: 100%;
+  padding: 1rem 1.25rem;
+  font-size: 1rem;
+  font-weight: 700;
+  font-family: inherit;
+  color: var(--nix-white);
+  background: linear-gradient(135deg, var(--nix-corp) 0%, var(--nix-corp-light) 100%);
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.3s ease;
+  box-shadow: 0 8px 24px var(--nix-corp-glow);
+  margin-top: 0.25rem;
+}
+
+.nix-login-page .nix-form .btn-primary:hover,
+.nix-login-page .nix-form .btn.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px var(--nix-corp-glow);
+}
+
+.nix-login-page .nix-form .btn-primary:disabled {
+  cursor: wait;
+  opacity: 0.9;
+}
+
+@keyframes nix-spin {
+  to { transform: rotate(360deg); }
+}
+
+.nix-login-page .nix-spinner {
+  animation: nix-spin 0.8s linear infinite;
+  vertical-align: middle;
+  margin-right: 0.4rem;
+  display: inline-block;
+}
+
+.nix-login-page .nix-form-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.nix-login-page .nix-form-label-description a,
+.nix-login-page .nix-link-forgot {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--nix-corp-light);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.nix-login-page .nix-form-label-description a:hover,
+.nix-login-page .nix-link-forgot:hover {
+  color: var(--nix-white);
+}
+
+.nix-login-page .form-check,
+.nix-login-page .nix-check-remember {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--nix-text-muted);
+  cursor: pointer;
+  margin-top: 0.5rem;
+}
+
+.nix-login-page .form-check-input {
+  width: 1.125rem;
+  height: 1.125rem;
+  accent-color: var(--nix-corp);
+  background-color: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+.nix-login-page .form-check-input:checked {
+  accent-color: var(--nix-corp);
+  background-color: var(--nix-corp) !important;
+  border-color: var(--nix-corp) !important;
+}
+.nix-login-page .form-check-input:focus {
+  border-color: var(--nix-corp);
+  box-shadow: 0 0 0 2px var(--nix-corp-soft);
+}
+
+.nix-login-page .nix-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  margin: 1.5rem 0;
+}
+
+.nix-login-page.nix-theme-light .nix-divider {
+  background: linear-gradient(90deg, transparent, rgba(0,82,182,0.2), transparent);
+}
+
+.nix-login-page .nix-social-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--nix-text-muted);
+  margin-bottom: 0.6rem;
+}
+
+.nix-login-page .nix-social-links {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.nix-login-page .nix-social-links a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--nix-text-muted);
+  transition: all 0.3s ease;
+}
+
+.nix-login-page.nix-theme-light .nix-social-links a {
+  background: rgba(0, 82, 182, 0.06);
+  border-color: rgba(0, 82, 182, 0.15);
+  color: var(--nix-text-muted);
+}
+
+.nix-login-page .nix-social-links a:hover {
+  background: var(--nix-corp-soft);
+  border-color: var(--nix-corp);
+  color: var(--nix-corp-light);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px var(--nix-corp-glow);
+}
+
+.nix-login-page .nix-social-links svg {
+  width: 18px;
+  height: 18px;
+}
+
+.nix-login-page .nix-policy-link {
+  margin-top: 0.75rem;
+}
+
+.nix-login-page .nix-policy-link a {
+  font-size: 0.8rem;
+  color: var(--nix-text-muted);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.nix-login-page .nix-policy-link a:hover {
+  color: var(--nix-corp-light);
+}
+
+.nix-login-page .nix-footer {
+  position: relative;
+  width: 100%;
+  max-width: 1000px;
+  margin-top: 2rem;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 0.875rem 1rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--nix-text-muted);
+  opacity: 0.95;
+  z-index: 10;
+}
+
+.nix-login-page .alert.alert-danger {
+  background: rgba(248, 113, 113, 0.15);
+  border-color: rgba(248, 113, 113, 0.4);
+  color: #fca5a5;
+  border-radius: 12px;
+  margin-bottom: 1rem;
+}
+
+
+
+
+
+/* Reflejo azul suave en el borde, sin relleno */
+@keyframes nix-border-glow {
+  0%, 100% { box-shadow: 0 0 24px var(--nix-corp-glow), 0 0 48px rgba(0, 82, 182, 0.25), inset 0 0 0 1px rgba(255, 255, 255, 0.06); border-color: rgba(0, 82, 182, 0.45); }
+  50%       { box-shadow: 0 0 32px var(--nix-corp-glow), 0 0 56px rgba(0, 82, 182, 0.35), inset 0 0 0 1px rgba(255, 255, 255, 0.08); border-color: rgba(0, 82, 182, 0.6); }
+}
+
+
+.nix-footer-copy {
+  margin-top: auto;
+  padding-top: 2rem;
+  padding-bottom: 1rem;
+  font-size: 0.8rem;
+  color: var(--nix-text-muted);
+  text-align: center;
+}
+
+/* Ajuste responsivo para portátiles / pantallas bajas */
+@media (max-height: 830px), (max-width: 1200px) {
+  .nix-login-page {
+    padding: 0.75rem;
+    align-items: flex-start;
+  }
+
+  .nix-login-page .nix-wrap {
+    max-width: 960px;
+    gap: 1.75rem;
+    margin-top: 0.1rem;
+  }
+
+  .nix-login-page .nix-card-inner {
+    padding: 1.6rem 1.8rem;
+  }
+
+  .nix-login-page .nix-panel-info .nix-title {
+    font-size: 1.5rem;
+  }
+
+  .nix-login-page .nix-form-logo-title {
+    font-size: 1.5rem;
+  }
+
+  .nix-login-page .nix-configurable-content {
+    font-size: 0.95rem;
+  }
+
+  .nix-login-page .nix-form .nix-field {
+    margin-bottom: 0.9rem;
+  }
+
+  .nix-login-page .nix-form-subtitle {
+    margin-bottom: 1.1rem;
+  }
+
+  /* en pantallas bajas, footer ya usa margin-top: auto */
+  .nix-footer-copy {
+    padding-top: 1.5rem;
+  }
+
+  /* Tema claro: mantener color y opacidad dentro del media query (evitar que .nix-configurable-content lo anule) */
+  .nix-login-page.nix-theme-light .nix-configurable-content,
+  .nix-login-page.nix-theme-light .nix-configurable-content p,
+  .nix-login-page.nix-theme-light .nix-panel-info .nix-configurable-content * {
+    color: #1e3a5f !important;
+    opacity: 1 !important;
+  }
+  .nix-login-page.nix-theme-light .nix-panel-info .nix-title {
+    color: #0a1f3d !important;
+    opacity: 1 !important;
+  }
+}
+
+/* Tema claro: anular -webkit-text-fill-color de GLPI/Tabler que hace el texto ilegible */
+.nix-login-page.nix-theme-light .nix-panel-info,
+.nix-login-page.nix-theme-light .nix-panel-info * {
+  color: #1e3a5f !important;
+  opacity: 1 !important;
+  -webkit-text-fill-color: #1e3a5f !important;
+}
+.nix-login-page.nix-theme-light .nix-panel-info .nix-title {
+  color: #0a1f3d !important;
+  -webkit-text-fill-color: #0a1f3d !important;
+}

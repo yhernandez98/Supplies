@@ -9,6 +9,30 @@ class LicenseProviderStock(models.Model):
     _order = 'provider_id, license_product_id'
     _rec_name = 'license_product_id'
 
+    def _register_hook(self):
+        """Sincronizar categoría desde plantilla: actualizar BD para que la vista muestre la categoría actual."""
+        super()._register_hook()
+        try:
+            cr = self.env.cr
+            # Actualizar desde license_template cuando hay license_template_id
+            cr.execute("""
+                UPDATE license_provider_stock s
+                SET license_category_id = t.name
+                FROM license_template t
+                WHERE s.license_template_id = t.id AND t.name IS NOT NULL
+            """)
+            # Para líneas sin template enlazado: actualizar por producto (template con mismo product_id)
+            cr.execute("""
+                UPDATE license_provider_stock s
+                SET license_category_id = t.name
+                FROM license_template t
+                WHERE s.license_template_id IS NULL
+                  AND t.product_id = s.license_product_id
+                  AND t.name IS NOT NULL
+            """)
+        except Exception:
+            pass
+
     provider_id = fields.Many2one(
         'res.partner',
         string='Proveedor',
@@ -139,13 +163,14 @@ class LicenseProviderStock(models.Model):
             elif not rec.license_product_id and rec.license_template_id:
                 rec.license_template_id = False
 
-    @api.depends('license_product_id')
+    @api.depends('license_product_id', 'license_template_id', 'license_template_id.name')
     def _compute_license_category(self):
-        """Obtiene la categoría de la licencia desde license.template si existe."""
+        """Obtiene la categoría de la licencia desde license.template (actualizada al cambiar categoría en la plantilla)."""
         for rec in self:
-            if rec.license_product_id:
+            if rec.license_template_id and rec.license_template_id.name:
+                rec.license_category_id = rec.license_template_id.name.id
+            elif rec.license_product_id:
                 try:
-                    # Buscar si hay un license.template con este producto
                     if 'license.template' in self.env:
                         license_template = self.env['license.template'].search([
                             ('product_id', '=', rec.license_product_id.id)
@@ -161,10 +186,10 @@ class LicenseProviderStock(models.Model):
             else:
                 rec.license_category_id = False
 
-    _unique_provider_license = models.Constraint(
-        'unique(provider_id, license_product_id)',
-        'Ya existe un registro para este proveedor y esta licencia. Edite el existente en lugar de crear uno nuevo.',
-    )
+    _sql_constraints = [
+        ('unique_provider_license', 'unique(provider_id, license_product_id)',
+         'Ya existe un registro para este proveedor y esta licencia. Edite el existente en lugar de crear uno nuevo.'),
+    ]
 
     @api.constrains('quantity')
     def _check_quantity(self):

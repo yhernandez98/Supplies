@@ -47,8 +47,6 @@ class ProductRelationSearch(models.TransientModel):
             ('component', 'Componente'),
             ('peripheral', 'Periférico'),
             ('complement', 'Complemento'),
-            ('monitor', 'Monitores'),
-            ('ups', 'UPS'),
         ],
         string='Tipo de Elemento',
         readonly=True,
@@ -185,9 +183,7 @@ class ProductRelationSearch(models.TransientModel):
                     type_map = {
                         'component': 'Componente',
                         'peripheral': 'Periférico',
-                        'complement': 'Complemento',
-                        'monitor': 'Monitores',
-                        'ups': 'UPS',
+                        'complement': 'Complemento'
                     }
                     record.relation_type = type_map.get(supply_line.item_type, 'Desconocido')
                 else:
@@ -210,9 +206,7 @@ class ProductRelationSearch(models.TransientModel):
                     type_map = {
                         'component': 'Componente',
                         'peripheral': 'Periférico',
-                        'complement': 'Complemento',
-                        'monitor': 'Monitores',
-                        'ups': 'UPS',
+                        'complement': 'Complemento'
                     }
                     record.relation_type = type_map.get(supply_line.item_type, 'Desconocido')
                 else:

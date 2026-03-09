@@ -61,17 +61,20 @@
         </field>
     </record>
 
-    <!-- Búsqueda para Series con licencias (sin group_by: evita Invalid view en Odoo 19 para TransientModel) -->
+    <!-- Búsqueda para Series con licencias: agrupar por asignadas / no asignadas -->
     <record id="view_subscription_license_serial_line_search" model="ir.ui.view">
         <field name="name">subscription.license.serial.line.search</field>
         <field name="model">subscription.license.serial.line</field>
-        <field name="type">search</field>
         <field name="arch" type="xml">
             <search string="Series con licencias">
                 <field name="location_id"/>
                 <field name="product_id"/>
                 <field name="lot_id"/>
                 <field name="license_service_name"/>
+                <group expand="0" string="Agrupar por">
+                    <filter string="Por tipo de licencia" name="group_by_license_type" context="{'group_by': 'license_service_name'}"/>
+                    <filter string="Licencias asignadas / No asignadas" name="group_assignment" context="{'group_by': 'assignment_group'}"/>
+                </group>
             </search>
         </field>
     </record>
@@ -126,7 +129,7 @@
         <field name="model">subscription.equipment.serial.line</field>
         <field name="type">list</field>
         <field name="arch" type="xml">
-            <list string="Detalles (equipos)" create="false" edit="false" delete="false" default_order="product_name, inventory_plate, lot_name">
+            <list string="Detalles (equipos)" create="false" edit="false" delete="true" default_order="product_name, inventory_plate, lot_name">
                 <field name="product_name" string="Producto"/>
                 <field name="inventory_plate" string="Placa de Inventario"/>
                 <field name="lot_name" string="Número de serie/lote"/>
@@ -216,6 +219,7 @@
                         </group>
                         <group>
                             <field name="license_name"/>
+                            <field name="license_type_id" options="{'no_open': True}"/>
                             <field name="license_category"/>
                             <field name="business_line_id" options="{'no_open': True}"/>
                             <field name="business_line_name" column_invisible="1"/>
@@ -314,8 +318,8 @@
                                         <field name="product_display_name" string="Producto"/>
                                         <field name="business_line_id" string="Línea de negocio"/>
                                         <field name="quantity" string="Cantidad" sum="Total"/>
-                                        <field name="proyectado" string="Proyectado" widget="monetary" options="{'currency_field': 'currency_id'}"/>
-                                        <field name="cost" string="Costo" widget="monetary" options="{'currency_field': 'cost_currency_id'}"/>
+                                        <field name="proyectado" string="Proyectado" widget="monetary" options="{'currency_field': 'currency_id'}" sum="Total"/>
+                                        <field name="cost" string="Costo" widget="monetary" options="{'currency_field': 'cost_currency_id'}" sum="Total"/>
                                         <field name="cost_currency_id" string="Moneda" options="{'no_create': True}"/>
                                         <button name="action_view_serials" type="object" string="Ver Detalles" class="btn-link" icon="fa-list" invisible="not show_view_details"/>
                                     </list>
@@ -528,6 +532,10 @@
                 <field name="subscription_id"/>
                 <filter name="filter_active" string="En curso" domain="[('date_end', '=', False)]"/>
                 <filter name="filter_completed" string="Finalizadas" domain="[('date_end', '!=', False)]"/>
+                <group expand="0" string="Agrupar">
+                    <filter name="group_by_month" string="Por mes" context="{'group_by': 'date_start:month'}"/>
+                    <filter name="group_by_subscription" string="Por suscripción" context="{'group_by': 'subscription_id'}"/>
+                </group>
             </search>
         </field>
     </record>
@@ -619,6 +627,11 @@
                 <field name="new_equipment_inventory_plate"/>
                 <field name="new_equipment_name"/>
                 <field name="change_date"/>
+                <group expand="0" string="Agrupar">
+                    <filter name="group_by_subscription" string="Por Suscripción" context="{'group_by': 'subscription_id'}"/>
+                    <filter name="group_by_user" string="Por Usuario" context="{'group_by': 'user_id'}"/>
+                    <filter name="group_by_date" string="Por Fecha" context="{'group_by': 'change_date:day'}"/>
+                </group>
             </search>
         </field>
     </record>
@@ -794,22 +807,22 @@
         <field name="context">{'equipment_change_wizard': True, 'search_by_inventory_plate_only': True}</field>
     </record>
 
-    <!-- Vista personalizada para formulario de proforma: columnas Cuenta, Analítica, Impuestos ocultas por defecto (seleccionables desde columnas opcionales) -->
+    <!-- Vista personalizada para formulario de proforma: secciones por línea de negocio, Ver Detalles, Aplicar IVA, Informe PDF detallado -->
     <record id="view_account_move_proforma_form" model="ir.ui.view">
         <field name="name">account.move.proforma.form</field>
         <field name="model">account.move</field>
         <field name="inherit_id" ref="account.view_move_form"/>
         <field name="priority" eval="99"/>
         <field name="arch" type="xml">
-            <!-- Botón Informe PDF detallado (solo proformas): genera PDF con líneas y detalle por grupo/serial -->
+            <!-- Botón Informe PDF detallado (solo proformas) -->
             <xpath expr="//header" position="inside">
                 <button name="action_print_proforma_detailed" type="object" string="Informe PDF detallado" invisible="not x_is_proforma" class="btn-secondary" title="Generar PDF con toda la información detallada por grupo (seriales, licencias, etc.)"/>
             </xpath>
-            <!-- Aplicar IVA: solo proformas; desmarcado = total sin IVA (el informe usa el valor actual) -->
-            <xpath expr="//group[@id='header_right_group']" position="inside">
+            <!-- Aplicar IVA: solo proformas; desmarcado = total sin IVA -->
+            <xpath expr="//header" position="inside">
                 <field name="x_apply_iva" string="Aplicar IVA" invisible="not x_is_proforma" widget="boolean_toggle"/>
             </xpath>
-            <!-- Cuenta: oculta por defecto, optional show para poder mostrarla desde el selector de columnas -->
+            <!-- Cuenta: oculta por defecto, optional show -->
             <xpath expr="//field[@name='invoice_line_ids']//field[@name='account_id']" position="attributes">
                 <attribute name="column_invisible">1</attribute>
                 <attribute name="optional">show</attribute>
@@ -828,17 +841,16 @@
             <xpath expr="//field[@name='invoice_line_ids']//field[@name='price_unit']" position="attributes">
                 <attribute name="column_invisible">1</attribute>
             </xpath>
-            <!-- Impuestos: oculto por defecto, optional show para poder mostrarlo -->
+            <!-- Impuestos y Analítica: ocultos por defecto, optional show -->
             <xpath expr="//field[@name='invoice_line_ids']//field[@name='tax_ids']" position="attributes">
                 <attribute name="column_invisible">1</attribute>
                 <attribute name="optional">show</attribute>
             </xpath>
-            <!-- Analítica: oculta por defecto, optional show para poder mostrarla -->
             <xpath expr="//field[@name='invoice_line_ids']//field[@name='analytic_distribution']" position="attributes">
                 <attribute name="column_invisible">1</attribute>
                 <attribute name="optional">show</attribute>
             </xpath>
-            <!-- Orden: Producto, Línea de negocio, Cantidad, Importe, Ver Detalles. Ocultar cantidad/importe en secciones. -->
+            <!-- Orden: Producto (subscription_line_display_name), Línea de negocio, Cantidad, Importe, Ver Detalles. Usar is_section_or_note_line para ocultar cantidad/importe. -->
             <xpath expr="//field[@name='invoice_line_ids']//field[@name='product_id']" position="before">
                 <field name="subscription_line_display_name" string="Producto" decoration-bold="is_section_or_note_line"/>
                 <field name="subscription_business_line_id" string="Línea de negocio"/>
@@ -857,9 +869,7 @@
             <xpath expr="//field[@name='invoice_line_ids']//field[@name='product_id']" position="attributes">
                 <attribute name="column_invisible">1</attribute>
             </xpath>
-            <!-- No tocar la columna name: el widget evalúa column_invisible sin contexto de fila y da error.
-                 Dejamos name visible (estándar) para que las filas de sección muestren el título (COMOPRINT, RENTING DE EQUIPOS, etc.). -->
-            <!-- Ver Detalles al final, después de Importe (oculto en secciones/notas) -->
+            <!-- Ver Detalles al final (oculto en secciones/notas o sin subscription_billable_line_id) -->
             <xpath expr="//field[@name='invoice_line_ids']//field[@name='price_total']" position="after">
                 <button name="action_view_billable_line_details" type="object" string="Ver Detalles" class="btn-link" icon="fa-list" invisible="is_section_or_note_line or not subscription_billable_line_id"/>
             </xpath>
@@ -884,8 +894,8 @@
                 </header>
             </xpath>
             
-            <!-- Servicio y Suscripción Activa: después de location_id (campo estándar) -->
-            <xpath expr="//field[@name='location_id']" position="after">
+            <!-- Servicio y Suscripción Activa en columna derecha (acorta la lista izquierda) -->
+            <xpath expr="//group[@name='main_group']/group[2]" position="inside">
                 <field name="subscription_service_product_id"
                        string="Servicio"
                        options="{'no_create': False}"
@@ -995,7 +1005,7 @@
                                     <field name="product_display_name" string="Producto"/>
                                     <field name="business_line_id" string="Línea de negocio"/>
                                     <field name="quantity" string="Cantidad" sum="Total"/>
-                                    <field name="cost" string="Costo" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                                    <field name="cost" string="Costo" widget="monetary" options="{'currency_field': 'currency_id'}" sum="Total"/>
                                     <button name="action_view_details" type="object" string="Ver Detalles" class="btn-link" icon="fa-list"/>
                                     <field name="currency_id" column_invisible="True"/>
                                 </list>

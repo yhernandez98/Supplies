@@ -1,6 +1,6 @@
 {
     'name': 'CRM Sales Supplies Integration',
-    'version': '19.0.1.0.0',
+    'version': '18.0.1.0.0',
     'author': 'Supplies',
     'category': 'Sales/CRM',
     'depends': [
@@ -10,7 +10,6 @@
         'stock',
         'purchase_stock',
         'sale_stock',
-        'sale_purchase',  # Para que nuestro has_sale_order y _compute_has_sale_order tengan prioridad (evita error NewId en onchange)
         'product_suppiles',
         'subscription_nocount',
         'custom_u',  # Requerido para el campo tipo_contacto

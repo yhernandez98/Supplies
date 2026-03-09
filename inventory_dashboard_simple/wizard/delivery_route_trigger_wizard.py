@@ -381,9 +381,9 @@ class DeliveryRouteTriggerWizard(models.TransientModel):
             }
             supply_kind = supply_kind_map.get(item_type, 'component')
             
-            # Crear movimiento para el producto relacionado (Odoo 19: stock.move usa description_picking, no name)
+            # Crear movimiento para el producto relacionado
             move_vals = {
-                'description_picking': f"{related_product.display_name} ({supply_kind} de {principal_lot.product_id.display_name})",
+                'name': f"{related_product.display_name} ({supply_kind} de {principal_lot.product_id.display_name})",
                 'product_id': related_product.id,
                 'product_uom': related_product.uom_id.id,
                 'product_uom_qty': related_qty,
@@ -521,7 +521,7 @@ class DeliveryRouteTriggerWizard(models.TransientModel):
                 supply_kind = 'parent' if is_principal else False
 
                 move_vals = {
-                    'description_picking': product.display_name,
+                    'name': product.display_name,
                     'product_id': product.id,
                     'product_uom': product.uom_id.id,
                     'product_uom_qty': line.quantity,
@@ -626,10 +626,8 @@ class DeliveryRouteTriggerWizard(models.TransientModel):
                     if hasattr(prev_move, 'supply_kind') and prev_move.supply_kind != 'parent':
                         continue
                     
-                    # Odoo 19: stock.move no tiene 'name'; usar description_picking (o el del move anterior)
-                    prev_desc = getattr(prev_move, 'description_picking', None) or (prev_move.product_id.display_name if prev_move.product_id else '')
                     move_vals = {
-                        'description_picking': prev_desc,
+                        'name': prev_move.name,
                         'product_id': prev_move.product_id.id,
                         'product_uom': prev_move.product_uom.id,
                         'product_uom_qty': prev_move.product_uom_qty,

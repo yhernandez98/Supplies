@@ -38,7 +38,7 @@ class PurchaseAlertComponentLine(models.Model):
         ('complement', 'Complemento'),
     ], string='Tipo', required=True, readonly=True)
     item_type_display = fields.Char(
-        string='Tipo (texto)',
+        string='Tipo',
         compute='_compute_item_type_display',
         readonly=True,
         store=False,

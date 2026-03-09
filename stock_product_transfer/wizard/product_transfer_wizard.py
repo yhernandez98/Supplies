@@ -6,11 +6,6 @@ import logging
 _logger = logging.getLogger(__name__)
 
 
-def _safe_get(obj, key, default=None):
-    """Evita 'list' object has no attribute 'get' (Odoo 19 compat)."""
-    return obj.get(key, default) if isinstance(obj, dict) else default
-
-
 class ProductTransferWizard(models.TransientModel):
     _name = 'product.transfer.wizard'
     _description = 'Wizard para transferir unidades y seriales entre productos'
@@ -216,9 +211,8 @@ class ProductTransferWizard(models.TransientModel):
                 self.lot_ids[0].name if self.lot_ids else 'N/A'
             )
             message += _('\nProducto específico creado: %s') % self.destination_product_id.display_name
-            new_lot_name = _safe_get(result, 'new_lot_name')
-            if new_lot_name:
-                message += _('\nNuevo serial: %s') % new_lot_name
+            if result.get('new_lot_name'):
+                message += _('\nNuevo serial: %s') % result['new_lot_name']
 
             return {
                 'type': 'ir.actions.client',
@@ -469,9 +463,9 @@ class ProductTransferWizard(models.TransientModel):
 
             lot_quantities[lot.id] = quant.quantity
 
-        # Crear movimiento de salida (producto origen) (Odoo 19: stock.move usa description_picking, no name)
+        # Crear movimiento de salida (producto origen)
         move_out_vals = {
-            'description_picking': _('Transferencia: %s -> %s') % (
+            'name': _('Transferencia: %s -> %s') % (
                 self.source_product_id.display_name,
                 self.destination_product_id.display_name
             ),
@@ -512,9 +506,9 @@ class ProductTransferWizard(models.TransientModel):
 
         picking_in = self.env['stock.picking'].create(picking_in_vals)
 
-        # Crear movimiento de entrada (producto destino) (Odoo 19: stock.move usa description_picking, no name)
+        # Crear movimiento de entrada (producto destino)
         move_in_vals = {
-            'description_picking': _('Transferencia: %s -> %s') % (
+            'name': _('Transferencia: %s -> %s') % (
                 self.source_product_id.display_name,
                 self.destination_product_id.display_name
             ),
@@ -641,7 +635,7 @@ class ProductTransferWizard(models.TransientModel):
                 # IMPORTANTE: Usar un contexto especial para evitar que el módulo auto_link_components
                 # (si todavía está activo) intente crear relaciones automáticamente
                 _logger.info('📦 Creando nuevo lote para producto destino %s (ID: %s) con nombre %s', 
-                            self.destination_product_id.name, self.destination_product_id.id, _safe_get(lot_vals, 'name'))
+                            self.destination_product_id.name, self.destination_product_id.id, lot_vals.get('name'))
                 
                 try:
                     # IMPORTANTE: Verificar una última vez que todas las líneas problemáticas estén eliminadas
@@ -844,17 +838,14 @@ class ProductTransferWizard(models.TransientModel):
         # Confirmar y validar ambos pickings
         picking.action_confirm()
         picking.action_assign()
-        # Odoo 19: move_line_ids_without_package fue eliminado; usar move_line_ids
-        pick_lines = getattr(picking, 'move_line_ids_without_package', picking.move_line_ids)
-        for move_line in pick_lines:
+        for move_line in picking.move_line_ids_without_package:
             if move_line.qty_done <= 0:
                 move_line.qty_done = move_line.reserved_uom_qty
         picking.button_validate()
 
         picking_in.action_confirm()
         picking_in.action_assign()
-        pick_in_lines = getattr(picking_in, 'move_line_ids_without_package', picking_in.move_line_ids)
-        for move_line in pick_in_lines:
+        for move_line in picking_in.move_line_ids_without_package:
             if move_line.qty_done <= 0:
                 move_line.qty_done = move_line.reserved_uom_qty
         picking_in.button_validate()
@@ -948,9 +939,6 @@ class ProductTransferWizard(models.TransientModel):
         if supply_lines_to_update and 'stock.lot.supply.line' in self.env:
             _logger.info('Restaurando %s relaciones de supply_line', len(supply_lines_to_update))
             for supply_line_data in supply_lines_to_update:
-                if not isinstance(supply_line_data, dict):
-                    _logger.warning('Saltando supply_line_data no-dict: %s', type(supply_line_data))
-                    continue
                 # Verificar si es una línea eliminada temporalmente (tiene item_type) o una línea existente
                 if 'item_type' in supply_line_data:
                     # Es una línea eliminada temporalmente, restaurarla
@@ -973,17 +961,17 @@ class ProductTransferWizard(models.TransientModel):
                         ))
                         restored_id = self.env.cr.fetchone()[0]
                         self.env.cr.commit()
-                        _logger.debug('Línea restaurada: ID %s (originalmente %s)', restored_id, _safe_get(supply_line_data, 'id'))
+                        _logger.debug('Línea restaurada: ID %s (originalmente %s)', restored_id, supply_line_data.get('id'))
                     except Exception as restore_error:
                         _logger.warning('No se pudo restaurar línea eliminada temporalmente (ID original: %s): %s', 
-                                      _safe_get(supply_line_data, 'id'), str(restore_error))
+                                      supply_line_data.get('id'), str(restore_error))
                 else:
                     # Es una línea existente que necesita actualización
                     supply_line = self.env['stock.lot.supply.line'].browse(supply_line_data['id'])
                     if not supply_line.exists():
                         continue
                     
-                    original_related_lot_id = _safe_get(supply_line_data, 'related_lot_id')
+                    original_related_lot_id = supply_line_data.get('related_lot_id')
                     
                     # Buscar el nuevo lote creado para el producto destino con el mismo nombre
                     new_lot = self.env['stock.lot'].search([
@@ -994,7 +982,7 @@ class ProductTransferWizard(models.TransientModel):
                     if new_lot and original_related_lot_id:
                         # Si tenía un related_lot_id original, intentar restaurarlo con el nuevo lote
                         # Verificar que el nuevo lote esté en la misma ubicación que el lote principal
-                        lot_principal = self.env['stock.lot'].browse(_safe_get(supply_line_data, 'lot_principal_id'))
+                        lot_principal = self.env['stock.lot'].browse(supply_line_data.get('lot_principal_id'))
                         if lot_principal and lot_principal.exists() and lot_principal.current_location_id:
                             # Verificar que el nuevo lote tenga stock en la ubicación del lote principal
                             quant_check = self.env['stock.quant'].search_count([
@@ -1381,9 +1369,9 @@ class ProductTransferWizard(models.TransientModel):
 
         picking = self.env['stock.picking'].create(picking_vals)
 
-        # Crear movimiento de salida (producto origen) (Odoo 19: stock.move usa description_picking, no name)
+        # Crear movimiento de salida (producto origen)
         move_out_vals = {
-            'description_picking': _('Transferencia: %s -> %s') % (
+            'name': _('Transferencia: %s -> %s') % (
                 self.source_product_id.display_name,
                 self.destination_product_id.display_name
             ),
@@ -1411,9 +1399,9 @@ class ProductTransferWizard(models.TransientModel):
 
         picking_in = self.env['stock.picking'].create(picking_in_vals)
 
-        # Crear movimiento de entrada (producto destino) (Odoo 19: stock.move usa description_picking, no name)
+        # Crear movimiento de entrada (producto destino)
         move_in_vals = {
-            'description_picking': _('Transferencia: %s -> %s') % (
+            'name': _('Transferencia: %s -> %s') % (
                 self.source_product_id.display_name,
                 self.destination_product_id.display_name
             ),
@@ -1427,19 +1415,17 @@ class ProductTransferWizard(models.TransientModel):
 
         move_in = self.env['stock.move'].create(move_in_vals)
 
-        # Confirmar y validar ambos pickings (Odoo 19: move_line_ids_without_package -> move_line_ids)
+        # Confirmar y validar ambos pickings
         picking.action_confirm()
         picking.action_assign()
-        pick_lines = getattr(picking, 'move_line_ids_without_package', picking.move_line_ids)
-        for move_line in pick_lines:
+        for move_line in picking.move_line_ids_without_package:
             if move_line.qty_done <= 0:
                 move_line.qty_done = move_line.reserved_uom_qty
         picking.button_validate()
 
         picking_in.action_confirm()
         picking_in.action_assign()
-        pick_in_lines = getattr(picking_in, 'move_line_ids_without_package', picking_in.move_line_ids)
-        for move_line in pick_in_lines:
+        for move_line in picking_in.move_line_ids_without_package:
             move_line.qty_done = self.quantity
             # Si el producto destino tiene seguimiento, crear un lote nuevo
             if self.destination_product_id.tracking != 'none':
@@ -1604,9 +1590,9 @@ class ProductTransferWizard(models.TransientModel):
         
         picking_out = self.env['stock.picking'].create(picking_out_vals)
         
-        # Crear movimiento de salida (Odoo 19: stock.move usa description_picking, no name)
+        # Crear movimiento de salida
         move_out_vals = {
-            'description_picking': _('Reducción de stock: %s') % self.source_product_id.display_name,
+            'name': _('Reducción de stock: %s') % self.source_product_id.display_name,
             'product_id': self.source_product_id.id,
             'product_uom': self.source_product_id.uom_id.id,
             'product_uom_qty': quantity_to_convert,
@@ -1630,11 +1616,10 @@ class ProductTransferWizard(models.TransientModel):
         
         self.env['stock.move.line'].create(move_line_out_vals)
         
-        # Validar el picking de salida para reducir el stock (Odoo 19: move_line_ids_without_package -> move_line_ids)
+        # Validar el picking de salida para reducir el stock
         picking_out.action_confirm()
         picking_out.action_assign()
-        pick_out_lines = getattr(picking_out, 'move_line_ids_without_package', picking_out.move_line_ids)
-        for move_line in pick_out_lines:
+        for move_line in picking_out.move_line_ids_without_package:
             if move_line.qty_done <= 0:
                 move_line.qty_done = move_line.reserved_uom_qty
         picking_out.button_validate()
@@ -1726,10 +1711,6 @@ class ProductTransferWizard(models.TransientModel):
         # PASO 7b: Restaurar asociaciones donde el genérico era COMPONENTE de otro producto (evitar doble trabajo al técnico)
         if relations_to_restore and 'stock.lot.supply.line' in self.env:
             for rel in relations_to_restore:
-                if not isinstance(rel, dict):
-                    _logger.warning('Saltando relación no-dict en relations_to_restore: %s', type(rel))
-                    continue
-                uom_id = _safe_get(rel, 'uom_id')
                 self.env.cr.execute("""
                     INSERT INTO stock_lot_supply_line 
                     (lot_id, item_type, product_id, quantity, uom_id, related_lot_id, create_uid, create_date, write_uid, write_date)
@@ -1739,7 +1720,7 @@ class ProductTransferWizard(models.TransientModel):
                     rel['item_type'],
                     rel['product_id'],
                     rel['quantity'],
-                    uom_id if uom_id else None,
+                    rel['uom_id'] if rel.get('uom_id') else None,
                     new_lot.id,
                     self.env.user.id,
                     self.env.user.id,
@@ -1824,9 +1805,9 @@ class ProductTransferWizard(models.TransientModel):
                 
                 picking = self.env['stock.picking'].create(picking_vals)
                 
-                # Crear movimiento ya completado (Odoo 19: stock.move usa description_picking, no name)
+                # Crear movimiento ya completado
                 move_vals = {
-                    'description_picking': _('Conversión: %s → %s') % (
+                    'name': _('Conversión: %s → %s') % (
                         self.source_product_id.display_name,
                         self.destination_product_id.display_name
                     ),
@@ -1879,9 +1860,6 @@ class ProductTransferWizard(models.TransientModel):
             _logger.info('🔗 Recreando %s relaciones donde el nuevo lote está asociado a productos principales (cualquier tipo)', len(relations_to_restore))
             
             for rel_data in relations_to_restore:
-                if not isinstance(rel_data, dict):
-                    _logger.warning('Saltando rel_data no-dict: %s', type(rel_data))
-                    continue
                 # Verificar que el lote principal aún existe
                 principal_lot = self.env['stock.lot'].browse(rel_data['lot_id'])
                 if not principal_lot.exists():

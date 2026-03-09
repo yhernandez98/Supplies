@@ -11,8 +11,8 @@ class ResPartner(models.Model):
     # Campos principales NIT DIAN
     dian_nit_number = fields.Char(
         string='Número NIT',
-        size=15,
-        help='Número de identificación tributaria sin dígito de verificación (9-15 dígitos: NIT empresa o cédula persona natural)'
+        size=9,
+        help='Número de identificación tributaria sin dígito de verificación'
     )
     
     dian_nit_dv = fields.Char(
@@ -157,40 +157,48 @@ class ResPartner(models.Model):
     @api.model
     def _calculate_dian_dv(self, nit_number):
         """
-        Calcula el dígito de verificación según el algoritmo oficial DIAN.
-        Soporta NIT empresa (9 dígitos) y cédula como NIT persona natural (hasta 15 dígitos).
+        Calcula el dígito de verificación según el algoritmo oficial DIAN
         
         Algoritmo oficial DIAN:
-        1. Coeficientes: [3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71]
-        2. Se aplican de DERECHA A IZQUIERDA (del dígito menos significativo al más significativo)
-        3. Se multiplica cada dígito por su coeficiente correspondiente
+        1. Se toman los 9 pesos: [41, 37, 29, 23, 19, 17, 13, 7, 3]
+        2. Se aplican de IZQUIERDA A DERECHA (del primer dígito al último)
+        3. Se multiplica cada dígito por su peso correspondiente
         4. Se suman todos los productos
         5. Se calcula el residuo de la división por 11
-        6. Si residuo > 1: DV = 11 - residuo
-        7. Si residuo es 0 o 1: DV = residuo
+        6. Si el residuo es 0 o 1, el DV es 0
+        7. Si el residuo es mayor que 1, el DV es 11 - residuo
         
         Ejemplos:
-        - NIT 800073584 (9 dígitos): DV = 4
-        - NIT 900877788 (9 dígitos): DV = 3
-        - Cédula 811026552 (9 dígitos): DV = 9
+        - NIT: 800073584
+          Pesos aplicados de izquierda a derecha: 8×41 + 0×37 + 0×29 + 0×23 + 7×19 + 3×17 + 5×13 + 8×7 + 4×3
+          Suma: 328 + 0 + 0 + 0 + 133 + 51 + 65 + 56 + 12 = 645
+          Residuo: 645 % 11 = 7
+          DV: 11 - 7 = 4
+        
+        - NIT: 900877788
+          Pesos aplicados de izquierda a derecha: 9×41 + 0×37 + 0×29 + 8×23 + 7×19 + 7×17 + 7×13 + 8×7 + 8×3
+          Suma: 369 + 0 + 0 + 184 + 133 + 119 + 91 + 56 + 24 = 976
+          Residuo: 976 % 11 = 8
+          DV: 11 - 8 = 3
         """
         if not nit_number or not nit_number.isdigit():
             return False
         
-        # Algoritmo DIAN oficial: 15 coeficientes aplicados de DERECHA A IZQUIERDA
-        coeficientes = [3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71]
-        nit_reversed = nit_number[::-1]
+        # Algoritmo DIAN oficial: 9 pesos aplicados de IZQUIERDA A DERECHA
+        weights = [41, 37, 29, 23, 19, 17, 13, 7, 3]
         
+        # Aplicar pesos de izquierda a derecha (sin invertir)
         total = 0
-        for i, digit in enumerate(nit_reversed):
-            if i < len(coeficientes):
-                total += int(digit) * coeficientes[i]
+        for i, digit in enumerate(nit_number):
+            if i < len(weights):
+                total += int(digit) * weights[i]
         
         remainder = total % 11
-        if remainder > 1:
-            return str(11 - remainder)
+        # Si el residuo es 0 o 1, el DV es 0 (no el residuo mismo)
+        if remainder < 2:
+            return '0'
         else:
-            return str(remainder)
+            return str(11 - remainder)
 
     @api.constrains('dian_nit_number', 'is_company')
     def _check_dian_nit_number(self):
@@ -205,13 +213,9 @@ class ResPartner(models.Model):
                 if not record.dian_nit_number.isdigit():
                     raise ValidationError(_('El número NIT solo puede contener dígitos.'))
                 
-                # Validar longitud (9 a 15 dígitos: NIT empresa o cédula persona natural)
-                nit_len = len(record.dian_nit_number)
-                if nit_len < 9 or nit_len > 15:
-                    raise ValidationError(_(
-                        'El número NIT debe tener entre 9 y 15 dígitos '
-                        '(9 para NIT empresa, hasta 11 para cédula persona natural).'
-                    ))
+                # Validar longitud (máximo 9 dígitos)
+                if len(record.dian_nit_number) > 9:
+                    raise ValidationError(_('El número NIT no puede tener más de 9 dígitos.'))
 
     @api.constrains('dian_nit_full', 'is_company')
     def _check_dian_nit_full(self):
@@ -222,10 +226,10 @@ class ResPartner(models.Model):
                 raise ValidationError(_('El NIT completo solo puede ser usado por empresas, no por contactos individuales.'))
             
             if record.dian_nit_full and record.dian_is_colombia and record.is_company:
-                # Validar formato NIT-DV (9-15 dígitos + guión + 1 dígito DV)
-                pattern = r'^\d{9,15}-\d$'
+                # Validar formato NIT-DV
+                pattern = r'^\d{1,9}-\d$'
                 if not re.match(pattern, record.dian_nit_full):
-                    raise ValidationError(_('El formato del NIT debe ser: número (9-15 dígitos)-dígito de verificación'))
+                    raise ValidationError(_('El formato del NIT debe ser: número-dígito de verificación'))
 
     def action_dian_calculate_dv(self):
         """Acción para recalcular el dígito de verificación"""

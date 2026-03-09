@@ -34,7 +34,7 @@ class StockLotSupplyLine(models.Model):
     uom_id = fields.Many2one(
         "uom.uom",
         string="UdM",
-        domain=[],
+        domain="[('category_id','=', product_id and product_id.uom_id and product_id.uom_id.category_id)]",
     )
     # location_id = fields.Many2one(
     #     "stock.location",
@@ -288,9 +288,6 @@ class StockLotSupplyLine(models.Model):
 
     @api.model
     def create(self, vals):
-        # Odoo 19: create() puede recibir lista de dicts (batch); evitar .get sobre list
-        if isinstance(vals, list):
-            return super().create(vals)
         ctx = self._context or {}
         if not vals.get("lot_id") and ctx.get("default_lot_id"):
             vals["lot_id"] = ctx["default_lot_id"]

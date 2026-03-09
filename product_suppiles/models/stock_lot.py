@@ -3,92 +3,7 @@ from odoo import api, fields, models, _
 import logging
 from dateutil.relativedelta import relativedelta
 
-try:
-    from lxml import etree
-except ImportError:
-    etree = None
-
 _logger = logging.getLogger(__name__)
-_logger.info("[product_supplies] módulo stock_lot cargado (si ves esto, el módulo está activo)")
-
-
-def _inject_supplies_notebook_into_form_arch(env, arch):
-    """Si la vista XML no aplicó nuestro notebook, lo inyectamos antes del chatter (fallback)."""
-    import traceback
-    _logger.info("[product_supplies] stock.lot form: _inject_supplies_notebook_into_form_arch llamado")
-    try:
-        if etree is None:
-            _logger.warning("[product_supplies] stock.lot form: lxml no disponible, no se puede inyectar notebook")
-            return arch
-        arch_str = arch.decode('utf-8') if isinstance(arch, bytes) else (arch if isinstance(arch, str) else None)
-        if arch_str is None:
-            try:
-                arch_str = etree.tostring(arch, encoding='unicode')
-            except Exception as e:
-                _logger.warning("[product_supplies] stock.lot form: no se pudo convertir arch a string: %s", e)
-                return arch
-        if 'name="info_group"' in arch_str or 'name=\'info_group\'' in arch_str:
-            _logger.info("[product_supplies] stock.lot form: vista XML ya tiene pestañas (info_group), no inyectar")
-            return arch
-        view = env['ir.ui.view'].search([
-            ('model', '=', 'stock.lot'), ('type', '=', 'form'),
-            ('name', '=', 'production.lot.form.supplies.inherit')
-        ], limit=1)
-        if not view:
-            _logger.warning(
-                "[product_supplies] stock.lot form: vista 'production.lot.form.supplies.inherit' NO existe en BD. "
-                "Actualiza el módulo Product Supplies y revisa que no haya errores al cargar el XML."
-            )
-            return arch
-        if not (getattr(view, 'arch_db', None) or getattr(view, 'arch', None)):
-            _logger.warning("[product_supplies] stock.lot form: vista encontrada pero sin arch_db/arch")
-            return arch
-        view = view.sudo()
-        raw = view.arch_db if view.arch_db else (getattr(view, 'arch', None) or '')
-        if not raw:
-            _logger.warning("[product_supplies] stock.lot form: vista arch vacío")
-            return arch
-        raw = raw.encode('utf-8') if isinstance(raw, str) else raw
-        root_supplies = etree.fromstring(raw)
-        xpath_before_chatter = root_supplies.xpath("//*[contains(@expr, 'chatter') and @position='before']")
-        if not xpath_before_chatter:
-            xpath_before_chatter = root_supplies.xpath("//*[contains(@expr, 'chatter')]")
-        notebook_node = None
-        for xp in xpath_before_chatter:
-            for child in xp:
-                tag = child.tag if hasattr(child, 'tag') else None
-                local_tag = (tag.split('}')[-1] if tag and '}' in tag else tag) or ''
-                if local_tag == 'notebook':
-                    notebook_node = child
-                    break
-            if notebook_node is not None:
-                break
-        if notebook_node is None:
-            _logger.warning(
-                "[product_supplies] stock.lot form: en la vista no se encontró nodo <notebook> dentro del xpath chatter. "
-                "Revisa que stock_lot_form_supplies_inherit.xml tenga <xpath expr=\"//chatter\" position=\"before\"><notebook>..."
-            )
-            return arch
-        root = etree.fromstring(arch_str.encode('utf-8') if isinstance(arch_str, str) else arch_str)
-        chatter_list = root.xpath("//chatter") or root.xpath("//*[local-name()='chatter']")
-        if not chatter_list:
-            _logger.warning("[product_supplies] stock.lot form: en la vista combinada no hay <chatter>, no se puede inyectar")
-            return arch
-        parent = chatter_list[0].getparent()
-        idx = list(parent).index(chatter_list[0])
-        import copy
-        new_notebook = copy.deepcopy(notebook_node)
-        parent.insert(idx, new_notebook)
-        out = etree.tostring(root, encoding='unicode')
-        _logger.info("[product_supplies] stock.lot form: notebook inyectado correctamente por fallback Python")
-        return out
-    except Exception as e:
-        _logger.exception(
-            "[product_supplies] stock.lot form: ERROR en _inject_supplies_notebook_into_form_arch: %s\n%s",
-            e, traceback.format_exc()
-        )
-        return arch
-
 
 class StockLot(models.Model):
     _inherit = "stock.lot"
@@ -162,49 +77,6 @@ class StockLot(models.Model):
         tracking=True
     )
 
-    @api.model
-    def _get_view(self, view_id=None, view_type='form', **options):
-        arch, view = super()._get_view(view_id=view_id, view_type=view_type, **options)
-        if view_type == 'form':
-            _logger.info("[product_supplies] stock.lot _get_view: form solicitado, aplicando fallback de notebook")
-            arch = _inject_supplies_notebook_into_form_arch(self.env, arch)
-        return (arch, view)
-
-    @api.model
-    def action_log_supplies_view_debug(self):
-        """Escribe en el log del servidor el estado de las vistas de formulario stock.lot (para depurar)."""
-        View = self.env['ir.ui.view'].sudo()
-        form_views = View.search([
-            ('model', '=', 'stock.lot'),
-            ('type', '=', 'form'),
-        ], order='priority asc, id asc')
-        supplies = form_views.filtered(lambda v: v.name == 'production.lot.form.supplies.inherit')
-        lines = [
-            "[product_supplies] === DEBUG VISTAS stock.lot (form) ===",
-            "Total vistas form stock.lot: %s" % len(form_views),
-            "Vista 'production.lot.form.supplies.inherit' existe: %s" % bool(supplies),
-        ]
-        if supplies:
-            v = supplies[0]
-            lines.append("  - id: %s, priority: %s, inherit_id: %s, activa: %s" % (
-                v.id, v.priority, v.inherit_id.id if v.inherit_id else None, getattr(v, 'active', True)))
-            lines.append("  - arch_db presente: %s (len %s)" % (bool(v.arch_db), len(v.arch_db or '')))
-        for v in form_views[:15]:
-            lines.append("  Vista: name=%s id=%s priority=%s inherit_id=%s" % (
-                (v.name or '')[:50], v.id, v.priority, v.inherit_id.id if v.inherit_id else None))
-        msg = "\n".join(lines)
-        _logger.info(msg)
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': _('Debug vistas'),
-                'message': _('Revisa el LOG del servidor Odoo. Busca "[product_supplies]".'),
-                'type': 'info',
-                'sticky': False,
-            }
-        }
-
     def _get_exit_date_from_plazo(self, entry_date, reining_plazo, custom_months=0):
         """Calcula Fecha Finalizacion Renting a partir de Fecha Activacion y Plazo Renting.
         Sin Permanencia -> devuelve False (sin fecha de fin)."""
@@ -272,21 +144,16 @@ class StockLot(models.Model):
                        WHERE id IN %s AND entry_date IS NOT NULL""",
                     (tuple(self.ids),),
                 )
-        # Conservar última fecha de salida para mostrar en suscripción hasta la limpieza
+        # Conservar última fecha de salida al ponerla; al quitarla, limpiar también last_exit_date_display
+        # para que el producto vuelva a salir en listados (ej. si se puso fecha por error y se corrige).
         if "exit_date" in vals:
             if vals["exit_date"]:
                 vals["last_exit_date_display"] = vals["exit_date"]
-            elif self.ids:
-                # Al borrar exit_date: copiar valor actual a last_exit_date_display ANTES del write
-                # para que la suscripción siga mostrando la fecha y el registro no "desaparezca"
-                self.env.cr.execute(
-                    """UPDATE stock_lot SET last_exit_date_display = exit_date
-                       WHERE id IN %s AND exit_date IS NOT NULL""",
-                    (tuple(self.ids),),
-                )
-                # No pasar last_exit_date_display en vals para que ningún otro write lo pise
-                if "last_exit_date_display" in vals:
-                    vals = {k: v for k, v in vals.items() if k != "last_exit_date_display"}
+            else:
+                vals["last_exit_date_display"] = False
+        # Si es un solo lote, exit_date ya está vacío y last_exit_date_display sigue con valor (se quitó la fecha antes), limpiarlo al guardar
+        if len(self) == 1 and "exit_date" not in vals and not self.exit_date and getattr(self, "last_exit_date_display", None):
+            vals = dict(vals, last_exit_date_display=False)
         res = super().write(vals)
         # Refrescar productos agrupados de la suscripción para que muestre last_exit_date_display
         if "exit_date" in vals and not vals.get("exit_date"):

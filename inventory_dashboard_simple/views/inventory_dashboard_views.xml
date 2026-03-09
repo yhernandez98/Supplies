@@ -16,7 +16,7 @@
                     <field name="picking_type_ids"/>
                     <button name="action_open" type="object" string="Ver Operaciones" class="oe_kanban_action" icon="fa-list"/>
                     <templates>
-                        <t t-name="card">
+                        <t t-name="kanban-box">
                             <div class="oe_kanban_card oe_kanban_global_click" 
                                  t-attf-style="border-left: 5px solid #{record.color.raw_value ? ['#6c757d', '#5eb5d9', '#7ec8e3', '#3a8fb5', '#2d6a8a', '#e83e8c', '#fd7e14', '#dc3545', '#856404'][record.color.raw_value] : '#6c757d'}; cursor: pointer; box-shadow: 0 8px 24px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04); border-radius: 20px; overflow: hidden; background: #ffffff; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); position: relative;"
                                  t-att-data-record-id="record.id.raw_value">

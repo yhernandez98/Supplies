@@ -21,10 +21,9 @@ class ProductLicenseType(models.Model):
     # Contador de asignaciones activas
     assignment_count = fields.Integer(string='Asignaciones Activas', compute='_compute_assignment_count', store=False)
 
-    _unique_code_company = models.Constraint(
-        'unique(code, company_id)',
-        'El código de licencia debe ser único por compañía.',
-    )
+    _sql_constraints = [
+        ('unique_code_company', 'unique(code, company_id)', 'El código de licencia debe ser único por compañía.'),
+    ]
 
     def _compute_assignment_count(self):
         for rec in self:

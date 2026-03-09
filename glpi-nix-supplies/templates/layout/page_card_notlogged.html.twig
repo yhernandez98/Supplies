@@ -1,0 +1,64 @@
+{#
+ # NIX Login - Supplies de Colombia
+ # Sustituye el layout de página no autenticada para GLPI 11.0.6
+ # Incluye estilos nix_login.css (azul #0052b6) y estructura de dos columnas.
+ #}
+{% if css_files is not defined %}
+   {% set css_files = [
+       {'path': 'lib/base.css'},
+       {'path': 'lib/tabler.css'},
+       {'path': 'css/glpi.scss'},
+       {'path': 'css/core_palettes.scss'}
+   ] %}
+{% endif %}
+{% set css_files = css_files|merge([{'path': 'css/nix_login.css'}]) %}
+{% if js_files is not defined %}
+   {% set js_files = [
+       {'path': 'lib/base.js'},
+       {'path': 'js/common.js'},
+       {'path': 'lib/fuzzy.js'}
+   ] %}
+{% endif %}
+{% if js_modules is not defined %}
+   {% set js_modules = [] %}
+{% endif %}
+{% if custom_header_tags is not defined %}
+   {% set custom_header_tags = [] %}
+{% endif %}
+
+{% set js_files = js_files|merge(get_plugins_js_scripts_files(true)) %}
+{% set js_modules = js_modules|merge(get_plugins_js_modules_files(true)) %}
+{% set is_anonymous_page = true %}
+
+{{ include('layout/parts/head.html.twig') }}
+<body class="welcome-anonymous nix-login-body">
+<div class="nix-login-page">
+   <button type="button" id="nix-theme-toggle" class="nix-theme-btn" aria-label="Cambiar tema" title="Cambiar a tema claro">
+      <svg id="nix-icon-moon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 9.79 9.79z"/></svg>
+      <svg id="nix-icon-sun" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" style="display:none;" aria-hidden="true"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+   </button>
+   <div class="nix-bg-base"></div>
+   <div class="nix-blob nix-blob-1"></div>
+   <div class="nix-blob nix-blob-2"></div>
+   <div class="nix-blob nix-blob-3"></div>
+   <div class="nix-blob nix-blob-4"></div>
+
+   <div class="nix-wrap">
+      <section class="nix-panel-info" aria-label="Marca y contenido">
+         {% block nix_brand_block %}{% endblock %}
+      </section>
+
+      <div class="nix-card-outer">
+         <div class="nix-card-inner">
+            {% block content_block %}{% endblock %}
+         </div>
+      </div>
+   </div>
+
+   <div class="nix-footer">
+      {% block footer_block %}{% endblock %}
+   </div>
+</div>
+{% block javascript_block %}{% endblock %}
+</body>
+</html>

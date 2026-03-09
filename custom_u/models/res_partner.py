@@ -178,6 +178,7 @@ class ResPartner(models.Model):
             'type': 'contact',
             'email': contact_email,
             'phone': company.phone,
+            'mobile': company.mobile,
             'street': company.street,
             'street2': company.street2,
             'city': company.city,

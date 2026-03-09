@@ -55,12 +55,6 @@ class PurchaseOrder(models.Model):
         compute='_compute_sale_order_count',
         readonly=True,
     )
-    has_sale_order = fields.Boolean(
-        string='Tiene orden de venta',
-        compute='_compute_has_sale_order',
-        readonly=True,
-        help='Indica si esta orden de compra está vinculada a alguna orden de venta.',
-    )
     partner_customer_ids = fields.Many2many(
         'res.partner',
         'purchase_customer_rel',
@@ -219,18 +213,6 @@ class PurchaseOrder(models.Model):
         """Calcular número de órdenes de venta relacionadas."""
         for order in self:
             order.sale_order_count = len(order.sale_order_ids)
-
-    @api.depends('sale_order_ids')
-    def _compute_has_sale_order(self):
-        """Siempre asigna un valor (evita ValueError en onchange con NewId)."""
-        for order in self:
-            value = False
-            try:
-                if order._origin and order.sale_order_ids:
-                    value = True
-            except Exception:
-                pass
-            order.has_sale_order = value
 
     @api.depends('sale_order_ids.partner_id')
     def _compute_partner_customer_ids(self):
