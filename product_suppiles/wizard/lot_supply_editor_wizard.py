@@ -440,7 +440,7 @@ class LotSupplyEditorWizardLine(models.TransientModel):
     uom_id = fields.Many2one(
         'uom.uom',
         string='UdM',
-        domain="[('category_id','=', product_id and product_id.uom_id and product_id.uom_id.category_id)]",
+        domain=[],
         help='Unidad de medida'
     )
     

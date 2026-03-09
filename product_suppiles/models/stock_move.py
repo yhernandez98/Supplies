@@ -72,6 +72,27 @@ class StockMove(models.Model):
         store=False,
         help='Números de serie de complementos asociados al producto principal'
     )
+
+    # Resumen de lo definido en el producto (componentes/periféricos/complementos)
+    # Usamos contadores para que la tabla en el picking sea estable (sin scroll horizontal).
+    product_components_count = fields.Integer(
+        string='N° Comp. (prod.)',
+        compute='_compute_product_supplies_definition',
+        store=False,
+        help='Cantidad de componentes definidos en la ficha del producto'
+    )
+    product_peripherals_count = fields.Integer(
+        string='N° Perif. (prod.)',
+        compute='_compute_product_supplies_definition',
+        store=False,
+        help='Cantidad de periféricos definidos en la ficha del producto'
+    )
+    product_complements_count = fields.Integer(
+        string='N° Compl. (prod.)',
+        compute='_compute_product_supplies_definition',
+        store=False,
+        help='Cantidad de complementos definidos en la ficha del producto'
+    )
     
     # Campo helper para ocultar líneas no principales en la vista
     show_in_list = fields.Boolean(
@@ -83,9 +104,37 @@ class StockMove(models.Model):
     
     @api.depends('supply_kind')
     def _compute_show_in_list(self):
-        """Calcular si la línea debe mostrarse (solo líneas principales)"""
+        """Calcular si la línea debe mostrarse (solo líneas principales)."""
         for move in self:
             move.show_in_list = move.supply_kind == 'parent'
+
+    @api.depends('product_id', 'product_id.product_tmpl_id')
+    def _compute_product_supplies_definition(self):
+        """Contar componentes/periféricos/complementos definidos en el producto (aunque no haya serial)."""
+        for move in self:
+            move.product_components_count = 0
+            move.product_peripherals_count = 0
+            move.product_complements_count = 0
+            if not move.product_id or not move.product_id.product_tmpl_id:
+                continue
+            tmpl = move.product_id.product_tmpl_id
+            if not hasattr(tmpl, 'composite_line_ids'):
+                continue
+            comps = [
+                line for line in getattr(tmpl, 'composite_line_ids', [])
+                if getattr(line, 'component_product_id', False)
+            ]
+            peris = [
+                line for line in getattr(tmpl, 'peripheral_line_ids', [])
+                if getattr(line, 'peripheral_product_id', False)
+            ]
+            compl = [
+                line for line in getattr(tmpl, 'complement_line_ids', [])
+                if getattr(line, 'complement_product_id', False)
+            ]
+            move.product_components_count = len(comps)
+            move.product_peripherals_count = len(peris)
+            move.product_complements_count = len(compl)
     
     principal_lot_serial = fields.Char(
         string='Número de Serie',
@@ -136,11 +185,8 @@ class StockMove(models.Model):
         if self.picking_id and self.picking_id.state == 'done':
             raise UserError(_('No se pueden editar los elementos asociados de un picking ya validado.'))
         
-        # Obtener la vista del formulario de stock.lot
-        form_view_id = self.env.ref('product_suppiles.view_production_lot_form_inherit_supplies', raise_if_not_found=False)
-        if not form_view_id:
-            form_view_id = self.env.ref('stock.view_production_lot_form', raise_if_not_found=False)
-        
+        # Usar siempre la vista raíz: Odoo fusiona herencias (pestañas, campos) automáticamente.
+        form_view_id = self.env.ref('stock.view_production_lot_form', raise_if_not_found=False)
         # Abrir la vista del lote como wizard (modal) para que no se salgan de la vista del picking
         return {
             'type': 'ir.actions.act_window',
@@ -155,6 +201,28 @@ class StockMove(models.Model):
                 'active_model': 'stock.lot',
                 'default_lot_id': self.principal_lot_id.id,
                 'form_view_initial_mode': 'edit',  # Abrir en modo edición
+            },
+        }
+
+    def action_open_assign_serial(self):
+        """Abrir el formulario estándar 'Move Detail' (stock.view_stock_move_operations) como wizard para este movimiento."""
+        self.ensure_one()
+        view = self.env.ref('stock.view_stock_move_operations', raise_if_not_found=False)
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Move Detail - %s') % (self.product_id.display_name or _('Movimiento')),
+            'res_model': 'stock.move',
+            'res_id': self.id,
+            'view_mode': 'form',
+            'view_id': view.id if view else False,
+            'target': 'new',
+            'context': {
+                'default_picking_id': self.picking_id.id,
+                'default_move_id': self.id,
+                'default_product_id': self.product_id.id,
+                'default_location_id': self.location_id.id,
+                'default_location_dest_id': self.location_dest_id.id,
+                'default_company_id': self.company_id.id,
             },
         }
     

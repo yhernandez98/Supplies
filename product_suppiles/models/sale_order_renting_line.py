@@ -25,7 +25,7 @@ class SaleOrderRentingLine(models.Model):
     name = fields.Text(string="Descripción")
     product_uom = fields.Many2one(
         "uom.uom", string="UdM",
-        domain="[('category_id','=',product_id.uom_id.category_id)]",
+        domain=[],
     )
     product_uom_qty = fields.Float(string="Cantidad", default=1.0, digits="Product UoS")
     price_unit = fields.Monetary(string="Precio", default=0.0)

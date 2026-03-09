@@ -3,7 +3,67 @@ from odoo import api, fields, models, _
 from odoo.exceptions import UserError
 import logging
 
+try:
+    from lxml import etree
+except ImportError:
+    etree = None
+
 _logger = logging.getLogger(__name__)
+
+# XML de la pestaña "Productos principales" para inyectar en el form de picking (fallback si la herencia XML no aplica).
+PICKING_SUPPLIES_PAGE_XML = """<page name="supplies_main_only" string="Productos principales">
+  <group string="Una fila por producto principal con componentes, periféricos y complementos en columnas">
+    <field name="move_ids_main_only" nolabel="1">
+      <list create="0" delete="0" decoration-muted="supply_kind != 'parent'" editable="false">
+        <field name="product_id"/>
+        <field name="supply_parent_product_id" column_invisible="1"/>
+        <field name="supply_kind" column_invisible="1"/>
+        <field name="principal_lot_serial" column_invisible="1"/>
+        <field name="principal_lot_id" string="Número de Serie" readonly="1" optional="show" invisible="supply_kind != 'parent' or not principal_lot_id" options="{'no_open': True, 'no_create': True}"/>
+        <button name="action_open_assign_serial" type="object" string="Asignar serial" icon="fa-edit" class="btn-primary btn-sm" invisible="supply_kind != 'parent'" title="Abrir operaciones detalladas para asignar el número de serie"/>
+        <button name="action_open_lot_wizard" type="object" string="✏️" invisible="supply_kind != 'parent' or not principal_lot_id or picking_id.state == 'done'" class="oe_link" title="Editar elementos asociados del lote"/>
+        <field name="product_components_count" string="Comp." readonly="1" optional="show" invisible="supply_kind != 'parent'"/>
+        <field name="product_peripherals_count" string="Perif." readonly="1" optional="show" invisible="supply_kind != 'parent'"/>
+        <field name="product_complements_count" string="Compl." readonly="1" optional="show" invisible="supply_kind != 'parent'"/>
+        <field name="product_uom_qty"/>
+        <field name="move_line_ids" column_invisible="1"/>
+      </list>
+    </field>
+  </group>
+</page>"""
+
+
+def _inject_picking_supplies_page(arch):
+    """Inyecta la pestaña 'Productos principales' en el form de stock.picking. Devuelve elemento etree (no string)."""
+    if etree is None:
+        return arch
+    try:
+        if hasattr(arch, 'tag'):
+            # arch ya es un elemento etree: usarlo y modificar in-place
+            root = arch
+        elif isinstance(arch, bytes):
+            arch_str = arch.decode('utf-8')
+            if arch_str.strip().startswith('<?xml'):
+                arch_str = arch_str.split('?>', 1)[-1].strip()
+            root = etree.fromstring(arch_str.encode('utf-8'))
+        elif isinstance(arch, str):
+            arch_str = arch
+            if arch_str.strip().startswith('<?xml'):
+                arch_str = arch_str.split('?>', 1)[-1].strip()
+            root = etree.fromstring(arch_str.encode('utf-8'))
+        else:
+            return arch
+        notebooks = root.xpath('//notebook') or root.xpath('//*[local-name()="notebook"]')
+        if not notebooks:
+            _logger.warning("[product_suppiles] stock.picking form: no se encontró <notebook>, no se inyecta pestaña")
+            return arch
+        page_node = etree.fromstring(PICKING_SUPPLIES_PAGE_XML)
+        notebooks[0].append(page_node)
+        # Importante: devolver el elemento, no string (ir.ui.view espera .tag)
+        return root
+    except Exception as e:
+        _logger.exception("[product_suppiles] stock.picking form: error inyectando pestaña Productos principales: %s", e)
+        return arch
 
 
 def _run_consolidation_loop(picking, max_iter=10):
@@ -29,13 +89,18 @@ class StockPicking(models.Model):
         help='Solo muestra movimientos con supply_kind = parent'
     )
     
-    @api.depends('move_ids_without_package', 'move_ids_without_package.supply_kind')
+    @api.depends('move_ids', 'move_ids.supply_kind', 'move_ids.internal_parent_move_id')
     def _compute_move_ids_main_only(self):
-        """Calcular movimientos principales (solo supply_kind = 'parent')"""
+        """Odoo 19: usa move_ids (move_ids_without_package no existe en vista estándar). Solo padres: supply_kind='parent' y sin internal_parent_move_id."""
         for picking in self:
             try:
-                picking.move_ids_main_only = picking.move_ids_without_package.filtered(
-                    lambda m: hasattr(m, 'supply_kind') and m.supply_kind == 'parent'
+                # Odoo 19: la vista usa move_ids; el modelo puede tener move_ids_without_package (stock) o no
+                moves = getattr(picking, 'move_ids_without_package', None) or picking.move_ids
+                picking.move_ids_main_only = moves.filtered(
+                    lambda m: (
+                        hasattr(m, 'supply_kind') and m.supply_kind == 'parent'
+                        and (not hasattr(m, 'internal_parent_move_id') or not m.internal_parent_move_id)
+                    )
                 )
             except Exception:
                 picking.move_ids_main_only = self.env['stock.move']
@@ -50,17 +115,35 @@ class StockPicking(models.Model):
         help='Solo muestra move_line_ids con supply_kind = parent'
     )
     
-    @api.depends('move_line_ids_without_package', 'move_line_ids_without_package.supply_kind')
+    @api.depends('move_line_ids', 'move_line_ids.supply_kind')
     def _compute_move_line_ids_main_only(self):
-        """Calcular move_line_ids principales (solo supply_kind = 'parent')"""
+        """Odoo 19: usa move_line_ids. Solo líneas con supply_kind = 'parent'."""
         for picking in self:
             try:
-                picking.move_line_ids_main_only = picking.move_line_ids_without_package.filtered(
+                lines = getattr(picking, 'move_line_ids_without_package', None) or picking.move_line_ids
+                picking.move_line_ids_main_only = lines.filtered(
                     lambda ml: hasattr(ml, 'supply_kind') and ml.supply_kind == 'parent'
                 )
             except Exception:
                 picking.move_line_ids_main_only = self.env['stock.move.line']
     
+
+    @api.model
+    def _get_view(self, view_id=None, view_type='form', **options):
+        """Inyecta la pestaña 'Productos principales' en el form para que funcione aunque la herencia XML no aplique."""
+        try:
+            result = super()._get_view(view_id=view_id, view_type=view_type, **options)
+        except Exception as e:
+            _logger.exception("[product_suppiles] stock.picking _get_view: error en super: %s", e)
+            raise
+        # Odoo puede devolver (arch, view) o un dict
+        if isinstance(result, tuple) and len(result) >= 2:
+            arch, view = result[0], result[1]
+            if view_type == 'form':
+                arch = _inject_picking_supplies_page(arch)
+            return (arch, view)
+        # Si devuelve otra cosa (ej. dict), no modificar
+        return result
 
     def action_debug_consolidate_serial_lines(self):
         """
@@ -390,7 +473,8 @@ class StockPicking(models.Model):
                     default_date = picking.date_done or fields.Datetime.now()
                     partner = picking.partner_id
 
-                    for move in picking.move_ids_without_package:
+                    moves = getattr(picking, 'move_ids_without_package', picking.move_ids)
+                    for move in moves:
                         try:
                             kind = move.supply_kind
                             if kind not in ("component", "peripheral", "complement"):
@@ -444,7 +528,8 @@ class StockPicking(models.Model):
         MoveLine = self.env["stock.move.line"]
 
         # CORRECCIÓN: Filtrar movimientos padres y asegurar que cada uno se procese independientemente
-        parent_moves = self.move_ids_without_package.filtered(
+        moves = getattr(self, 'move_ids_without_package', self.move_ids)
+        parent_moves = moves.filtered(
             lambda m: m.state in ("draft", "confirmed", "waiting", "assigned") and 
                      m.supply_kind == "parent" and
                      m.product_id and m.product_id.exists()
@@ -534,7 +619,7 @@ class StockPicking(models.Model):
             
             # Verificar si ya existen movimientos de complementos antes de eliminar
             # Esto evita eliminar y recrear complementos que ya fueron recibidos
-            existing_complement_moves = self.move_ids_without_package.filtered(
+            existing_complement_moves = moves.filtered(
                 lambda m: m.supply_kind == "complement" and 
                          m.internal_parent_move_id and m.internal_parent_move_id.id == parent.id
             )

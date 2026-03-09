@@ -201,22 +201,27 @@
     line-height: 1.4 !important;
 }
 
-/* ========== COLUMNA DERECHA (.o_lot_right_col): mismo layout que izquierda (label | valor) ========== */
+/* ========== COLUMNA DERECHA (.o_lot_right_col / .o_stock_lot_right_col): mismo layout que izquierda (label | valor) ========== */
 /* Replicar exactamente el estilo de la columna izquierda para que Valor total, Costo queden igual */
-.o_lot_right_col .o_group {
+.o_lot_right_col .o_group,
+.o_stock_lot_right_col.o_group {
     display: table !important;
 }
-.o_lot_right_col .o_group table {
+.o_lot_right_col .o_group table,
+.o_stock_lot_right_col.o_group table {
     width: 100% !important;
     table-layout: fixed !important;
     display: table !important;
 }
 .o_lot_right_col .o_group table tbody,
-.o_lot_right_col .o_group table tr {
+.o_lot_right_col .o_group table tr,
+.o_stock_lot_right_col.o_group table tbody,
+.o_stock_lot_right_col.o_group table tr {
     display: table-row !important;
 }
 .o_lot_right_col .o_td_label,
-.o_lot_right_col .o_group .o_td_label {
+.o_lot_right_col .o_group .o_td_label,
+.o_stock_lot_right_col.o_group .o_td_label {
     width: 1% !important;
     white-space: nowrap !important;
     vertical-align: top !important;
@@ -224,7 +229,8 @@
     display: table-cell !important;
 }
 .o_lot_right_col .o_td_value,
-.o_lot_right_col .o_group .o_td_value {
+.o_lot_right_col .o_group .o_td_value,
+.o_stock_lot_right_col.o_group .o_td_value {
     width: 300px !important;
     min-width: 300px !important;
     max-width: 300px !important;
@@ -233,8 +239,77 @@
     box-sizing: border-box !important;
 }
 
-/* Foto en columna derecha */
-.o_lot_right_col .o_lot_photo_block.o_lot_photo_below_costo {
+/* Columna derecha: solo campos en tabla para que etiquetas y valores alineen bien */
+.o_stock_lot_pastel_form .o_stock_lot_right_col table,
+.o_form_view:has(form.o_stock_lot_pastel_form) .o_stock_lot_right_col table {
+    table-layout: fixed !important;
+    width: 100% !important;
+}
+.o_stock_lot_pastel_form .o_stock_lot_right_col .o_td_label,
+.o_form_view:has(form.o_stock_lot_pastel_form) .o_stock_lot_right_col .o_td_label {
+    width: 1% !important;
+    white-space: nowrap !important;
+    vertical-align: top !important;
+}
+.o_stock_lot_pastel_form .o_stock_lot_right_col .o_td_value,
+.o_form_view:has(form.o_stock_lot_pastel_form) .o_stock_lot_right_col .o_td_value {
+    vertical-align: top !important;
+}
+
+/* Derecha: bloque 1 = foto + botón (filas normales), bloque 2 = resto inventario */
+.o_stock_lot_pastel_form .o_stock_lot_right_col .o_lot_photo_field .o_td_value,
+.o_form_view:has(form.o_stock_lot_pastel_form) .o_stock_lot_right_col .o_lot_photo_field .o_td_value,
+.o_stock_lot_pastel_form .o_stock_lot_right_col tr:has(.o_lot_photo_field) .o_td_value,
+.o_form_view:has(form.o_stock_lot_pastel_form) .o_stock_lot_right_col tr:has(.o_lot_photo_field) .o_td_value {
+    padding: 10px !important;
+    background: #fff !important;
+    border: 1px solid rgba(74, 163, 201, 0.2) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06) !important;
+}
+.o_stock_lot_pastel_form .o_stock_lot_right_col .o_lot_photo_field .o_field_widget,
+.o_form_view:has(form.o_stock_lot_pastel_form) .o_stock_lot_right_col .o_lot_photo_field .o_field_widget {
+    display: flex !important;
+    justify-content: center !important;
+}
+.o_stock_lot_pastel_form .o_stock_lot_right_col .o_lot_photo_field img,
+.o_form_view:has(form.o_stock_lot_pastel_form) .o_stock_lot_right_col .o_lot_photo_field img {
+    max-width: 140px !important;
+    max-height: 140px !important;
+    border-radius: 8px !important;
+}
+.o_stock_lot_pastel_form .o_stock_lot_right_col .o_lot_life_sheet_btn,
+.o_form_view:has(form.o_stock_lot_pastel_form) .o_stock_lot_right_col .o_lot_life_sheet_btn {
+    max-width: 220px !important;
+}
+/* Separación entre bloque foto y bloque inventario */
+.o_stock_lot_pastel_form .o_stock_lot_right_col tr:has(.o_lot_life_sheet_btn) .o_td_value,
+.o_form_view:has(form.o_stock_lot_pastel_form) .o_stock_lot_right_col tr:has(.o_lot_life_sheet_btn) .o_td_value {
+    padding-bottom: 0.75rem !important;
+    border-bottom: 1px solid rgba(74, 163, 201, 0.2) !important;
+    margin-bottom: 0.25rem !important;
+}
+
+/* Grupo foto debajo de columnas (por si se usa en otra vista) */
+.o_stock_lot_pastel_form .o_form_sheet .o_group.o_lot_photo_row,
+.o_form_view:has(form.o_stock_lot_pastel_form) .o_form_sheet .o_group.o_lot_photo_row {
+    width: 100% !important;
+    max-width: 100% !important;
+}
+.o_stock_lot_pastel_form .o_form_sheet .o_group.o_lot_photo_row .o_lot_photo_block.o_lot_photo_below_costo,
+.o_form_view:has(form.o_stock_lot_pastel_form) .o_form_sheet .o_group.o_lot_photo_row .o_lot_photo_block.o_lot_photo_below_costo {
+    display: inline-flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    padding: 12px !important;
+    background: #fff !important;
+    border: 1px solid rgba(74, 163, 201, 0.2) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06) !important;
+    box-sizing: border-box !important;
+}
+.o_lot_right_col .o_lot_photo_block.o_lot_photo_below_costo,
+.o_stock_lot_right_col .o_lot_photo_block.o_lot_photo_below_costo {
     display: flex !important;
     flex-direction: column !important;
     align-items: center !important;
@@ -248,7 +323,9 @@
     box-shadow: 0 1px 4px rgba(0,0,0,0.06) !important;
     box-sizing: border-box !important;
 }
-.o_lot_right_col .o_lot_photo_below_costo .o_field_widget {
+.o_lot_right_col .o_lot_photo_below_costo .o_field_widget,
+.o_stock_lot_right_col .o_lot_photo_below_costo .o_field_widget,
+.o_form_sheet .o_group.o_lot_photo_row .o_lot_photo_below_costo .o_field_widget {
     width: 140px !important;
     max-width: 140px !important;
     min-height: 140px !important;
@@ -266,7 +343,9 @@
     border-radius: 8px !important;
     display: block !important;
 }
-.o_lot_right_col .o_lot_photo_below_costo .btn {
+.o_lot_right_col .o_lot_photo_below_costo .btn,
+.o_stock_lot_right_col .o_lot_photo_below_costo .btn,
+.o_form_sheet .o_group.o_lot_photo_row .o_lot_photo_below_costo .btn {
     width: 100% !important;
     font-size: 0.85rem !important;
     padding: 0.5rem 0.75rem !important;

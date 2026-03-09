@@ -5,33 +5,26 @@ from odoo import models, fields, api, _
 class StockLot(models.Model):
     _inherit = 'stock.lot'
 
-    @api.model
-    def create(self, vals):
+    @api.model_create_multi
+    def create(self, vals_list):
         """
-        Al crear un nuevo lote, buscar automáticamente otros lotes con el mismo nombre
-        y crear las relaciones entre TODOS ellos
+        Al crear lotes, buscar automáticamente otros lotes con el mismo nombre
+        y crear las relaciones entre TODOS ellos. Soporta creación múltiple (vals_list).
         """
-        lot = super(StockLot, self).create(vals)
-        
-        # Solo procesar si el lote tiene nombre y producto
-        if not lot.name or not lot.product_id:
-            return lot
-        
-        # Buscar otros lotes con el mismo nombre pero diferentes productos
-        other_lots = self.env['stock.lot'].search([
-            ('name', '=', lot.name),
-            ('id', '!=', lot.id),
-            ('product_id', '!=', lot.product_id.id),
-        ])
-        
-        if not other_lots:
-            return lot
-        
-        # Crear relaciones bidireccionales entre TODOS los lotes
-        all_lots = other_lots | lot
-        self._create_full_mesh_relations(all_lots)
-        
-        return lot
+        lots = super(StockLot, self).create(vals_list)
+        for lot in lots:
+            if not lot.name or not lot.product_id:
+                continue
+            other_lots = self.env['stock.lot'].search([
+                ('name', '=', lot.name),
+                ('id', '!=', lot.id),
+                ('product_id', '!=', lot.product_id.id),
+            ])
+            if not other_lots:
+                continue
+            all_lots = other_lots | lot
+            self._create_full_mesh_relations(all_lots)
+        return lots
 
     def _create_full_mesh_relations(self, lots):
         """

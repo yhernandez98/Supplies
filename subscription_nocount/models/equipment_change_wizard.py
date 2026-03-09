@@ -85,7 +85,6 @@ class EquipmentChangeWizard(models.TransientModel):
         domain="[('id', 'in', available_old_equipment_ids), ('inventory_plate', '!=', False)]",
         help='Serial del equipo seleccionado.',
         readonly=True,
-        invisible="not old_equipment_inventory_plate_search",
     )
     
     old_equipment_inventory_plate = fields.Char(
@@ -133,7 +132,6 @@ class EquipmentChangeWizard(models.TransientModel):
         domain="[('id', 'in', available_new_equipment_ids), ('inventory_plate', '!=', False)]",
         help='Equipo nuevo seleccionado. Use el campo de búsqueda por placa de inventario para seleccionar el equipo.',
         readonly=True,
-        invisible="not new_equipment_inventory_plate_search",
     )
     
     new_equipment_inventory_plate = fields.Char(
@@ -705,24 +703,24 @@ class EquipmentChangeWizard(models.TransientModel):
     def _get_lot_entry_date(self, lot, location):
         """Obtiene la fecha de entrada de un lote a una ubicación."""
         MoveLine = self.env['stock.move.line'].sudo()
-        
+        # Odoo 19: qty_done no es stored, no usar en dominio SQL; filtrar en Python
         location_ids = self.env['stock.location'].search([
             ('id', 'child_of', location.id)
         ]).ids
-        
+
         domain = [
             ('state', '=', 'done'),
             ('lot_id', '=', lot.id),
             ('product_id', '=', lot.product_id.id),
-            ('qty_done', '>', 0),
             ('location_dest_id', 'in', location_ids),
         ]
-        
-        move_line = MoveLine.search(domain, order='date desc', limit=1)
-        
-        if move_line:
-            return move_line.date or move_line.write_date or move_line.create_date
-        
+
+        candidates = MoveLine.search(domain, order='date desc', limit=10)
+        for move_line in candidates:
+            qty_done = getattr(move_line, 'qty_done', 0) or 0
+            if float(qty_done) > 0:
+                return move_line.date or move_line.write_date or move_line.create_date
+
         return False
 
     def _move_lot_to_location(self, lot, destination_location):

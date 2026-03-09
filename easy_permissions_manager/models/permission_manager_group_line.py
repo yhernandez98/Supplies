@@ -31,11 +31,21 @@ class PermissionManagerGroupLine(models.TransientModel):
     )
     
     category_name = fields.Char(
-        related='group_id.category_id.name',
         string='Categoría',
+        compute='_compute_category_name',
         store=False,
         readonly=True
     )
+    
+    @api.depends('group_id')
+    def _compute_category_name(self):
+        for line in self:
+            if not line.group_id:
+                line.category_name = ''
+                continue
+            # res.groups puede no tener category_id en algunas versiones/estados del registro
+            cat = getattr(line.group_id, 'category_id', None)
+            line.category_name = (cat.name or '') if cat else ''
     
     is_selected = fields.Boolean(
         string='Activar',

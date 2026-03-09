@@ -31,16 +31,16 @@ class ProductTemplate(models.Model):
     )
 
     is_composite = fields.Boolean(
-        string="Componentes",
+        string="Usar componentes",
         help="Si está activo, el producto se explota en componentes en recepciones."
     )
 
     use_peripherals = fields.Boolean(
-        string="Periféricos",
+        string="Usar periféricos",
         help="Si está activo, el producto maneja líneas de periféricos"
     )
     use_complements = fields.Boolean(
-        string="Complementos",
+        string="Usar complementos",
         help="Si está activo, el producto maneja líneas de complementos"
     )
 
@@ -290,7 +290,8 @@ class ProductCompositeLine(models.Model):
     component_qty = fields.Float(string="Cantidad (por 1 compuesto)", required=True, default=1.0, digits="Product Unit of Measure")
     component_uom_id = fields.Many2one(
         "uom.uom", string="Unidad componente",
-        domain="[('category_id','=', component_product_id and component_product_id.uom_id and component_product_id.uom_id.category_id)]",
+        # Odoo 19: uom.uom ya no tiene category_id; el onchange asigna la UdM del producto.
+        domain=[],
     )
 
     @api.onchange("component_product_id")
@@ -312,7 +313,7 @@ class ProductPeripheralLine(models.Model):
     peripheral_qty = fields.Float(string="Cantidad (por 1 producto)", required=True, default=1.0, digits="Product Unit of Measure")
     peripheral_uom_id = fields.Many2one(
         "uom.uom", string="Unidad periférico",
-        domain="[('category_id','=', peripheral_product_id and peripheral_product_id.uom_id and peripheral_product_id.uom_id.category_id)]",
+        domain=[],
     )
 
     @api.onchange("peripheral_product_id")
@@ -334,7 +335,7 @@ class ProductComplementLine(models.Model):
     complement_qty = fields.Float(string="Cantidad (por 1 producto)", required=True, default=1.0, digits="Product Unit of Measure")
     complement_uom_id = fields.Many2one(
         "uom.uom", string="Unidad complemento",
-        domain="[('category_id','=', complement_product_id and complement_product_id.uom_id and complement_product_id.uom_id.category_id)]",
+        domain=[],
     )
 
     @api.onchange("complement_product_id")
@@ -380,9 +381,10 @@ class ProductProduct(models.Model):
         related="product_tmpl_id.classification", readonly=False
     )
 
-    _sql_constraints = [
-        ("serial_cc_unique", "unique(serial_cc)", "El Serial (Único) debe ser único en todas las variantes."),
-    ]
+    _serial_cc_unique = models.Constraint(
+        "unique(serial_cc)",
+        "El Serial (Único) debe ser único en todas las variantes.",
+    )
 
     @api.constrains("serial_cc")
     def _check_unique_serial_cc(self):

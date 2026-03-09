@@ -120,7 +120,7 @@ class LeasingContract(models.Model):
         string='Órdenes de Compra'
     )
     purchase_order_count = fields.Integer(
-        string='Órdenes de Compra',
+        string='Nº Órdenes de Compra',
         compute='_compute_purchase_order_count'
     )
 
@@ -281,8 +281,8 @@ class LeasingContractProductLine(models.Model):
         help='Si está desactivado, este producto ya no está incluido en el contrato'
     )
 
-    _sql_constraints = [
-        ('unique_product_contract', 'unique(contract_id, product_id)',
-         'El producto ya está incluido en este contrato.')
-    ]
+    _unique_product_contract = models.Constraint(
+        'unique(contract_id, product_id)',
+        'El producto ya está incluido en este contrato.',
+    )
 

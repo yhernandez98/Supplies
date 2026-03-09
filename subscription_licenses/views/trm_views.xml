@@ -38,6 +38,7 @@
     <record id="view_trm_search" model="ir.ui.view">
         <field name="name">license.trm.search</field>
         <field name="model">license.trm</field>
+        <field name="type">search</field>
         <field name="arch" type="xml">
             <search string="Buscar TRM">
                 <field name="year"/>
@@ -45,10 +46,6 @@
                 <field name="rate"/>
                 <filter string="Activas" name="active" domain="[('active', '=', True)]"/>
                 <filter string="Inactivas" name="inactive" domain="[('active', '=', False)]"/>
-                <group expand="0" string="Agrupar por">
-                    <filter string="Año" name="group_year" context="{'group_by': 'year'}"/>
-                    <filter string="Mes" name="group_month" context="{'group_by': 'month'}"/>
-                </group>
             </search>
         </field>
     </record>

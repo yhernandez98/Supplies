@@ -656,6 +656,8 @@ class StockMoveLine(models.Model):
             if not picking or not picking.exists() or not picking.picking_type_id or not picking.picking_type_id.exists() or picking.picking_type_id.code != "incoming":
                 continue
 
+            # Odoo 19: move_ids_without_package fue eliminado; usar move_ids
+            picking_moves = getattr(picking, 'move_ids_without_package', picking.move_ids)
             lines = picking.move_line_ids
 
             # CORRECCIÓN: Validar que lot_id existe antes de filtrar
@@ -665,10 +667,9 @@ class StockMoveLine(models.Model):
 
             if principal_lots:
                 vals_pl = {"is_principal": True}
-                # CORRECCIÓN: Validar que move_ids_without_package existe antes de acceder
                 ptr = False
-                if picking.move_ids_without_package and len(picking.move_ids_without_package) > 0:
-                    ptr = picking.move_ids_without_package[0].purchase_tracking_ref or False
+                if picking_moves and len(picking_moves) > 0:
+                    ptr = picking_moves[0].purchase_tracking_ref or False
                 if ptr:
                     vals_pl["purchase_tracking_ref"] = ptr
                 if principal_product:
@@ -687,10 +688,10 @@ class StockMoveLine(models.Model):
                 continue
 
             single_principal_lot = principal_lots[0] if len(principal_lots) == 1 and principal_lots[0] and principal_lots[0].exists() else False
-            # CORRECCIÓN: Validar que move_ids_without_package existe antes de acceder
+            # CORRECCIÓN: Odoo 19 no tiene move_ids_without_package; usar move_ids
             purchase_ref = False
-            if picking.move_ids_without_package and len(picking.move_ids_without_package) > 0:
-                purchase_ref = picking.move_ids_without_package[0].purchase_tracking_ref or False
+            if picking_moves and len(picking_moves) > 0:
+                purchase_ref = picking_moves[0].purchase_tracking_ref or False
 
             for ml in child_lines:
                 # CORRECCIÓN: Validar que lot_id existe antes de acceder

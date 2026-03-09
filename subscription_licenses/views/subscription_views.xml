@@ -88,7 +88,7 @@
             </xpath>
         </field>
     </record>
-    <!-- Productos agrupados (form): añadir tema pastel sin quitar clase existente -->
+    <!-- Productos agrupados (form): tema pastel + campo license_type_id (comodel en este módulo) -->
     <record id="view_subscription_product_grouped_form_theme" model="ir.ui.view">
         <field name="name">subscription.product.grouped.form.theme</field>
         <field name="model">subscription.product.grouped</field>
@@ -96,6 +96,9 @@
         <field name="arch" type="xml">
             <xpath expr="//form" position="attributes">
                 <attribute name="class" add="o_subscription_form o_license_module_form" separator=" "/>
+            </xpath>
+            <xpath expr="//field[@name='license_name']" position="after">
+                <field name="license_type_id" options="{'no_open': True}"/>
             </xpath>
         </field>
     </record>

@@ -168,8 +168,9 @@ class StockQuant(models.Model):
                 quant.related_products_ids = self.env['product.product']
     
     @api.model
-    def _search(self, domain, offset=0, limit=None, order=None, access_rights_uid=None):
+    def _search(self, domain, offset=0, limit=None, order=None, **kwargs):
         """Extender búsqueda para filtrar por producto principal o por características de componentes.
+        kwargs: active_test, bypass_access, etc. (Odoo 19).
         Excluye automáticamente componentes, periféricos y complementos asociados a productos principales.
         IMPORTANTE: Solo aplica el filtro en la vista de inventario, NO durante validaciones."""
         try:
@@ -283,7 +284,7 @@ class StockQuant(models.Model):
             # Ejecutar la búsqueda con el dominio (con o sin filtro de exclusión)
             # Usar try/except para manejar errores de acceso de forma segura
             try:
-                return super()._search(domain, offset=offset, limit=limit, order=order)
+                return super()._search(domain, offset=offset, limit=limit, order=order, **kwargs)
             except Exception as search_error:
                 # Si hay error de acceso, intentar filtrar los quants accesibles manualmente
                 import logging
@@ -366,7 +367,7 @@ class StockQuant(models.Model):
             _logger.error("Error en _search de stock.quant: %s", str(e), exc_info=True)
             # En caso de error, delegar al método padre para que no falle
             try:
-                return super()._search(domain, offset=offset, limit=limit, order=order)
+                return super()._search(domain, offset=offset, limit=limit, order=order, **kwargs)
             except Exception:
                 return self.env['stock.quant']
         
@@ -425,7 +426,7 @@ class StockQuant(models.Model):
         if not has_custom_context and not has_custom_domain:
             # Llamar al método padre directamente sin modificar el dominio
             try:
-                return super()._search(domain, offset=offset, limit=limit, order=order)
+                return super()._search(domain, offset=offset, limit=limit, order=order, **kwargs)
             except Exception as e:
                 # Si hay error, intentar con dominio básico o retornar búsqueda vacía
                 import logging
@@ -434,7 +435,7 @@ class StockQuant(models.Model):
                 # Intentar con dominio mínimo
                 try:
                     safe_domain = [('id', '>', 0)]  # Dominio seguro que no debería fallar
-                    return super()._search(safe_domain, offset=offset, limit=limit, order=order)
+                    return super()._search(safe_domain, offset=offset, limit=limit, order=order, **kwargs)
                 except Exception:
                     # Si aún falla, retornar búsqueda vacía
                     return self.env['stock.quant']
