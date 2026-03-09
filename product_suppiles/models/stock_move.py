@@ -205,22 +205,32 @@ class StockMove(models.Model):
         }
 
     def action_open_assign_serial(self):
-        """Abre las operaciones detalladas de este movimiento para asignar número de serie (desde pestaña Productos principales)."""
+        """Abrir el mismo wizard estándar de 'Operaciones detalladas' pero filtrado a este movimiento."""
         self.ensure_one()
-        return {
-            'type': 'ir.actions.act_window',
-            'name': _('Asignar serial - %s') % (self.product_id.display_name or _('Movimiento')),
-            'res_model': 'stock.move.line',
-            'view_mode': 'list,form',
-            'domain': [('move_id', '=', self.id)],
-            'context': {
-                'default_move_id': self.id,
-                'default_product_id': self.product_id.id,
-                'default_picking_id': self.picking_id.id if self.picking_id else False,
-                'default_location_id': self.location_id.id if self.location_id else False,
-                'default_location_dest_id': self.location_dest_id.id if self.location_dest_id else False,
-            },
-        }
+        if not self.picking_id:
+            return False
+
+        # Usar la acción estándar del picking (abre el wizard correcto con su vista y lógica nativa).
+        action = self.picking_id.action_detailed_operations()
+        if not isinstance(action, dict):
+            return action
+
+        # Restringir el dominio a las líneas de este movimiento concreto.
+        domain = list(action.get('domain', []))
+        domain.append(('move_id', '=', self.id))
+        action['domain'] = domain
+
+        # Asegurar contexto útil para creación de líneas.
+        ctx = dict(action.get('context', {}))
+        ctx.update({
+            'default_move_id': self.id,
+            'default_product_id': self.product_id.id,
+            'default_picking_id': self.picking_id.id,
+            'default_location_id': self.location_id.id,
+            'default_location_dest_id': self.location_dest_id.id,
+        })
+        action['context'] = ctx
+        return action
     
     def name_get(self):
         """Sobrescribir name_get para que el campo principal_lot_id muestre el número de serie."""
