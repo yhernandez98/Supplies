@@ -209,10 +209,8 @@ class ResPartner(models.Model):
         if not action:
             # Fallback a la implementación anterior
             view_id = self.env.ref('mesa_ayuda_inventario.view_customer_inventory_lot_kanban_simple', raise_if_not_found=False)
-            form_view_id = self.env.ref('product_suppiles.view_production_lot_form_inherit_supplies', raise_if_not_found=False)
-            if not form_view_id:
-                form_view_id = self.env.ref('stock.view_production_lot_form', raise_if_not_found=False)
-            
+            # Siempre usar la vista raíz: Odoo fusiona herencias (product_suppiles, mesa_ayuda) automáticamente.
+            form_view_id = self.env.ref('stock.view_production_lot_form', raise_if_not_found=False)
             return {
                 'name': _('Cliente Supplies - %s') % self.name,
                 'type': 'ir.actions.act_window',
@@ -282,10 +280,8 @@ class ResPartner(models.Model):
         if not action:
             # Fallback a la implementación anterior
             tree_hierarchical_id = self.env.ref('mesa_ayuda_inventario.view_stock_lot_tree_hierarchical', raise_if_not_found=False)
-            form_view_id = self.env.ref('product_suppiles.view_production_lot_form_inherit_supplies', raise_if_not_found=False)
-            if not form_view_id:
-                form_view_id = self.env.ref('stock.view_production_lot_form', raise_if_not_found=False)
-            
+            # Siempre usar la vista raíz: Odoo fusiona herencias (product_suppiles, mesa_ayuda) automáticamente.
+            form_view_id = self.env.ref('stock.view_production_lot_form', raise_if_not_found=False)
             return {
                 'name': _('Inventario Lista - %s') % self.name,
                 'type': 'ir.actions.act_window',

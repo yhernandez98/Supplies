@@ -54,15 +54,13 @@
     <record id="view_product_license_type_search" model="ir.ui.view">
         <field name="name">product.license.type.search</field>
         <field name="model">product.license.type</field>
+        <field name="type">search</field>
         <field name="arch" type="xml">
             <search string="Buscar Tipos de Licencia">
                 <field name="code"/>
                 <field name="name"/>
                 <filter string="Activas" name="active" domain="[('active', '=', True)]"/>
                 <filter string="Inactivas" name="inactive" domain="[('active', '=', False)]"/>
-                <group expand="0" string="Agrupar por">
-                    <filter string="Compañía" name="group_company" context="{'group_by': 'company_id'}" groups="base.group_multi_company"/>
-                </group>
             </search>
         </field>
     </record>

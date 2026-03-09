@@ -1,13 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Búsqueda en líneas de reporte: permite agrupar por Cliente (solo funciona en vista lista abierta por acción, no en One2many embebido) -->
+    <!-- Búsqueda en líneas de reporte (sin group_by: evita Invalid view en Odoo 19) -->
     <record id="view_license_provider_report_line_search" model="ir.ui.view">
         <field name="name">license.provider.report.line.search</field>
         <field name="model">license.provider.report.line</field>
+        <field name="type">search</field>
         <field name="arch" type="xml">
             <search string="Líneas de reporte">
-                <filter string="Cliente" name="group_partner" context="{'group_by': 'partner_id'}"/>
-                <filter string="Licenciamiento" name="group_product" context="{'group_by': 'product_id'}"/>
             </search>
         </field>
     </record>

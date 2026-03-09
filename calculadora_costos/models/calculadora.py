@@ -38,8 +38,214 @@ class Calculadora(models.Model):
         store=False,
         help='Cantidad de suscripciones no contables activas del cliente'
     )
+<<<<<<< HEAD
+
+    # Estado del flujo: borrador, enviada por correo, aprobada (y cargada a lista de precios si es renting)
+    state = fields.Selection([
+        ('draft', 'Borrador'),
+        ('sent', 'Enviada'),
+        ('approved', 'Aprobada'),
+    ], string='Estado', default='draft', required=True, copy=False,
+       help='Borrador: en edición. Enviada: cotización enviada por correo. Aprobada: cliente aprobó y (si es renting) se cargó a lista de precios.')
+
+    # Tipo de operación: Venta (solo valor con utilidad) o Renting (con servicios, financiación, plazos)
+    tipo_operacion = fields.Selection([
+        ('venta', 'Venta'),
+        ('renting', 'Renting'),
+    ], string='Tipo de operación', default='renting', required=True,
+       help='Venta: cotización con valor del producto con utilidad. Renting: incluye servicios técnicos, parámetros financieros y opciones por plazo.')
+
+    # Moneda de cotización (el total siempre se muestra en COP)
+    moneda_cotizacion = fields.Selection([
+        ('usd', 'USD'),
+        ('cop', 'COP (Pesos)'),
+    ], string='Cotizar en', default='usd', required=True,
+       help='Moneda en la que ingresarás los valores del equipo. El total siempre se mostrará en pesos (COP).')
+
+    # Tipo: Bien o Servicio (solo estas dos opciones; si es Bien se muestra categoría de activo)
+    tipo_producto = fields.Selection([
+        ('consu', 'Bien'),
+        ('service', 'Servicio'),
+    ], string='Tipo', default='consu', required=True,
+       help='Seleccione si cotiza un bien (activo) o un servicio. Si es bien, podrá elegir la categoría de activo.')
+    asset_category_id = fields.Many2one(
+        'product.asset.category',
+        string='Categoría de activo',
+        help='Categoría del activo a cotizar (visible cuando el tipo es Bien).'
+    )
+    asset_class_id = fields.Many2one(
+        'product.asset.class',
+        string='Clase de activo',
+        domain="[('category_id', '=', asset_category_id)]",
+        help='Clase del activo a cotizar (visible cuando el tipo es Bien). Filtra por la categoría seleccionada.'
+    )
+
+    # Cantidad de equipos a cotizar (1 o más)
+    cantidad_equipos = fields.Integer(
+        string='Cantidad de equipos',
+        default=1,
+        required=True,
+        help='Número de equipos a cotizar (1 a 20). Guarde para actualizar la lista de equipos.'
+    )
+    _cantidad_equipos_range = models.Constraint(
+        'CHECK(cantidad_equipos >= 1 AND cantidad_equipos <= 20)',
+        'La cantidad de equipos debe estar entre 1 y 20.',
+    )
+    line_ids = fields.One2many(
+        'calculadora.costos.line',
+        'calculadora_id',
+        string='Equipos',
+        copy=True,
+        help='Una línea por cada equipo a cotizar'
+    )
+
+    # Campos por equipo 1..20 para formulario (sincronizados con line_ids)
+    equipo_1_nombre = fields.Char(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Nombre')
+    equipo_1_product_id = fields.Many2one('product.product', compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Producto')
+    equipo_1_valor_usd = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Valor (USD)', digits=(16, 0))
+    equipo_1_garantia_usd = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (USD)', digits=(16, 0))
+    equipo_1_valor_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Valor (COP)', digits=(16, 0))
+    equipo_1_garantia_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (COP)', digits=(16, 0))
+    equipo_1_costo_total_cop = fields.Float(compute='_compute_equipo_campos', string='Costo total (COP)', digits=(16, 0))
+    equipo_2_nombre = fields.Char(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Nombre')
+    equipo_2_product_id = fields.Many2one('product.product', compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Producto')
+    equipo_2_valor_usd = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Valor (USD)', digits=(16, 0))
+    equipo_2_garantia_usd = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (USD)', digits=(16, 0))
+    equipo_2_valor_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Valor (COP)', digits=(16, 0))
+    equipo_2_garantia_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (COP)', digits=(16, 0))
+    equipo_2_costo_total_cop = fields.Float(compute='_compute_equipo_campos', string='Costo total (COP)', digits=(16, 0))
+    equipo_3_nombre = fields.Char(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Nombre')
+    equipo_3_product_id = fields.Many2one('product.product', compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Producto')
+    equipo_3_valor_usd = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Valor (USD)', digits=(16, 0))
+    equipo_3_garantia_usd = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (USD)', digits=(16, 0))
+    equipo_3_valor_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Valor (COP)', digits=(16, 0))
+    equipo_3_garantia_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (COP)', digits=(16, 0))
+    equipo_3_costo_total_cop = fields.Float(compute='_compute_equipo_campos', string='Costo total (COP)', digits=(16, 0))
+    equipo_4_nombre = fields.Char(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Nombre')
+    equipo_4_product_id = fields.Many2one('product.product', compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Producto')
+    equipo_4_valor_usd = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Valor (USD)', digits=(16, 0))
+    equipo_4_garantia_usd = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (USD)', digits=(16, 0))
+    equipo_4_valor_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Valor (COP)', digits=(16, 0))
+    equipo_4_garantia_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (COP)', digits=(16, 0))
+    equipo_4_costo_total_cop = fields.Float(compute='_compute_equipo_campos', string='Costo total (COP)', digits=(16, 0))
+    equipo_5_nombre = fields.Char(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Nombre')
+    equipo_5_product_id = fields.Many2one('product.product', compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Producto')
+    equipo_5_valor_usd = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Valor (USD)', digits=(16, 0))
+    equipo_5_garantia_usd = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (USD)', digits=(16, 0))
+    equipo_5_valor_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Valor (COP)', digits=(16, 0))
+    equipo_5_garantia_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (COP)', digits=(16, 0))
+    equipo_5_costo_total_cop = fields.Float(compute='_compute_equipo_campos', string='Costo total (COP)', digits=(16, 0))
+    equipo_6_nombre = fields.Char(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Nombre')
+    equipo_6_product_id = fields.Many2one('product.product', compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Producto')
+    equipo_6_valor_usd = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Valor (USD)', digits=(16, 0))
+    equipo_6_garantia_usd = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (USD)', digits=(16, 0))
+    equipo_6_valor_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Valor (COP)', digits=(16, 0))
+    equipo_6_garantia_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (COP)', digits=(16, 0))
+    equipo_6_costo_total_cop = fields.Float(compute='_compute_equipo_campos', string='Costo total (COP)', digits=(16, 0))
+    equipo_7_nombre = fields.Char(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Nombre')
+    equipo_7_product_id = fields.Many2one('product.product', compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Producto')
+    equipo_7_valor_usd = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Valor (USD)', digits=(16, 0))
+    equipo_7_garantia_usd = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (USD)', digits=(16, 0))
+    equipo_7_valor_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Valor (COP)', digits=(16, 0))
+    equipo_7_garantia_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (COP)', digits=(16, 0))
+    equipo_7_costo_total_cop = fields.Float(compute='_compute_equipo_campos', string='Costo total (COP)', digits=(16, 0))
+    equipo_8_nombre = fields.Char(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Nombre')
+    equipo_8_product_id = fields.Many2one('product.product', compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Producto')
+    equipo_8_valor_usd = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Valor (USD)', digits=(16, 0))
+    equipo_8_garantia_usd = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (USD)', digits=(16, 0))
+    equipo_8_valor_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Valor (COP)', digits=(16, 0))
+    equipo_8_garantia_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (COP)', digits=(16, 0))
+    equipo_8_costo_total_cop = fields.Float(compute='_compute_equipo_campos', string='Costo total (COP)', digits=(16, 0))
+    equipo_9_nombre = fields.Char(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Nombre')
+    equipo_9_product_id = fields.Many2one('product.product', compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Producto')
+    equipo_9_valor_usd = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Valor (USD)', digits=(16, 0))
+    equipo_9_garantia_usd = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (USD)', digits=(16, 0))
+    equipo_9_valor_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Valor (COP)', digits=(16, 0))
+    equipo_9_garantia_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (COP)', digits=(16, 0))
+    equipo_9_costo_total_cop = fields.Float(compute='_compute_equipo_campos', string='Costo total (COP)', digits=(16, 0))
+    equipo_10_nombre = fields.Char(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Nombre')
+    equipo_10_product_id = fields.Many2one('product.product', compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Producto')
+    equipo_10_valor_usd = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Valor (USD)', digits=(16, 0))
+    equipo_10_garantia_usd = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (USD)', digits=(16, 0))
+    equipo_10_valor_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Valor (COP)', digits=(16, 0))
+    equipo_10_garantia_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (COP)', digits=(16, 0))
+    equipo_10_costo_total_cop = fields.Float(compute='_compute_equipo_campos', string='Costo total (COP)', digits=(16, 0))
+    equipo_11_nombre = fields.Char(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Nombre')
+    equipo_11_product_id = fields.Many2one('product.product', compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Producto')
+    equipo_11_valor_usd = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Valor (USD)', digits=(16, 0))
+    equipo_11_garantia_usd = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (USD)', digits=(16, 0))
+    equipo_11_valor_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Valor (COP)', digits=(16, 0))
+    equipo_11_garantia_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (COP)', digits=(16, 0))
+    equipo_11_costo_total_cop = fields.Float(compute='_compute_equipo_campos', string='Costo total (COP)', digits=(16, 0))
+    equipo_12_nombre = fields.Char(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Nombre')
+    equipo_12_product_id = fields.Many2one('product.product', compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Producto')
+    equipo_12_valor_usd = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Valor (USD)', digits=(16, 0))
+    equipo_12_garantia_usd = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (USD)', digits=(16, 0))
+    equipo_12_valor_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Valor (COP)', digits=(16, 0))
+    equipo_12_garantia_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (COP)', digits=(16, 0))
+    equipo_12_costo_total_cop = fields.Float(compute='_compute_equipo_campos', string='Costo total (COP)', digits=(16, 0))
+    equipo_13_nombre = fields.Char(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Nombre')
+    equipo_13_product_id = fields.Many2one('product.product', compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Producto')
+    equipo_13_valor_usd = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Valor (USD)', digits=(16, 0))
+    equipo_13_garantia_usd = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (USD)', digits=(16, 0))
+    equipo_13_valor_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Valor (COP)', digits=(16, 0))
+    equipo_13_garantia_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (COP)', digits=(16, 0))
+    equipo_13_costo_total_cop = fields.Float(compute='_compute_equipo_campos', string='Costo total (COP)', digits=(16, 0))
+    equipo_14_nombre = fields.Char(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Nombre')
+    equipo_14_product_id = fields.Many2one('product.product', compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Producto')
+    equipo_14_valor_usd = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Valor (USD)', digits=(16, 0))
+    equipo_14_garantia_usd = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (USD)', digits=(16, 0))
+    equipo_14_valor_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Valor (COP)', digits=(16, 0))
+    equipo_14_garantia_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (COP)', digits=(16, 0))
+    equipo_14_costo_total_cop = fields.Float(compute='_compute_equipo_campos', string='Costo total (COP)', digits=(16, 0))
+    equipo_15_nombre = fields.Char(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Nombre')
+    equipo_15_product_id = fields.Many2one('product.product', compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Producto')
+    equipo_15_valor_usd = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Valor (USD)', digits=(16, 0))
+    equipo_15_garantia_usd = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (USD)', digits=(16, 0))
+    equipo_15_valor_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Valor (COP)', digits=(16, 0))
+    equipo_15_garantia_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (COP)', digits=(16, 0))
+    equipo_15_costo_total_cop = fields.Float(compute='_compute_equipo_campos', string='Costo total (COP)', digits=(16, 0))
+    equipo_16_nombre = fields.Char(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Nombre')
+    equipo_16_product_id = fields.Many2one('product.product', compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Producto')
+    equipo_16_valor_usd = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Valor (USD)', digits=(16, 0))
+    equipo_16_garantia_usd = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (USD)', digits=(16, 0))
+    equipo_16_valor_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Valor (COP)', digits=(16, 0))
+    equipo_16_garantia_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (COP)', digits=(16, 0))
+    equipo_16_costo_total_cop = fields.Float(compute='_compute_equipo_campos', string='Costo total (COP)', digits=(16, 0))
+    equipo_17_nombre = fields.Char(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Nombre')
+    equipo_17_product_id = fields.Many2one('product.product', compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Producto')
+    equipo_17_valor_usd = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Valor (USD)', digits=(16, 0))
+    equipo_17_garantia_usd = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (USD)', digits=(16, 0))
+    equipo_17_valor_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Valor (COP)', digits=(16, 0))
+    equipo_17_garantia_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (COP)', digits=(16, 0))
+    equipo_17_costo_total_cop = fields.Float(compute='_compute_equipo_campos', string='Costo total (COP)', digits=(16, 0))
+    equipo_18_nombre = fields.Char(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Nombre')
+    equipo_18_product_id = fields.Many2one('product.product', compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Producto')
+    equipo_18_valor_usd = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Valor (USD)', digits=(16, 0))
+    equipo_18_garantia_usd = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (USD)', digits=(16, 0))
+    equipo_18_valor_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Valor (COP)', digits=(16, 0))
+    equipo_18_garantia_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (COP)', digits=(16, 0))
+    equipo_18_costo_total_cop = fields.Float(compute='_compute_equipo_campos', string='Costo total (COP)', digits=(16, 0))
+    equipo_19_nombre = fields.Char(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Nombre')
+    equipo_19_product_id = fields.Many2one('product.product', compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Producto')
+    equipo_19_valor_usd = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Valor (USD)', digits=(16, 0))
+    equipo_19_garantia_usd = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (USD)', digits=(16, 0))
+    equipo_19_valor_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Valor (COP)', digits=(16, 0))
+    equipo_19_garantia_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (COP)', digits=(16, 0))
+    equipo_19_costo_total_cop = fields.Float(compute='_compute_equipo_campos', string='Costo total (COP)', digits=(16, 0))
+    equipo_20_nombre = fields.Char(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Nombre')
+    equipo_20_product_id = fields.Many2one('product.product', compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Producto')
+    equipo_20_valor_usd = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Valor (USD)', digits=(16, 0))
+    equipo_20_garantia_usd = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (USD)', digits=(16, 0))
+    equipo_20_valor_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Valor (COP)', digits=(16, 0))
+    equipo_20_garantia_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (COP)', digits=(16, 0))
+    equipo_20_costo_total_cop = fields.Float(compute='_compute_equipo_campos', string='Costo total (COP)', digits=(16, 0))
+
+    # Costos del Equipo (se mantienen para compatibilidad cuando hay 1 solo equipo)
+=======
     
     # Costos del Equipo
+>>>>>>> 93ec7b80108b10824984b535bedfeefcfa1e85fd
     valor_usd = fields.Float(
         string='Valor en USD',
         required=True,

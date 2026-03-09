@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Transferencia de Productos y Seriales',
-    'version': '18.0.1.0.0',
+    'version': '19.0.1.0.0',
     'category': 'Warehouse',
     'summary': 'Transferir unidades y seriales de un producto a otro',
     'description': """

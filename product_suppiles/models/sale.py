@@ -159,7 +159,8 @@ class SaleOrder(models.Model):
                         # Buscar movimientos padre (productos principales) que no sean de renting
                         # Los movimientos de renting ya fueron procesados en _create_renting_moves
                         # CORRECCIÓN: Validar que sale_line_id, product_id y product_tmpl_id existen antes de acceder
-                        parent_moves = picking.move_ids_without_package.filtered(
+                        moves = getattr(picking, 'move_ids_without_package', picking.move_ids)
+                        parent_moves = moves.filtered(
                             lambda m: m.sale_line_id and m.sale_line_id.exists()
                             and m.sale_line_id.product_id and m.sale_line_id.product_id.exists()
                             and m.sale_line_id.product_id.product_tmpl_id

@@ -168,10 +168,11 @@
             </field>
         </record>
 
-        <!-- Vista de búsqueda para mantenimientos -->
+        <!-- Vista de búsqueda para mantenimientos (sin group_by: evita Invalid view en Odoo 19) -->
         <record id="view_lot_maintenance_search" model="ir.ui.view">
             <field name="name">stock.lot.maintenance.search</field>
             <field name="model">stock.lot.maintenance</field>
+            <field name="type">search</field>
             <field name="arch" type="xml">
                 <search>
                     <field name="lot_id" string="Número de Serie/Placa"/>
@@ -186,12 +187,6 @@
                     <filter string="Pendientes" name="pending" domain="[('status', '=', 'pending')]"/>
                     <filter string="Firmados" name="signed" domain="[('is_signed', '=', True)]"/>
                     <filter string="Este Mes" name="this_month" domain="[('maintenance_date', '>=', (context_today() - relativedelta(months=1)).strftime('%Y-%m-01'))]"/>
-                    <group expand="0" string="Agrupar por">
-                        <filter string="Tipo" name="group_type" context="{'group_by': 'maintenance_type'}"/>
-                        <filter string="Técnico" name="group_technician" context="{'group_by': 'technician_id'}"/>
-                        <filter string="Estado" name="group_status" context="{'group_by': 'status'}"/>
-                        <filter string="Mes" name="group_month" context="{'group_by': 'maintenance_date:month'}"/>
-                    </group>
                 </search>
             </field>
         </record>

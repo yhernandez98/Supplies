@@ -20,7 +20,7 @@
                     <field name="product_id" context="{'bin_size': True}"/>
                     <progressbar field="quantity_at_customer" colors='{"0": "success", "1": "warning"}'/>
                     <templates>
-                        <t t-name="kanban-box">
+                        <t t-name="card">
                             <div class="oe_kanban_card oe_kanban_global_click" style="border-radius: 20px; box-shadow: 0 6px 12px rgba(0,0,0,0.15); margin: 12px; background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%); overflow: hidden; border: 2px solid #e0e6ed; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 16px rgba(0,0,0,0.2)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 6px 12px rgba(0,0,0,0.15)';">
                                 <!-- Header con gradiente empresarial gris oscuro -->
                                 <div style="background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%); padding: 18px; color: white; position: relative; border-bottom: 2px solid #047857;">
@@ -133,10 +133,11 @@
         </record>
 
 
-        <!-- Vista de búsqueda con filtros personalizados -->
+        <!-- Vista de búsqueda con filtros personalizados (sin group_by: evita Invalid view en Odoo 19) -->
         <record id="view_customer_inventory_lot_search" model="ir.ui.view">
             <field name="name">customer.inventory.lot.search</field>
             <field name="model">stock.lot</field>
+            <field name="type">search</field>
             <field name="arch" type="xml">
                 <search>
                     <field name="inventory_plate" string="Placa Inventario"/>
@@ -150,13 +151,6 @@
                     <filter string="Productos Principales" name="principal_only" domain="[('is_principal', '=', True)]"/>
                     <filter string="Con Placa Inventario" name="with_inventory_plate" domain="[('inventory_plate', '!=', False)]"/>
                     <filter string="Con Placa Seguridad" name="with_security_plate" domain="[('security_plate', '!=', False)]"/>
-                    <group expand="0" string="Agrupar por">
-                        <filter string="Cliente" name="group_customer" context="{'group_by': 'customer_id'}"/>
-                        <filter string="Servicio" name="group_subscription_service" context="{'group_by': 'subscription_service_product_id'}"/>
-                        <filter string="Código de Facturación" name="group_billing_code" context="{'group_by': 'billing_code'}"/>
-                        <filter string="Categoría de Activo" name="group_category" context="{'group_by': 'product_asset_category_id'}"/>
-                        <filter string="Clase de Activo" name="group_class" context="{'group_by': 'product_asset_class_id'}"/>
-                    </group>
                 </search>
             </field>
         </record>
@@ -173,7 +167,7 @@
                     <field name="property_stock_customer"/>
                     <field name="id"/>
                     <templates>
-                        <t t-name="kanban-box">
+                        <t t-name="card">
                             <div class="oe_kanban_card customer-inventory-card" style="border-radius: 16px; box-shadow: 0 2px 12px rgba(148, 163, 184, 0.2); background: linear-gradient(160deg, #f8fafc 0%, #f1f5f9 45%, #e2e8f0 100%); overflow: hidden; border: 1px solid #e2e8f0; transition: transform 0.3s ease, box-shadow 0.3s ease; width: 100%; height: 200px; display: flex; flex-direction: column; position: relative; margin: 0; padding: 0;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 12px 28px rgba(148, 163, 184, 0.25)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 12px rgba(148, 163, 184, 0.2)';">
                                 <div class="customer-inventory-card-inner" style="background: linear-gradient(160deg, #f0f9ff 0%, #e0f2fe 100%); border-bottom: 1px solid #bae6fd; padding: 12px; text-align: center; color: #0f172a; flex: 1; display: flex; flex-direction: column; justify-content: space-between; min-height: 0; position: relative; z-index: 1; border-radius: 16px 16px 0 0;">
                                     <div style="margin-bottom: 8px; flex-shrink: 0;">
@@ -208,7 +202,7 @@
                     <field name="property_stock_customer"/>
                     <field name="id"/>
                     <templates>
-                        <t t-name="kanban-box">
+                        <t t-name="card">
                             <div class="oe_kanban_card customer-inventory-card" style="border-radius: 16px; box-shadow: 0 2px 12px rgba(148, 163, 184, 0.2); background: linear-gradient(160deg, #f8fafc 0%, #f1f5f9 45%, #e2e8f0 100%); overflow: hidden; border: 1px solid #e2e8f0; transition: transform 0.3s ease, box-shadow 0.3s ease; width: 100%; height: 200px; display: flex; flex-direction: column; position: relative; margin: 0; padding: 0;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 12px 28px rgba(148, 163, 184, 0.25)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 12px rgba(148, 163, 184, 0.2)';">
                                 <div class="customer-inventory-card-inner" style="background: linear-gradient(160deg, #f0f9ff 0%, #e0f2fe 100%); border-bottom: 1px solid #bae6fd; padding: 12px; text-align: center; color: #0f172a; flex: 1; display: flex; flex-direction: column; justify-content: space-between; min-height: 0; position: relative; z-index: 1; border-radius: 16px 16px 0 0;">
                                     <div style="margin-bottom: 8px; flex-shrink: 0;">
@@ -303,20 +297,19 @@
                     <field name="associated_products_count"/>
                     <field name="associated_products_display"/>
                                 <templates>
-                                    <t t-name="kanban-box">
+                                    <t t-name="card">
                                         <div class="oe_kanban_card oe_kanban_global_click" style="border: 1px solid #d0d7de; border-radius: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.12); margin-bottom: 12px; background: #ffffff; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.18)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 6px rgba(0,0,0,0.12)';">
                                             <!-- Header corporativo con color azul cielo elegante -->
                                             <div style="background: linear-gradient(160deg, #f0f9ff 0%, #e0f2fe 100%); border-bottom: 2px solid #bae6fd; padding: 14px; border-radius: 20px 20px 0 0;">
                                                 <div style="display: flex; align-items: center; gap: 12px;">
                                                     <div t-if="record.lot_image.raw_value or record.product_id.raw_value" style="width: 55px; height: 55px; border-radius: 8px; overflow: hidden; background: rgba(255,255,255,0.95); border: 2px solid rgba(203,213,225,0.8); padding: 4px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.06);">
                                                         <t t-if="record.lot_image.raw_value">
-                                                            <img t-att-src="kanban_image('stock.lot', 'lot_image', record.id.raw_value)" 
-                                                                style="max-width: 100%; max-height: 100%; object-fit: contain;"/>
+                                                            <field name="lot_image" widget="image" options="{'size': [55, 55]}" nolabel="1" class="d-block" style="max-width: 100%; max-height: 100%; object-fit: contain;"/>
                                                         </t>
                                                         <t t-else="">
-                                                            <img t-if="record.product_id.raw_value" 
-                                                                t-att-src="kanban_image('product.product', 'image_1920', record.product_id.raw_value)" 
-                                                                style="max-width: 100%; max-height: 100%; object-fit: contain;"/>
+                                                            <t t-if="record.product_id.raw_value">
+                                                                <field name="product_image" widget="image" options="{'size': [55, 55]}" nolabel="1" class="d-block" style="max-width: 100%; max-height: 100%; object-fit: contain;"/>
+                                                            </t>
                                                         </t>
                                                     </div>
                                                     <div style="flex: 1;">
@@ -406,7 +399,7 @@
                     <field name="associated_products_count"/>
                     <field name="associated_products_display"/>
                     <templates>
-                        <t t-name="kanban-box">
+                        <t t-name="card">
                             <div class="oe_kanban_card oe_kanban_global_click" style="border: 1px solid #d0d7de; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 12px; background: #ffffff; overflow: hidden;">
                                 <!-- Header azul con serial y producto -->
                                 <div style="background: linear-gradient(160deg, #f0f9ff 0%, #e0f2fe 100%); border-bottom: 2px solid #bae6fd; padding: 12px; border-radius: 8px 8px 0 0;">
@@ -414,13 +407,12 @@
                                         <!-- Icono/Imagen del producto -->
                                         <div t-if="record.lot_image.raw_value or record.product_id.raw_value" style="width: 50px; height: 50px; border-radius: 6px; overflow: hidden; background: rgba(255,255,255,0.95); border: 2px solid rgba(203,213,225,0.8); padding: 3px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                                             <t t-if="record.lot_image.raw_value">
-                                                <img t-att-src="kanban_image('stock.lot', 'lot_image', record.id.raw_value)" 
-                                                    style="max-width: 100%; max-height: 100%; object-fit: contain;"/>
+                                                <field name="lot_image" widget="image" options="{'size': [50, 50]}" nolabel="1" class="d-block" style="max-width: 100%; max-height: 100%; object-fit: contain;"/>
                                             </t>
                                             <t t-else="">
-                                                <img t-if="record.product_id.raw_value" 
-                                                    t-att-src="kanban_image('product.product', 'image_1920', record.product_id.raw_value)" 
-                                                    style="max-width: 100%; max-height: 100%; object-fit: contain;"/>
+                                                <t t-if="record.product_id.raw_value">
+                                                    <field name="product_image" widget="image" options="{'size': [50, 50]}" nolabel="1" class="d-block" style="max-width: 100%; max-height: 100%; object-fit: contain;"/>
+                                                </t>
                                             </t>
                                         </div>
                                         <!-- Serial y Producto -->
@@ -524,7 +516,7 @@
             <field name="name">Inventario Kanban</field>
             <field name="res_model">stock.lot</field>
             <!-- Permitir a todos los usuarios internos (no solo Administración/Ajustes) -->
-            <field name="groups_id" eval="[(6, 0, [ref('base.group_user')])]"/>
+            <field name="group_ids" eval="[(6, 0, [ref('base.group_user')])]"/>
             <!-- IMPORTANTE: Incluimos 'list' para que aparezca el switcher nativo,
                  pero el contexto fuerza que Kanban NO tenga agrupación -->
             <field name="view_mode">kanban,list,form</field>
@@ -551,7 +543,7 @@
             <field name="name">Inventario Lista</field>
             <field name="res_model">stock.lot</field>
             <!-- Permitir a todos los usuarios internos (no solo Administración/Ajustes) -->
-            <field name="groups_id" eval="[(6, 0, [ref('base.group_user')])]"/>
+            <field name="group_ids" eval="[(6, 0, [ref('base.group_user')])]"/>
             <field name="view_mode">list,form</field>
             <field name="view_id" ref="view_stock_lot_tree_hierarchical"/>
             <field name="search_view_id" ref="view_customer_inventory_lot_search"/>
@@ -677,7 +669,7 @@ else:
         <record id="action_customer_inventory_detailed" model="ir.actions.act_window">
             <field name="name">Cliente Supplies</field>
             <field name="res_model">res.partner</field>
-            <field name="groups_id" eval="[(6, 0, [ref('base.group_user')])]"/>
+            <field name="group_ids" eval="[(6, 0, [ref('base.group_user')])]"/>
             <field name="view_mode">kanban,list</field>
             <field name="view_id" ref="view_customer_kanban_detailed"/>
             <field name="view_ids" eval="[(5, 0, 0),

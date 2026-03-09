@@ -115,6 +115,7 @@
     <record id="view_license_search" model="ir.ui.view">
         <field name="name">license.template.search</field>
         <field name="model">license.template</field>
+        <field name="type">search</field>
         <field name="arch" type="xml">
             <search string="Buscar Licencias">
                 <field name="code" string="Código"/>
@@ -129,11 +130,6 @@
                 <separator/>
                 <filter string="Con Asignaciones" name="with_assignments" domain="[('assignment_ids', '!=', False)]"/>
                 <filter string="Sin Asignaciones" name="no_assignments" domain="[('assignment_ids', '=', False)]"/>
-                <group expand="0" string="Agrupar por">
-                    <filter string="Categoría" name="group_category" context="{'group_by': 'name'}"/>
-                    <filter string="Producto" name="group_product" context="{'group_by': 'product_id'}"/>
-                    <filter string="Estado" name="group_active" context="{'group_by': 'active'}"/>
-                </group>
             </search>
         </field>
     </record>

@@ -112,54 +112,6 @@ class StockLot(models.Model):
             for lot in self:
                 if lot.last_subscription_id:
                     lot.last_subscription_id.invalidate_recordset(['grouped_product_ids'])
-        # Cuando el producto sale de la ubicación del cliente: crear/actualizar línea en "Ajustes de fechas por serial"
-        # solo si la salida aplica al mes en curso (para seguir la lógica de guardado y actualización a primero de mes).
-        if 'subscription.lot.date.override' in self.env:
-            today = fields.Date.context_today(self)
-            first_cur = datetime.date(today.year, today.month, 1)
-            last_cur = datetime.date(today.year, today.month, calendar.monthrange(today.year, today.month)[1])
-            for lot in self:
-                sub = None
-                entry_val = None
-                exit_val = None
-                if 'exit_date' in vals and vals.get('exit_date') and getattr(lot, 'active_subscription_id', None):
-                    sub = lot.active_subscription_id
-                    entry_val = getattr(lot, 'entry_date', None) or getattr(lot, 'last_entry_date_display', None)
-                    exit_val = vals['exit_date']
-                elif 'active_subscription_id' in vals and vals.get('active_subscription_id') is False and getattr(lot, 'last_subscription_id', None):
-                    sub = lot.last_subscription_id
-                    entry_val = getattr(lot, 'last_subscription_entry_date', None)
-                    exit_val = getattr(lot, 'last_subscription_exit_date', None)
-                if not sub or not (entry_val or exit_val):
-                    continue
-                exit_d = exit_val
-                if exit_d and hasattr(exit_d, 'date'):
-                    exit_d = exit_d.date() if callable(getattr(exit_d, 'date', None)) else exit_d
-                if not exit_d:
-                    exit_d = today
-                if hasattr(exit_d, 'year'):
-                    exit_d = datetime.date(exit_d.year, exit_d.month, exit_d.day)
-                else:
-                    continue
-                if not (first_cur <= exit_d <= last_cur):
-                    continue
-                Override = self.env['subscription.lot.date.override'].sudo()
-                override = Override.search([
-                    ('subscription_id', '=', sub.id),
-                    ('lot_id', '=', lot.id),
-                ], limit=1)
-                if override:
-                    override.write({
-                        'entry_date': entry_val or override.entry_date,
-                        'exit_date': exit_d,
-                    })
-                else:
-                    Override.create({
-                        'subscription_id': sub.id,
-                        'lot_id': lot.id,
-                        'entry_date': entry_val,
-                        'exit_date': exit_d,
-                    })
         return res
 
     # Visualización: día del mes en curso y costo acumulado al día (para vista de series)

@@ -87,3 +87,23 @@
 .o_form_view:has(.oe_stock_picking_sheet) .oe_chatter .btn:not(.btn-link):not(.oe_link):hover::after {
     left: 100%;
 }
+
+/* -------- Pestaña "Productos principales" (recepción agrupada) -------- */
+
+/* Evitar scroll horizontal y saltos al hacer clic: bloqueamos el scroll horizontal
+   en LA HOJA del picking cuando está presente nuestra pestaña. */
+.o_form_view:has(.supplies-main-products-page) .o_form_sheet {
+    overflow-x: hidden !important;
+}
+
+/* Mantener tabla compacta (todas las columnas ya son cortas: producto, serial, contadores) */
+.o_form_sheet.oe_stock_picking_sheet .supplies-main-products-page .o_list_view table {
+    table-layout: fixed;
+}
+
+.o_form_sheet.oe_stock_picking_sheet .supplies-main-products-page .o_list_view th,
+.o_form_sheet.oe_stock_picking_sheet .supplies-main-products-page .o_list_view td {
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+}

@@ -32,7 +32,7 @@ class LeasingBrand(models.Model):
         string='Contratos'
     )
     contract_count = fields.Integer(
-        string='Contratos',
+        string='Nº Contratos',
         compute='_compute_contract_count'
     )
 

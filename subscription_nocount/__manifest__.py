@@ -1,6 +1,6 @@
 {
     'name': 'Subscription No Accounting',
-    'version': '18.0.1.0.6',
+    'version': '19.0.1.0.6',
     'author': 'Supplies De Colombia SAS',
     'category': 'Sales/Subscriptions',
     'depends': ['mail', 'sale_subscription', 'stock', 'account', 'product_suppiles'],

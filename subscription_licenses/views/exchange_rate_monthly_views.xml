@@ -39,6 +39,7 @@
     <record id="view_exchange_rate_monthly_search" model="ir.ui.view">
         <field name="name">exchange.rate.monthly.search</field>
         <field name="model">exchange.rate.monthly</field>
+        <field name="type">search</field>
         <field name="arch" type="xml">
             <search string="Buscar TRM Mensual">
                 <field name="year"/>
@@ -46,11 +47,6 @@
                 <field name="rate"/>
                 <filter string="Activas" name="active" domain="[('active', '=', True)]"/>
                 <filter string="Inactivas" name="inactive" domain="[('active', '=', False)]"/>
-                <group expand="0" string="Agrupar por">
-                    <filter string="Año" name="group_year" context="{'group_by': 'year'}"/>
-                    <filter string="Mes" name="group_month" context="{'group_by': 'month'}"/>
-                    <filter string="Compañía" name="group_company" context="{'group_by': 'company_id'}" groups="base.group_multi_company"/>
-                </group>
             </search>
         </field>
     </record>

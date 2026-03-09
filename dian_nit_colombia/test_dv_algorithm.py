@@ -6,38 +6,33 @@ Script de prueba para validar el algoritmo de cálculo del dígito de verificaci
 
 def calcular_dv_dian(nit_number):
     """
-    Calcula el dígito de verificación según el algoritmo oficial DIAN
+    Calcula el dígito de verificación según el algoritmo oficial DIAN.
+    Soporta NIT empresa (9 dígitos) y cédula persona natural (hasta 15 dígitos).
     
     Algoritmo oficial DIAN:
-    1. Se toman los 9 pesos: [41, 37, 29, 23, 19, 17, 13, 7, 3]
-    2. Se aplican de IZQUIERDA A DERECHA (del primer dígito al último)
-    3. Se multiplica cada dígito por su peso correspondiente
-    4. Se suman todos los productos
-    5. Se calcula el residuo de la división por 11
-    6. Si el residuo es 0 o 1, el DV es 0
-    7. Si el residuo es mayor que 1, el DV es 11 - residuo
+    1. Coeficientes: [3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71]
+    2. Se aplican de DERECHA A IZQUIERDA
+    3. Residuo % 11; si > 1: DV = 11 - residuo; si no: DV = residuo
     """
     if not nit_number or not nit_number.isdigit():
         return False
     
-    # Algoritmo DIAN oficial: 9 pesos aplicados de IZQUIERDA A DERECHA
-    weights = [41, 37, 29, 23, 19, 17, 13, 7, 3]
+    coeficientes = [3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71]
+    nit_reversed = nit_number[::-1]
     
-    # Aplicar pesos de izquierda a derecha (sin invertir)
     total = 0
     detalles = []
-    for i, digit in enumerate(nit_number):
-        if i < len(weights):
-            producto = int(digit) * weights[i]
+    for i, digit in enumerate(nit_reversed):
+        if i < len(coeficientes):
+            producto = int(digit) * coeficientes[i]
             total += producto
-            detalles.append(f"{digit}×{weights[i]}={producto}")
+            detalles.append(f"{digit}×{coeficientes[i]}={producto}")
     
     remainder = total % 11
-    # Si el residuo es 0 o 1, el DV es 0 (no el residuo mismo)
-    if remainder < 2:
-        dv = '0'
-    else:
+    if remainder > 1:
         dv = str(11 - remainder)
+    else:
+        dv = str(remainder)
     
     return {
         'nit': nit_number,
@@ -48,12 +43,12 @@ def calcular_dv_dian(nit_number):
     }
 
 
-# Casos de prueba proporcionados por el usuario
+# Casos de prueba: NIT empresa (9 dígitos) y cédula persona natural
 casos_prueba = [
     {'nit': '800073584', 'dv_esperado': '4'},
     {'nit': '900877788', 'dv_esperado': '3'},
-    # Casos adicionales para validación
-    {'nit': '860013715', 'dv_esperado': '4'},  # Del ejemplo en el código
+    {'nit': '860013715', 'dv_esperado': '4'},
+    {'nit': '811026552', 'dv_esperado': '9'},   # Cédula persona natural
 ]
 
 print("=" * 80)
