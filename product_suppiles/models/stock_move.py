@@ -210,23 +210,26 @@ class StockMove(models.Model):
         if not self.picking_id:
             return False
 
-        return {
-            'type': 'ir.actions.act_window',
-            'name': _('Operaciones detalladas - %s') % (self.product_id.display_name or _('Movimiento')),
-            'res_model': 'stock.move.line',
-            # Para acciones dict (no registro en BD): o varios modos sin view_id,
-            # o un solo modo con view_id opcional. Usamos varios modos sin view_id.
-            'view_mode': 'tree,form',
-            'target': 'new',  # abrir como wizard/popup
-            'domain': [('move_id', '=', self.id)],
-            'context': {
-                'default_move_id': self.id,
-                'default_product_id': self.product_id.id,
-                'default_picking_id': self.picking_id.id,
-                'default_location_id': self.location_id.id,
-                'default_location_dest_id': self.location_dest_id.id,
-            },
-        }
+        # Reutilizar la acción del picking (ya configurada correctamente) y
+        # solo ajustar el dominio/contexto para este movimiento.
+        action = self.picking_id.action_detailed_operations()
+        if not isinstance(action, dict):
+            return action
+
+        domain = list(action.get('domain', []))
+        domain.append(('move_id', '=', self.id))
+        action['domain'] = domain
+
+        ctx = dict(action.get('context', {}))
+        ctx.update({
+            'default_move_id': self.id,
+            'default_product_id': self.product_id.id,
+            'default_picking_id': self.picking_id.id,
+            'default_location_id': self.location_id.id,
+            'default_location_dest_id': self.location_dest_id.id,
+        })
+        action['context'] = ctx
+        return action
     
     def name_get(self):
         """Sobrescribir name_get para que el campo principal_lot_id muestre el número de serie."""
