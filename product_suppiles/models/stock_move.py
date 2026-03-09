@@ -210,14 +210,13 @@ class StockMove(models.Model):
         if not self.picking_id:
             return False
 
-        view = self.env.ref('stock.view_stock_move_line_detailed_operation_tree', raise_if_not_found=False)
-
         return {
             'type': 'ir.actions.act_window',
             'name': _('Operaciones detalladas - %s') % (self.product_id.display_name or _('Movimiento')),
             'res_model': 'stock.move.line',
+            # Para acciones dict (no registro en BD): o varios modos sin view_id,
+            # o un solo modo con view_id opcional. Usamos varios modos sin view_id.
             'view_mode': 'tree,form',
-            'view_id': view.id if view else False,
             'target': 'new',  # abrir como wizard/popup
             'domain': [('move_id', '=', self.id)],
             'context': {
