@@ -90,9 +90,9 @@
 
 /* -------- Pestaña "Productos principales" (recepción agrupada) -------- */
 
-/* Evitar scroll horizontal y saltos al hacer clic en la lista agrupada */
-.o_form_sheet.oe_stock_picking_sheet .supplies-main-products-page .o_list_view,
-.o_form_sheet.oe_stock_picking_sheet .supplies-main-products-group .o_list_view {
+/* Evitar scroll horizontal y saltos al hacer clic: bloqueamos el scroll horizontal
+   en LA HOJA del picking cuando está presente nuestra pestaña. */
+.o_form_view:has(.supplies-main-products-page) .o_form_sheet {
     overflow-x: hidden !important;
 }
 
