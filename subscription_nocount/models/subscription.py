@@ -508,6 +508,7 @@ class SubscriptionSubscription(models.Model):
                 if not subscription.location_id:
                     continue
 
+                Lot = self.env['stock.lot']
                 # Obtener quants sin clasificación (ya filtrados por suscripción en _compute_location_quants)
                 other_quants = subscription.other_quant_ids.filtered(lambda q: q.lot_id and q.quantity > 0)
 
@@ -562,9 +563,16 @@ class SubscriptionSubscription(models.Model):
                             today = fields.Date.today()
                             year = today.year if today else None
                             month = today.month if today else None
-                    months_to_include = [(year, month)] if year and month else []
+                    if year and month and 1 <= month <= 12:
+                        months_to_include = [(year, month)]
+                    else:
+                        # Fallback: mes actual para no dejar exited_lots vacío y perder líneas
+                        today = fields.Date.today()
+                        if today:
+                            months_to_include = [(today.year, today.month)]
+                        else:
+                            months_to_include = []
                 if months_to_include:
-                    Lot = self.env['stock.lot']
                     exited_lots = Lot.browse([])
                     for (y, m) in months_to_include:
                         if not (y and m and 1 <= m <= 12):
@@ -632,6 +640,7 @@ class SubscriptionSubscription(models.Model):
                                     lambda l: l.subscription_service_product_id
                                 )
                                 exited_lots = (exited_lots | lots_moved_out)
+                    exited_lot_ids = set()
                     for lot in exited_lots:
                         service = lot.subscription_service_product_id
                         if service.id not in subscription_services_dict:
@@ -643,8 +652,12 @@ class SubscriptionSubscription(models.Model):
                         if lot.id not in subscription_services_dict[service.id]['lot_ids']:
                             subscription_services_dict[service.id]['lot_ids'].append(lot.id)
                             subscription_services_dict[service.id]['quantity'] += 1
+                            exited_lot_ids.add(lot.id)
+                else:
+                    exited_lot_ids = set()
 
                 # Incluir lotes que salieron a otro cliente pero siguen visibles hasta el día 1 del mes siguiente
+                # No incluir lotes que ya están en exited_lots (salida en el mes): deben estar solo en su servicio actual
                 today_sub = fields.Date.context_today(subscription)
                 if hasattr(Lot, 'last_subscription_id') and hasattr(Lot, 'pending_removal_date'):
                     pending_lots = Lot.search([
@@ -652,6 +665,8 @@ class SubscriptionSubscription(models.Model):
                         ('pending_removal_date', '>', today_sub),
                     ])
                     for lot in pending_lots:
+                        if lot.id in exited_lot_ids:
+                            continue
                         service = (lot.last_subscription_service_id if hasattr(lot, 'last_subscription_service_id') and lot.last_subscription_service_id
                                    else lot.subscription_service_product_id)
                         if not service:
@@ -677,13 +692,12 @@ class SubscriptionSubscription(models.Model):
                         }
                     products_dict[product.id]['quantity'] += 1  # Contar seriales
 
-                # Limpiar registros anteriores de esta suscripción
+                # Limpiar registros anteriores de esta suscripción y crear de nuevo (evita inconsistencias)
                 GroupedModel.search([('subscription_id', '=', subscription.id)]).unlink()
 
-                # Inicializar lista de IDs para los registros agrupados
                 grouped_record_ids = []
 
-                # Crear una línea agrupada por servicio CON suscripción (lot_ids para prorrateo por fecha ingreso/salida)
+                # Servicios CON suscripción (lot_ids para prorrateo)
                 for service_id, data in subscription_services_dict.items():
                     record = GroupedModel.create({
                         'subscription_id': subscription.id,
@@ -698,12 +712,12 @@ class SubscriptionSubscription(models.Model):
                     })
                     grouped_record_ids.append(record.id)
 
-                # Crear líneas agrupadas para seriales SIN suscripción (agrupados por producto físico)
+                # Seriales SIN suscripción (producto físico)
                 for product_id, data in products_dict.items():
                     record = GroupedModel.create({
                         'subscription_id': subscription.id,
                         'product_id': data['product_id'],
-                        'lot_id': False,  # No es un serial individual
+                        'lot_id': False,
                         'quantity': data['quantity'],
                         'has_subscription': False,
                         'subscription_service': False,
@@ -822,8 +836,8 @@ class SubscriptionSubscription(models.Model):
                     except Exception as e:
                         _logger.error('❌ Error al incluir licencias desde subscription.license.assignment: %s', str(e), exc_info=True)
 
-                # Servicios de MESA DE SERVICIOS y ADMINISTRACION Y SEGURIDAD INFORMATICA desde la lista de precios del cliente
-                _SERVICES_BL_NAMES = ('MESA DE SERVICIOS', 'ADMINISTRACION Y SEGURIDAD INFORMATICA')
+                # Servicios de MESA DE SERVICIOS, ADMINISTRACION Y SEGURIDAD INFORMATICA y SERVICIO DE INTERNET desde la lista de precios del cliente
+                _SERVICES_BL_NAMES = ('MESA DE SERVICIOS', 'ADMINISTRACION Y SEGURIDAD INFORMATICA', 'SERVICIO DE INTERNET')
                 try:
                     pricelist = subscription.partner_id.property_product_pricelist if subscription.partner_id else False
                     if pricelist and 'product.business.line' in self.env:
@@ -1980,17 +1994,23 @@ class SubscriptionSubscription(models.Model):
 
     @api.model
     def cron_save_monthly_billable_all(self):
-        """Último día del mes: guardar facturable del mes en curso para cada suscripción activa."""
+        """Último día del mes: guardar facturable del mes en curso. Si corre el día 1 (p. ej. zona horaria), guarda el mes anterior."""
         today = fields.Date.context_today(self)
         last_day = calendar.monthrange(today.year, today.month)[1]
-        if today.day != last_day:
+        if today.day == last_day:
+            year, month = today.year, today.month
+        elif today.day == 1:
+            # Fallback: cron pudo ejecutarse ya en día 1 por zona horaria; guardar mes anterior
+            prev = today - relativedelta(months=1)
+            year, month = prev.year, prev.month
+            _logger.info('Cron guardar facturable: ejecutado el día 1, guardando mes anterior %s-%s.', year, month)
+        else:
             return
-        year, month = today.year, today.month
         subscriptions = self.search([
             ('state', '=', 'active'),
             ('location_id', '!=', False),
         ])
-        _logger.info('Cron: último día del mes, guardando facturable %s-%s para %s suscripciones.', year, month, len(subscriptions))
+        _logger.info('Cron: guardando facturable %s-%s para %s suscripciones.', year, month, len(subscriptions))
         for subscription in subscriptions:
             try:
                 subscription.do_save_monthly_billable(year, month)
@@ -2032,12 +2052,14 @@ class SubscriptionSubscription(models.Model):
 
     @api.model
     def cron_apply_trm_saved_billables(self):
-        """Día 7 del mes: aplicar TRM del mes a facturar a cada facturable guardado del mes anterior."""
+        """Día 7 del mes: aplicar TRM del mes a facturar a cada facturable guardado del mes anterior. Fallback día 8 por zona horaria."""
         today = fields.Date.context_today(self)
-        if today.day != 7:
+        if today.day not in (7, 8):
             return
         prev = today - relativedelta(months=1)
         year, month = prev.year, prev.month
+        if today.day == 8:
+            _logger.info('Cron aplicar TRM: ejecutado el día 8, procesando mes anterior %s-%s.', year, month)
         Billable = self.env['subscription.monthly.billable']
         billables = Billable.search([
             ('reference_year', '=', year),
@@ -2054,12 +2076,14 @@ class SubscriptionSubscription(models.Model):
 
     @api.model
     def cron_generate_proformas_from_saved(self):
-        """Día 7 del mes: generar proformas a partir del facturable guardado del mes anterior."""
+        """Día 7 del mes: generar proformas a partir del facturable guardado del mes anterior. Fallback día 8 por zona horaria."""
         today = fields.Date.context_today(self)
-        if today.day != 7:
+        if today.day not in (7, 8):
             return
         prev = today - relativedelta(months=1)
         year, month = prev.year, prev.month
+        if today.day == 8:
+            _logger.info('Cron generar proformas: ejecutado el día 8, procesando mes anterior %s-%s.', year, month)
         Billable = self.env['subscription.monthly.billable']
         billables = Billable.search([
             ('reference_year', '=', year),
@@ -2487,22 +2511,25 @@ class SubscriptionSubscription(models.Model):
 
     def _lot_entry_exit_for_display(self, lot):
         """Devuelve (entry_date, exit_date) para mostrar en esta suscripción.
-        Si el lote salió de esta suscripción (last_subscription_id == self), usa las fechas congeladas
-        para que cambios manuales en el lote (cliente nuevo) no afecten lo que ve esta suscripción."""
+        Prioridad: 1) tabla de ajustes (en memoria o en BD); 2) fechas congeladas/lote.
+        La tabla de ajustes funciona aparte del formulario del lote."""
         if not lot:
             return (None, None)
+        # 1) Usar ajuste de la tabla si está en el formulario (mismo contexto, aunque no haya guardado)
+        for ov in (self.lot_date_override_ids or []):
+            if ov.lot_id and ov.lot_id.id == lot.id:
+                return (ov.entry_date, ov.exit_date)
+        # 2) Buscar en BD por si el ajuste ya está guardado
+        Override = self.env.get('subscription.lot.date.override')
+        if Override:
+            override = Override.sudo().search([
+                ('subscription_id', '=', self.id),
+                ('lot_id', '=', lot.id),
+            ], limit=1)
+            if override:
+                override.invalidate_recordset(['entry_date', 'exit_date'])
+                return (override.entry_date, override.exit_date)
         if getattr(lot, 'last_subscription_id', None) and lot.last_subscription_id.id == self.id:
-            # Override opcional por suscripción (ajustes de fechas para la suscripción de la que salió)
-            Override = self.env.get('subscription.lot.date.override')
-            if Override:
-                override = Override.search([
-                    ('subscription_id', '=', self.id),
-                    ('lot_id', '=', lot.id),
-                ], limit=1)
-                if override:
-                    entry = override.entry_date or getattr(lot, 'last_subscription_entry_date', None)
-                    exit_ = override.exit_date or getattr(lot, 'last_subscription_exit_date', None)
-                    return (entry, exit_)
             entry = getattr(lot, 'last_subscription_entry_date', None)
             exit_ = getattr(lot, 'last_subscription_exit_date', None)
             return (entry, exit_)
@@ -2514,8 +2541,12 @@ class SubscriptionSubscription(models.Model):
         return (entry, exit_)
 
     def _save_monthly_billable_license_details(self, billable_line, grouped_product, Detail):
+<<<<<<< HEAD
         """Guarda detalles por licencia: misma lógica que Ver Detalles (por asignación, así cada tipo de licencia conserva su nombre).
         Ej.: Microsoft y Office 365 muestra líneas por tipo: Exchange Basic, Exchange Standard, Office 365 E3, etc."""
+=======
+        """Guarda detalles por licencia: misma lógica que Ver Detalles (por asignación, así cada tipo de licencia conserva su nombre)."""
+>>>>>>> a0f9d7c2d7c33e41454952de2c46bb46e02b30c9
         category_name = grouped_product.license_category or ''
         total_qty = max(1, int(grouped_product.quantity or 0))
         cost_per_unit = (grouped_product.cost or 0) / float(total_qty) if total_qty else 0
@@ -2539,7 +2570,11 @@ class SubscriptionSubscription(models.Model):
         Quant = self.env['stock.quant']
         assigned_count = 0
         default_service_name = category_name
+<<<<<<< HEAD
         # Igual que Ver Detalles: por cada asignación de la categoría, nombre = producto de esa asignación (tipo: Exchange Basic, etc.)
+=======
+        # Igual que Ver Detalles: por cada asignación de la categoría, nombre = producto de esa asignación
+>>>>>>> a0f9d7c2d7c33e41454952de2c46bb46e02b30c9
         for la in active_licenses:
             if not la.license_id:
                 continue
@@ -2587,7 +2622,11 @@ class SubscriptionSubscription(models.Model):
                         'cost_renting': cost_per_unit,
                     })
                     assigned_count += 1
+<<<<<<< HEAD
             # Filas no asignadas para esta licencia (mismo tipo)
+=======
+            # Filas no asignadas para esta licencia
+>>>>>>> a0f9d7c2d7c33e41454952de2c46bb46e02b30c9
             num_assigned = len(equipment_lots)
             missing = qty - num_assigned
             for _dummy in range(missing):
@@ -2687,6 +2726,7 @@ class SubscriptionSubscription(models.Model):
             'journal_id': journal.id,
             'subscription_id': self.id,
             'x_is_proforma': True,
+            'x_apply_iva': True,
             'invoice_date': fields.Date.context_today(self),
         }
         seq = self._next_proforma_sequence()
@@ -2712,7 +2752,11 @@ class SubscriptionSubscription(models.Model):
             active_ids=[move.id],
         )
         for key, g in grouped_by_business.items():
+<<<<<<< HEAD
             # Siempre crear línea de sección por grupo para que no quede un producto como primera fila (se ve mal)
+=======
+            # Siempre crear línea de sección por grupo (igual que Odoo 19)
+>>>>>>> a0f9d7c2d7c33e41454952de2c46bb46e02b30c9
             section_name = None
             if g['business_line']:
                 section_name = g['business_line'].name
@@ -2725,12 +2769,19 @@ class SubscriptionSubscription(models.Model):
             })
             group_total = 0.0
             for line in g['lines']:
+<<<<<<< HEAD
                 # Una línea de factura por cada línea del facturable guardado (igual que la tabla: producto, cantidad, costo)
+=======
+>>>>>>> a0f9d7c2d7c33e41454952de2c46bb46e02b30c9
                 line_vals = line._prepare_invoice_line_values(self)
                 line_vals['move_id'] = move.id
                 MoveLine.create(line_vals)
                 group_total += float(line.cost or 0)
+<<<<<<< HEAD
             # Línea de subtotal del grupo (total que suma ese agrupamiento)
+=======
+            # Línea de subtotal del grupo
+>>>>>>> a0f9d7c2d7c33e41454952de2c46bb46e02b30c9
             if group_total != 0:
                 MoveLine.create({
                     'move_id': move.id,
@@ -4199,13 +4250,13 @@ class SubscriptionProductGrouped(models.Model):
         string='Mostrar Ver Detalles',
         compute='_compute_show_view_details',
         store=False,
-        help='False para líneas de negocio que son solo servicios (MESA DE SERVICIOS, ADMINISTRACION Y SEGURIDAD INFORMATICA) que no agrupan equipos.'
+        help='False para líneas de negocio que son solo servicios (MESA DE SERVICIOS, ADMINISTRACION Y SEGURIDAD INFORMATICA, SERVICIO DE INTERNET) que no agrupan equipos.'
     )
 
     @api.depends('business_line_id', 'business_line_id.name')
     def _compute_show_view_details(self):
         """Oculta "Ver Detalles" para servicios que no agrupan equipos/seriales."""
-        _SERVICES_NO_DETAILS = ('MESA DE SERVICIOS', 'ADMINISTRACION Y SEGURIDAD INFORMATICA')
+        _SERVICES_NO_DETAILS = ('MESA DE SERVICIOS', 'ADMINISTRACION Y SEGURIDAD INFORMATICA', 'SERVICIO DE INTERNET')
         names_upper = {n.strip().upper() for n in _SERVICES_NO_DETAILS}
         for record in self:
             if not record.business_line_id or not record.business_line_id.name:
@@ -4740,6 +4791,23 @@ class SubscriptionProductGrouped(models.Model):
         """Abre una vista con los seriales de este producto o servicio de suscripción.
         También funciona para licencias, mostrando los seriales que tienen asignadas esas licencias."""
         self.ensure_one()
+        # Si el registro fue borrado al recalcular productos agrupados, buscar el agrupado actual equivalente
+        if not self.exists():
+            try:
+                sub_id = self.subscription_id.id if self.subscription_id else None
+                prod_id = self.product_id.id if self.product_id else None
+            except Exception:
+                sub_id = prod_id = None
+            if sub_id and prod_id:
+                replacement = self.env['subscription.product.grouped'].sudo().search([
+                    ('subscription_id', '=', sub_id),
+                    ('product_id', '=', prod_id),
+                ], limit=1)
+                if replacement:
+                    return replacement.action_view_serials()
+            raise UserError(_(
+                'El registro ya no existe (la lista se actualizó). Actualice la página (F5) y vuelva a hacer clic en Ver Detalles.'
+            ))
         if not self.subscription_id or not self.subscription_id.location_id:
             raise UserError(_('No hay ubicación definida para mostrar las series.'))
         
@@ -4833,7 +4901,7 @@ class SubscriptionProductGrouped(models.Model):
                 'res_model': 'subscription.license.serial.line',
                 'view_mode': 'list',
                 'domain': [('id', 'in', lines.ids)],
-                'context': {'create': False, 'edit': False, 'delete': False},
+                'context': {'create': False, 'edit': False, 'delete': True},
             }
 
         # EQUIPOS / SERVICIOS (no licencias)
@@ -4941,7 +5009,7 @@ class SubscriptionProductGrouped(models.Model):
             'view_mode': 'list',
             'views': [(self.env.ref('subscription_nocount.view_subscription_equipment_serial_line_tree').id, 'list')],
             'domain': [('id', 'in', lines.ids)],
-            'context': {'create': False, 'edit': False, 'delete': False},
+            'context': {'create': False, 'edit': False, 'delete': True},
         }
 
     def _prepare_invoice_line_values(self, subscription):

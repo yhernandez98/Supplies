@@ -201,6 +201,32 @@ class LicenseTemplate(models.Model):
             else:
                 rec.provider_stock_ids = Stock.browse([])
 
+    def write(self, vals):
+        res = super().write(vals)
+        if 'name' in vals:
+            # Actualizar categoría en BD (license_provider_stock.license_category_id es stored computed)
+            cr = self.env.cr
+            for rec in self:
+                new_cat = rec.name.id if rec.name else None
+                cr.execute(
+                    """
+                    UPDATE license_provider_stock
+                    SET license_category_id = %s
+                    WHERE license_template_id = %s
+                    """,
+                    (new_cat, rec.id),
+                )
+                if rec.product_id:
+                    cr.execute(
+                        """
+                        UPDATE license_provider_stock
+                        SET license_category_id = %s
+                        WHERE license_product_id = %s AND license_template_id IS NULL
+                        """,
+                        (new_cat, rec.product_id.id),
+                    )
+        return res
+
     def _inverse_provider_stock_ids(self):
         """Al añadir/editar líneas desde la pestaña: asegurar license_template_id y license_product_id."""
         for rec in self:
