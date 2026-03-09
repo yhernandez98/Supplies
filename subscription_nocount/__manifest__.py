@@ -15,6 +15,7 @@
         'security/ir.model.access.csv',
         'data/subscription_journal.xml',
         'data/subscription_cron.xml',
+        'reports/proforma_detailed_report.xml',
         'views/subscription_dashboard_templates.xml',
         'views/subscription_views.xml',
         'views/product_views.xml',

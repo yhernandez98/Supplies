@@ -23,11 +23,11 @@
       <xpath expr="//form" position="attributes">
         <attribute name="class" add="o_stock_lot_pastel_form" separator=" "/>
       </xpath>
-      <!-- Clases para alinear cuadritos: columna izquierda y derecha mismo ancho de campos -->
-      <xpath expr="//group[@name='main_group']/group[1]" position="attributes">
+      <!-- Clases para alinear: por columnas (Odoo 19 puede no tener main_group) -->
+      <xpath expr="//field[@name='product_id']/parent::group" position="attributes">
         <attribute name="class" add="o_stock_lot_left_col" separator=" "/>
       </xpath>
-      <xpath expr="//group[@name='main_group']/group[2]" position="attributes">
+      <xpath expr="//field[@name='location_id']/parent::group" position="attributes">
         <attribute name="class" add="o_stock_lot_right_col" separator=" "/>
       </xpath>
 
@@ -37,33 +37,32 @@
         <attribute name="placeholder">Ingrese el número de serie</attribute>
       </xpath>
       
-      <!-- Placa de Inventario, Placa de Seguridad, Hostname en formulario blanco (columna izquierda, antes de Producto) -->
-      <xpath expr="//group[1]/group[1]/*[1]" position="before">
+      <!-- Placa de Inventario, Placa de Seguridad, Hostname: antes de Producto (campo estable en base) -->
+      <xpath expr="//field[@name='product_id']" position="before">
         <field name="inventory_plate" string="Placa de Inventario" placeholder="Ingrese la placa de inventario"/>
         <field name="security_plate" string="Placa de Seguridad" placeholder="Ingrese la placa de seguridad"/>
         <field name="hostname" string="Hostname" placeholder="Ingrese el hostname del equipo"/>
       </xpath>
       
-      <!-- Mantener los otros campos en su ubicación original -->
-      <xpath expr="//group[1]/group[1]" position="inside">
+      <!-- model_name, billing_code y fechas renting: después de ref -->
+      <xpath expr="//field[@name='ref']" position="after">
         <field name="model_name"/>
         <field name="billing_code"/>
-      </xpath>
-      <!-- Fechas para facturación prorrateada (solo productos/servicios, no aplica a licencias) -->
-      <xpath expr="//field[@name='billing_code']" position="after">
         <field name="entry_date" string="Fecha Activacion Renting" help="Fecha en que el producto llegó al cliente (para cobro por días)"/>
         <field name="entry_date_display" string="Fecha activación (visible en suscripción)" invisible="1" help="Lo que se muestra en la suscripción: igual que arriba si hay fecha; si la borraste, aquí sigue la última guardada."/>
         <field name="exit_date" string="Fecha Finalizacion Renting" help="Fecha en que el producto salió del cliente (para cobro por días)"/>
         <field name="exit_date_display" string="Fecha finalización (visible en suscripción)" invisible="1" help="Lo que se muestra en la suscripción: igual que arriba si hay fecha; si la borraste, aquí sigue la última guardada hasta la limpieza."/>
       </xpath>
       
-      <!-- Plazo Renting en columna derecha (acorta la lista izquierda) -->
-      <xpath expr="//group[@name='main_group']/group[2]" position="inside">
+      <!-- Plazo Renting en columna derecha -->
+      <xpath expr="//field[@name='location_id']" position="after">
         <field name="reining_plazo" string="Plazo Renting" help="Plazo en meses o fecha personalizada"/>
         <field name="reining_plazo_custom_months" string="Meses (personalizado)" invisible="reining_plazo != 'custom'" optional="show"/>
       </xpath>
 
-      <xpath expr="//sheet/notebook" position="inside">
+      <!-- Odoo 19 base no tiene notebook: insertar después del último group del sheet -->
+      <xpath expr="//sheet/group[last()]" position="after">
+        <notebook>
 
         <!-- Pestaña Información: agrupa Información de Asociación, Elementos Asociados, etc. como subpestañas -->
         <page string="Información" name="info_group">
@@ -183,6 +182,7 @@
         </page>
           </notebook>
         </page>
+        </notebook>
       </xpath>
     </field>
   </record>
