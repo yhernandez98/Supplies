@@ -426,9 +426,9 @@ class LicenseAssignment(models.Model):
         # a veces el precio personalizado se queda "congelado" aunque la lista cambie.
         # Por eso permitimos saltar el precio personalizado por contexto.
         if not self.env.context.get('ignore_custom_price', False):
-        if self.use_custom_price and self.price_usd:
-            return self.price_usd
-        
+            if self.use_custom_price and self.price_usd:
+                return self.price_usd
+
         product = self.license_id and self.license_id.product_id
         if not self.partner_id or not product:
             return 0.0
