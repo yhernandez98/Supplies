@@ -15,12 +15,45 @@ class QuantEditorWizard(models.TransientModel):
     _name = 'quant.editor.wizard'
     _description = 'Editor de Cantidades de Inventario'
 
+    def _get_client_from_location(self, location):
+        """Devuelve el cliente (res.partner) asociado a una ubicación usando property_stock_customer.
+
+        Soporta que el usuario seleccione una sub-ubicación: buscamos el ancestor location_id dentro
+        de los ancestros de la ubicación.
+        """
+        if not location:
+            return self.env['res.partner'].browse([])
+
+        ancestor_ids = {location.id}
+        parent_path = getattr(location, 'parent_path', '') or ''
+        for pid in parent_path.split('/'):
+            if pid:
+                try:
+                    ancestor_ids.add(int(pid))
+                except Exception:
+                    continue
+
+        return self.env['res.partner'].search([
+            ('parent_id', '=', False),
+            ('property_stock_customer', '!=', False),
+            ('property_stock_customer', 'in', list(ancestor_ids)),
+        ], limit=1)
+
     location_id = fields.Many2one(
         'stock.location',
         string='Ubicación',
         required=True,
         domain=['|', ('usage', '=', 'internal'), ('complete_name', 'ilike', 'Supp/Alistamiento')],
         help='Ubicación donde se actualizará el inventario'
+    )
+
+    client_id = fields.Many2one(
+        'res.partner',
+        string='Cliente',
+        required=False,
+        domain=[('parent_id', '=', False), ('property_stock_customer', '!=', False)],
+        options={'no_open': True},
+        help='Cliente asociado a la ubicación de Existencias/Inventario.'
     )
     
     product_id = fields.Many2one(
@@ -159,8 +192,31 @@ class QuantEditorWizard(models.TransientModel):
             ], limit=1)
             if supplies_location:
                 res['location_id'] = supplies_location.id
+
+        # Sincronizar Cliente con ubicación (si aplica)
+        loc = res.get('location_id')
+        if loc:
+            location = self.env['stock.location'].browse(loc)
+            client = self._get_client_from_location(location)
+            if client:
+                res['client_id'] = client.id
         
         return res
+
+    @api.onchange('client_id')
+    def _onchange_client_id(self):
+        """Si selecciona un cliente, cargar la ubicación configurada de ese cliente."""
+        if self.client_id and self.client_id.property_stock_customer:
+            self.location_id = self.client_id.property_stock_customer.id
+
+    @api.onchange('location_id')
+    def _onchange_location_id(self):
+        """Si cambia la ubicación manualmente, ajustar el cliente arriba."""
+        if self.location_id:
+            client = self._get_client_from_location(self.location_id)
+            self.client_id = client.id if client else False
+        else:
+            self.client_id = False
 
     @api.depends('location_id', 'product_id', 'lot_id', 'owner_id')
     def _compute_current_quantity(self):

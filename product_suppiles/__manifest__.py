@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# Copyright 2026 Supplies De Colombia SAS
+# License LGPL-3.0 or later (https://www.gnu.org/licenses/lgpl-3.0.html).
 {
     'name': "Product Supplies",
     'summary': "Product Supplies",
@@ -35,7 +37,8 @@
         'views/stock_lot_views.xml',
         'views/stock_picking_views.xml',
         'views/menuitems.xml',
-
+        'reports/orden_entrega_supplies.xml',
+        'reports/orden_devolucion_supplies.xml',
     ],
     'assets': {
         'web.assets_backend': [

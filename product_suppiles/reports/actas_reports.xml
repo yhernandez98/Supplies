@@ -1,0 +1,217 @@
+<odoo>
+    <!-- Acta de Entrega de Equipos (plantilla genérica) -->
+    <template id="report_acta_entrega_equipos">
+        <t t-call="web.external_layout">
+            <t t-set="picking" t-value="doc or (docs and docs[0])"/>
+            <div class="page">
+                <h2 style="text-align:center; font-weight:bold; text-transform:uppercase;">
+                    Acta de Entrega de Equipos
+                </h2>
+
+                <div class="row" style="margin-top:16px;">
+                    <div class="col-6">
+                        <p><strong>Compañía:</strong>
+                            <span t-esc="(picking.company_id.name if picking and picking.company_id else '')"/>
+                        </p>
+                        <p><strong>Cliente:</strong>
+                            <span t-esc="(picking.partner_id.display_name if picking and picking.partner_id else '')"/>
+                        </p>
+                        <p><strong>Dirección:</strong>
+                            <span t-esc="(picking.partner_id.contact_address if picking and picking.partner_id else '')"/>
+                        </p>
+                    </div>
+                    <div class="col-6">
+                        <p><strong>Documento:</strong>
+                            <span t-esc="(picking.name or '')"/>
+                        </p>
+                        <p><strong>Fecha:</strong>
+                            <span t-esc="(picking.scheduled_date or picking.date_done or '')"/>
+                        </p>
+                        <p><strong>Tipo de operación:</strong>
+                            <span t-esc="(picking.picking_type_id.display_name if picking and picking.picking_type_id else '')"/>
+                        </p>
+                    </div>
+                </div>
+
+                <h4 style="margin-top:16px;">Equipos Entregados</h4>
+                <table class="table table-sm table-bordered" style="width:100%; font-size:11px;">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Descripción</th>
+                            <th>Cantidad</th>
+                            <th>Unidad</th>
+                            <th>Serial</th>
+                            <th>Placa Inventario</th>
+                            <th>Placa Seguridad</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <t t-foreach="(picking.move_line_ids or []).sorted(key=lambda l: (l.product_id.display_name or '', l.lot_id.name or ''))" t-as="line">
+                            <tr>
+                                <td>
+                                    <span t-esc="line.product_id.default_code or ''"/>
+                                </td>
+                                <td>
+                                    <span t-esc="line.product_id.display_name"/>
+                                </td>
+                                <td class="text-right">
+                                    <span t-esc="line.qty_done or line.product_uom_qty"/>
+                                </td>
+                                <td>
+                                    <span t-esc="line.product_uom_id.name or line.product_id.uom_id.name or ''"/>
+                                </td>
+                                <td>
+                                    <span t-esc="line.lot_id.name or ''"/>
+                                </td>
+                                <td>
+                                    <span t-esc="line.lot_id.inventory_plate or ''"/>
+                                </td>
+                                <td>
+                                    <span t-esc="line.lot_id.security_plate or ''"/>
+                                </td>
+                            </tr>
+                        </t>
+                    </tbody>
+                </table>
+
+                <div style="margin-top:32px;">
+                    <p><strong>Observaciones:</strong></p>
+                    <p style="min-height:60px; border:1px solid #ccc; padding:4px;">
+                        <span t-esc="picking.note or ''"/>
+                    </p>
+                </div>
+
+                <div class="row" style="margin-top:40px;">
+                    <div class="col-6" style="text-align:center;">
+                        <p>______________________________</p>
+                        <p><strong>Entregado por</strong></p>
+                        <p t-esc="(picking.user_id.name or (picking.company_id.name if picking and picking.company_id else ''))"/>
+                    </div>
+                    <div class="col-6" style="text-align:center;">
+                        <p>______________________________</p>
+                        <p><strong>Recibido por</strong></p>
+                        <p t-esc="(picking.partner_id.name if picking and picking.partner_id else '')"/>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- Alias para compatibilidad: antiguas acciones que usan
+         product_suppiles.report_orden_entrega llaman ahora a la
+         plantilla de Acta de Entrega -->
+    <template id="report_orden_entrega">
+        <t t-call="product_suppiles.report_acta_entrega_equipos"/>
+    </template>
+
+    <!-- Acta de Devolución de Equipos -->
+    <report
+        id="action_report_acta_devolucion_equipos"
+        model="stock.picking"
+        string="Acta de Devolución"
+        name="product_suppiles.report_acta_devolucion_equipos"
+        file="product_suppiles.report_acta_devolucion_equipos"
+        report_type="qweb-pdf"
+        print_report_name="'Acta_Devolucion_' + (object.name or '').replace('/','_')"
+    />
+
+    <template id="report_acta_devolucion_equipos">
+        <t t-call="web.external_layout">
+            <t t-set="picking" t-value="doc or (docs and docs[0])"/>
+            <div class="page">
+                <h2 style="text-align:center; font-weight:bold; text-transform:uppercase;">
+                    Acta de Devolución de Equipos
+                </h2>
+
+                <div class="row" style="margin-top:16px;">
+                    <div class="col-6">
+                        <p><strong>Compañía:</strong>
+                            <span t-esc="(picking.company_id.name if picking and picking.company_id else '')"/>
+                        </p>
+                        <p><strong>Cliente:</strong>
+                            <span t-esc="(picking.partner_id.display_name if picking and picking.partner_id else '')"/>
+                        </p>
+                        <p><strong>Dirección:</strong>
+                            <span t-esc="(picking.partner_id.contact_address if picking and picking.partner_id else '')"/>
+                        </p>
+                    </div>
+                    <div class="col-6">
+                        <p><strong>Documento:</strong>
+                            <span t-esc="(picking.name or '')"/>
+                        </p>
+                        <p><strong>Fecha:</strong>
+                            <span t-esc="(picking.scheduled_date or picking.date_done or '')"/>
+                        </p>
+                        <p><strong>Tipo de operación:</strong>
+                            <span t-esc="(picking.picking_type_id.display_name if picking and picking.picking_type_id else '')"/>
+                        </p>
+                    </div>
+                </div>
+
+                <h4 style="margin-top:16px;">Equipos Devueltos</h4>
+                <table class="table table-sm table-bordered" style="width:100%; font-size:11px;">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Descripción</th>
+                            <th>Cantidad</th>
+                            <th>Unidad</th>
+                            <th>Serial</th>
+                            <th>Placa Inventario</th>
+                            <th>Placa Seguridad</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <t t-foreach="(picking.move_line_ids or []).sorted(key=lambda l: (l.product_id.display_name or '', l.lot_id.name or ''))" t-as="line">
+                            <tr>
+                                <td>
+                                    <span t-esc="line.product_id.default_code or ''"/>
+                                </td>
+                                <td>
+                                    <span t-esc="line.product_id.display_name"/>
+                                </td>
+                                <td class="text-right">
+                                    <span t-esc="line.qty_done or line.product_uom_qty"/>
+                                </td>
+                                <td>
+                                    <span t-esc="line.product_uom_id.name or line.product_id.uom_id.name or ''"/>
+                                </td>
+                                <td>
+                                    <span t-esc="line.lot_id.name or ''"/>
+                                </td>
+                                <td>
+                                    <span t-esc="getattr(line.lot_id, 'inventory_plate', False) or ''"/>
+                                </td>
+                                <td>
+                                    <span t-esc="line.lot_id.security_plate or ''"/>
+                                </td>
+                            </tr>
+                        </t>
+                    </tbody>
+                </table>
+
+                <div style="margin-top:16px;">
+                    <p><strong>Motivo de la devolución:</strong></p>
+                    <p style="min-height:60px; border:1px solid #ccc; padding:4px;">
+                        <span t-esc="picking.note or ''"/>
+                    </p>
+                </div>
+
+                <div class="row" style="margin-top:40px;">
+                    <div class="col-6" style="text-align:center;">
+                        <p>______________________________</p>
+                        <p><strong>Entregado por</strong></p>
+                        <p t-esc="(picking.partner_id.name if picking and picking.partner_id else '')"/>
+                    </div>
+                    <div class="col-6" style="text-align:center;">
+                        <p>______________________________</p>
+                        <p><strong>Recibido por</strong></p>
+                        <p t-esc="(picking.company_id.name if picking and picking.company_id else '')"/>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+</odoo>
+

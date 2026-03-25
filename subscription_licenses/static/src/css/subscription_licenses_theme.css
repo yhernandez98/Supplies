@@ -444,6 +444,70 @@ form.o_subscription_form .o_list_view div:has(> table) {
     max-height: 65vh !important;
     overflow: auto !important;
 }
+
+/* Fix: asegurar que dropdown/autocomplete de Many2one no quede tapado
+   (pasa en grillas editables inline dentro de pestañas). */
+.o_form_view .ui-autocomplete,
+.o_form_view .ui-menu,
+.o_form_view .o-autocomplete .dropdown-menu,
+.o_form_view .o-autocomplete--dropdown,
+.o_form_view .dropdown-menu {
+    z-index: 99999 !important;
+}
+
+/* Evitar que el tema pastel de stock.lot recorte dropdown en listas editables */
+.o_stock_lot_pastel_form .o_list_view .o_data_cell,
+.o_stock_lot_pastel_form .o_list_view .o_field_widget,
+.o_stock_lot_pastel_form .o_list_view .o_field_selector,
+.o_stock_lot_pastel_form .o_list_view .o_input_dropdown,
+.o_stock_lot_pastel_form .o_list_view .o_input {
+    overflow: visible !important;
+}
+
+/* En algunas pantallas el scroll del notebook/tab-content puede estar recortando menús */
+.o_stock_lot_pastel_form .o_notebook .tab-content,
+.o_stock_lot_pastel_form .o_notebook .tab-pane {
+    overflow: visible !important;
+}
+
+/* Contenedores scroll internos de listas: que no recorten el dropdown */
+.o_stock_lot_pastel_form .o_list_view,
+.o_stock_lot_pastel_form .o_list_view > div,
+.o_stock_lot_pastel_form .o_list_table_wrapper,
+.o_stock_lot_pastel_form .o_list_container {
+    overflow: visible !important;
+}
+
+/* Menús/autocomplete: por encima del form */
+.o_stock_lot_pastel_form .ui-autocomplete,
+.o_stock_lot_pastel_form .ui-menu,
+.o_stock_lot_pastel_form .o-autocomplete .dropdown-menu,
+.o_stock_lot_pastel_form .o-autocomplete--dropdown,
+.o_stock_lot_pastel_form .dropdown-menu {
+    z-index: 999999 !important;
+}
+
+/* Botón "Agregar Asignación" (evitar que el tema pastel lo recorte) */
+.o_stock_lot_pastel_form .o_license_assignment_pick_group {
+    overflow: visible !important;
+    margin-bottom: 8px !important;
+    padding-top: 6px !important;
+}
+.o_stock_lot_pastel_form .o_license_assignment_pick_btn {
+    position: relative !important;
+    z-index: 9999999 !important;
+}
+
+/* Many2one (campo "Asignación") en grillas editables: evitar que el theme pastel
+   recorte el dropdown/autocomplete. */
+.o_form_view:has(form.o_stock_lot_pastel_form) .o_list_view .o_data_cell .o_field_widget,
+.o_stock_lot_pastel_form .o_list_view .o_data_cell .o_field_widget,
+.o_stock_lot_pastel_form .o_list_view .o_data_cell .o_field_selector,
+.o_stock_lot_pastel_form .o_list_view .o_data_cell .o_input_dropdown,
+.o_stock_lot_pastel_form .o_list_view .o_data_cell .o_field_widget .o_input,
+.o_stock_lot_pastel_form .o_list_view .o_data_cell .o_field_widget .o_input input {
+    overflow: visible !important;
+}
 .o_list_view.o_license_module_list .o_list_table,
 .o_list_view.o_license_module_list table,
 .o_list_view.o_license_provider_list .o_list_table,
@@ -534,7 +598,8 @@ form.o_subscription_form .o_list_view tbody tr:nth-child(even) td:first-child {
 /* Listas del módulo (vistas lista): tabla tipo tarjeta */
 .o_license_module_list .o_list_table {
     border-radius: 12px;
-    overflow: hidden;
+    /* Permitir que el dropdown/autocomplete de Many2one se vea completo en filas editables */
+    overflow: visible !important;
 }
 .o_license_module_list thead {
     background: linear-gradient(180deg, #f0f9ff 0%, #e8f4f8 100%) !important;
@@ -557,7 +622,8 @@ form.o_subscription_form .o_list_view tbody tr:nth-child(even) td:first-child {
 /* Lista Asignaciones: mismo estilo tarjeta + texto en negro */
 .o_license_assignment_list .o_list_table {
     border-radius: 12px;
-    overflow: hidden;
+    /* Permitir que el dropdown/autocomplete de Many2one se vea completo */
+    overflow: visible !important;
 }
 .o_license_assignment_list thead {
     background: linear-gradient(180deg, #f0f9ff 0%, #e8f4f8 100%) !important;
@@ -587,7 +653,8 @@ form.o_subscription_form .o_list_view tbody tr:nth-child(even) td:first-child {
 /* ---- Proveedores: lista (mismo criterio tarjeta + fondo zona) ---- */
 .o_license_provider_list .o_list_table {
     border-radius: 12px;
-    overflow: hidden;
+    /* Permitir que el dropdown/autocomplete de Many2one se vea completo */
+    overflow: visible !important;
 }
 .o_license_provider_list thead {
     background: linear-gradient(180deg, #f0fdfa 0%, #ccfbf1 100%) !important;
@@ -710,7 +777,8 @@ form.o_subscription_form .o_list_view tbody tr:nth-child(even) td:first-child {
 }
 .o_license_provider_form .o_list_view {
     border-radius: 10px !important;
-    overflow: hidden;
+    /* Evitar clipping del dropdown en tablas dentro de pestañas */
+    overflow: visible !important;
     box-shadow: 0 1px 8px rgba(0, 0, 0, 0.04) !important;
 }
 .o_license_provider_form .o_list_view thead {

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from odoo import api, fields, models, _
+from odoo.exceptions import ValidationError
 
 # Odoo 19: sale.subscription.pricing fue reemplazado por product.pricelist.item con plan_id (Recurring Pricing).
 # Heredamos product.pricelist.item para añadir moneda y cantidad por cliente en las reglas recurrentes.
@@ -180,3 +181,42 @@ class ProductPricelistItemSubscription(models.Model):
         if hasattr(self, 'pricelist_id') and self.pricelist_id and self.pricelist_id.currency_id:
             return self.pricelist_id.currency_id.id
         return self.env.company.currency_id.id
+
+    def _subscription_recurring_product_tmpl(self):
+        """Plantilla de producto para reglas recurrentes (variante o template)."""
+        self.ensure_one()
+        if self.product_id:
+            return self.product_id.product_tmpl_id
+        return self.product_tmpl_id
+
+    @api.constrains('pricelist_id', 'product_tmpl_id', 'product_id', 'plan_id')
+    def _check_unique_recurring_product_per_pricelist(self):
+        """No permitir el mismo producto dos veces con el mismo plan en la misma lista."""
+        for line in self:
+            if not line.plan_id or not line.pricelist_id:
+                continue
+            tmpl = line._subscription_recurring_product_tmpl()
+            if not tmpl:
+                continue
+            duplicate = self.search(
+                [
+                    ('id', '!=', line.id),
+                    ('pricelist_id', '=', line.pricelist_id.id),
+                    ('plan_id', '=', line.plan_id.id),
+                    '|',
+                    ('product_tmpl_id', '=', tmpl.id),
+                    ('product_id.product_tmpl_id', '=', tmpl.id),
+                ],
+                limit=1,
+            )
+            if duplicate:
+                raise ValidationError(
+                    _(
+                        'En esta lista de precios ya existe una línea recurrente para el producto '
+                        '"%(product)s" con el plan "%(plan)s". Elimine o edite la línea existente.'
+                    )
+                    % {
+                        'product': tmpl.display_name,
+                        'plan': line.plan_id.display_name,
+                    }
+                )

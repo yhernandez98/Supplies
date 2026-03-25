@@ -30,7 +30,14 @@ class StockQuant(models.Model):
         store=False,
         help='Placa de inventario del serial'
     )
-    
+
+    lot_assigned_user_name = fields.Char(
+        string='Usuario Asignado',
+        compute='_compute_lot_assigned_user_name',
+        store=False,
+        group_operator=False,
+    )
+
     principal_lot_name = fields.Char(
         string='Serial Producto Asociado',
         compute='_compute_principal_lot_info',
@@ -104,8 +111,14 @@ class StockQuant(models.Model):
             if not lot:
                 q.lot_exit_date = False
                 continue
+            # Si el lote está actualmente en ESTA suscripción:
+            # - Antes no se mostraba nada.
+            # - Ahora, sin romper históricos, mostramos la fecha de salida planificada
+            #   si existe (exit_date o last_exit_date_display).
             if subscription_id and getattr(lot, 'active_subscription_id', None) and lot.active_subscription_id.id == subscription_id:
-                q.lot_exit_date = False
+                ex = getattr(lot, 'exit_date', None) and lot.exit_date
+                last_ex = getattr(lot, 'last_exit_date_display', None) and lot.last_exit_date_display
+                q.lot_exit_date = ex or last_ex
                 continue
             if subscription_id and getattr(lot, 'last_subscription_id', None) and lot.last_subscription_id.id == subscription_id:
                 Override = self.env.get('subscription.lot.date.override')
@@ -122,6 +135,14 @@ class StockQuant(models.Model):
             ex = getattr(lot, 'exit_date', None) and lot.exit_date
             last_ex = getattr(lot, 'last_exit_date_display', None) and lot.last_exit_date_display
             q.lot_exit_date = ex or last_ex
+
+    @api.depends('lot_id', 'lot_id.related_partner_id', 'lot_id.related_partner_id.name')
+    def _compute_lot_assigned_user_name(self):
+        for q in self:
+            lot = q.lot_id
+            p = getattr(lot, 'related_partner_id', False) if lot else False
+            q.lot_assigned_user_name = (p.name or '').strip() if p else ''
+
     lot_reining_plazo = fields.Selection(
         related='lot_id.reining_plazo',
         readonly=True,
@@ -131,6 +152,7 @@ class StockQuant(models.Model):
         string='Días totales en sitio',
         compute='_compute_lot_days_total_on_site',
         help='Días totales desde Fecha Activación Renting hasta hoy (o hasta Fecha Finalización si ya salió).',
+        group_operator=False,
     )
     # Columnas para "Ver Detalles" en suscripción — según borrador Excel (Quants).
     lot_month_name = fields.Char(
@@ -142,28 +164,33 @@ class StockQuant(models.Model):
         string='Días total del mes',
         compute='_compute_lot_days_and_cost_to_date',
         help='Días totales del mes actual (28, 29, 30 o 31).',
+        group_operator=False,
     )
     lot_current_day_of_month_display = fields.Integer(
         string='Día del mes en curso',
         compute='_compute_lot_days_and_cost_to_date',
         help='Día actual del mes (1-31).',
+        group_operator=False,
     )
     lot_days_used_in_month = fields.Integer(
         string='Días en servicio',
         compute='_compute_lot_days_and_cost_to_date',
         help='Días facturables en el mes (si el cliente cancela, se cobra solo hasta este número de días).',
+        group_operator=False,
     )
     lot_cost_renting_month = fields.Monetary(
         string='Costo renting',
         compute='_compute_lot_days_and_cost_to_date',
         currency_field='lot_cost_to_date_currency_id',
         help='Costo renting mes total.',
+        group_operator=False,
     )
     lot_cost_daily = fields.Monetary(
         string='Costo diario',
         compute='_compute_lot_days_and_cost_to_date',
         currency_field='lot_cost_to_date_currency_id',
         help='Costo renting del mes / días total del mes; base para prorratear si el cliente cancela.',
+        group_operator=False,
     )
     lot_cost_to_date_currency_id = fields.Many2one(
         'res.currency',
@@ -174,6 +201,7 @@ class StockQuant(models.Model):
         compute='_compute_lot_days_and_cost_to_date',
         currency_field='lot_cost_to_date_currency_id',
         help='Días en servicio × costo diario; es el monto a cobrar si el cliente cancela a mitad de mes.',
+        group_operator=False,
     )
     lot_current_day_of_month = fields.Integer(
         string='Día del mes (lot)',

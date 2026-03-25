@@ -14,11 +14,11 @@
                     </group>
                     
                     <notebook>
-                        <page string="Componentes" name="components">
+                                <page string="Componentes" name="components">
                             <field name="component_lines" 
                                    context="{'default_item_type': 'component', 'default_wizard_id': id}"
                                    nolabel="1">
-                                <list editable="bottom" create="1" delete="1">
+                                        <list editable="bottom" create="0" delete="1">
                                     <field name="item_type" invisible="1"/>
                                     <field name="product_id" required="1"/>
                                     <field name="quantity" required="1"/>
@@ -28,25 +28,11 @@
                             </field>
                         </page>
                         
-                        <page string="Periféricos" name="peripherals">
-                            <field name="peripheral_lines" 
-                                   context="{'default_item_type': 'peripheral', 'default_wizard_id': id}"
-                                   nolabel="1">
-                                <list editable="bottom" create="1" delete="1">
-                                    <field name="item_type" invisible="1"/>
-                                    <field name="product_id" required="1"/>
-                                    <field name="quantity" required="1"/>
-                                    <field name="uom_id"/>
-                                    <field name="related_lot_id" string="Lote/Serie"/>
-                                </list>
-                            </field>
-                        </page>
-                        
-                        <page string="Complementos" name="complements">
+                                <page string="Complementos" name="complements">
                             <field name="complement_lines" 
                                    context="{'default_item_type': 'complement', 'default_wizard_id': id}"
                                    nolabel="1">
-                                <list editable="bottom" create="1" delete="1">
+                                        <list editable="bottom" create="0" delete="1">
                                     <field name="item_type" invisible="1"/>
                                     <field name="product_id" required="1"/>
                                     <field name="quantity" required="1"/>
@@ -55,19 +41,69 @@
                                 </list>
                             </field>
                         </page>
+
+                                <page string="Monitores" name="monitors">
+                                    <field name="monitor_lines"
+                                           context="{'default_item_type': 'monitor', 'default_wizard_id': id}"
+                                           nolabel="1">
+                                        <list editable="bottom" create="0" delete="1">
+                                            <field name="item_type" invisible="1"/>
+                                            <field name="product_id" required="1"/>
+                                            <field name="quantity" required="1"/>
+                                            <field name="uom_id"/>
+                                            <field name="related_lot_id" string="Lote/Serie"/>
+                                        </list>
+                                    </field>
+                                </page>
+
+                                <page string="Periféricos" name="peripherals">
+                            <field name="peripheral_lines" 
+                                   context="{'default_item_type': 'peripheral', 'default_wizard_id': id}"
+                                   nolabel="1">
+                                        <list editable="bottom" create="0" delete="1">
+                                    <field name="item_type" invisible="1"/>
+                                    <field name="product_id" required="1"/>
+                                    <field name="quantity" required="1"/>
+                                    <field name="uom_id"/>
+                                    <field name="related_lot_id" string="Lote/Serie"/>
+                                </list>
+                            </field>
+                        </page>
+
+                                <page string="Repuestos" name="spares">
+                                    <field name="spare_lines"
+                                           context="{'default_item_type': 'spare', 'default_wizard_id': id}"
+                                           nolabel="1">
+                                        <list editable="bottom" create="0" delete="1">
+                                            <field name="item_type" invisible="1"/>
+                                            <field name="product_id" required="1"/>
+                                            <field name="quantity" required="1"/>
+                                            <field name="uom_id"/>
+                                            <field name="related_lot_id" string="Lote/Serie"/>
+                                        </list>
+                                    </field>
+                                </page>
+
+                                <page string="UPS" name="ups">
+                                    <field name="ups_lines"
+                                           context="{'default_item_type': 'ups', 'default_wizard_id': id}"
+                                           nolabel="1">
+                                        <list editable="bottom" create="0" delete="1">
+                                            <field name="item_type" invisible="1"/>
+                                            <field name="product_id" required="1"/>
+                                            <field name="quantity" required="1"/>
+                                            <field name="uom_id"/>
+                                            <field name="related_lot_id" string="Lote/Serie"/>
+                                        </list>
+                                    </field>
+                                </page>
                     </notebook>
                 </sheet>
                 
                 <footer>
-                    <button name="action_debug_wizard" 
-                            type="object" 
-                            string="🔍 Debug" 
-                            class="btn-secondary"
-                            title="Mostrar información de debug sobre las líneas del wizard"/>
-                    <button name="action_save" 
-                            type="object" 
-                            string="Guardar" 
-                            class="btn-primary"/>
+                    <button string="Guardar"
+                            class="btn-primary"
+                            special="save"/>
                     <button string="Cancelar" 
                             special="cancel" 
                             class="btn-secondary"/>

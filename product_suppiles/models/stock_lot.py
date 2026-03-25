@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 from odoo import api, fields, models, _
+from odoo.exceptions import UserError, RedirectWarning
 import logging
+from urllib.parse import quote
+import json
 from dateutil.relativedelta import relativedelta
 
 try:
@@ -97,6 +100,85 @@ class StockLot(models.Model):
     inventory_plate = fields.Char(string="Placa de Inventario")
     security_plate = fields.Char(string="Placa de Seguridad")
     billing_code = fields.Char(string="Código de Facturación")
+
+    cost_additional = fields.Boolean(
+        string="Costo Adicional",
+        default=False,
+        help="Check para marcar costo adicional. Solo se muestra para productos clasificados como Componente, Complemento o Periférico.",
+    )
+    cost_additional_value = fields.Float(
+        string="Valor Costo Adicional",
+        digits=(16, 2),
+        default=0.0,
+        help="Valor adicional manual cuando se activa la opción Costo Adicional.",
+    )
+
+    @api.onchange("cost_additional")
+    def _onchange_cost_additional_reset_value(self):
+        """
+        Regla de UI:
+        - Si se desmarca "Costo Adicional", el valor debe quedar en 0.0.
+        - Pero si este serial ya está asociado como elemento (related_lot_id) a otro producto,
+          no se permite desmarcar hasta que primero se desasocie.
+        """
+        for lot in self:
+            if lot.id and not lot.cost_additional:
+                SupplyLine = self.env["stock.lot.supply.line"]
+                # ¿Este serial (lot) está usando este lote como componente/periférico asociado?
+                links = SupplyLine.search([("related_lot_id", "=", lot.id), ("has_cost", "=", True)])
+                if links:
+                    principal_products = links.mapped("lot_id.product_id").filtered(lambda p: p)
+                    principal_product_names = sorted(set(principal_products.mapped("display_name")))
+
+                    # Restaurar el checkbox y conservar el valor anterior (para que no se pierda).
+                    previous_cost_additional = bool(getattr(lot._origin, "cost_additional", False))
+                    previous_value = float(getattr(lot._origin, "cost_additional_value", 0.0) or 0.0)
+                    lot.cost_additional = previous_cost_additional or True
+                    lot.cost_additional_value = previous_value
+
+                    tab_message = ", ".join(principal_product_names) if principal_product_names else _("(sin producto)")
+                    return {
+                        "warning": {
+                            "title": _("Serial asociado"),
+                            "message": _(
+                                "Este serial está asociado a: %(products)s. "
+                                "Primero debes desasociarlo y luego podrás desmarcar 'Costo Adicional'."
+                            )
+                            % {"products": tab_message},
+                        }
+                    }
+
+            if not lot.cost_additional:
+                lot.cost_additional_value = 0.0
+
+    def _get_principal_products_for_associated_serial(self):
+        """Devuelve nombres de productos principales donde este serial está asociado como related_lot_id."""
+        SupplyLine = self.env["stock.lot.supply.line"]
+        links = SupplyLine.search([("related_lot_id", "in", self.ids), ("has_cost", "=", True)])
+        principal_products = links.mapped("lot_id.product_id").filtered(lambda p: p)
+        return sorted(set(principal_products.mapped("display_name")))
+
+    def _get_lot_supply_editor_wizard_url(self, principal_lot):
+        """
+        Construye una URL para abrir el wizard de edición de elementos asociados
+        (`lot.supply.editor.wizard`) ya prellenado con el lote principal.
+        """
+        if not principal_lot:
+            return ""
+        try:
+            action_id = self.env.ref("product_suppiles.action_lot_supply_editor_wizard").id
+        except Exception:
+            action_id = None
+        if not action_id:
+            return ""
+
+        context = {"default_lot_id": principal_lot.id}
+        context_str = quote(json.dumps(context))
+        # Odoo web client: /web#action=<id>&model=<model>&view_type=form&context=<json>
+        return "/web#action=%s&model=lot.supply.editor.wizard&view_type=form&context=%s" % (
+            action_id,
+            context_str,
+        )
     entry_date = fields.Date(
         string="Fecha Activacion Renting",
         help="Fecha en que el producto llegó a la ubicación del cliente. Se usa para facturación prorrateada por días (solo productos/servicios, no licencias)."
@@ -242,6 +324,12 @@ class StockLot(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
+            # Seguridad: nunca persistir valor si el checkbox "Costo Adicional" llega como False.
+            if "cost_additional" in vals and not vals.get("cost_additional"):
+                vals["cost_additional_value"] = 0.0
+            elif "cost_additional_value" in vals and not vals.get("cost_additional", False):
+                vals["cost_additional_value"] = 0.0
+
             entry = vals.get("entry_date")
             plazo = vals.get("reining_plazo")
             custom = vals.get("reining_plazo_custom_months", 0)
@@ -252,6 +340,51 @@ class StockLot(models.Model):
         return super().create(vals_list)
 
     def write(self, vals):
+        # Validación server-side: no permitir desmarcar el checkbox si este serial
+        # está asociado como elemento (related_lot_id) en alguna línea de suministro.
+        if "cost_additional" in vals and vals.get("cost_additional") is False:
+            for lot in self:
+                if not lot.id:
+                    continue
+                SupplyLine = self.env["stock.lot.supply.line"]
+                links = SupplyLine.search([("related_lot_id", "=", lot.id), ("has_cost", "=", True)])
+                if links:
+                    principal_products = links.mapped("lot_id.product_id").filtered(lambda p: p)
+                    products_txt = ", ".join(sorted(set(principal_products.mapped("display_name")))) or _("(sin producto)")
+
+                    principal_lots = links.mapped("lot_id").filtered(lambda l: l and l.exists())
+                    principal_lot = principal_lots[:1]
+
+                    action_id = False
+                    try:
+                        action_id = self.env.ref("product_suppiles.action_lot_supply_editor_wizard").id
+                    except Exception:
+                        action_id = False
+
+                    message = _(
+                        "Este serial está asociado a: %(products)s. "
+                        "Primero debes desasociarlo en el wizard y luego podrás desmarcar 'Costo Adicional'."
+                    ) % {"products": products_txt}
+
+                    if action_id and principal_lot:
+                        raise RedirectWarning(
+                            message,
+                            action_id,
+                            _("Abrir wizard para desasociar"),
+                            additional_context={
+                                "default_lot_id": principal_lot.id,
+                                # Serial que intentamos desmarcar; el wizard lo desasocia de forma forzada al guardar.
+                                "force_unlink_related_lot_id": lot.id,
+                            },
+                        )
+                    raise UserError(message)
+
+        # Seguridad: si se desmarca "Costo Adicional" y se está guardando, limpiar el valor en servidor.
+        # Esto evita que el valor anterior vuelva a persistirse si el cliente no envía el campo
+        # cuando queda en readonly.
+        if "cost_additional" in vals and not vals.get("cost_additional"):
+            vals["cost_additional_value"] = 0.0
+
         if "reining_plazo" in vals or "entry_date" in vals or "reining_plazo_custom_months" in vals:
             for lot in self:
                 entry = vals.get("entry_date", lot.entry_date)

@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# Copyright 2026 Supplies De Colombia SAS
+# License LGPL-3.0 or later (https://www.gnu.org/licenses/lgpl-3.0.html).
 {
     'name': "Reporte de Lotes y Ubicaciones",
     'summary': "Genera reporte Excel con todos los lotes/series y sus ubicaciones actuales",
@@ -10,7 +12,7 @@
         - Filtros por ubicación, producto y fechas
         - Información detallada de stock
     ''',
-    'author': 'Felipe Valbuena',
+    'author': 'Supplies De Colombia SAS',
     'license': 'LGPL-3',
     'category': 'Inventory/Reports',
     'version': '19.0.0.0.1',

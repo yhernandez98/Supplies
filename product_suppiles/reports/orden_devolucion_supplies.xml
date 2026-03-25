@@ -1,0 +1,199 @@
+<odoo>
+    <record id="action_report_orden_devolucion_supplies" model="ir.actions.report">
+        <field name="name">Orden de Devolución Supplies</field>
+        <field name="model">stock.picking</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">product_suppiles.report_orden_devolucion_supplies</field>
+        <field name="print_report_name">'Acta_Devolucion_' + (object.name or '').replace('/','_')</field>
+        <field name="binding_model_id" ref="stock.model_stock_picking"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <template id="report_orden_devolucion_supplies">
+        <t t-name="product_suppiles.report_orden_devolucion_supplies">
+            <t t-call="web.html_container">
+                <t t-if="not docs and doc" t-set="docs" t-value="doc"/>
+                <t t-foreach="docs" t-as="picking">
+                    <div class="article o_report_layout_standard"
+                         t-att-data-oe-model="picking._name"
+                         t-att-data-oe-id="picking.id"
+                         t-att-data-oe-lang="env.lang">
+                <div class="page" style="font-family:Helvetica, Arial, sans-serif; font-size:9px;">
+
+                    <!-- Encabezado (mismos colores / rejilla que orden de entrega) -->
+                    <div style="border:1px solid #000; border-radius:14px; padding:0; margin-top:12px; overflow:hidden;">
+                        <table style="width:100%; border-collapse:collapse; table-layout:fixed;">
+                            <colgroup>
+                                <col style="width:18%;"/>
+                                <col style="width:31%;"/>
+                                <col style="width:31%;"/>
+                                <col style="width:20%;"/>
+                            </colgroup>
+                            <tr style="min-height:40px;">
+                                <td rowspan="3"
+                                    style="border-right:1px solid #000; text-align:center; vertical-align:middle; padding:4px;">
+                                    <img t-att-src="image_data_uri(picking.company_id.logo)"
+                                         style="max-width:80px; max-height:70px;"/>
+                                </td>
+                                <td colspan="3" style="text-align:center; vertical-align:middle; padding:8px 6px;">
+                                    <span style="font-weight:bold; text-transform:uppercase; font-size:13px; letter-spacing:0.5px;">
+                                        ACTA DE DEVOLUCI&#211;N
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr style="height:22px;">
+                                <td colspan="2" style="border-top:1px solid #000; border-right:1px solid #000; text-align:center; vertical-align:middle; font-size:10px;">
+                                    F-GLG-ADEV-001
+                                </td>
+                                <td rowspan="2" style="border-top:1px solid #000; text-align:center; vertical-align:middle; font-size:9px;">
+                                    P&#225;gina <span>1</span> de <span>1</span>
+                                </td>
+                            </tr>
+                            <tr style="height:20px;">
+                                <td style="border-top:1px solid #000; border-right:1px solid #000; font-size:8px; padding:3px 5px; text-align:center; vertical-align:middle;">
+                                    Versi&#243;n: 01
+                                </td>
+                                <td style="border-top:1px solid #000; font-size:8px; padding:3px 5px; text-align:center; vertical-align:middle;">
+                                    Fecha de Creaci&#243;n: Julio 2023
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <!-- Ciudad + fecha | Acta No: consecutivo del albar&#225;n (name), sin marco de tabla -->
+                    <table style="width:100%; border-collapse:collapse; font-size:9px; margin-top:8px;">
+                        <tr>
+                            <td style="width:65%; border:none; padding:4px 2px 4px 0; text-align:left; vertical-align:middle;">
+                                <span t-esc="(picking.company_id.partner_id.city or picking.company_id.city or '')"/>
+                                <t t-if="picking.company_id.partner_id and picking.company_id.partner_id.state_id">
+                                    <span t-esc="' ' + (picking.company_id.partner_id.state_id.name or '')"/>
+                                </t>
+                                <span> </span>
+                                <span t-esc="picking.acta_devolucion_fecha_larga()"/>
+                            </td>
+                            <td style="width:35%; border:none; padding:4px 0; text-align:right; vertical-align:middle; font-weight:bold;">
+                                Acta No: <span t-esc="picking.name or ''"/>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <div style="height:4px;"></div>
+
+                    <!-- Cliente: sin bordes de tabla (estilo PDF limpio) -->
+                    <table style="width:100%; border-collapse:collapse; font-size:9px;">
+                        <tr>
+                            <td style="width:22%; border:none; padding:4px 8px 4px 0; font-weight:bold; text-align:left; vertical-align:top;">CLIENTE:</td>
+                            <td style="border:none; padding:4px 0; text-align:left; vertical-align:top;">
+                                <span t-esc="(picking.partner_id.name if picking.partner_id else '')"/>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="border:none; padding:4px 8px 4px 0; font-weight:bold; text-align:left; vertical-align:top;">NIT:</td>
+                            <td style="border:none; padding:4px 0; text-align:left; vertical-align:top;">
+                                <span t-esc="((picking.partner_id.dian_nit_number or picking.partner_id.vat) if picking.partner_id else '')"/>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="border:none; padding:4px 8px 4px 0; font-weight:bold; text-align:left; vertical-align:top;">DIRECCION:</td>
+                            <td style="border:none; padding:4px 0; text-align:left; vertical-align:top;">
+                                <span t-esc="(picking.partner_id and ((picking.partner_id.street or '') + (' ' + picking.partner_id.street2 if picking.partner_id.street2 else '')).strip()) or ''"/>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="border:none; padding:4px 8px 4px 0; font-weight:bold; text-align:left; vertical-align:top;">TEL:</td>
+                            <td style="border:none; padding:4px 0; text-align:left; vertical-align:top;">
+                                <span t-esc="((picking.partner_id.phone or picking.partner_id.mobile) if picking.partner_id else '')"/>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="border:none; padding:4px 8px 4px 0; font-weight:bold; text-align:left; vertical-align:top;">CIUDAD:</td>
+                            <td style="border:none; padding:4px 0; text-align:left; vertical-align:top;">
+                                <span t-esc="(picking.partner_id.city if picking.partner_id else '')"/>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="border:none; padding:4px 8px 4px 0; font-weight:bold; text-align:left; vertical-align:top;">MOTIVO DE DEVOLUCION:</td>
+                            <td style="border:none; padding:4px 0; text-align:left; vertical-align:top;">
+                                <span t-esc="picking.acta_devolucion_motivo_linea()"/>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <div style="margin-top:10px; font-size:9px; text-align:justify;">
+                        <p style="margin:0 0 6px 0; font-weight:bold;">Estimado cliente:</p>
+                        <p style="margin:0;">
+                            La presente acta hace constancia de la devoluci&#243;n del (los) siguiente (s) activo (s) fijo (s), el cual queda (n) sujeto a revisi&#243;n por el departamento t&#233;cnico, por un periodo de 3 (tres) d&#237;as h&#225;biles
+                            a partir de hoy para entregas menores a 5 (cinco) activos, sumando 2 (dos) d&#237;a h&#225;biles por cada 5 (cinco) activos relacionados en esta acta; durante este periodo de tiempo podr&#225; recibir informe (s)
+                            t&#233;cnico (s) si se detecta alg&#250;n da&#241;o que pueda ser compensado a Supplies de Colombia S.A.S,
+                            posteriormente de no recibir ning&#250;n informe se da como aceptados a conformidad los activo (s) fijo
+                            (s) relacionados en la presente acta.
+                        </p>
+                    </div>
+
+                    <!-- Cabecera productos: azul #0068b3 como entrega; sin bordes entre celdas del encabezado -->
+                    <table style="width:100%; border-collapse:collapse; table-layout:fixed; font-size:9px; margin-top:8px;">
+                        <colgroup>
+                            <col style="width:16%;"/>
+                            <col style="width:16%;"/>
+                            <col style="width:16%;"/>
+                            <col style="width:18%;"/>
+                            <col style="width:17%;"/>
+                            <col style="width:17%;"/>
+                        </colgroup>
+                        <tr style="background-color:#0068b3; color:#fff; font-weight:bold;">
+                            <td style="border:none; padding:5px 3px; text-align:center; vertical-align:middle;">CLASE DE ACTIVO</td>
+                            <td style="border:none; padding:5px 3px; text-align:center; vertical-align:middle;">MARCA</td>
+                            <td style="border:none; padding:5px 3px; text-align:center; vertical-align:middle;">MODELO</td>
+                            <td style="border:none; padding:5px 3px; text-align:center; vertical-align:middle;">SERIAL</td>
+                            <td style="border:none; padding:5px 3px; text-align:center; vertical-align:middle;">PLACA<br/>INVENTARIO</td>
+                            <td style="border:none; padding:5px 3px; text-align:center; vertical-align:middle;">PLACA<br/>SEGURIDAD</td>
+                        </tr>
+                        <t t-foreach="sorted(picking.move_line_ids or [], key=lambda l: (l.product_id.display_name or '', l.lot_id.name or ''))" t-as="line">
+                            <tr>
+                                <td style="border:1px solid #000; border-top:1px solid #000; padding:3px 2px; text-align:center; vertical-align:middle; word-wrap:break-word;">
+                                    <span t-esc="(line.product_id.product_tmpl_id.asset_class_id.name if line.product_id and line.product_id.product_tmpl_id and line.product_id.product_tmpl_id.asset_class_id else (line.product_id.categ_id.name if line.product_id and line.product_id.categ_id else ''))"/>
+                                </td>
+                                <td style="border:1px solid #000; border-left:none; border-top:1px solid #000; padding:3px 2px; text-align:center; vertical-align:middle; word-wrap:break-word;">
+                                    <span t-esc="line.product_id.name or ''"/>
+                                </td>
+                                <td style="border:1px solid #000; border-left:none; border-top:1px solid #000; padding:3px 2px; text-align:center; vertical-align:middle; word-wrap:break-word;">
+                                    <span t-esc="(line.lot_id and line.lot_id.model_name) or (line.product_id and line.product_id.product_tmpl_id and line.product_id.product_tmpl_id.model_name) or (line.product_id and line.product_id.default_code) or ''"/>
+                                </td>
+                                <td style="border:1px solid #000; border-left:none; border-top:1px solid #000; padding:3px 2px; text-align:center; vertical-align:middle; word-wrap:break-word;">
+                                    <span t-esc="line.lot_id.name or ''"/>
+                                </td>
+                                <td style="border:1px solid #000; border-left:none; border-top:1px solid #000; padding:3px 2px; text-align:center; vertical-align:middle; word-wrap:break-word;">
+                                    <span t-esc="(line.lot_id.inventory_plate or '')"/>
+                                </td>
+                                <td style="border:1px solid #000; border-left:none; border-top:1px solid #000; padding:3px 2px; text-align:center; vertical-align:middle; word-wrap:break-word;">
+                                    <span t-esc="(line.lot_id.security_plate or '')"/>
+                                </td>
+                            </tr>
+                        </t>
+                    </table>
+
+                    <!-- Observaciones: banda azul como secciones de entrega + texto autom&#225;tico de plazos -->
+                    <table style="width:100%; border-collapse:collapse; font-size:9px; margin-top:8px;">
+                        <tr>
+                            <td style="background-color:#0068b3; color:#fff; text-align:center; font-weight:bold; border:1px solid #000; padding:3px;">
+                                OBSERVACIONES
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="border:1px solid #000; border-top:none; padding:6px; min-height:40px; text-align:left; white-space:pre-wrap;">
+                                <span t-esc="picking.acta_devolucion_observaciones_impresion()"/>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <div style="margin-top:28px; font-size:9px;">
+                        <p style="margin:0;">Atentamente,</p>
+                        <p style="margin:8px 0 0 0;">Supplies de Colombia SAS</p>
+                    </div>
+                </div>
+                </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>

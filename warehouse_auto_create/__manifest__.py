@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# Copyright 2026 Supplies De Colombia SAS
+# License LGPL-3.0 or later (https://www.gnu.org/licenses/lgpl-3.0.html).
 {
     'name': 'Creación Automática de Almacenes',
     'version': '19.0.1.0.5',

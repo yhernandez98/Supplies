@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+# Copyright 2026 Supplies De Colombia SAS
+# License LGPL-3.0 or later (https://www.gnu.org/licenses/lgpl-3.0.html).
+
 {
     'name': 'Subscription Licenses',
     'version': '19.0.1.0.1',
@@ -26,6 +30,7 @@
         'wizard/license_add_multiple_warning_wizard_views.xml',
         'wizard/license_equipment_delete_warning_wizard_views.xml',
         'wizard/license_quantity_warning_wizard_views.xml',
+        'wizard/license_assignment_pick_wizard_views.xml',
         'views/license_assignment_views.xml',
         'views/license_views.xml',
         'views/license_dashboard_templates.xml',

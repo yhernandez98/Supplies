@@ -166,14 +166,21 @@ class PurchaseAddItemsWizardLine(models.TransientModel):
 
     wizard_id = fields.Many2one("purchase.add.items.wizard", required=True, ondelete="cascade")
     item_type = fields.Selection(
-        [("component", "Componente"), ("peripheral", "Periférico"), ("complement", "Complemento"), ("monitor", "Monitores"), ("ups", "UPS")],
+        [
+            ("component", "Componente"),
+            ("peripheral", "Periférico"),
+            ("complement", "Complemento"),
+            ("monitor", "Monitores"),
+            ("ups", "UPS"),
+            ("spare", "Repuestos"),
+        ],
         required=True, default="component"
     )
 
     product_id = fields.Many2one(
         "product.product", required=True,
         domain="[('type','in',('consu','product')),"
-               " ('classification','=', item_type=='component' and 'component' or item_type=='peripheral' and 'peripheral' or item_type=='complement' and 'complement' or item_type=='monitor' and 'monitor' or item_type=='ups' and 'ups')]"
+               " ('classification','=', item_type=='component' and 'component' or item_type=='peripheral' and 'peripheral' or item_type=='complement' and 'complement' or item_type=='monitor' and 'monitor' or item_type=='ups' and 'ups' or item_type=='spare' and 'spare')]"
     )
     quantity = fields.Float(string="Cantidad", required=True, default=1.0, digits="Product Unit of Measure")
     uom_id = fields.Many2one(
@@ -193,7 +200,17 @@ class PurchaseAddItemsPreviewLine(models.TransientModel):
     _description = "Vista previa de items (producto/buffer) - solo lectura"
 
     wizard_id = fields.Many2one("purchase.add.items.wizard", required=True, ondelete="cascade")
-    item_type = fields.Selection([("component", "Componente"), ("peripheral", "Periférico"), ("complement", "Complemento"), ("monitor", "Monitores"), ("ups", "UPS")], required=True)
+    item_type = fields.Selection(
+        [
+            ("component", "Componente"),
+            ("peripheral", "Periférico"),
+            ("complement", "Complemento"),
+            ("monitor", "Monitores"),
+            ("ups", "UPS"),
+            ("spare", "Repuestos"),
+        ],
+        required=True
+    )
     product_id = fields.Many2one("product.product", required=True, readonly=True)
     quantity = fields.Float(string="Cantidad", required=True, readonly=True)
     uom_id = fields.Many2one("uom.uom", string="Unidad", readonly=True)

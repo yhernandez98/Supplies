@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# Copyright 2026 Supplies De Colombia SAS
+# License LGPL-3.0 or later (https://www.gnu.org/licenses/lgpl-3.0.html).
 {
     'name': 'Módulo Unificado Personalizado',
     'version': '19.0.3.1',
@@ -40,7 +42,7 @@
         - Herramientas de utilidad para mantenimiento
         - Documentación completa y ejemplos de uso
     """,
-    'author': 'Felipe Valbuena',
+    'author': 'Supplies De Colombia SAS',
     'category': 'Productivity/Productivity',
     'depends': [
         'base',

@@ -36,7 +36,11 @@ class SubscriptionEquipmentCostDetailWizard(models.TransientModel):
                     'related_lot_id': supply.related_lot_id.id if supply.related_lot_id else False,
                     'serial_name': supply.related_lot_id.name if supply.related_lot_id else '',
                     'item_type': item_label,
-                    'cost': supply.cost or 0.0,
+                    'cost': (
+                        (supply.related_lot_id.cost_additional_value or 0.0)
+                        if (supply.related_lot_id and supply.related_lot_id.cost_additional)
+                        else (supply.cost or 0.0)
+                    ),
                     'quantity': supply.quantity or 1.0,
                 })
         return wizard

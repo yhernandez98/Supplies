@@ -102,12 +102,14 @@
                                                                     <th>Producto</th>
                                                                     <th>Nº serie/lote</th>
                                                                     <th>Placa inventario</th>
+                                                                    <th>Usuario Asignado</th>
                                                                     <th>Licencia/Servicio</th>
                                                                 </t>
                                                                 <t t-else="">
                                                                     <th>Producto</th>
                                                                     <th>Placa</th>
                                                                     <th>Nº serie/lote</th>
+                                                                    <th>Usuario Asignado</th>
                                                                     <th class="text-end">Costo Renting</th>
                                                                     <th class="text-end">Costo Adicional</th>
                                                                     <th>Activación</th>
@@ -125,12 +127,14 @@
                                                                         <td><t t-esc="d.product_name or '-'"/></td>
                                                                         <td><t t-esc="d.lot_name or '-'"/></td>
                                                                         <td><t t-esc="d.inventory_plate or '-'"/></td>
+                                                                        <td><t t-esc="d.assigned_user_display_name or '-'"/></td>
                                                                         <td><t t-esc="d.license_service_name or '-'"/></td>
                                                                     </t>
                                                                     <t t-else="">
                                                                         <td><t t-esc="d.product_name or '-'"/></td>
                                                                         <td><t t-esc="d.inventory_plate or '-'"/></td>
                                                                         <td><t t-esc="d.lot_name or '-'"/></td>
+                                                                        <td><t t-esc="d.assigned_user_display_name or '-'"/></td>
                                                                         <td class="text-end"><t t-esc="d.currency_id.format(d.cost_renting_total or 0)"/></td>
                                                                         <td class="text-end"><t t-esc="d.currency_id.format(d.cost_additional or 0)"/></td>
                                                                         <td><t t-esc="d.entry_date or '-'"/></td>

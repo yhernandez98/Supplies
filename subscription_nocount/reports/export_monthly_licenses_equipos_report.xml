@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- PDF Exportar Licencias y Equipos (Facturable mensual guardado) -->
+    <record id="action_report_export_monthly_licenses_equipos_pdf" model="ir.actions.report">
+        <field name="name">Exportar Licencias y Equipos (PDF - Facturable guardado)</field>
+        <field name="model">subscription.monthly.billable</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">subscription_nocount.report_export_monthly_licenses_equipos_pdf</field>
+        <field name="report_file">subscription_nocount.report_export_monthly_licenses_equipos_pdf</field>
+        <field name="print_report_name">'Exportar Licencias y Equipos - %s' % (object.name or '')</field>
+    </record>
+
+    <template id="report_export_monthly_licenses_equipos_pdf">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <h2 class="text-center">Exportar Licencias y Equipos</h2>
+                        <p class="text-center text-muted mb-4">
+                            <t t-esc="doc.name"/>
+                        </p>
+
+                        <!-- Licencias -->
+                        <div class="mt-3 mb-2">
+                            <h3 style="font-size: 1.1rem;">Licencias</h3>
+                            <table class="table table-sm table-bordered">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Agrupamiento</th>
+                                        <th>Producto</th>
+                                        <th>Número de serie/lote</th>
+                                        <th>Placa de Inventario</th>
+                                        <th>Usuario Asignado</th>
+                                        <th>Licencia/Servicio Asignado</th>
+                                        <th class="text-end">Costo</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-set="license_details" t-value="doc._get_export_saved_license_details()"/>
+                                    <t t-foreach="license_details" t-as="l">
+                                        <tr>
+                                            <td><t t-esc="l.business_line_name or ''"/></td>
+                                            <td><t t-esc="l.product_name or ''"/></td>
+                                            <td><t t-esc="l.lot_name or ''"/></td>
+                                            <td><t t-esc="l.inventory_plate or ''"/></td>
+                                            <td><t t-esc="getattr(l, 'assigned_user_name', None) or (l.assigned_user_display_name or '')"/></td>
+                                            <td><t t-esc="l.license_service_name or ''"/></td>
+                                            <td class="text-end">
+                                                <t t-if="l.currency_id">
+                                                    <t t-esc="l.currency_id.format(l.cost_renting or 0)"/>
+                                                </t>
+                                                <t t-else="">
+                                                    <t t-esc="l.cost_renting or 0"/>
+                                                </t>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                    <t t-if="not license_details">
+                                        <tr>
+                                            <td colspan="7" class="text-center text-muted">Sin datos</td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Equipos -->
+                        <div class="mt-4 mb-2">
+                            <h3 style="font-size: 1.1rem;">Equipos</h3>
+                            <table class="table table-sm table-bordered">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Agrupamiento</th>
+                                        <th>Producto</th>
+                                        <th>Placa de Inventario</th>
+                                        <th>Serial/Lote</th>
+                                        <th>Usuario Asignado</th>
+                                        <th class="text-end">Costo Renting</th>
+                                        <th class="text-end">Costo Adicional</th>
+                                        <th>Fecha Activación</th>
+                                        <th>Fecha Finalización</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-set="equipment_details" t-value="doc._get_export_saved_equipment_details()"/>
+                                    <t t-foreach="equipment_details" t-as="e">
+                                        <tr>
+                                            <td><t t-esc="e.business_line_name or ''"/></td>
+                                            <td><t t-esc="e.product_name or ''"/></td>
+                                            <td><t t-esc="e.inventory_plate or ''"/></td>
+                                            <td><t t-esc="e.lot_name or ''"/></td>
+                                            <td><t t-esc="e.assigned_user_display_name or ''"/></td>
+                                            <td class="text-end">
+                                                <t t-if="e.currency_id">
+                                                    <t t-esc="e.currency_id.format(e.cost_renting_total or 0)"/>
+                                                </t>
+                                                <t t-else="">
+                                                    <t t-esc="e.cost_renting_total or 0"/>
+                                                </t>
+                                            </td>
+                                            <td class="text-end">
+                                                <t t-if="e.currency_id">
+                                                    <t t-esc="e.currency_id.format(e.cost_additional or 0)"/>
+                                                </t>
+                                                <t t-else="">
+                                                    <t t-esc="e.cost_additional or 0"/>
+                                                </t>
+                                            </td>
+                                            <td><t t-esc="e.entry_date or ''"/></td>
+                                            <td><t t-esc="e.exit_date or ''"/></td>
+                                        </tr>
+                                    </t>
+                                    <t t-if="not equipment_details">
+                                        <tr>
+                                            <td colspan="9" class="text-center text-muted">Sin datos</td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+
+    <!-- XLSX Exportar Licencias y Equipos (Facturable mensual guardado) -->
+    <record id="action_report_export_monthly_licenses_equipos_xlsx" model="ir.actions.report">
+        <field name="name">Exportar Licencias y Equipos (Excel - Facturable guardado)</field>
+        <field name="model">subscription.monthly.billable</field>
+        <field name="report_type">xlsx</field>
+        <field name="report_name">subscription_nocount.monthly_lic_eq_xlsx</field>
+        <field name="report_file">subscription_nocount.monthly_lic_eq_xlsx</field>
+        <field name="print_report_name">'Exportar Licencias y Equipos - %s' % (object.name or '')</field>
+    </record>
+</odoo>
+

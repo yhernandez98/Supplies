@@ -13,7 +13,8 @@ class LicenseEquipment(models.Model):
         string='Asignación de Licencia',
         required=True,
         ondelete='cascade',
-        index=True
+        index=True,
+        domain="[('id', 'in', available_assignment_ids)]"
     )
     license_id = fields.Many2one(
         'license.template',
@@ -73,6 +74,13 @@ class LicenseEquipment(models.Model):
         compute='_compute_available_lot_ids',
         store=False,
         help='Lotes disponibles en la ubicación del cliente'
+    )
+    available_assignment_ids = fields.Many2many(
+        'license.assignment',
+        string='Asignaciones Disponibles',
+        compute='_compute_available_assignment_ids',
+        store=False,
+        help='Asignaciones disponibles según cliente/ubicación y tipo de pestaña (equipo/usuario).',
     )
     product_id = fields.Many2one(
         'product.product',
@@ -238,13 +246,105 @@ class LicenseEquipment(models.Model):
 
     @api.onchange('assignment_id')
     def _onchange_assignment_id(self):
-        """Limpia el contacto y recalcula lotes disponibles cuando cambia la asignación"""
-        if self.assignment_id:
-            # El partner_id y location_id se actualizan automáticamente por ser related
-            # Limpiar contact_id para que el usuario seleccione uno nuevo
+        """Sincroniza contact_id según la pestaña (Equipo/Usuario) al cambiar asignación.
+
+        Esto evita que una misma asignación quede visible en ambas pestañas.
+        """
+        if not self.assignment_id:
+            return
+
+        tab_type = self.env.context.get('license_tab_type')
+        default_contact_id = self.env.context.get('default_contact_id')
+
+        # partner_id y location_id se actualizan automáticamente por ser fields related.
+        if tab_type == 'user':
+            # En "Licencias del Usuario", el grid no debería requerir que el usuario elija
+            # manualmente el contacto; lo tomamos del contexto (stock.lot -> related_partner_id).
+            if default_contact_id:
+                self.contact_id = default_contact_id
+            elif self.lot_id and getattr(self.lot_id, 'related_partner_id', None):
+                self.contact_id = self.lot_id.related_partner_id.id
+            # Si no hay default/contacto, dejamos el valor actual (para permitir edición manual).
+        elif tab_type == 'equipment':
+            # En "Licencias del Equipo", la pestaña filtra por contact_id=False.
             self.contact_id = False
-            # Recalcular lotes disponibles
-            self._compute_available_lot_ids()
+        else:
+            # Fallback conservador
+            self.contact_id = False
+
+        # Recalcular lotes disponibles cuando cambia la asignación.
+        self._compute_available_lot_ids()
+
+    @api.depends('lot_id', 'contact_id')
+    def _compute_available_assignment_ids(self):
+        """Filtra asignaciones activas por cliente/ubicación y tipo (equipo/usuario)."""
+        Assignment = self.env['license.assignment']
+        for rec in self:
+            rec.available_assignment_ids = [(5, 0, 0)]
+
+            # Soportar edición inline desde stock.lot (usando contexto del tab)
+            lot = rec.lot_id
+            if not lot and self.env.context.get('default_lot_id'):
+                lot = self.env['stock.lot'].browse(self.env.context.get('default_lot_id'))
+
+            contact = rec.contact_id
+            if not contact and self.env.context.get('default_contact_id'):
+                contact = self.env['res.partner'].browse(self.env.context.get('default_contact_id'))
+
+            tab_type = self.env.context.get('license_tab_type') or ''
+
+            domain = [('state', '=', 'active')]
+
+            # Filtrar por cliente/ubicación del serial (si tenemos lote)
+            location_partner_id = False
+            lot_location_id = False
+            if lot and lot.exists():
+                try:
+                    if hasattr(lot, 'location_partner_id') and lot.location_partner_id:
+                        location_partner_id = lot.location_partner_id.id
+                except Exception:
+                    pass
+                # Preferir la ubicación directa del serial en formulario.
+                try:
+                    if hasattr(lot, 'location_id') and lot.location_id:
+                        lot_location_id = lot.location_id.id
+                except Exception:
+                    pass
+                try:
+                    if not lot_location_id:
+                        quant = self.env['stock.quant'].search([
+                            ('lot_id', '=', lot.id),
+                            ('quantity', '>', 0),
+                        ], order='quantity desc, in_date desc', limit=1)
+                        if quant and quant.location_id:
+                            lot_location_id = quant.location_id.id
+                except Exception:
+                    pass
+
+            # Regla segura: si estamos en contexto de serial y no se puede resolver
+            # ni cliente ni ubicación, no exponer asignaciones para evitar mezclar clientes.
+            if lot and not (location_partner_id or lot_location_id):
+                rec.available_assignment_ids = Assignment.browse([])
+                continue
+
+            if location_partner_id:
+                domain.append(('partner_id', '=', location_partner_id))
+            if lot_location_id:
+                domain.append(('location_id', '=', lot_location_id))
+
+            # Tipo de licenciamiento según pestaña
+            if tab_type == 'equipment':
+                domain.append(('license_applies_to_equipment', '=', True))
+            elif tab_type == 'user':
+                domain.append(('license_applies_to_user', '=', True))
+            else:
+                # Fallback por datos de la línea
+                if lot:
+                    domain.append(('license_applies_to_equipment', '=', True))
+                elif contact:
+                    domain.append(('license_applies_to_user', '=', True))
+
+            rec.available_assignment_ids = Assignment.search(domain)
 
     @api.constrains('contact_id', 'lot_id', 'license_id', 'state')
     def _check_license_applies_to(self):
@@ -475,10 +575,25 @@ class LicenseEquipment(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         """Sobrescribe create para actualizar fecha de inicio de la asignación cuando se asignan equipos/usuarios."""
+        tab_type = self.env.context.get('license_tab_type')
+        default_contact_id = self.env.context.get('default_contact_id')
         for vals in vals_list:
             if 'assignment_date' not in vals and vals.get('assignment_id'):
                 assignment = self.env['license.assignment'].browse(vals['assignment_id'])
                 vals['assignment_date'] = self._default_assignment_date(assignment)
+
+            # Asegurar contact_id correcto según pestaña al crear inline desde stock.lot
+            # (evita que el mismo registro "salga" en ambas grillas).
+            if tab_type == 'user':
+                if not vals.get('contact_id') and default_contact_id:
+                    vals['contact_id'] = default_contact_id
+                elif tab_type == 'user' and not vals.get('contact_id') and vals.get('lot_id'):
+                    lot = self.env['stock.lot'].browse(vals['lot_id'])
+                    if lot.exists() and getattr(lot, 'related_partner_id', None):
+                        vals['contact_id'] = lot.related_partner_id.id
+            elif tab_type == 'equipment':
+                # En equipo, por diseño la grilla usa contact_id=False.
+                vals['contact_id'] = False
         records = super().create(vals_list)
         # Actualizar fecha de inicio de la asignación si es necesario
         for rec in records:
@@ -490,6 +605,16 @@ class LicenseEquipment(models.Model):
 
     def write(self, vals):
         """Sobrescribe write para actualizar fecha de inicio de la asignación cuando se asignan equipos/usuarios."""
+        # Asegurar que el registro queda categorizado por pestaña
+        # (evita que un registro creado/editarado desde "Equipo" quede con contact_id
+        # y luego aparezca en "Usuario", o viceversa).
+        tab_type = self.env.context.get('license_tab_type')
+        default_contact_id = self.env.context.get('default_contact_id')
+        if tab_type == 'equipment':
+            vals['contact_id'] = False
+        elif tab_type == 'user' and default_contact_id:
+            vals['contact_id'] = default_contact_id
+
         result = super().write(vals)
         # Si se cambió assignment_date o state a 'assigned', actualizar fecha de inicio
         if 'assignment_date' in vals or (vals.get('state') == 'assigned'):

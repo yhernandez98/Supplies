@@ -9,7 +9,8 @@
       
       <!-- Usuario antes de Fecha Renting (posición intercambiada) -->
       <xpath expr="//field[@name='entry_date']" position="before">
-        <field name="related_partner_id" string="Usuario" options="{'no_create': True}" placeholder="Seleccione un usuario relacionado de la empresa según la ubicación..."/>
+        <field name="related_partner_id" string="Usuario" options="{'no_create': True}" placeholder="Seleccione un usuario relacionado de la empresa según la ubicación..."
+               invisible="lot_classification in ('component', 'complement', 'spare')"/>
       </xpath>
       
     </field>

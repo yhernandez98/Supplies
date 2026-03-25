@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Mostrar campos de Suscripción/Servicio en stock.lot cuando subscription_nocount esté instalado -->
+        <record id="view_stock_lot_form_inherit_subscription_fields" model="ir.ui.view">
+            <field name="name">stock.lot.form.inherit.subscription.fields</field>
+            <field name="model">stock.lot</field>
+            <field name="inherit_id" ref="stock.view_production_lot_form"/>
+            <field name="priority" eval="25"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='location_id']" position="after">
+                    <field name="subscription_service_product_id" string="Servicio" optional="show"
+                           invisible="lot_classification in ('component', 'complement', 'spare')"/>
+                    <field name="active_subscription_id" string="Suscripción" optional="show"
+                           invisible="lot_classification in ('component', 'complement', 'spare')"/>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</odoo>
+

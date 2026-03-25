@@ -58,6 +58,30 @@ class LotSupplyEditorWizard(models.TransientModel):
         domain=[('item_type', '=', 'complement')],
         help='Complementos asociados al lote'
     )
+
+    monitor_lines = fields.One2many(
+        'lot.supply.editor.wizard.line',
+        'wizard_id',
+        string='Monitores',
+        domain=[('item_type', '=', 'monitor')],
+        help='Monitores asociados al lote'
+    )
+
+    ups_lines = fields.One2many(
+        'lot.supply.editor.wizard.line',
+        'wizard_id',
+        string='UPS',
+        domain=[('item_type', '=', 'ups')],
+        help='UPS asociados al lote'
+    )
+
+    spare_lines = fields.One2many(
+        'lot.supply.editor.wizard.line',
+        'wizard_id',
+        string='Repuestos',
+        domain=[('item_type', '=', 'spare')],
+        help='Repuestos asociados al lote'
+    )
     
     @api.model
     def default_get(self, fields_list):
@@ -82,6 +106,9 @@ class LotSupplyEditorWizard(models.TransientModel):
         component_vals = []
         peripheral_vals = []
         complement_vals = []
+        monitor_vals = []
+        ups_vals = []
+        spare_vals = []
         
         # Obtener todas las líneas existentes del lote
         for supply_line in lot.lot_supply_line_ids:
@@ -91,6 +118,10 @@ class LotSupplyEditorWizard(models.TransientModel):
                 continue
             
             processed_supply_line_ids.add(supply_line.id)
+
+            # Solo mostrar lo que está con costo
+            if not getattr(supply_line, "has_cost", False):
+                continue
             
             line_data = {
                 'supply_line_id': supply_line.id,
@@ -107,9 +138,12 @@ class LotSupplyEditorWizard(models.TransientModel):
                 peripheral_vals.append((0, 0, line_data))
             elif supply_line.item_type == 'complement':
                 complement_vals.append((0, 0, line_data))
-            elif supply_line.item_type in ('monitor', 'ups'):
-                # Monitores y UPS se tratan como periféricos en el wizard
-                peripheral_vals.append((0, 0, line_data))
+            elif supply_line.item_type == 'monitor':
+                monitor_vals.append((0, 0, line_data))
+            elif supply_line.item_type == 'ups':
+                ups_vals.append((0, 0, line_data))
+            elif supply_line.item_type == 'spare':
+                spare_vals.append((0, 0, line_data))
         
         # Cargar en los campos correspondientes solo si están en fields_list
         if 'component_lines' in fields_list:
@@ -118,10 +152,16 @@ class LotSupplyEditorWizard(models.TransientModel):
             res['peripheral_lines'] = peripheral_vals
         if 'complement_lines' in fields_list:
             res['complement_lines'] = complement_vals
+        if 'monitor_lines' in fields_list:
+            res['monitor_lines'] = monitor_vals
+        if 'ups_lines' in fields_list:
+            res['ups_lines'] = ups_vals
+        if 'spare_lines' in fields_list:
+            res['spare_lines'] = spare_vals
         
         # También mantener lot_supply_line_ids para compatibilidad
         if 'lot_supply_line_ids' in fields_list:
-            all_vals = component_vals + peripheral_vals + complement_vals
+            all_vals = component_vals + peripheral_vals + complement_vals + monitor_vals + ups_vals + spare_vals
             res['lot_supply_line_ids'] = all_vals
         
         _logger.debug('default_get cargó %d componentes, %d periféricos, %d complementos', 
@@ -130,155 +170,85 @@ class LotSupplyEditorWizard(models.TransientModel):
         return res
     
     def action_save(self):
-        """Guardar los cambios en las líneas de suministro usando la misma lógica que Odoo."""
+        """Cerrar wizard.
+
+        El sincronizado de líneas se hace en los hooks create/write/unlink de
+        `lot.supply.editor.wizard.line` para que el delete del One2many se refleje en BD
+        incluso si el botón corre antes de que el cliente persistiera todos los cambios.
+        """
+        return {'type': 'ir.actions.act_window_close'}
+
+    def _apply_wizard_to_lot_supply_lines(self):
+        """Sincroniza las líneas 'con costo' del wizard hacia el lote principal."""
         self.ensure_one()
-        
         if not self.lot_id:
-            raise UserError(_('No se ha especificado un lote.'))
-        
-        # Obtener todas las líneas de todas las pestañas
-        all_lines = self.component_lines + self.peripheral_lines + self.complement_lines
-        
-        # PRIMERO: Eliminar duplicados en el wizard antes de procesar
-        # Crear un diccionario para detectar duplicados por (supply_line_id, product_id, related_lot_id, item_type)
-        seen_lines = {}
-        unique_lines = []
-        
-        for wizard_line in all_lines:
-            if not wizard_line.product_id:
-                continue
-            
-            # Crear una clave única para identificar duplicados
-            key = (
-                wizard_line.supply_line_id.id if wizard_line.supply_line_id else None,
-                wizard_line.product_id.id,
-                wizard_line.related_lot_id.id if wizard_line.related_lot_id else None,
-                wizard_line.item_type
+            return
+
+        force_unlink_related_lot_id = self.env.context.get('force_unlink_related_lot_id')
+
+        wizard_lines = (
+            self.component_lines
+            + self.peripheral_lines
+            + self.complement_lines
+            + self.monitor_lines
+            + self.ups_lines
+            + self.spare_lines
+        ).filtered(lambda l: l.product_id and l.related_lot_id)
+
+        # Si venimos desde el warning de "Costo Adicional", forzar exclusión del serial objetivo
+        # aunque siga visible en la UI del wizard.
+        if force_unlink_related_lot_id:
+            wizard_lines = wizard_lines.filtered(
+                lambda l: l.related_lot_id.id != int(force_unlink_related_lot_id)
             )
-            
-            # Si ya vimos esta línea, mantener solo la primera (o la que tiene supply_line_id)
-            if key in seen_lines:
-                existing_line = seen_lines[key]
-                # Si la nueva línea tiene supply_line_id y la existente no, reemplazar
-                if wizard_line.supply_line_id and not existing_line.supply_line_id:
-                    # Reemplazar en unique_lines
-                    idx = unique_lines.index(existing_line)
-                    unique_lines[idx] = wizard_line
-                    seen_lines[key] = wizard_line
-                # Si ambas tienen supply_line_id, mantener la primera
-                # Si ninguna tiene, mantener la primera
-                continue
-            
-            seen_lines[key] = wizard_line
-            unique_lines.append(wizard_line)
-        
-        # Validar que no haya seriales duplicados en las líneas únicas
-        used_related_lot_ids = {}
-        for wizard_line in unique_lines:
-            if not wizard_line.product_id or not wizard_line.related_lot_id:
-                continue
-            
-            related_lot_id = wizard_line.related_lot_id.id
-            if related_lot_id in used_related_lot_ids:
+
+        # Unicidad por related_lot_id dentro del wizard
+        seen = set()
+        for wl in wizard_lines:
+            if wl.related_lot_id.id in seen:
                 raise UserError(_(
                     'El número de serie "%s" está duplicado en las líneas del wizard. '
                     'Cada serial solo puede aparecer una vez.'
-                ) % wizard_line.related_lot_id.name)
-            
-            used_related_lot_ids[related_lot_id] = wizard_line
-        
-        # Construir comandos ORM estándar de Odoo para actualizar el campo One2many
-        # Esto es la misma lógica que usa Odoo cuando editas directamente lot_supply_line_ids
-        commands = []
-        
-        # Obtener todas las líneas existentes
-        existing_lines = self.lot_id.lot_supply_line_ids
-        
-        # Crear un mapa de líneas existentes por su ID
-        existing_lines_map = {line.id: line for line in existing_lines}
-        
-        # Procesar cada línea única del wizard
-        processed_ids = set()
-        
-        for wizard_line in unique_lines:
-            if not wizard_line.product_id:
-                continue
-            
-            # Si tiene supply_line_id, es una línea existente que se está editando
-            if wizard_line.supply_line_id and wizard_line.supply_line_id.id:
-                existing_id = wizard_line.supply_line_id.id
-                
-                # Evitar procesar la misma línea dos veces
-                if existing_id in processed_ids:
-                    _logger.warning('Línea duplicada detectada y omitida: supply_line_id=%s', existing_id)
-                    continue
-                
-                processed_ids.add(existing_id)
-                
-                # Verificar que la línea existe
-                if existing_id not in existing_lines_map:
-                    # La línea fue eliminada, crear nueva
-                    commands.append((0, 0, {
-                        'item_type': wizard_line.item_type,
-                        'product_id': wizard_line.product_id.id,
-                        'quantity': wizard_line.quantity,
-                        'uom_id': wizard_line.uom_id.id if wizard_line.uom_id else False,
-                        'related_lot_id': wizard_line.related_lot_id.id if wizard_line.related_lot_id else False,
-                    }))
-                else:
-                    # Actualizar línea existente usando comando (1, id, vals)
-                    commands.append((1, existing_id, {
-                        'item_type': wizard_line.item_type,
-                        'product_id': wizard_line.product_id.id,
-                        'quantity': wizard_line.quantity,
-                        'uom_id': wizard_line.uom_id.id if wizard_line.uom_id else False,
-                        'related_lot_id': wizard_line.related_lot_id.id if wizard_line.related_lot_id else False,
-                    }))
+                ) % wl.related_lot_id.name)
+            seen.add(wl.related_lot_id.id)
+
+        existing_cost_lines = self.lot_id.lot_supply_line_ids.filtered(lambda l: getattr(l, 'has_cost', False))
+        commands = [(2, line.id, 0) for line in existing_cost_lines]
+
+        for wl in wizard_lines:
+            related = wl.related_lot_id
+            if related and getattr(related, 'cost_additional', False):
+                effective_cost = float(getattr(related, 'cost_additional_value', 0.0) or 0.0)
             else:
-                # Es una nueva línea (sin supply_line_id)
-                # Verificar que no exista ya una línea con estos valores
-                if wizard_line.related_lot_id:
-                    duplicate = existing_lines.filtered(
-                        lambda l: l.product_id.id == wizard_line.product_id.id
-                        and l.related_lot_id
-                        and l.related_lot_id.id == wizard_line.related_lot_id.id
-                        and l.item_type == wizard_line.item_type
-                    )
-                    if duplicate:
-                        # Actualizar la existente en lugar de crear nueva
-                        commands.append((1, duplicate[0].id, {
-                            'item_type': wizard_line.item_type,
-                            'product_id': wizard_line.product_id.id,
-                            'quantity': wizard_line.quantity,
-                            'uom_id': wizard_line.uom_id.id if wizard_line.uom_id else False,
-                            'related_lot_id': wizard_line.related_lot_id.id if wizard_line.related_lot_id else False,
-                        }))
-                        continue
-                
-                commands.append((0, 0, {
-                    'item_type': wizard_line.item_type,
-                    'product_id': wizard_line.product_id.id,
-                    'quantity': wizard_line.quantity,
-                    'uom_id': wizard_line.uom_id.id if wizard_line.uom_id else False,
-                    'related_lot_id': wizard_line.related_lot_id.id if wizard_line.related_lot_id else False,
-                }))
-        
-        # Aplicar los cambios usando write con comandos ORM estándar
-        # Esto es exactamente lo que hace Odoo cuando editas directamente el campo One2many
-        self.lot_id.write({
-            'lot_supply_line_ids': commands
-        })
-        
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': _('Guardado'),
-                'message': _('Los elementos asociados se han actualizado correctamente.'),
-                'type': 'success',
-                'sticky': False,
-            }
-        }
+                effective_cost = float(getattr(wl, 'cost', 0.0) or 0.0)
+
+            commands.append((0, 0, {
+                'item_type': wl.item_type,
+                'product_id': wl.product_id.id,
+                'quantity': wl.quantity,
+                'uom_id': wl.uom_id.id if wl.uom_id else False,
+                'related_lot_id': wl.related_lot_id.id,
+                'has_cost': True,
+                # Para compatibilidad: si algún cálculo todavía mira `cost`, lo dejamos correcto.
+                'cost': effective_cost,
+            }))
+
+        self.lot_id.write({'lot_supply_line_ids': commands})
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        records = super().create(vals_list)
+        # Al crear wizard (default_get), deja el estado consistente.
+        for rec in records.filtered(lambda r: r.lot_id):
+            rec._apply_wizard_to_lot_supply_lines()
+        return records
+
+    def write(self, vals):
+        res = super().write(vals)
+        # Al guardar el wizard (special="save"), aquí ya vienen aplicados los comandos del One2many.
+        for rec in self.filtered(lambda r: r.lot_id):
+            rec._apply_wizard_to_lot_supply_lines()
+        return res
     
     def action_debug_wizard(self):
         """Método de debug para ver qué está pasando en el wizard."""
@@ -288,7 +258,14 @@ class LotSupplyEditorWizard(models.TransientModel):
             raise UserError(_('No se ha especificado un lote.'))
         
         # Obtener todas las líneas de todas las pestañas
-        all_lines = self.component_lines + self.peripheral_lines + self.complement_lines
+        all_lines = (
+            self.component_lines
+            + self.peripheral_lines
+            + self.complement_lines
+            + self.monitor_lines
+            + self.ups_lines
+            + self.spare_lines
+        )
         
         # Obtener todas las líneas existentes del lote
         all_existing_lines = self.lot_id.lot_supply_line_ids
@@ -415,7 +392,8 @@ class LotSupplyEditorWizardLine(models.TransientModel):
             ('peripheral', 'Periférico'),
             ('complement', 'Complemento'),
             ('monitor', 'Monitores'),
-            ('ups', 'UPS')
+            ('ups', 'UPS'),
+            ('spare', 'Repuestos'),
         ],
         string='Tipo',
         required=True,
@@ -458,6 +436,33 @@ class LotSupplyEditorWizardLine(models.TransientModel):
         store=False,
         help='Lotes disponibles para relacionar'
     )
+
+    def _sync_wizard_lot_supply_lines(self):
+        """Sincroniza el lote principal desde el wizard actual."""
+        for w in self.mapped('wizard_id').filtered(lambda x: x and x.lot_id):
+            w._apply_wizard_to_lot_supply_lines()
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        records = super().create(vals_list)
+        records._sync_wizard_lot_supply_lines()
+        return records
+
+    def write(self, vals):
+        res = super().write(vals)
+        self._sync_wizard_lot_supply_lines()
+        return res
+
+    def unlink(self):
+        # Tomar líneas reales asociadas antes de eliminar el transient.
+        source_lines = self.mapped('supply_line_id').filtered(lambda l: l and l.exists())
+        wizards = self.mapped('wizard_id').filtered(lambda x: x and x.lot_id)
+        res = super().unlink()
+        # Borrar asociación real (solo las de costo que maneja este wizard).
+        source_lines.filtered(lambda l: getattr(l, 'has_cost', False)).unlink()
+        for w in wizards:
+            w._apply_wizard_to_lot_supply_lines()
+        return res
     
     @api.depends('product_id', 'wizard_id', 'wizard_id.lot_id', 'related_lot_id', 'supply_line_id')
     def _compute_available_related_lot_ids(self):

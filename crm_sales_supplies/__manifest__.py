@@ -1,7 +1,11 @@
+# -*- coding: utf-8 -*-
+# Copyright 2026 Supplies De Colombia SAS
+# License LGPL-3.0 or later (https://www.gnu.org/licenses/lgpl-3.0.html).
+
 {
     'name': 'CRM Sales Supplies Integration',
     'version': '19.0.1.0.0',
-    'author': 'Supplies',
+    'author': 'Supplies De Colombia SAS',
     'category': 'Sales/CRM',
     'depends': [
         'crm',

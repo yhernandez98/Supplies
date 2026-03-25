@@ -1,0 +1,3 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_partner_pricelist_debug_wizard,partner.pricelist.debug.wizard,partner_pricelist_debug.model_partner_pricelist_debug_wizard,base.group_system,1,1,1,1
+access_partner_set_specific_pricelist_wizard,partner.set.specific.pricelist.wizard,partner_pricelist_debug.model_partner_set_specific_pricelist_wizard,base.group_system,1,1,1,1

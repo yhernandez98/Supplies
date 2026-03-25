@@ -804,23 +804,23 @@ class StockLotCustomerInventory(models.Model):
             # Es principal si:
             # 1. is_principal=True (marcado como principal)
             # 2. O si principal_lot_id es False (no está asociado a otro producto)
-            # 3. Y no es un componente/periférico/complemento según classification
+            # 3. Y no es un componente/periférico/complemento/repuesto según classification
             lot.is_main_product = (
                 lot.is_principal or 
                 (not lot.principal_lot_id and 
-                 lot.product_id.classification not in ('component', 'peripheral', 'complement'))
+                lot.product_id.classification not in ('component', 'peripheral', 'complement', 'spare'))
             )
 
     def _search_is_main_product(self, operator, value):
         """Búsqueda para filtrar solo productos principales."""
         if operator == '=' and value:
-            # Buscar lotes principales: is_principal=True O (principal_lot_id=False Y classification no es component/peripheral/complement)
+            # Buscar lotes principales: is_principal=True O (principal_lot_id=False Y classification no es component/peripheral/complement/repuesto)
             domain = [
                 '|',
                 ('is_principal', '=', True),
                 '&',
                 ('principal_lot_id', '=', False),
-                ('product_id.classification', 'not in', ['component', 'peripheral', 'complement'])
+                ('product_id.classification', 'not in', ['component', 'peripheral', 'complement', 'spare'])
             ]
             lot_ids = self.search(domain).ids
             return [('id', 'in', lot_ids)]

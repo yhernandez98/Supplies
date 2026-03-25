@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# Copyright 2026 Supplies De Colombia SAS
+# License LGPL-3.0 or later (https://www.gnu.org/licenses/lgpl-3.0.html).
 {
     'name': 'Gestor Fácil de Permisos',
     'version': '19.0.1.0.0',
@@ -13,7 +15,7 @@
         - Wizard para asignar permisos rápidamente
         - Vista de módulos y modelos disponibles
     """,
-    'author': 'Supplies de Colombia',
+    'author': 'Supplies De Colombia SAS',
     'website': '',
     'depends': ['base', 'stock', 'purchase', 'sale'],
     'data': [

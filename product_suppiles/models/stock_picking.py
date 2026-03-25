@@ -520,6 +520,104 @@ class StockPicking(models.Model):
         except Exception as e:
             _logger.warning("Error al inicializar historial de compras: %s", str(e))
 
+    def acta_devolucion_fecha_larga(self):
+        """Fecha en formato largo localizado para el PDF del acta (p. ej. martes, 24 de febrero de 2026)."""
+        self.ensure_one()
+        from odoo.tools.misc import format_datetime
+
+        dt = self.date_done or self.scheduled_date
+        if not dt:
+            return ""
+        tz = False
+        partner = self.company_id.partner_id
+        if partner and partner.tz:
+            tz = partner.tz
+        elif self.env.user.tz:
+            tz = self.env.user.tz
+        try:
+            return format_datetime(
+                self.env,
+                dt,
+                tz=tz or "UTC",
+                dt_format="EEEE, d 'de' MMMM 'de' y",
+                lang_code=self.env.lang or None,
+            )
+        except Exception:
+            return ""
+
+    def acta_devolucion_motivo_linea(self):
+        """Primera línea de notas (motivo). Si no hay texto, mismo valor por defecto que el acta impresa (PDF)."""
+        self.ensure_one()
+        default = "CAMBIO - DEVOLUCION"
+        text = (self.note or "").strip()
+        if not text:
+            return default
+        first = text.split("\n", 1)[0].strip()
+        return first or default
+
+    def acta_devolucion_observaciones_resto(self):
+        """Texto tras el primer salto de línea en notas (observaciones). Vacío si una sola línea."""
+        self.ensure_one()
+        text = self.note or ""
+        parts = text.split("\n", 1)
+        return parts[1].strip() if len(parts) > 1 else ""
+
+    def _acta_devolucion_cuenta_activos(self):
+        """Líneas de operación con producto (para plazo de revisión técnica)."""
+        self.ensure_one()
+        return len(self.move_line_ids.filtered(lambda l: l.product_id))
+
+    def _acta_devolucion_dias_habiles_revision(self):
+        """Alineado al acta: 3 días hábiles base; +2 por cada 5 activos en la acta."""
+        self.ensure_one()
+        n = self._acta_devolucion_cuenta_activos()
+        if n <= 0:
+            return 3
+        return 3 + 2 * (n // 5)
+
+    def _acta_devolucion_fecha_inicio_acta(self):
+        """Fecha del acta (devolución) en fecha local contexto."""
+        self.ensure_one()
+        dt = self.date_done or self.scheduled_date
+        if dt:
+            return fields.Datetime.context_timestamp(self, dt).date()
+        return fields.Date.context_today(self)
+
+    def _acta_devolucion_fin_plazo_dia_habil_inclusive(self, start, n_habiles):
+        """Último día del plazo: el día `start` cuenta como 1.er día hábil si es laborable."""
+        from datetime import timedelta
+
+        if n_habiles <= 0:
+            return start
+        d = start
+        while d.weekday() >= 5:
+            d += timedelta(days=1)
+        count = 1
+        while count < n_habiles:
+            d += timedelta(days=1)
+            if d.weekday() < 5:
+                count += 1
+        return d
+
+    def acta_devolucion_observaciones_impresion(self):
+        """
+        Texto automático de plazos según el acta (3 días hábiles; +2 por cada 5 activos),
+        más texto manual tras primera línea de la nota del albarán (si existe).
+        """
+        self.ensure_one()
+        d0 = self._acta_devolucion_fecha_inicio_acta()
+        dias = self._acta_devolucion_dias_habiles_revision()
+        d1 = self._acta_devolucion_fin_plazo_dia_habil_inclusive(d0, dias)
+        s0 = d0.strftime("%d-%m-%y")
+        s1 = d1.strftime("%d-%m-%y")
+        auto = (
+            "LA FECHA DE INICIO POR ACTIVOS RECIBIDOS %s Y LA FECHA MAXIMA PARA REPORTE DE DAÑOS %s"
+            % (s0, s1)
+        )
+        extra = self.acta_devolucion_observaciones_resto()
+        if extra:
+            return auto + "\n\n" + extra
+        return auto
 
     def action_assign_supplies_relations(self):
         self.ensure_one()

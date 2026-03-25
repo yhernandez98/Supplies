@@ -25,6 +25,7 @@ class ProductTemplate(models.Model):
             ("complement", "Complemento"),
             ("monitor", "Monitores"),
             ("ups", "UPS"),
+            ("spare", "Repuestos"),
         ],
         string="Clasificación",
         help="Clasifica el producto para filtrar en el wizard de compras."

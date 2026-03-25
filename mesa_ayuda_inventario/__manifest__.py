@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# Copyright 2026 Supplies De Colombia SAS
+# License LGPL-3.0 or later (https://www.gnu.org/licenses/lgpl-3.0.html).
 {
     'name': 'Mesa de Ayuda - Inventario de Clientes',
     'summary': 'Consulta y gestión de productos principales en inventario de clientes por número de serie',

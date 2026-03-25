@@ -9,7 +9,8 @@
                     <style>
                         * { box-sizing: border-box; }
                         body { margin: 0; font-family: "Inter", "Segoe UI", system-ui, sans-serif; min-height: 100vh; color: #1e293b; background: #f1f5f9; }
-                        .ld_header { background: linear-gradient(180deg, #1e40af 0%, #2563eb 22%, #0ea5e9 45%, #06b6d4 70%, #0d9488 100%); color: #fff; padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; box-shadow: 0 4px 24px rgba(30,64,175,0.3); }
+                        /* Encabezado en un solo tono verde, coherente con el módulo */
+                        .ld_header { background: #0d9488; color: #fff; padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; box-shadow: 0 4px 24px rgba(13,148,136,0.35); }
                         .ld_header h1 { margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; }
                         .ld_header_links { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
                         .ld_header_links a { color: rgba(255,255,255,0.95); text-decoration: none; padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.9rem; font-weight: 500; transition: background 0.2s; }
@@ -42,6 +43,8 @@
                         .ld_bar_fill.green { background: linear-gradient(90deg, #059669, #10b981); }
                         .ld_bar_fill.gray { background: linear-gradient(90deg, #475569, #64748b); }
                         .ld_bar_fill.violet { background: linear-gradient(90deg, #7c3aed, #8b5cf6); }
+                        /* Línea de tiempo (últimos 12 meses) */
+                        .ld_chart_canvas { width: 100%; height: 260px; margin-top: 0.5rem; }
                     </style>
                 </head>
                 <body>
@@ -71,25 +74,138 @@
                                 <div class="ld_kpi_value" t-esc="total_cancelled"/>
                             </div>
                         </div>
+                        <!-- Gráfica anual (enero–diciembre) antes del cuadro Por estado -->
                         <div class="ld_section">
-                            <div class="ld_section_title">Por estado</div>
-                            <t t-if="by_state">
-                                <t t-foreach="by_state" t-as="row">
-                                    <div class="ld_bar_wrap">
-                                        <div class="ld_bar_label">
-                                            <span t-esc="row['name']"/>
-                                            <span t-esc="row['count']"/>
-                                        </div>
-                                        <div class="ld_bar">
-                                            <div t-attf-class="ld_bar_fill #{row['bar_class']}" t-att-style="row['bar_style']"/>
-                                        </div>
-                                    </div>
-                                </t>
+                            <div class="ld_section_title">Acumulado año actual (COP)</div>
+                            <t t-if="monthly_series">
+                                <canvas id="subMonthlyChart" class="ld_chart_canvas"></canvas>
+                                <script type="text/javascript">
+                                    (function () {
+                                        var data = {
+                                            labels: [
+                                                <t t-foreach="monthly_series" t-as="m">
+                                                    "<t t-esc="m['label']"/>",
+                                                </t>
+                                            ],
+                                            values: [
+                                                <t t-foreach="monthly_series" t-as="m">
+                                                    <t t-esc="m['value'] or 0.0"/>,
+                                                </t>
+                                            ],
+                                        };
+                                        function drawLineChart(canvasId, chartData) {
+                                            var canvas = document.getElementById(canvasId);
+                                            if (!canvas) { return; }
+                                            var ctx = canvas.getContext('2d');
+                                            var dpr = window.devicePixelRatio || 1;
+                                            var rect = canvas.getBoundingClientRect();
+                                            canvas.width = rect.width * dpr;
+                                            canvas.height = rect.height * dpr;
+                                            ctx.scale(dpr, dpr);
+                                            var w = rect.width;
+                                            var h = rect.height;
+                                            ctx.clearRect(0, 0, w, h);
+                                            if (!chartData.values.length) { return; }
+                                            var maxVal = Math.max.apply(null, chartData.values) || 1;
+                                            var padding = 42;
+                                            var innerW = w - padding * 2;
+                                            var innerH = h - padding * 2;
+                                            // Ejes
+                                            ctx.strokeStyle = '#cbd5f5';
+                                            ctx.lineWidth = 1;
+                                            ctx.beginPath();
+                                            ctx.moveTo(padding, padding);
+                                            ctx.lineTo(padding, h - padding);
+                                            ctx.lineTo(w - padding, h - padding);
+                                            ctx.stroke();
+                                            // Línea
+                                            ctx.strokeStyle = '#0f766e';
+                                            ctx.lineWidth = 2;
+                                            ctx.beginPath();
+                                            chartData.values.forEach(function (v, i) {
+                                                var x = padding + (chartData.values.length === 1 ? innerW / 2 : innerW * i / (chartData.values.length - 1));
+                                                var y = h - padding - (v / maxVal) * innerH;
+                                                if (i === 0) {
+                                                    ctx.moveTo(x, y);
+                                                } else {
+                                                    ctx.lineTo(x, y);
+                                                }
+                                            });
+                                            ctx.stroke();
+                                            // Puntos
+                                            ctx.fillStyle = '#0d9488';
+                                            chartData.values.forEach(function (v, i) {
+                                                var x = padding + (chartData.values.length === 1 ? innerW / 2 : innerW * i / (chartData.values.length - 1));
+                                                var y = h - padding - (v / maxVal) * innerH;
+                                                ctx.beginPath();
+                                                ctx.arc(x, y, 3, 0, Math.PI * 2);
+                                                ctx.fill();
+                                            });
+                                            // Etiqueta de valor encima del punto (con fondo para legibilidad)
+                                            ctx.font = '10px sans-serif';
+                                            ctx.textAlign = 'center';
+                                            chartData.values.forEach(function (v, i) {
+                                                if (!v) { return; }
+                                                var x = padding + (chartData.values.length === 1 ? innerW / 2 : innerW * i / (chartData.values.length - 1));
+                                                var y = h - padding - (v / maxVal) * innerH;
+                                                var label = Number(v || 0).toLocaleString('es-CO', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+                                                // Si está muy arriba, poner la etiqueta debajo del punto para que no se pegue al título/máx
+                                                var labelY = (y - 14 &lt; padding + 16) ? (y + 16) : (y - 12);
+                                                // Fondo (pill)
+                                                var textWidth = ctx.measureText(label).width;
+                                                var padX = 6, padY = 3;
+                                                var boxW = textWidth + padX * 2;
+                                                var boxH = 12 + padY * 2;
+                                                var boxX = x - boxW / 2;
+                                                var boxY = labelY - 10 - padY;
+                                                ctx.fillStyle = 'rgba(255,255,255,0.92)';
+                                                ctx.strokeStyle = 'rgba(15,118,110,0.25)';
+                                                ctx.lineWidth = 1;
+                                                // rounded rect
+                                                var r = 6;
+                                                ctx.beginPath();
+                                                ctx.moveTo(boxX + r, boxY);
+                                                ctx.lineTo(boxX + boxW - r, boxY);
+                                                ctx.quadraticCurveTo(boxX + boxW, boxY, boxX + boxW, boxY + r);
+                                                ctx.lineTo(boxX + boxW, boxY + boxH - r);
+                                                ctx.quadraticCurveTo(boxX + boxW, boxY + boxH, boxX + boxW - r, boxY + boxH);
+                                                ctx.lineTo(boxX + r, boxY + boxH);
+                                                ctx.quadraticCurveTo(boxX, boxY + boxH, boxX, boxY + boxH - r);
+                                                ctx.lineTo(boxX, boxY + r);
+                                                ctx.quadraticCurveTo(boxX, boxY, boxX + r, boxY);
+                                                ctx.closePath();
+                                                ctx.fill();
+                                                ctx.stroke();
+                                                // Texto
+                                                ctx.fillStyle = '#0f172a';
+                                                ctx.fillText(label, x, labelY);
+                                            });
+                                            // Etiquetas de eje X
+                                            ctx.fillStyle = '#64748b';
+                                            ctx.font = '10px sans-serif';
+                                            ctx.textAlign = 'center';
+                                            chartData.labels.forEach(function (lab, i) {
+                                                var x = padding + (chartData.values.length === 1 ? innerW / 2 : innerW * i / (chartData.values.length - 1));
+                                                var y = h - padding + 14;
+                                                ctx.fillText(lab, x, y);
+                                            });
+                                            // Marca del valor máximo (evita cortes en el eje)
+                                            ctx.fillStyle = '#64748b';
+                                            ctx.font = '10px sans-serif';
+                                            var maxLabel = maxVal.toLocaleString('es-CO', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+                                            ctx.textAlign = 'left';
+                                            // Colocar el valor dentro del área del gráfico para que no se recorte.
+                                            ctx.fillText('Máx: ' + maxLabel, padding + 4, padding + 4);
+                                        }
+                                        window.addEventListener('load', function () {
+                                            drawLineChart('subMonthlyChart', data);
+                                        });
+                                    })();
+                                </script>
                             </t>
                             <t t-else="">
-                                <p style="color: #64748b; margin: 0;">No hay suscripciones.</p>
+                                <p style="color: #64748b; margin: 0;">No hay datos de facturables guardados para este año.</p>
                             </t>
-                            <a t-attf-href="#{url_list}" class="ld_cta">Ver listado completo →</a>
                         </div>
                         <div class="ld_section">
                             <div class="ld_section_title">Suscripciones recientes</div>
@@ -100,7 +216,7 @@
                                             <th>Referencia</th>
                                             <th>Cliente</th>
                                             <th>Estado</th>
-                                            <th class="num">Total mensual</th>
+                                            <th class="num">Acumulado</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -120,26 +236,7 @@
                             </t>
                             <a t-attf-href="#{url_list}" class="ld_cta">Ver suscripciones →</a>
                         </div>
-                        <div class="ld_section">
-                            <div class="ld_section_title">Clientes con más suscripciones</div>
-                            <t t-if="top_partners">
-                                <t t-foreach="top_partners" t-as="item">
-                                    <div class="ld_bar_wrap">
-                                        <div class="ld_bar_label">
-                                            <span t-esc="item['name']"/>
-                                            <span t-esc="item['count']"/>
-                                        </div>
-                                        <div class="ld_bar">
-                                            <div class="ld_bar_fill violet" t-att-style="item['bar_style']"/>
-                                        </div>
-                                    </div>
-                                </t>
-                            </t>
-                            <t t-else="">
-                                <p style="color: #64748b; margin: 0;">No hay datos por cliente.</p>
-                            </t>
-                            <a t-attf-href="#{url_list}" class="ld_cta">Ver listado →</a>
-                        </div>
+                        
                     </div>
                 </body>
             </html>

@@ -96,28 +96,20 @@ class SubscriptionMonthlyBillable(models.Model):
             }}
         if 'license.assignment' not in self.env:
             raise UserError(_('El módulo de licencias no está disponible.'))
+        DetailModel = self.env['subscription.monthly.billable.line.detail']
         for line in license_lines:
+            # Recalcular detalles por serial para que el export del facturable guardado muestre el costo real por producto (no promedio).
             category_name = (line.product_display_name or '').strip() or 'Sin Categoría'
-            license_domain = [
-                ('partner_id', '=', subscription.partner_id.id),
-                ('state', '=', 'active'),
-                ('license_id', '!=', False),
-            ]
-            if subscription.location_id:
-                license_domain.append(('location_id', '=', subscription.location_id.id))
-            assignments = self.env['license.assignment'].search(license_domain)
-            total_cost = 0.0
-            for assignment in assignments:
-                if not assignment.license_id or not assignment.license_id.product_id:
-                    continue
-                cat = (assignment.license_id.name.name if assignment.license_id.name else 'Sin Categoría') or 'Sin Categoría'
-                if cat != category_name:
-                    continue
-                product = assignment.license_id.product_id
-                unit_cop = subscription._get_license_unit_price_cop(product, trm_rate)
-                qty = float(assignment.quantity or 0)
-                total_cost += unit_cop * qty
-            line.write({'cost': float_round(total_cost, precision_digits=2)})
+            stub = type(
+                'GroupedProductStub',
+                (),
+                {
+                    'license_category': category_name,
+                    'quantity': line.quantity or 0,
+                    'cost': line.cost or 0.0,
+                },
+            )()
+            subscription._save_monthly_billable_license_details(line, stub, DetailModel)
         new_total = sum(self.line_ids.mapped('cost'))
         self.write({'total_amount': float_round(new_total, precision_digits=2)})
         _months = ('enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre')
@@ -152,6 +144,105 @@ class SubscriptionMonthlyBillable(models.Model):
             'view_mode': 'form',
             'res_id': move.id,
             'context': {'hide_account_column': True},
+        }
+
+    def _get_export_saved_license_details(self):
+        """Datos guardados para exportar (licencias) desde el facturable mensual."""
+        self.ensure_one()
+        subscription = self.subscription_id
+        license_lines = self.line_ids.filtered(lambda l: l.is_license)
+        if not subscription or not license_lines:
+            return license_lines.mapped('detail_ids')
+
+        # Importante: algunos facturables guardados pueden existir antes de los últimos fixes.
+        # Para que el Excel/PDF salga consistente con "en vivo", recalculamos EN MEMORIA
+        # los detalles de licencias por serial (sin modificar el facturable guardado).
+        export_rows = []
+        Detail = self.env['subscription.monthly.billable.line.detail']
+        for line in license_lines:
+            category_name = (line.product_display_name or '').strip() or 'Sin Categoría'
+            stub = type(
+                'GroupedProductStub',
+                (),
+                {
+                    'license_category': category_name,
+                    'quantity': line.quantity or 0,
+                    'cost': line.cost or 0.0,
+                },
+            )()
+            rows = subscription._save_monthly_billable_license_details(
+                line, stub, Detail, persist=False
+            )
+            if rows:
+                export_rows.extend(rows)
+
+        return export_rows
+
+    def _get_export_saved_equipment_details(self):
+        """Datos guardados para exportar (equipos) desde el facturable mensual."""
+        self.ensure_one()
+        equipment_lines = self.line_ids.filtered(lambda l: not l.is_license)
+        return equipment_lines.mapped('detail_ids')
+
+    def action_view_licencias_unificadas_guardadas(self):
+        """Abre una vista unificada de las licencias guardadas en este facturable."""
+        self.ensure_one()
+        license_line_ids = self.line_ids.filtered(lambda l: l.is_license).ids
+        if not license_line_ids:
+            return {'type': 'ir.actions.act_window_close'}
+
+        view_id = self.env.ref('subscription_nocount.view_subscription_monthly_billable_line_detail_list').id
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Ver Licencias'),
+            'res_model': 'subscription.monthly.billable.line.detail',
+            'view_mode': 'list',
+            'views': [(view_id, 'list')],
+            'domain': [('billable_line_id', 'in', license_line_ids)],
+            'context': {
+                'create': False,
+                'edit': False,
+                'delete': False,
+                'group_by': ['business_line_name'],
+            },
+        }
+
+    def action_view_equipos_unificados_guardados(self):
+        """Abre una vista unificada de los equipos guardados en este facturable."""
+        self.ensure_one()
+        equipment_line_ids = self.line_ids.filtered(lambda l: not l.is_license).ids
+        if not equipment_line_ids:
+            return {'type': 'ir.actions.act_window_close'}
+
+        view_id = self.env.ref('subscription_nocount.view_subscription_monthly_billable_line_detail_equipment_list').id
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Ver Equipos'),
+            'res_model': 'subscription.monthly.billable.line.detail',
+            'view_mode': 'list',
+            'views': [(view_id, 'list')],
+            'domain': [('billable_line_id', 'in', equipment_line_ids)],
+            'context': {
+                'create': False,
+                'edit': False,
+                'delete': False,
+                'group_by': ['business_line_name'],
+            },
+        }
+
+    def action_open_export_licenses_equipos_wizard_monthly(self):
+        """Abre el wizard de exportación (Excel/PDF) usando este facturable guardado."""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Exportar Licencias y Equipos'),
+            'res_model': 'subscription.export.licenses.equipos.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_subscription_id': self.subscription_id.id if self.subscription_id else False,
+                'default_billable_id': self.id,
+            },
         }
 
 
@@ -237,7 +328,7 @@ class SubscriptionMonthlyBillableLine(models.Model):
 class SubscriptionMonthlyBillableLineDetail(models.Model):
     _name = 'subscription.monthly.billable.line.detail'
     _description = 'Detalle por serial del facturable mensual (solo actividad del mes)'
-    _order = 'product_name, inventory_plate, lot_name'
+    _order = 'business_line_name, product_name, inventory_plate, lot_name'
 
     billable_line_id = fields.Many2one(
         'subscription.monthly.billable.line',
@@ -255,17 +346,38 @@ class SubscriptionMonthlyBillableLineDetail(models.Model):
     lot_id = fields.Many2one('stock.lot', string='Serial/Lote', readonly=True)
     lot_name = fields.Char(string='Número de serie/lote', readonly=True)
     product_name = fields.Char(string='Producto', readonly=True, help='Equipo/hardware (licencias) o producto (equipos renting).')
+    business_line_name = fields.Char(
+        string='Agrupamiento',
+        readonly=True,
+        compute='_compute_business_line_name',
+        store=True,
+        help='Agrupamiento para organizar licencias/equipos (viene del facturable guardado).',
+    )
     license_service_name = fields.Char(
         string='Licencia/Servicio Asignado',
         readonly=True,
         help='Nombre del servicio o licencia asignada (solo para líneas de licencia).',
     )
     inventory_plate = fields.Char(string='Placa de Inventario', readonly=True)
+    assigned_user_id = fields.Many2one(
+        'res.partner',
+        string='Usuario Asignado',
+        readonly=True,
+        group_operator=False,
+        help='Contacto usuario del serial (stock.lot.related_partner_id) al guardar el facturable.',
+    )
+    assigned_user_display_name = fields.Char(
+        string='Usuario Asignado',
+        compute='_compute_assigned_user_display_name',
+        store=False,
+        help='Nombre del contacto sin prefijo de compañía (solo para listas e informes).',
+    )
     cost_renting = fields.Monetary(
         string='Costo Renting',
         currency_field='currency_id',
         digits=(16, 2),
         readonly=True,
+        group_operator=False,
     )
     cost_additional = fields.Monetary(
         string='Costo Adicional',
@@ -274,6 +386,7 @@ class SubscriptionMonthlyBillableLineDetail(models.Model):
         readonly=True,
         compute='_compute_cost_additional',
         help='Suma de los costos de los elementos asociados con costo (pestaña Elementos Con Costo del serial).',
+        group_operator=False,
     )
     cost_renting_total = fields.Monetary(
         string='Costo Renting (total)',
@@ -282,14 +395,15 @@ class SubscriptionMonthlyBillableLineDetail(models.Model):
         readonly=True,
         compute='_compute_cost_additional',
         help='Costo Renting base + Costo adicional (elementos con costo).',
+        group_operator=False,
     )
-    days_total_month = fields.Integer(string='Días total del mes', readonly=True)
-    current_day_of_month = fields.Integer(string='Día del mes en curso', readonly=True)
+    days_total_month = fields.Integer(string='Días total del mes', readonly=True, group_operator=False)
+    current_day_of_month = fields.Integer(string='Día del mes en curso', readonly=True, group_operator=False)
     entry_date = fields.Date(string='Fecha Activación Renting', readonly=True)
     exit_date = fields.Date(string='Fecha Finalización Renting', readonly=True)
     reining_plazo = fields.Char(string='Plazo Renting', readonly=True)
-    days_total_on_site = fields.Integer(string='Días totales en sitio', readonly=True)
-    days_in_service = fields.Integer(string='Días En Servicio', readonly=True)
+    days_total_on_site = fields.Integer(string='Días totales en sitio', readonly=True, group_operator=False)
+    days_in_service = fields.Integer(string='Días En Servicio', readonly=True, group_operator=False)
     tiempo_en_sitio_display = fields.Char(
         string='Tiempo En Sitio',
         compute='_compute_tiempo_displays',
@@ -307,6 +421,7 @@ class SubscriptionMonthlyBillableLineDetail(models.Model):
         readonly=True,
         compute='_compute_cost_daily_from_total',
         help='Costo diario calculado a partir del Costo Renting total (base + adicional).',
+        group_operator=False,
     )
     cost_to_date = fields.Monetary(
         string='Costo Días En Servicio',
@@ -315,6 +430,7 @@ class SubscriptionMonthlyBillableLineDetail(models.Model):
         readonly=True,
         compute='_compute_cost_daily_from_total',
         help='Costo días en servicio = Costo diario × Días en servicio.',
+        group_operator=False,
     )
     currency_id = fields.Many2one(
         'res.currency',
@@ -326,6 +442,17 @@ class SubscriptionMonthlyBillableLineDetail(models.Model):
         compute='_compute_month_display',
         help='Mes y año del facturable (ej. febrero 2026).',
     )
+
+    @api.depends('billable_line_id', 'billable_line_id.product_display_name')
+    def _compute_business_line_name(self):
+        for rec in self:
+            rec.business_line_name = rec.billable_line_id.product_display_name or ''
+
+    @api.depends('assigned_user_id', 'assigned_user_id.name')
+    def _compute_assigned_user_display_name(self):
+        for rec in self:
+            p = rec.assigned_user_id
+            rec.assigned_user_display_name = (p.name or '').strip() if p else ''
 
     @api.depends('billable_line_id', 'billable_line_id.billable_id', 'billable_line_id.billable_id.reference_year', 'billable_line_id.billable_id.reference_month')
     def _compute_month_display(self):
@@ -340,14 +467,27 @@ class SubscriptionMonthlyBillableLineDetail(models.Model):
             else:
                 rec.month_display = ''
 
-    @api.depends('lot_id', 'lot_id.lot_supply_line_ids', 'lot_id.lot_supply_line_ids.has_cost', 'lot_id.lot_supply_line_ids.cost')
+    @api.depends(
+        'lot_id',
+        'lot_id.lot_supply_line_ids',
+        'lot_id.lot_supply_line_ids.has_cost',
+        'lot_id.lot_supply_line_ids.cost',
+        'lot_id.lot_supply_line_ids.related_lot_id',
+        'lot_id.lot_supply_line_ids.related_lot_id.cost_additional',
+        'lot_id.lot_supply_line_ids.related_lot_id.cost_additional_value',
+    )
     def _compute_cost_additional(self):
         """Suma de costos de elementos asociados con costo (Elementos Con Costo del serial)."""
         for rec in self:
             additional = 0.0
             if rec.lot_id and hasattr(rec.lot_id, 'lot_supply_line_ids'):
                 lines_with_cost = rec.lot_id.lot_supply_line_ids.filtered(lambda l: l.has_cost)
-                additional = sum(lines_with_cost.mapped('cost')) or 0.0
+                for line in lines_with_cost:
+                    related = getattr(line, 'related_lot_id', False)
+                    if related and getattr(related, 'cost_additional', False):
+                        additional += float(getattr(related, 'cost_additional_value', 0.0) or 0.0)
+                    else:
+                        additional += float(getattr(line, 'cost', 0.0) or 0.0)
             rec.cost_additional = additional
             rec.cost_renting_total = (rec.cost_renting or 0.0) + additional
 

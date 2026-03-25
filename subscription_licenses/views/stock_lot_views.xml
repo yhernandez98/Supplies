@@ -7,10 +7,20 @@
             <field name="inherit_id" ref="product_suppiles.view_production_lot_form_inherit_supplies"/>
             <field name="arch" type="xml">
                 <xpath expr="//page[@name='elementos_y_licencias']/notebook" position="inside">
-                    <page string="Licencias del Equipo" name="equipment_licenses">
-                        <field name="license_equipment_ids" nolabel="1" readonly="1" 
-                               context="{'default_lot_id': id, 'search_default_assigned': 1}">
-                            <list string="Licencias Asignadas al Equipo" default_order="assignment_date desc" decoration-muted="state == 'unassigned'">
+                    <page string="Licencias del Equipo" name="equipment_licenses" invisible="lot_classification in ('component', 'complement', 'peripheral', 'monitor', 'spare')">
+                        <group class="o_license_assignment_pick_group" colspan="4">
+                            <button name="action_open_license_assignment_pick_wizard"
+                                    type="object"
+                                    string="Agregar Asignación"
+                                    class="btn-primary o_license_assignment_pick_btn"
+                                    context="{'license_tab_type': 'equipment'}"/>
+                        </group>
+                        <field name="license_equipment_ids" nolabel="1"
+                               domain="[('license_id.applies_to_equipment', '=', True), ('contact_id', '=', False)]"
+                               context="{'default_lot_id': id, 'search_default_assigned': 1, 'default_assignment_date': context_today(), 'license_tab_type': 'equipment'}">
+                            <list string="Licencias Asignadas al Equipo" default_order="assignment_date desc" decoration-muted="state == 'unassigned'" create="0" edit="0" delete="1">
+                                <field name="available_assignment_ids" column_invisible="1"/>
+                                <field name="assignment_id" string="Asignación" domain="[('id', 'in', available_assignment_ids)]" options="{'no_create': True}" readonly="1"/>
                                 <field name="license_id" string="Categoria"/>
                                 <field name="service_product_id" string="Licencia"/>
                                 <field name="assignment_date" string="Fecha Asignación"/>
@@ -22,10 +32,22 @@
                             </list>
                         </field>
                     </page>
-                    <page string="Licencias del Usuario" name="user_licenses" invisible="not related_partner_id">
+                    <page string="Licencias del Usuario" name="user_licenses" invisible="lot_classification in ('component', 'complement', 'peripheral', 'monitor', 'spare')">
+                        <group class="o_license_assignment_pick_group" colspan="4">
+                            <button name="action_open_license_assignment_pick_wizard"
+                                    type="object"
+                                    string="Agregar Asignación"
+                                    class="btn-primary o_license_assignment_pick_btn"
+                                    context="{'license_tab_type': 'user'}"/>
+                        </group>
                         <field name="related_partner_id" invisible="1"/>
-                        <field name="license_user_ids" nolabel="1" readonly="1">
-                            <list string="Licencias Asignadas al Usuario" default_order="assignment_date desc" decoration-muted="state == 'unassigned'">
+                        <field name="license_user_ids" nolabel="1"
+                               domain="[('license_id.applies_to_user', '=', True)]"
+                               context="{'default_contact_id': related_partner_id, 'default_lot_id': id, 'search_default_assigned': 1, 'default_assignment_date': context_today(), 'license_tab_type': 'user'}">
+                            <list string="Licencias Asignadas al Usuario" default_order="assignment_date desc" decoration-muted="state == 'unassigned'" create="0" edit="0" delete="1">
+                                <field name="available_assignment_ids" column_invisible="1"/>
+                                <field name="assignment_id" string="Asignación" domain="[('id', 'in', available_assignment_ids)]" options="{'no_create': True}" readonly="1"/>
+                                <field name="contact_id" column_invisible="1"/>
                                 <field name="license_id" string="Categoria"/>
                                 <field name="service_product_id" string="Licencia"/>
                                 <field name="assignment_date" string="Fecha Asignación"/>

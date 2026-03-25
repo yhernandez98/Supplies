@@ -123,94 +123,88 @@ class LicenseProviderReportLine(models.Model):
 
     @api.depends('partner_id', 'product_id', 'quantity', 'assignment_id')
     def _compute_price_from_pricelist(self):
-        """Obtiene el precio a cliente desde la lista de precios (misma fuente que suscripción)."""
+        """Obtiene el precio a cliente directamente desde la lista de precios del cliente."""
         for rec in self:
-            unit = 0.0
-            if rec.assignment_id:
-                unit = rec.assignment_id._get_unit_price_usd()
-            elif rec.partner_id and rec.product_id:
-                unit = rec._get_unit_price_from_pricelist_usd()
+            unit = rec._get_unit_price_from_pricelist_usd() if (rec.partner_id and rec.product_id) else 0.0
             rec.unit_price_pricelist_usd = unit
             rec.total_price_pricelist_usd = float_round(unit * (rec.quantity or 0), precision_digits=2)
 
     def _get_unit_price_from_pricelist_usd(self):
-        """Precio unitario en USD desde lista de precios del cliente (igual que en asignación/suscripción)."""
+        """Precio unitario en USD desde la lista de precios del cliente (directo por producto)."""
         self.ensure_one()
         if not self.partner_id or not self.product_id:
             return 0.0
         product = self.product_id
         pricelist = self.partner_id.property_product_pricelist
+        if not pricelist:
+            return 0.0
         usd_currency = self.env.ref('base.USD', raise_if_not_found=False)
         trm_rate = 0.0
         if 'license.trm' in self.env:
             trm_rate = self.env['license.trm'].get_trm_for_date() or 0.0
-        # 1) Suscripción del cliente -> _get_price_for_product
-        if 'subscription.subscription' in self.env and hasattr(self.env['subscription.subscription'], '_get_price_for_product'):
-            try:
-                sub = self.env['subscription.subscription'].search([('partner_id', '=', self.partner_id.id)], limit=1)
-                if sub:
-                    price = sub._get_price_for_product(product, 1.0)
-                    if price is not None:
-                        curr = sub.partner_id.property_product_pricelist.currency_id if sub.partner_id and sub.partner_id.property_product_pricelist else None
-                        if curr and curr.name == 'USD':
-                            return float(price)
-                        if curr and curr.name == 'COP' and trm_rate and trm_rate > 0:
-                            return float(price) / trm_rate
-                        if curr and usd_currency:
-                            try:
-                                return curr._convert(float(price), usd_currency, self.env.company, fields.Date.today())
-                            except Exception:
-                                pass
-                        return float(price)
-            except Exception:
-                pass
-        # 2) Precios recurrentes (sale.subscription.pricing) — pestaña "Precios recurrentes" de la lista
-        if pricelist and 'sale.subscription.pricing' in self.env:
-            try:
-                Pricing = self.env['sale.subscription.pricing']
-                product_tmpl_field = 'product_template_id' if 'product_template_id' in Pricing._fields else 'product_tmpl_id'
-                domain = [
-                    ('pricelist_id', '=', pricelist.id),
-                    (product_tmpl_field, '=', product.product_tmpl_id.id),
-                ]
-                pricing = Pricing.search(domain, limit=1)
-                if pricing and hasattr(pricing, 'price') and pricing.price is not None:
-                    price_val = float(pricing.price)
-                    curr = getattr(pricing, 'currency_id', None) and pricing.currency_id or pricelist.currency_id
-                    if curr and curr.name == 'USD':
-                        return price_val
-                    if curr and curr.name == 'COP' and trm_rate and trm_rate > 0:
-                        return price_val / trm_rate
-                    if curr and usd_currency:
-                        try:
-                            return curr._convert(price_val, usd_currency, self.env.company, fields.Date.today())
-                        except Exception:
-                            pass
+
+        # 1) Buscar regla explícita en product.pricelist.item (la misma que editas en UI).
+        try:
+            Item = self.env['product.pricelist.item']
+            item = Item.search([
+                ('pricelist_id', '=', pricelist.id),
+                '|',
+                ('product_id', '=', product.id),
+                ('product_tmpl_id', '=', product.product_tmpl_id.id),
+            ], order='applied_on desc, min_quantity desc, id desc', limit=1)
+            if item:
+                qty = self.quantity or 1.0
+                price_val = None
+                # Precio fijo de la regla
+                if item.compute_price == 'fixed' and hasattr(item, 'fixed_price'):
+                    price_val = float(item.fixed_price or 0.0)
+                # Fórmula/descuento u otros: usar motor nativo
+                if price_val is None and hasattr(item, '_compute_price'):
+                    price_val = item._compute_price(
+                        product,
+                        qty,
+                        uom=product.uom_id,
+                        date=fields.Datetime.now(),
+                        currency=pricelist.currency_id,
+                        plan_id=getattr(item, 'plan_id', False) and item.plan_id.id or None,
+                    )
+                    price_val = float(price_val or 0.0)
+
+                curr = getattr(item, 'currency_id', False) or pricelist.currency_id
+                if curr and curr.name == 'USD':
                     return price_val
-            except Exception:
-                pass
-        # 3) Lista de precios directa (reglas de precio)
-        if pricelist:
-            try:
-                price = pricelist._get_product_price(
-                    product,
-                    quantity=self.quantity or 1.0,
-                    partner=self.partner_id,
-                    date=fields.Date.today(),
-                    uom_id=product.uom_id.id,
-                )
-                if price is not None:
-                    if pricelist.currency_id.name == 'USD':
-                        return float(price)
-                    if pricelist.currency_id.name == 'COP' and trm_rate and trm_rate > 0:
-                        return float(price) / trm_rate
-                    if pricelist.currency_id and usd_currency:
-                        try:
-                            return pricelist.currency_id._convert(float(price), usd_currency, self.env.company, fields.Date.today())
-                        except Exception:
-                            pass
-            except Exception:
-                pass
+                if curr and curr.name == 'COP':
+                    return (price_val / trm_rate) if trm_rate and trm_rate > 0 else 0.0
+                if curr and usd_currency:
+                    try:
+                        return curr._convert(price_val, usd_currency, self.env.company, fields.Date.today())
+                    except Exception:
+                        pass
+                return price_val
+        except Exception:
+            pass
+
+        # 2) Fallback estándar del pricelist.
+        try:
+            price = pricelist._get_product_price(
+                product,
+                quantity=self.quantity or 1.0,
+                partner=self.partner_id,
+                date=fields.Date.today(),
+                uom_id=product.uom_id.id,
+            )
+            if price is not None:
+                if pricelist.currency_id.name == 'USD':
+                    return float(price)
+                if pricelist.currency_id.name == 'COP' and trm_rate and trm_rate > 0:
+                    return float(price) / trm_rate
+                if pricelist.currency_id and usd_currency:
+                    try:
+                        return pricelist.currency_id._convert(float(price), usd_currency, self.env.company, fields.Date.today())
+                    except Exception:
+                        pass
+        except Exception:
+            pass
         return 0.0
     external_order_id = fields.Char(string='Order ID / MPN', help='ID externo del pedido o MPN.')
     subscription_id = fields.Char(string='Suscripción ID', help='ID de suscripción en el reporte.')

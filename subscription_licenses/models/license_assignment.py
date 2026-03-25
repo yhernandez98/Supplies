@@ -9,6 +9,7 @@ class LicenseAssignment(models.Model):
     _description = 'Asignación de Licencia a Cliente'
     _inherit = ['mail.thread', 'mail.activity.mixin']
     _order = 'partner_id, license_id'
+    _rec_name = 'license_display_name_stored'
 
     # Campo para seleccionar el servicio/producto primero
     selected_product_id = fields.Many2one(
@@ -420,7 +421,11 @@ class LicenseAssignment(models.Model):
         """
         self.ensure_one()
         
-        # Si hay precio personalizado y está activado, usarlo
+        # Si hay precio personalizado y está activado, usarlo.
+        # Pero para el reporte del proveedor (Consolidado / Ver licencias contratadas),
+        # a veces el precio personalizado se queda "congelado" aunque la lista cambie.
+        # Por eso permitimos saltar el precio personalizado por contexto.
+        if not self.env.context.get('ignore_custom_price', False):
         if self.use_custom_price and self.price_usd:
             return self.price_usd
         
@@ -432,8 +437,15 @@ class LicenseAssignment(models.Model):
         usd_currency = self.env.ref('base.USD', raise_if_not_found=False)
         trm_rate = self.trm_rate or (self.env['license.trm'].get_trm_for_date() if 'license.trm' in self.env else 0.0)
 
-        # 1) PRIMERO: precio que el usuario puso en la lista del cliente (Precios recurrentes / sale.subscription.pricing)
-        if pricelist and 'sale.subscription.pricing' in self.env:
+        # 1) (Odoo 18 legacy) Precios recurrentes: sale.subscription.pricing
+        # En Odoo 19 los recurrentes deberían venir desde la lista de precios (product.pricelist.item / suscripción),
+        # pero durante el upgrade a veces queda el modelo heredado y puede devolver valores viejos.
+        # Por eso, lo dejamos desactivado por defecto y solo lo usamos si se fuerza con contexto.
+        if (
+            pricelist
+            and 'sale.subscription.pricing' in self.env
+            and self.env.context.get('use_sale_subscription_pricing', False)
+        ):
             try:
                 Pricing = self.env['sale.subscription.pricing']
                 product_tmpl_field = 'product_template_id' if 'product_template_id' in Pricing._fields else 'product_tmpl_id'
@@ -463,7 +475,231 @@ class LicenseAssignment(models.Model):
             except Exception:
                 pass
 
-        # 2) Suscripción del cliente (por si no hay fila en Precios recurrentes pero sí en la suscripción)
+        # 1.5) Prioridad: precio desde la lista de precios del cliente
+        # OJO: muchas veces las reglas recurrentes viven con plan_id y
+        # `pricelist._get_product_price()` puede devolver 0.0 (cuando "no encuentra").
+        # En ese caso NO debemos retornar 0.0: debemos dejar que el cálculo
+        # siga hacia el bloque recurrente por plan.
+        if pricelist:
+            try:
+                direct_price = pricelist._get_product_price(
+                    product,
+                    quantity=self.quantity or 1.0,
+                    partner=self.partner_id,
+                    date=fields.Date.today(),
+                    uom_id=product.uom_id.id,
+                )
+                if direct_price is not None:
+                    try:
+                        direct_price = float(direct_price)
+                    except (TypeError, ValueError):
+                        direct_price = None
+
+                # Si el precio "estándar" es 0, puede significar que no hay regla
+                # (en reglas recurrentes). Dejamos seguir hacia el bloque por plan.
+                if direct_price is not None and direct_price != 0.0:
+                    if pricelist.currency_id and pricelist.currency_id.name == 'USD':
+                        return direct_price
+                    if pricelist.currency_id and pricelist.currency_id.name == 'COP':
+                        return (direct_price / trm_rate) if trm_rate and trm_rate > 0 else 0.0
+                    if pricelist.currency_id and usd_currency:
+                        try:
+                            return pricelist.currency_id._convert(
+                                direct_price,
+                                usd_currency,
+                                self.env.company,
+                                fields.Date.today(),
+                            ) or 0.0
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+
+        # 1.6) Fallback (fiable): leer la regla recurrente directamente en product.pricelist.item
+        # (evita depender de APIs cuando el plan_id no se resuelve bien).
+        try:
+            if pricelist and product:
+                plan_model = self.env['sale.subscription.plan']
+                expected_plan_ids = []
+                if self.contracting_type == 'monthly_monthly':
+                    expected_plan_ids = plan_model.search([
+                        ('billing_period_unit', '=', 'month'),
+                        ('billing_period_value', '=', 1),
+                    ], limit=10).ids
+                elif self.contracting_type in ('annual_monthly_commitment', 'annual'):
+                    # anual: 12 meses o 1 año
+                    expected_plan_ids = plan_model.search([
+                        '|',
+                        '&',
+                        ('billing_period_unit', '=', 'month'),
+                        ('billing_period_value', '=', 12),
+                        '&',
+                        ('billing_period_unit', '=', 'year'),
+                        ('billing_period_value', '=', 1),
+                    ], limit=10).ids
+                if not expected_plan_ids:
+                    expected_plan_ids = plan_model.search([
+                        ('billing_period_unit', 'in', ('month', 'year')),
+                    ], limit=10).ids
+
+                if expected_plan_ids:
+                    PricelistItem = self.env['product.pricelist.item']
+                    item = PricelistItem.search([
+                        ('pricelist_id', '=', pricelist.id),
+                        ('plan_id', 'in', expected_plan_ids),
+                        '|',
+                        ('product_tmpl_id', '=', product.product_tmpl_id.id),
+                        ('product_id', '=', product.id),
+                    ], limit=1)
+                    if item:
+                        qty = self.quantity or 1.0
+                        # _compute_price usa la moneda del pricelist y considera plan/cantidad.
+                        price_value = item._compute_price(
+                            product,
+                            qty,
+                            uom=product.uom_id,
+                            date=fields.Datetime.now(),
+                            currency=pricelist.currency_id,
+                            plan_id=item.plan_id.id if item.plan_id else None,
+                        )
+                        if price_value is not None:
+                            price_value = float(price_value)
+                            if pricelist.currency_id and pricelist.currency_id.name == 'USD':
+                                return price_value
+                            if pricelist.currency_id and pricelist.currency_id.name == 'COP':
+                                return (price_value / trm_rate) if trm_rate and trm_rate > 0 else 0.0
+                            if pricelist.currency_id and usd_currency:
+                                try:
+                                    return pricelist.currency_id._convert(
+                                        price_value, usd_currency, self.env.company, fields.Date.today()
+                                    ) or 0.0
+                                except Exception:
+                                    pass
+        except Exception:
+            pass
+
+        # 2) Precio recurrente desde Plan del cliente (sale.subscription.plan)
+        # En Odoo 19, los "precios recurrentes" suelen vivir en product.pricelist.item con plan_id.
+        # Si no pasamos ese plan_id, pricelist._get_product_price puede caer a una regla genérica
+        # (por eso en el Consolidado se ve un valor viejo tipo 12 aunque en la lista pongas 150).
+        try:
+            if 'sale.subscription.plan' in self.env and product and pricelist:
+                plan_model = self.env['sale.subscription.plan']
+                plans = self.env['sale.subscription.plan']
+                # Odoo 19 Enterprise: sale.subscription.plan usa campos de billing period en vez de nombres
+                # (y en producción normalmente está en inglés: Monthly/Yearly).
+                if self.contracting_type == 'monthly_monthly':
+                    # Plan mensual: 1 mes
+                    plans = plan_model.search([
+                        ('billing_period_unit', '=', 'month'),
+                        ('billing_period_value', '=', 1),
+                    ], limit=1)
+                elif self.contracting_type in ('annual_monthly_commitment', 'annual'):
+                    # Plan anual: 12 meses o 1 año
+                    plans = plan_model.search([
+                        '|',
+                        '&',
+                        ('billing_period_unit', '=', 'month'),
+                        ('billing_period_value', '=', 12),
+                        '&',
+                        ('billing_period_unit', '=', 'year'),
+                        ('billing_period_value', '=', 1),
+                    ], limit=1)
+
+                # Fallback por si no existe exactamente el plan.
+                # Preferimos probar múltiples planes para evitar quedarnos con uno incorrecto.
+                if not plans:
+                    if self.contracting_type == 'monthly_monthly':
+                        plans = plan_model.search([('billing_period_unit', '=', 'month')], limit=10)
+                    else:
+                        plans = plan_model.search([('billing_period_unit', 'in', ('month', 'year'))], limit=10)
+
+                if plans and hasattr(product.product_tmpl_id, '_get_recurring_pricing'):
+                    qty = self.quantity or 1.0
+                    for plan in plans:
+                        pricing_item = product.product_tmpl_id._get_recurring_pricing(
+                            pricelist=pricelist,
+                            variant=product,
+                            plan_id=plan.id if plan else None,
+                            quantity=qty,
+                        )
+                        if not pricing_item or not hasattr(pricing_item, '_compute_price'):
+                            continue
+
+                        price_value = pricing_item._compute_price(
+                            product,
+                            qty,
+                            uom=product.uom_id,
+                            date=fields.Datetime.now(),
+                            currency=pricelist.currency_id,
+                            plan_id=plan.id if plan else None,
+                        )
+                        if price_value is None:
+                            continue
+
+                        try:
+                            price_value = float(price_value)
+                        except (TypeError, ValueError):
+                            continue
+
+                        # Convertir a USD según la moneda de la lista
+                        if pricelist.currency_id and pricelist.currency_id.name == 'USD':
+                            return price_value
+                        if pricelist.currency_id and pricelist.currency_id.name == 'COP':
+                            return (price_value / trm_rate) if trm_rate and trm_rate > 0 else 0.0
+                        if pricelist.currency_id and usd_currency:
+                            try:
+                                return pricelist.currency_id._convert(
+                                    price_value, usd_currency, self.env.company, fields.Date.today()
+                                ) or 0.0
+                            except Exception:
+                                pass
+        except Exception:
+            pass
+
+        # 2.5) Odoo 19 nativo sin plan explícito:
+        # si no se pudo resolver plan en assignment, pedir a Odoo la primera regla recurrente aplicable
+        # para la lista del cliente (any_plan=True internamente en _get_recurring_pricing cuando plan_id=None).
+        try:
+            if pricelist and product and hasattr(product.product_tmpl_id, '_get_recurring_pricing'):
+                qty = self.quantity or 1.0
+                pricing_item = product.product_tmpl_id._get_recurring_pricing(
+                    pricelist=pricelist,
+                    variant=product,
+                    plan_id=None,
+                    quantity=qty,
+                )
+                if pricing_item and hasattr(pricing_item, '_compute_price'):
+                    price_value = pricing_item._compute_price(
+                        product,
+                        qty,
+                        uom=product.uom_id,
+                        date=fields.Datetime.now(),
+                        currency=pricelist.currency_id,
+                        plan_id=None,
+                    )
+                    if price_value is not None:
+                        try:
+                            price_value = float(price_value)
+                        except (TypeError, ValueError):
+                            price_value = None
+
+                    if price_value is not None:
+                        if pricelist.currency_id and pricelist.currency_id.name == 'USD':
+                            return price_value
+                        if pricelist.currency_id and pricelist.currency_id.name == 'COP':
+                            return (price_value / trm_rate) if trm_rate and trm_rate > 0 else 0.0
+                        if pricelist.currency_id and usd_currency:
+                            try:
+                                return pricelist.currency_id._convert(
+                                    price_value, usd_currency, self.env.company, fields.Date.today()
+                                ) or 0.0
+                            except Exception:
+                                pass
+        except Exception:
+            pass
+
+        # 3) Suscripción del cliente (por si no hay fila en Precios recurrentes pero sí en la suscripción)
         if 'subscription.subscription' in self.env and hasattr(self.env['subscription.subscription'], '_get_price_for_product'):
             try:
                 sub_domain = [('partner_id', '=', self.partner_id.id)]
@@ -492,7 +728,7 @@ class LicenseAssignment(models.Model):
             except Exception:
                 pass
 
-        # 3) Reglas de la lista de precios (pricelist._get_product_price)
+        # 4) Reglas de la lista de precios (pricelist._get_product_price)
         if pricelist:
             try:
                 price = pricelist._get_product_price(

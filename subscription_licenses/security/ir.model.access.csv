@@ -34,3 +34,6 @@ access_license_equipment_delete_warning_wizard_manager,license.equipment.delete.
 access_license_quantity_warning_wizard_user,license.quantity.warning.wizard.user,model_license_quantity_warning_wizard,base.group_user,1,1,1,1
 access_license_quantity_warning_wizard_manager,license.quantity.warning.wizard.manager,model_license_quantity_warning_wizard,base.group_system,1,1,1,1
 
+access_license_assignment_pick_wizard_user,license.assignment.pick.wizard.user,model_license_assignment_pick_wizard,base.group_user,1,1,1,1
+access_license_assignment_pick_wizard_manager,license.assignment.pick.wizard.manager,model_license_assignment_pick_wizard,base.group_system,1,1,1,1
+

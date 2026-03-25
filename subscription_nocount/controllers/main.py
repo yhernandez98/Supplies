@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-from odoo import http
+from odoo import http, fields
 from odoo.http import request
 from odoo.tools.misc import formatLang
+from dateutil.relativedelta import relativedelta
 
 
 class SubscriptionDashboard(http.Controller):
@@ -68,6 +69,21 @@ class SubscriptionDashboard(http.Controller):
         url_list = '%s/web#action=%s&model=subscription.subscription&view_type=list' % (base_url, action_subscription.id) if action_subscription else '%s/web#model=subscription.subscription' % base_url
         url_back = base_url + '/web'
 
+        # Serie anual: enero–diciembre del año actual (total mensual COP por mes, basado en facturables guardados)
+        today = fields.Date.context_today(Subscription)
+        current_year = today.year
+        months = []
+        Billable = request.env['subscription.monthly.billable'].with_context(active_test=False)
+        month_names = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
+        for m in range(1, 13):
+            billables = Billable.search([
+                ('reference_year', '=', current_year),
+                ('reference_month', '=', m),
+            ])
+            total_month = sum(billables.mapped('total_amount')) if 'total_amount' in Billable._fields else 0.0
+            label = '%s %s' % (month_names[m-1].capitalize(), current_year)
+            months.append({'label': label, 'value': total_month})
+
         values = {
             'total_subscriptions': total_subscriptions,
             'total_active': total_active,
@@ -76,6 +92,7 @@ class SubscriptionDashboard(http.Controller):
             'by_state': by_state,
             'recent_list': recent_list,
             'top_partners': top_partners,
+            'monthly_series': months,
             'url_back': url_back,
             'url_list': url_list,
         }

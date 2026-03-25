@@ -3,6 +3,28 @@
     background: #fafafa !important;
 }
 
+/* Quitar completamente el rectángulo/fondo del grupo y dejar solo la tarjeta */
+.o_kanban_dashboard .o_kanban_group {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* El wrapper estándar de Odoo alrededor de la tarjeta (o_kanban_record)
+   es el que dibuja el rectángulo de fondo. Lo hacemos totalmente
+   transparente y sin sombra para que solo se vea la tarjeta ovalada. */
+.o_kanban_dashboard .o_kanban_record {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+}
+
+/* Esquinas moderadamente redondeadas de la tarjeta blanca principal */
+.o_kanban_dashboard .oe_kanban_card {
+    border-radius: 24px !important;
+}
+
 /* Botón Ver Operaciones: azul Suscripciones (pastel + reflejo al hover) */
 button.oe_kanban_btn_operaciones,
 .btn.oe_kanban_btn_operaciones {

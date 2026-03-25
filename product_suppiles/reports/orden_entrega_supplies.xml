@@ -1,0 +1,236 @@
+<odoo>
+    <!-- Acción de reporte: Orden de Entrega Supplies -->
+    <record id="action_report_orden_entrega_supplies" model="ir.actions.report">
+        <field name="name">Orden de Entrega Supplies</field>
+        <field name="model">stock.picking</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">product_suppiles.report_orden_entrega_supplies</field>
+        <field name="print_report_name">'Orden_Entrega_' + (object.name or '').replace('/','_')</field>
+        <field name="binding_model_id" ref="stock.model_stock_picking"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <!-- Plantilla QWeb completa: Orden de Entrega Supplies -->
+    <template id="report_orden_entrega_supplies">
+        <t t-name="product_suppiles.report_orden_entrega_supplies">
+            <!--
+                IMPORTANTE: el contenido debe ir dentro de div.article.
+                Si no, Odoo envía a wkhtmltopdf un fragmento HTML sin &lt;head&gt;/charset
+                y en Windows suele aparecer mojibake (PÃ¡gina, BogotÃ¡, etc.).
+            -->
+            <t t-call="web.html_container">
+                <t t-if="not docs and doc" t-set="docs" t-value="doc"/>
+                <t t-foreach="docs" t-as="picking">
+                    <div class="article o_report_layout_standard"
+                         t-att-data-oe-model="picking._name"
+                         t-att-data-oe-id="picking.id"
+                         t-att-data-oe-lang="env.lang">
+                <div class="page" style="font-family:Helvetica, Arial, sans-serif; font-size:9px;">
+
+                    <!-- ENCABEZADO: borde solo en el contenedor (evita línea doble abajo con bordes de celdas) -->
+                    <div style="border:1px solid #000; border-radius:14px; padding:0; margin-top:12px; overflow:hidden;">
+                        <table style="width:100%; border-collapse:collapse; table-layout:fixed;">
+                            <colgroup>
+                                <col style="width:18%;"/>
+                                <col style="width:31%;"/>
+                                <col style="width:31%;"/>
+                                <col style="width:20%;"/>
+                            </colgroup>
+                            <tr style="min-height:40px;">
+                                <!-- Logo: 3 filas -->
+                                <td rowspan="3"
+                                    style="border-right:1px solid #000; text-align:center; vertical-align:middle; padding:4px;">
+                                    <img t-att-src="image_data_uri(picking.company_id.logo)"
+                                         style="max-width:80px; max-height:70px;"/>
+                                </td>
+                                <!-- Título en todo el ancho a la derecha del logo (antes título+página) -->
+                                <td colspan="3"
+                                    style="text-align:center; vertical-align:middle; padding:8px 6px;">
+                                    <span style="font-weight:bold; text-transform:uppercase; font-size:13px; letter-spacing:0.5px;">
+                                        ORDEN DE ENTREGA
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr style="height:22px;">
+                                <td colspan="2" style="border-top:1px solid #000; border-right:1px solid #000; text-align:center; vertical-align:middle; font-size:10px;">
+                                    F-GLG-ORDE-001
+                                </td>
+                                <td rowspan="2"
+                                    style="border-top:1px solid #000; text-align:center; vertical-align:middle; font-size:9px;">
+                                    P&#225;gina <span>1</span> de <span>1</span>
+                                </td>
+                            </tr>
+                            <tr style="height:20px;">
+                                <td style="border-top:1px solid #000; border-right:1px solid #000; font-size:8px; padding:3px 5px; text-align:center; vertical-align:middle;">
+                                    Versi&#243;n: 01
+                                </td>
+                                <td style="border-top:1px solid #000; font-size:8px; padding:3px 5px; text-align:center; vertical-align:middle;">
+                                    Fecha de Creaci&#243;n: Julio 2023
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <!-- ESPACIO -->
+                    <div style="height:8px;"></div>
+
+                    <!-- DATOS DE LA ORDEN -->
+                    <table style="width:100%; border-collapse:collapse; font-size:9px;">
+                        <tr>
+                            <td colspan="4" style="background-color:#0068b3; color:#fff; text-align:center; font-weight:bold; border:1px solid #000; padding:2px;">
+                                DATOS DE LA ORDEN
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="width:20%; border-left:1px solid #000; border-bottom:1px solid #000; padding:2px; font-weight:bold; text-align:center; vertical-align:middle;">
+                                FECHA ENTREGA:
+                            </td>
+                            <td style="width:30%; border-bottom:1px solid #000; padding:2px; text-align:center; vertical-align:middle;">
+                                <span t-esc="(picking.scheduled_date or picking.date_done or '')"/>
+                            </td>
+                            <td style="width:20%; border-bottom:1px solid #000; padding:2px; font-weight:bold; text-align:center; vertical-align:middle;">
+                                ORDEN N&#218;MERO:
+                            </td>
+                            <td style="width:30%; border-right:1px solid #000; border-bottom:1px solid #000; padding:2px; text-align:center; vertical-align:middle;">
+                                <span t-esc="picking.name or ''"/>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <!-- ESPACIO -->
+                    <div style="height:6px;"></div>
+
+                    <!-- DATOS DEL CLIENTE -->
+                    <table style="width:100%; border-collapse:collapse; font-size:9px;">
+                        <tr>
+                            <td colspan="4" style="background-color:#0068b3; color:#fff; text-align:center; font-weight:bold; border:1px solid #000; padding:2px;">
+                                DATOS DEL CLIENTE
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="width:20%; border-left:1px solid #000; border-bottom:1px solid #000; padding:2px; font-weight:bold; text-align:center; vertical-align:middle;">
+                                NOMBRE CLIENTE
+                            </td>
+                            <td style="width:30%; border-bottom:1px solid #000; padding:2px; text-align:center; vertical-align:middle;">
+                                <span t-esc="(picking.partner_id.name if picking and picking.partner_id else '')"/>
+                            </td>
+                            <td style="width:20%; border-bottom:1px solid #000; padding:2px; font-weight:bold; text-align:center; vertical-align:middle;">
+                                NIT
+                            </td>
+                            <td style="width:30%; border-right:1px solid #000; border-bottom:1px solid #000; padding:2px; text-align:center; vertical-align:middle;">
+                                <span t-esc="((picking.partner_id.dian_nit_number or picking.partner_id.vat) if picking and picking.partner_id else '')"/>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="border-left:1px solid #000; border-bottom:1px solid #000; padding:2px; font-weight:bold; text-align:center; vertical-align:middle;">
+                                CIUDAD
+                            </td>
+                            <td style="border-bottom:1px solid #000; padding:2px; text-align:center; vertical-align:middle;">
+                                <span t-esc="(picking.partner_id.city if picking and picking.partner_id else '')"/>
+                            </td>
+                            <td style="border-bottom:1px solid #000; padding:2px; font-weight:bold; text-align:center; vertical-align:middle;">
+                                TEL&#201;FONO
+                            </td>
+                            <td style="border-right:1px solid #000; border-bottom:1px solid #000; padding:2px; text-align:center; vertical-align:middle;">
+                                <span t-esc="(picking.partner_id.phone or picking.partner_id.mobile if picking and picking.partner_id else '')"/>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="border-left:1px solid #000; border-bottom:1px solid #000; padding:2px; font-weight:bold; text-align:center; vertical-align:middle;">
+                                DIRECCI&#211;N
+                            </td>
+                            <td colspan="3" style="border-right:1px solid #000; border-bottom:1px solid #000; padding:2px; text-align:center; vertical-align:middle;">
+                                <span t-esc="(picking.partner_id.contact_address if picking and picking.partner_id else '')"/>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <!-- TEXTO INTRODUCTORIO -->
+                    <div style="margin-top:8px; font-size:9px; text-align:justify;">
+                        <p>
+                            Estimado (s) se&#241;or (es):
+                        </p>
+                        <p>
+                            En virtud del presente documento, Supplies de Colombia SAS realiza la entrega de los productos descritos
+                            a continuaci&#243;n, en perfecto estado de funcionamiento y conservaci&#243;n, con las siguientes caracter&#237;sticas:
+                        </p>
+                    </div>
+
+                    <!-- DATOS DE LOS PRODUCTOS: table-layout fijo + colgroup para alinear títulos y celdas -->
+                    <table style="width:100%; border-collapse:collapse; table-layout:fixed; font-size:9px; margin-top:6px;">
+                        <colgroup>
+                            <col style="width:16%;"/>
+                            <col style="width:28%;"/>
+                            <col style="width:18%;"/>
+                            <col style="width:22%;"/>
+                            <col style="width:16%;"/>
+                        </colgroup>
+                        <tr>
+                            <td colspan="5" style="background-color:#0068b3; color:#fff; text-align:center; font-weight:bold; border:1px solid #000; padding:2px;">
+                                DATOS DE LOS PRODUCTOS
+                            </td>
+                        </tr>
+                        <tr style="background-color:#e3eef8; font-weight:bold;">
+                            <td style="border-left:1px solid #000; border-bottom:1px solid #000; padding:2px; text-align:center; vertical-align:middle;">CLASE</td>
+                            <td style="border-bottom:1px solid #000; padding:2px; text-align:center; vertical-align:middle;">MARCA</td>
+                            <td style="border-bottom:1px solid #000; padding:2px; text-align:center; vertical-align:middle;">MODELO</td>
+                            <td style="border-bottom:1px solid #000; padding:2px; text-align:center; vertical-align:middle;">SERIAL</td>
+                            <td style="border-right:1px solid #000; border-bottom:1px solid #000; padding:2px; text-align:center; vertical-align:middle;">PLACA</td>
+                        </tr>
+
+                        <t t-foreach="sorted(picking.move_line_ids or [], key=lambda l: (l.product_id.display_name or '', l.lot_id.name or ''))" t-as="line">
+                            <tr>
+                                <!-- CLASE: clase de activo (Supplies); si no hay, categoría interna del producto -->
+                                <td style="border-left:1px solid #000; border-bottom:1px solid #000; padding:2px; text-align:center; vertical-align:middle; word-wrap:break-word;">
+                                    <span t-esc="(line.product_id.product_tmpl_id.asset_class_id.name if line.product_id and line.product_id.product_tmpl_id and line.product_id.product_tmpl_id.asset_class_id else (line.product_id.categ_id.name if line.product_id and line.product_id.categ_id else ''))"/>
+                                </td>
+                                <!-- MARCA: nombre comercial del producto (no hay campo marca dedicado en el módulo) -->
+                                <td style="border-bottom:1px solid #000; padding:2px; text-align:center; vertical-align:middle; word-wrap:break-word;">
+                                    <span t-esc="line.product_id.name or ''"/>
+                                </td>
+                                <!-- MODELO: del serial/lote si existe; si no, del template; último recurso referencia interna -->
+                                <td style="border-bottom:1px solid #000; padding:2px; text-align:center; vertical-align:middle; word-wrap:break-word;">
+                                    <span t-esc="(line.lot_id and line.lot_id.model_name) or (line.product_id and line.product_id.product_tmpl_id and line.product_id.product_tmpl_id.model_name) or (line.product_id and line.product_id.default_code) or ''"/>
+                                </td>
+                                <td style="border-bottom:1px solid #000; padding:2px; text-align:center; vertical-align:middle; word-wrap:break-word;">
+                                    <span t-esc="line.lot_id.name or ''"/>
+                                </td>
+                                <!-- PLACA: misma fuente que el acta de entrega (placa de inventario) -->
+                                <td style="border-right:1px solid #000; border-bottom:1px solid #000; padding:2px; text-align:center; vertical-align:middle; word-wrap:break-word;">
+                                    <span t-esc="(line.lot_id.inventory_plate or '')"/>
+                                </td>
+                            </tr>
+                        </t>
+                    </table>
+
+                    <!-- OBSERVACIONES -->
+                    <table style="width:100%; border-collapse:collapse; font-size:9px; margin-top:8px;">
+                        <tr>
+                            <td style="background-color:#0068b3; color:#fff; text-align:center; font-weight:bold; border:1px solid #000; padding:2px;">
+                                OBSERVACIONES
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="border-left:1px solid #000; border-right:1px solid #000; border-bottom:1px solid #000; padding:4px; min-height:40px;">
+                                <span t-esc="picking.note or ''"/>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <div style="margin-top:30px; font-size:9px;">
+                        <p>Atentamente,</p>
+                        <p style="margin-top:8px;">
+                            Supplies de Colombia SAS
+                        </p>
+                    </div>
+                </div>
+                </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>
+

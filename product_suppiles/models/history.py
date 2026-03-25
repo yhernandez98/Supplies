@@ -7,7 +7,14 @@ class SuppliesItemHistory(models.Model):
     _order = "purchase_date desc, id desc"
 
     item_type = fields.Selection(
-        [("component", "Componente"), ("peripheral", "Periférico"), ("complement", "Complemento"), ("monitor", "Monitores"), ("ups", "UPS")],
+        [
+            ("component", "Componente"),
+            ("peripheral", "Periférico"),
+            ("complement", "Complemento"),
+            ("monitor", "Monitores"),
+            ("ups", "UPS"),
+            ("spare", "Repuestos"),
+        ],
         required=True,
     )
     parent_product_tmpl_id = fields.Many2one("product.template", string="Producto padre", required=True, index=True)

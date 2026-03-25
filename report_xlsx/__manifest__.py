@@ -1,9 +1,10 @@
-# Copyright 2015 ACSONE SA/NV (<http://acsone.eu>)
+# -*- coding: utf-8 -*-
+# Copyright 2026 Supplies De Colombia SAS
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl.html).
 {
     "name": "Base report xlsx",
     "summary": "Base module to create xlsx report",
-    "author": "ACSONE SA/NV," "Creu Blanca," "Odoo Community Association (OCA)",
+    "author": "Supplies De Colombia SAS",
     "website": "https://github.com/OCA/reporting-engine",
     "category": "Reporting",
     "version": "19.0.1.0.1",
