@@ -81,7 +81,7 @@
                                    placeholder="Se cargará automáticamente"/>
                         </group>
                         <group string="Información del Cliente">
-                            <div class="text-muted mb-1">
+                            <div class="text-muted mb-1" colspan="2">
                                 Puede crear varias asignaciones para el mismo cliente y la misma licencia si en el reporte del proveedor aparecen líneas distintas (cantidad, precio o fechas diferentes). Cada asignación será una línea al rellenar Reporte / Facturación.
                             </div>
                             <field name="partner_id" options="{'no_create': True}" 
@@ -96,7 +96,8 @@
                             <field name="contracting_type" 
                                    placeholder="Seleccione el tipo de contratación"/>
                             <field name="contracting_type_description" nolabel="1" readonly="1" 
-                                   invisible="not contracting_type"/>
+                                   invisible="not contracting_type"
+                                   colspan="2"/>
                         </group>
                         <group string="Detalles de la Asignación">
                             <field name="quantity" string="Cantidad de Licencias"
@@ -104,6 +105,7 @@
                             <button name="action_open_quantity_warning_wizard" type="object"
                                     string="Modificar cantidad"
                                     class="btn-link"
+                                    colspan="2"
                                     invisible="contracting_type not in ('annual_monthly_commitment', 'annual')"
                                     title="En contratos anuales use este botón para cambiar la cantidad (verá una advertencia)"/>
                             <field name="start_date" string="Fecha de Inicio" 

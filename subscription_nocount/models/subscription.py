@@ -573,9 +573,25 @@ class SubscriptionSubscription(models.Model):
             subscription.monitor_quant_ids = Quant.browse(associated_monitor_quant_ids) if associated_monitor_quant_ids else Quant.browse([])
             subscription.ups_quant_ids = Quant.browse(associated_ups_quant_ids) if associated_ups_quant_ids else Quant.browse([])
             subscription.spare_quant_ids = Quant.browse(associated_spare_quant_ids) if associated_spare_quant_ids else Quant.browse([])
+            # "Facturable / Suscripciones" se alimenta de other_quant_ids.
+            # Mantener aquí seriales clasificados SOLO cuando ya están vinculados a servicio+suscripción,
+            # para que aparezcan en la suscripción sin perder su clasificación en pestañas de inventario.
             subscription.other_quant_ids = quants.filtered(
-                lambda q: q.product_id.product_tmpl_id.classification not in ('component', 'peripheral', 'complement', 'spare', 'monitor', 'ups')
-                if hasattr(q.product_id.product_tmpl_id, 'classification') else True
+                lambda q: (
+                    (
+                        hasattr(q.product_id.product_tmpl_id, 'classification')
+                        and q.product_id.product_tmpl_id.classification not in ('component', 'peripheral', 'complement', 'spare', 'monitor', 'ups')
+                    )
+                    or (
+                        q.lot_id
+                        and getattr(q.lot_id, 'subscription_service_product_id', False)
+                        and getattr(q.lot_id, 'active_subscription_id', False)
+                        and q.lot_id.active_subscription_id.id == subscription.id
+                    )
+                    or (
+                        not hasattr(q.product_id.product_tmpl_id, 'classification')
+                    )
+                )
             ) if quants else Quant.browse([])
 
     @api.depends('location_id', 'other_quant_ids', 'usage_ids', 'usage_ids.lot_id', 'reference_year', 'reference_month',
@@ -2393,9 +2409,24 @@ class SubscriptionSubscription(models.Model):
     def action_confirm_lot_date_overrides(self):
         """Confirma los ajustes de fechas. Ver Detalles y el facturable usan las fechas de esta tabla al abrirlos (no se invalida la lista para evitar "Registro faltante")."""
         self.ensure_one()
+        Lot = self.env['stock.lot'].sudo()
         self.flush_recordset()
         for ov in self.lot_date_override_ids:
             ov.flush_recordset()
+            lot = Lot.browse(ov.lot_id.id) if ov.lot_id else False
+            if not lot:
+                continue
+            # Robustez: sincronizar también con el lote para que cualquier ruta
+            # (activa/histórica) refleje inmediatamente la fecha confirmada.
+            vals = {}
+            if getattr(lot, 'active_subscription_id', None) and lot.active_subscription_id.id == self.id:
+                vals['entry_date'] = ov.entry_date or False
+                vals['exit_date'] = ov.exit_date or False
+            if getattr(lot, 'last_subscription_id', None) and lot.last_subscription_id.id == self.id:
+                vals['last_subscription_entry_date'] = ov.entry_date or False
+                vals['last_subscription_exit_date'] = ov.exit_date or False
+            if vals:
+                lot.write(vals)
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',
@@ -2734,18 +2765,33 @@ class SubscriptionSubscription(models.Model):
         para que cambios manuales en el lote (cliente nuevo) no afecten lo que ve esta suscripción."""
         if not lot:
             return (None, None)
+        override = False
+        Override = self.env.get('subscription.lot.date.override')
+        if Override:
+            override = Override.search([
+                ('subscription_id', '=', self.id),
+                ('lot_id', '=', lot.id),
+            ], limit=1)
+        # Si existe ajuste manual para esta suscripción+serial, debe prevalecer siempre.
+        # Esto evita casos donde el lote no cae exactamente en active/last subscription
+        # y la vista terminaba mostrando la fecha original del lote.
+        if override:
+            entry = (
+                override.entry_date
+                or getattr(lot, 'last_subscription_entry_date', None)
+                or getattr(lot, 'entry_date', None)
+                or getattr(lot, 'last_entry_date_display', None)
+            )
+            exit_ = (
+                override.exit_date
+                or getattr(lot, 'last_subscription_exit_date', None)
+                or getattr(lot, 'exit_date', None)
+                or getattr(lot, 'last_exit_date_display', None)
+            )
+            return (entry, exit_)
+
         if getattr(lot, 'last_subscription_id', None) and lot.last_subscription_id.id == self.id:
-            # Override opcional por suscripción (ajustes de fechas para la suscripción de la que salió)
-            Override = self.env.get('subscription.lot.date.override')
-            if Override:
-                override = Override.search([
-                    ('subscription_id', '=', self.id),
-                    ('lot_id', '=', lot.id),
-                ], limit=1)
-                if override:
-                    entry = override.entry_date or getattr(lot, 'last_subscription_entry_date', None)
-                    exit_ = override.exit_date or getattr(lot, 'last_subscription_exit_date', None)
-                    return (entry, exit_)
+            # Override por suscripción para seriales que ya salieron de esta suscripción.
             entry = getattr(lot, 'last_subscription_entry_date', None)
             exit_ = getattr(lot, 'last_subscription_exit_date', None)
             return (entry, exit_)

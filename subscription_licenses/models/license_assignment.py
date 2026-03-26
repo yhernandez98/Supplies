@@ -1003,6 +1003,22 @@ class LicenseAssignment(models.Model):
                     vals['end_date'] = fields.Date.to_string(end_date)
 
         res = super().write(vals)
+
+        # Ajustar estado automáticamente cuando cambian fechas:
+        # - Si estaba vencida y ahora la vigencia cubre hoy, volver a activa.
+        # - Si estaba activa y ahora quedó fuera de vigencia, marcar vencida.
+        if 'start_date' in vals or 'end_date' in vals:
+            today = fields.Date.today()
+            for rec in self:
+                if rec.state == 'cancelled':
+                    continue
+                is_started = (not rec.start_date) or (rec.start_date <= today)
+                is_not_ended = (not rec.end_date) or (rec.end_date >= today)
+                if rec.state == 'expired' and is_started and is_not_ended:
+                    rec.state = 'active'
+                elif rec.state == 'active' and (not is_started or not is_not_ended):
+                    rec.state = 'expired'
+
         if not self.env.context.get('skip_sync_provider_report'):
             self._sync_to_provider_report()
         return res
