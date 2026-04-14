@@ -6,17 +6,20 @@ class ProductProduct(models.Model):
     _inherit = 'product.product'
 
     @api.model
-    def name_search(self, name='', args=None, domain=None, limit=100, operator='ilike', order=None, **kwargs):
-        """En el selector de Licencia (Servicio) del stock de proveedor, solo mostrar productos que son licencias del módulo."""
-        # Asegurar que domain es lista de tuplas (el frontend a veces pasa algo no válido y Domain() falla con 'e')
-        if isinstance(domain, list) and (not domain or isinstance(domain[0], (list, tuple))):
-            search_domain = list(domain)
-        else:
-            search_domain = list(args or []) if isinstance(args, list) else []
+    def _name_search(self, name='', domain=None, operator='ilike', limit=None, order=None, **kwargs):
+        """En el selector de Licencia (Servicio) del stock de proveedor, solo licencias del módulo."""
+        domain = list(domain or [])
         if self.env.context.get('license_provider_stock_select'):
-            Template = self.env['license.template']
-            license_product_ids = Template.search([]).mapped('product_id').ids
+            rows = self.env['license.template'].sudo().search_read([], ['product_id'])
+            license_product_ids = list(
+                {
+                    row['product_id'][0]
+                    for row in rows
+                    if row.get('product_id') and row['product_id'][0]
+                }
+            )
             if license_product_ids:
-                search_domain = search_domain + [('id', 'in', license_product_ids)]
-        # Odoo 16+: el parámetro es domain (no args)
-        return super().name_search(name=name, domain=search_domain, operator=operator, limit=limit)
+                domain = domain + [('id', 'in', license_product_ids)]
+        return super()._name_search(
+            name, domain=domain, operator=operator, limit=limit, order=order, **kwargs
+        )

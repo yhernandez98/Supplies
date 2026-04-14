@@ -27,9 +27,10 @@
                         
                         <page string="Proveedores" name="vendors">
                             <group>
+                                <field name="available_vendor_ids" invisible="1"/>
                                 <field name="vendor_ids" 
                                        widget="many2many_tags" 
-                                       options="{'no_create': False, 'no_open': True}"
+                                       options="{'no_create': True, 'no_create_edit': True, 'no_open': True}"
                                        required="1"
                                        nolabel="1"/>
                                 <p class="text-muted" style="margin-top: 10px;">

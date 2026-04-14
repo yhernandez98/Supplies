@@ -248,37 +248,41 @@ class PurchaseAlert(models.Model):
         help='Todos los componentes, periféricos y complementos unificados',
     )
     
-    @api.model
-    def create(self, vals):
+    @api.model_create_multi
+    def create(self, vals_list):
         """Crear líneas de componentes al crear la alerta."""
-        # Generar nombre automático para la alerta
-        if not vals.get('name') or vals.get('name') == _('Nueva Alerta'):
-            try:
-                seq = self.env['ir.sequence'].next_by_code('purchase.alert') or _('Nueva Alerta')
-            except Exception:
-                seq = _('Nueva Alerta')
-            vals['name'] = seq
-        
-        # Asignar partner_id desde lead_id si no está definido
-        if not vals.get('partner_id') and vals.get('lead_id'):
-            lead = self.env['crm.lead'].browse(vals['lead_id'])
-            if lead and lead.partner_id:
-                vals['partner_id'] = lead.partner_id.id
-        
-        # Asignar lead_id desde sale_order_id si no está definido
-        if not vals.get('lead_id') and vals.get('sale_order_id'):
-            sale_order = self.env['sale.order'].browse(vals['sale_order_id'])
-            if sale_order and sale_order.opportunity_id:
-                vals['lead_id'] = sale_order.opportunity_id.id
-        
-        # Crear la alerta
-        alert = super().create(vals)
-        
+        normalized_vals = []
+        for vals in vals_list:
+            vals = dict(vals or {})
+            # Generar nombre automático para la alerta
+            if not vals.get('name') or vals.get('name') == _('Nueva Alerta'):
+                try:
+                    seq = self.env['ir.sequence'].next_by_code('purchase.alert') or _('Nueva Alerta')
+                except Exception:
+                    seq = _('Nueva Alerta')
+                vals['name'] = seq
+
+            # Asignar partner_id desde lead_id si no está definido
+            if not vals.get('partner_id') and vals.get('lead_id'):
+                lead = self.env['crm.lead'].browse(vals['lead_id'])
+                if lead and lead.partner_id:
+                    vals['partner_id'] = lead.partner_id.id
+
+            # Asignar lead_id desde sale_order_id si no está definido
+            if not vals.get('lead_id') and vals.get('sale_order_id'):
+                sale_order = self.env['sale.order'].browse(vals['sale_order_id'])
+                if sale_order and sale_order.opportunity_id:
+                    vals['lead_id'] = sale_order.opportunity_id.id
+            normalized_vals.append(vals)
+
+        alerts = super().create(normalized_vals)
+
         # Actualizar líneas después de crear (necesitamos el ID)
-        if alert.alert_line_ids or alert.product_id:
-            alert._update_component_lines()
-        
-        return alert
+        for alert in alerts:
+            if alert.alert_line_ids or alert.product_id:
+                alert._update_component_lines()
+
+        return alerts
     
     
     def _delete_existing_component_lines(self):
@@ -297,9 +301,9 @@ class PurchaseAlert(models.Model):
             # NO invalidar cache aquí para evitar bucles infinitos
     
     @api.model
-    def _search(self, domain, offset=0, limit=None, order=None):
+    def _search(self, domain, offset=0, limit=None, order=None, **kwargs):
         """Sobrescribir search - NO crear líneas automáticamente para evitar duplicados."""
-        result = super()._search(domain, offset=offset, limit=limit, order=order)
+        result = super()._search(domain, offset=offset, limit=limit, order=order, **kwargs)
         # NO crear líneas automáticamente aquí - solo se crearán en create() o write()
         # Esto evita duplicados cuando se valida o se accede a una alerta existente
         return result
@@ -741,7 +745,7 @@ class PurchaseAlert(models.Model):
             'order_line': [(0, 0, {
                 'product_id': self.product_id.id,
                 'product_qty': self.quantity_missing,
-                'product_uom': uom.id,
+                'product_uom_id': uom.id,
                 'price_unit': supplier.price or self.product_id.standard_price,
                 'date_planned': fields.Datetime.now(),
                 'name': _('Para cliente: %s - %s') % (self.partner_id.display_name, self.sale_order_id.name),

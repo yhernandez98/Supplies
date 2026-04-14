@@ -261,7 +261,7 @@
             <field name="view_mode">kanban,list</field>
             <field name="view_id" ref="view_customer_kanban"/>
             <field name="search_view_id" ref="view_customer_search"/>
-            <field name="domain">[('is_company', '=', True), ('property_stock_customer', '!=', False)]</field>
+            <field name="domain">[('is_company', '=', True), ('property_stock_customer', '!=', False), ('product_count', '>', 0)]</field>
             <field name="context">{}</field>
             <field name="help" type="html">
                 <p class="o_view_nocontent_smiling_face">
@@ -598,12 +598,13 @@
             <field name="state">code</field>
             <field name="code">
 # Obtener registros seleccionados o todos los del dominio
+ctx = dict(env.context or {})
 if records:
     action = records.action_generate_all_life_sheets_for_customer()
 else:
     # Si no hay registros seleccionados, usar el dominio activo
-    active_ids = context.get('active_ids', [])
-    active_domain = context.get('active_domain', [])
+    active_ids = ctx.get('active_ids', [])
+    active_domain = ctx.get('active_domain', [])
     
     if active_ids:
         records = env['stock.lot'].browse(active_ids)
@@ -676,7 +677,7 @@ else:
                 (0, 0, {'view_mode': 'kanban', 'view_id': ref('view_customer_kanban_detailed')}),
                 (0, 0, {'view_mode': 'list', 'view_id': ref('view_customer_list')})]"/>
             <field name="search_view_id" ref="view_customer_search"/>
-            <field name="domain">[('is_company', '=', True), ('property_stock_customer', '!=', False)]</field>
+            <field name="domain">[('is_company', '=', True), ('property_stock_customer', '!=', False), ('product_count', '>', 0)]</field>
             <field name="context">{'from_detailed_view': True}</field>
             <field name="help" type="html">
                 <p class="o_view_nocontent_smiling_face">
@@ -727,12 +728,13 @@ else:
             <field name="state">code</field>
             <field name="code">
 # Obtener el cliente del contexto o de los registros visibles
-customer_id = context.get('active_partner_id') or context.get('default_customer_id')
+ctx = dict(env.context or {})
+customer_id = ctx.get('active_partner_id') or ctx.get('default_customer_id')
 
 # Si no está en el contexto, intentar obtenerlo del dominio o de los registros visibles
 if not customer_id:
     # Buscar en los registros actuales (si hay alguno seleccionado)
-    active_ids = context.get('active_ids', [])
+    active_ids = ctx.get('active_ids', [])
     if active_ids:
         lots = env['stock.lot'].browse(active_ids)
         customers = lots.mapped('customer_id').filtered(lambda c: c)
@@ -742,7 +744,7 @@ if not customer_id:
 # Si aún no hay customer_id, intentar obtenerlo del dominio activo
 if not customer_id:
     # Buscar en el dominio activo de la vista actual
-    active_domain = context.get('active_domain', [])
+    active_domain = ctx.get('active_domain', [])
     if active_domain:
         # Buscar customer_id en el dominio activo
         for condition in active_domain:
@@ -754,7 +756,15 @@ if not customer_id:
 if not customer_id:
     raise UserError('No se pudo determinar el cliente para cambiar de vista. Por favor, asegúrate de estar viendo el inventario de un cliente específico.')
 
-customer = env['res.partner'].browse(customer_id)
+# Normalizar a un ID entero para evitar browse sobre tipos inesperados.
+if isinstance(customer_id, (list, tuple)):
+    customer_id = customer_id[0] if customer_id else False
+if not customer_id:
+    raise UserError('No se pudo determinar un cliente válido para cambiar de vista.')
+
+customer = env['res.partner'].browse(int(customer_id))
+if not customer.exists():
+    raise UserError('El cliente seleccionado ya no existe o no es accesible.')
 action = customer.action_view_customer_inventory_kanban()
             </field>
         </record>
@@ -767,12 +777,13 @@ action = customer.action_view_customer_inventory_kanban()
             <field name="state">code</field>
             <field name="code">
 # Obtener el cliente del contexto o de los registros visibles
-customer_id = context.get('active_partner_id') or context.get('default_customer_id')
+ctx = dict(env.context or {})
+customer_id = ctx.get('active_partner_id') or ctx.get('default_customer_id')
 
 # Si no está en el contexto, intentar obtenerlo del dominio o de los registros visibles
 if not customer_id:
     # Buscar en los registros actuales (si hay alguno seleccionado)
-    active_ids = context.get('active_ids', [])
+    active_ids = ctx.get('active_ids', [])
     if active_ids:
         lots = env['stock.lot'].browse(active_ids)
         customers = lots.mapped('customer_id').filtered(lambda c: c)
@@ -782,7 +793,7 @@ if not customer_id:
 # Si aún no hay customer_id, intentar obtenerlo del dominio activo
 if not customer_id:
     # Buscar en el dominio activo de la vista actual
-    active_domain = context.get('active_domain', [])
+    active_domain = ctx.get('active_domain', [])
     if active_domain:
         # Buscar customer_id en el dominio activo
         for condition in active_domain:
@@ -794,7 +805,15 @@ if not customer_id:
 if not customer_id:
     raise UserError('No se pudo determinar el cliente para cambiar de vista. Por favor, asegúrate de estar viendo el inventario de un cliente específico.')
 
-customer = env['res.partner'].browse(customer_id)
+# Normalizar a un ID entero para evitar browse sobre tipos inesperados.
+if isinstance(customer_id, (list, tuple)):
+    customer_id = customer_id[0] if customer_id else False
+if not customer_id:
+    raise UserError('No se pudo determinar un cliente válido para cambiar de vista.')
+
+customer = env['res.partner'].browse(int(customer_id))
+if not customer.exists():
+    raise UserError('El cliente seleccionado ya no existe o no es accesible.')
 action = customer.action_view_customer_inventory_list()
             </field>
         </record>

@@ -11,7 +11,7 @@
     ''',
     'author': 'Supplies De Colombia SAS',
     'category': 'Inventory/Inventory',
-    'version': '19.0.0.0.2',
+    'version': '19.0.0.0.50',
     'depends': [
         'stock',
         'product_suppiles',  # Para usar el campo inventory_plate en stock.lot y mover productos relacionados
@@ -20,14 +20,24 @@
     'assets': {
         'web.assets_backend': [
             'inventory_dashboard_simple/static/src/css/dashboard_kanban.css',
+            'inventory_dashboard_simple/static/src/css/lab_hub_theme.css',
+            'inventory_dashboard_simple/static/src/js/inventory_lab_hub_theme.js',
         ],
     },
     'data': [
         'security/ir.model.access.csv',
+        'data/component_lab_acta_sequence.xml',
         'views/internal_reference_views.xml',
         'views/stock_lot_views.xml',
         'views/stock_quant_views.xml',
         'wizard/delivery_route_trigger_wizard_views.xml',
+        'wizard/component_transfer_wizard_views.xml',
+        'views/component_lab_pending_views.xml',
+        'views/component_lab_pool_views.xml',
+        'views/component_lab_hub_dashboard_templates.xml',
+        'reports/component_lab_assignment_report.xml',
+        'reports/component_lab_acta_report.xml',
+        'views/stock_picking_supplies_lab_inherit.xml',
         'wizard/quant_editor_wizard_views.xml',
         'views/inventory_dashboard_views.xml',
         'views/product_relation_search_views.xml',

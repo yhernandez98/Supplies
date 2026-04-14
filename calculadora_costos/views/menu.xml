@@ -4,7 +4,7 @@
     <menuitem id="menu_calculadora_costos_root"
               name="Calculadora de Costos"
               sequence="100"
-              web_icon="calculadora_costos,static/description/icon.png"/>
+              web_icon="calculadora_costos,static/description/calculadora.png"/>
 
     <!-- Calculadora Unificada -->
     <menuitem id="menu_calculadora"
@@ -13,15 +13,4 @@
               action="action_calculadora"
               sequence="10"/>
 
-    <!-- Submenú: Configuración -->
-    <menuitem id="menu_calculadora_configuracion"
-              name="Configuración"
-              parent="menu_calculadora_costos_root"
-              sequence="90"/>
-
-    <menuitem id="menu_parametros_financieros"
-              name="Parámetros Financieros"
-              parent="menu_calculadora_configuracion"
-              action="action_parametros_financieros"
-              sequence="10"/>
 </odoo>

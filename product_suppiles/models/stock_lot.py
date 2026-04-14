@@ -340,6 +340,20 @@ class StockLot(models.Model):
         return super().create(vals_list)
 
     def write(self, vals):
+        if self.env.context.get("skip_lot_date_history"):
+            return super().write(vals)
+
+        previous_entry_dates = {}
+        previous_exit_dates = {}
+        if "entry_date" in vals and not vals["entry_date"]:
+            previous_entry_dates = {
+                lot.id: lot.entry_date for lot in self if lot.id and lot.entry_date
+            }
+        if "exit_date" in vals and not vals["exit_date"]:
+            previous_exit_dates = {
+                lot.id: lot.exit_date for lot in self if lot.id and lot.exit_date
+            }
+
         # Validación server-side: no permitir desmarcar el checkbox si este serial
         # está asociado como elemento (related_lot_id) en alguna línea de suministro.
         if "cost_additional" in vals and vals.get("cost_additional") is False:
@@ -399,28 +413,24 @@ class StockLot(models.Model):
         if "entry_date" in vals:
             if vals["entry_date"]:
                 vals["last_entry_date_display"] = vals["entry_date"]
-            elif self.ids:
-                self.env.cr.execute(
-                    """UPDATE stock_lot SET last_entry_date_display = entry_date
-                       WHERE id IN %s AND entry_date IS NOT NULL""",
-                    (tuple(self.ids),),
-                )
         # Conservar última fecha de salida para mostrar en suscripción hasta la limpieza
         if "exit_date" in vals:
             if vals["exit_date"]:
                 vals["last_exit_date_display"] = vals["exit_date"]
-            elif self.ids:
-                # Al borrar exit_date: copiar valor actual a last_exit_date_display ANTES del write
-                # para que la suscripción siga mostrando la fecha y el registro no "desaparezca"
-                self.env.cr.execute(
-                    """UPDATE stock_lot SET last_exit_date_display = exit_date
-                       WHERE id IN %s AND exit_date IS NOT NULL""",
-                    (tuple(self.ids),),
-                )
+            elif "last_exit_date_display" in vals:
                 # No pasar last_exit_date_display en vals para que ningún otro write lo pise
-                if "last_exit_date_display" in vals:
-                    vals = {k: v for k, v in vals.items() if k != "last_exit_date_display"}
+                vals = {k: v for k, v in vals.items() if k != "last_exit_date_display"}
         res = super().write(vals)
+        if previous_entry_dates:
+            for lot in self.filtered(lambda l: l.id in previous_entry_dates and not l.entry_date):
+                super(StockLot, lot.with_context(skip_lot_date_history=True)).write({
+                    "last_entry_date_display": previous_entry_dates[lot.id],
+                })
+        if previous_exit_dates:
+            for lot in self.filtered(lambda l: l.id in previous_exit_dates and not l.exit_date):
+                super(StockLot, lot.with_context(skip_lot_date_history=True)).write({
+                    "last_exit_date_display": previous_exit_dates[lot.id],
+                })
         # Refrescar productos agrupados de la suscripción para que muestre last_exit_date_display
         if "exit_date" in vals and not vals.get("exit_date"):
             for lot in self:
@@ -453,6 +463,23 @@ class StockLot(models.Model):
 
     lot_classification = fields.Selection(
         related="product_id.classification", store=True, readonly=True
+    )
+    asset_category_id = fields.Many2one(
+        "product.asset.category",
+        related="product_id.asset_category_id",
+        readonly=True,
+        store=False,
+    )
+    asset_class_id = fields.Many2one(
+        "product.asset.class",
+        related="product_id.asset_class_id",
+        readonly=True,
+        store=False,
+    )
+    show_subscription_service_fields = fields.Boolean(
+        string="Mostrar servicio/suscripción",
+        compute="_compute_show_subscription_service_fields",
+        store=False,
     )
 
     component_product_ids = fields.Many2many(
@@ -549,16 +576,18 @@ class StockLot(models.Model):
     def _search_has_excess_quantity(self, operator, value):
         """Permite buscar seriales con cantidad > 1."""
         try:
-            # Buscar todos los lotes con cantidad > 1 usando SQL directa para mejor performance
-            self.env.cr.execute("""
-                SELECT DISTINCT lot.id 
-                FROM stock_lot lot
-                INNER JOIN stock_quant quant ON quant.lot_id = lot.id
-                WHERE quant.quantity > 0
-                GROUP BY lot.id
-                HAVING SUM(quant.quantity) > 1.0
-            """)
-            lot_ids = [row[0] for row in self.env.cr.fetchall()]
+            # ORM: mantener reglas de acceso y transaccionalidad sin SQL manual.
+            grouped = self.env["stock.quant"].read_group(
+                domain=[("lot_id", "!=", False), ("quantity", ">", 0)],
+                fields=["lot_id", "quantity:sum"],
+                groupby=["lot_id"],
+                lazy=False,
+            )
+            lot_ids = [
+                row["lot_id"][0]
+                for row in grouped
+                if row.get("lot_id") and (row.get("quantity", 0.0) or 0.0) > 1.0
+            ]
             
             # Si no hay resultados, retornar dominio que no coincida con nada
             if not lot_ids:
@@ -605,6 +634,19 @@ class StockLot(models.Model):
             except Exception:
                 # Si hay error (por ejemplo, durante instalación), dejar en False
                 lot.current_location_id = False
+
+    @api.depends("lot_classification", "asset_category_id", "asset_class_id")
+    def _compute_show_subscription_service_fields(self):
+        for lot in self:
+            default_visible = lot.lot_classification not in ("component", "complement", "spare")
+            category_name = (lot.asset_category_id.name or "").strip().lower()
+            class_name = (lot.asset_class_id.name or "").strip().lower()
+            complement_phone_exception = (
+                lot.lot_classification == "complement"
+                and category_name == "telefonia"
+                and class_name == "telefono"
+            )
+            lot.show_subscription_service_fields = default_visible or complement_phone_exception
     
     def _compute_is_associated_element(self):
         """Calcula si este lote está asociado como elemento a otro producto principal."""

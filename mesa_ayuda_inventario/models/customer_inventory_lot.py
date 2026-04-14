@@ -211,7 +211,58 @@ class StockLotCustomerInventory(models.Model):
     license_8_name = fields.Char(string='Licencia 8', compute='_compute_licenses_columns', store=False)
     license_9_name = fields.Char(string='Licencia 9', compute='_compute_licenses_columns', store=False)
     license_10_name = fields.Char(string='Licencia 10', compute='_compute_licenses_columns', store=False)
-    
+
+    # Separación explícita pestaña Equipo vs Usuario (para wizards sin mezclar)
+    mesa_equipment_only_licenses_list_display = fields.Char(
+        string='Licencias solo equipo',
+        compute='_compute_mesa_license_tab_splits',
+        store=False,
+        help='Nombres de servicio de licencias tipo pestaña Equipo (sin contacto en la línea).',
+    )
+    mesa_user_only_licenses_list_display = fields.Char(
+        string='Licencias solo usuario',
+        compute='_compute_mesa_license_tab_splits',
+        store=False,
+        help='Nombres de servicio de licencias tipo pestaña Usuario (contacto en la línea).',
+    )
+
+    def _mesa_license_line_service_name(self, line):
+        self.ensure_one()
+        if not line:
+            return ''
+        if getattr(line, 'service_product_id', False) and line.service_product_id:
+            return line.service_product_id.name or ''
+        if getattr(line, 'license_id', False) and line.license_id:
+            return line.license_id.display_name or ''
+        return ''
+
+    @api.depends('assigned_licenses_count', 'assigned_licenses_display', 'related_partner_id')
+    def _compute_mesa_license_tab_splits(self):
+        for lot in self:
+            lot.mesa_equipment_only_licenses_list_display = ''
+            lot.mesa_user_only_licenses_list_display = ''
+            if 'license.equipment' not in lot.env:
+                continue
+            names_eq = []
+            names_user = []
+            try:
+                if hasattr(lot, 'license_equipment_ids'):
+                    for line in lot.license_equipment_ids.filtered(
+                        lambda l: l.state == 'assigned' and not l.contact_id
+                    ):
+                        n = lot._mesa_license_line_service_name(line)
+                        if n:
+                            names_eq.append(n)
+                if hasattr(lot, 'license_user_ids'):
+                    for line in lot.license_user_ids.filtered(lambda l: l.state == 'assigned'):
+                        n = lot._mesa_license_line_service_name(line)
+                        if n:
+                            names_user.append(n)
+            except Exception:
+                pass
+            lot.mesa_equipment_only_licenses_list_display = ', '.join(names_eq)
+            lot.mesa_user_only_licenses_list_display = ', '.join(names_user)
+
     def _get_product_type_name(self, product_name):
         """Obtener nombre del tipo de producto para nombrar columnas."""
         product_lower = product_name.lower()

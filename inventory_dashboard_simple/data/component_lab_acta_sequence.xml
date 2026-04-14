@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="seq_component_lab_acta" model="ir.sequence">
+        <field name="name">Acta laboratorio</field>
+        <field name="code">inventory_dashboard_simple.lab_acta</field>
+        <field name="prefix">ACTA/LAB/</field>
+        <field name="padding">6</field>
+        <field name="implementation">no_gap</field>
+    </record>
+</odoo>
+

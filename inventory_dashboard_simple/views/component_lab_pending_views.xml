@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Filtro «mis préstamos»: responsable o técnico = usuario en sesión (uid). -->
+        <record id="view_picking_internal_search_lab_loan_inherit" model="ir.ui.view">
+            <field name="name">stock.picking.internal.search.lab.loan.inherit</field>
+            <field name="model">stock.picking</field>
+            <field name="inherit_id" ref="stock.view_picking_internal_search"/>
+            <field name="arch" type="xml">
+                <xpath expr="//search" position="inside">
+                    <separator/>
+                    <filter string="Mis préstamos lab."
+                            name="my_lab_loans"
+                            domain="['|', ('lab_responsible_user_id', '=', uid), ('lab_technician_user_id', '=', uid)]"
+                            help="Solo albaranes donde usted es responsable o técnico asignado (laboratorio)."/>
+                    <filter string="Lab.: solo completados"
+                            name="lab_loans_completed_only"
+                            domain="[('component_lab_loan_completed', '=', True)]"/>
+                    <filter string="Lab.: ocultar completados"
+                            name="lab_loans_hide_completed"
+                            domain="[('component_lab_loan_completed', '=', False)]"/>
+                    <filter string="Lab.: pendiente aprobación responsable"
+                            name="lab_loans_pending_responsible"
+                            domain="[('component_lab_pending_responsible_approval', '=', True)]"/>
+                    <separator/>
+                    <filter string="Pool: ingresos por validar"
+                            name="lab_pool_intake_pending"
+                            domain="[('component_lab_pool_intake', '=', True), ('component_lab_temp_out', '=', True), ('state', 'not in', ('done', 'cancel'))]"/>
+                    <filter string="Pool: mis ingresos por validar"
+                            name="my_lab_pool_intake_pending"
+                            domain="[('component_lab_pool_intake', '=', True), ('component_lab_temp_out', '=', True), ('state', 'not in', ('done', 'cancel')), ('lab_responsible_user_id', '=', uid)]"/>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="view_picking_tree_component_lab_unified" model="ir.ui.view">
+            <field name="name">stock.picking.list.component.lab.unified</field>
+            <field name="model">stock.picking</field>
+            <field name="arch" type="xml">
+                <list string="Seguimiento préstamos laboratorio"
+                      class="o_lab_loan_tracking_list"
+                      decoration-info="component_lab_temp_out"
+                      decoration-success="component_lab_loan_active"
+                      decoration-warning="component_lab_pending_responsible_approval"
+                      decoration-muted="component_lab_loan_completed"
+                      create="false">
+                    <field name="component_lab_tracking_phase" string="Fase"/>
+                    <field name="name"/>
+                    <field name="scheduled_date"/>
+                    <field name="location_id"/>
+                    <field name="location_dest_id"/>
+                    <field name="lab_responsible_user_id"/>
+                    <field name="lab_technician_user_id"/>
+                    <field name="state"/>
+                    <field name="component_lab_return_picking_id" optional="show"/>
+                    <field name="origin"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_picking_form_component_lab_inherit" model="ir.ui.view">
+            <field name="name">stock.picking.form.component.lab.inherit</field>
+            <field name="model">stock.picking</field>
+            <field name="inherit_id" ref="stock.view_picking_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='origin']" position="after">
+                    <group string="Préstamo laboratorio (herramientas)"
+                           colspan="2"
+                           invisible="not lab_responsible_user_id and not lab_technician_user_id and not component_lab_temp_out and not component_lab_loan_active and not component_lab_loan_completed and not component_lab_pending_responsible_approval">
+                        <field name="component_lab_tracking_phase" readonly="1"/>
+                        <field name="component_lab_temp_out" readonly="1"/>
+                        <field name="component_lab_loan_active" readonly="1"/>
+                        <field name="component_lab_pending_responsible_approval" readonly="1"/>
+                        <field name="component_lab_loan_completed" readonly="1"/>
+                        <field name="lab_responsible_user_id" readonly="1"/>
+                        <field name="lab_technician_user_id" readonly="1"/>
+                        <field name="component_lab_return_picking_id" readonly="1"/>
+                        <button name="action_lab_loan_responsible_approve"
+                                type="object"
+                                string="Aprobar cierre de préstamo (responsable)"
+                                class="btn-primary"
+                                invisible="not component_lab_pending_responsible_approval"/>
+                    </group>
+                    <group string="Devolución laboratorio"
+                           colspan="2"
+                           invisible="not component_lab_source_loan_picking_id">
+                        <field name="component_lab_source_loan_picking_id" readonly="1"/>
+                    </group>
+                </xpath>
+            </field>
+        </record>
+
+        <!-- Una sola acción: pendiente validar + préstamo activo (validado, falta devolución) -->
+        <record id="action_component_lab_loan_tracking" model="ir.actions.act_window">
+            <field name="name">Seguimiento préstamos lab. (herramientas)</field>
+            <field name="res_model">stock.picking</field>
+            <field name="view_mode">list,form</field>
+            <field name="view_id" ref="view_picking_tree_component_lab_unified"/>
+            <field name="domain">['|', '|', '|', '&amp;', ('component_lab_temp_out', '=', True), ('state', 'not in', ('done', 'cancel')), '&amp;', ('component_lab_loan_active', '=', True), ('state', '=', 'done'), ('component_lab_pending_responsible_approval', '=', True), ('component_lab_loan_completed', '=', True)]</field>
+            <field name="context">{'search_default_my_lab_loans': 1}</field>
+            <field name="search_view_id" ref="stock.view_picking_internal_search"/>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No hay préstamos de laboratorio en seguimiento (con el filtro actual).
+                </p>
+                <p>
+                    Por defecto solo ve albaranes donde usted es <strong>responsable</strong> o <strong>técnico asignado</strong>.
+                    Quite el filtro <strong>Mis préstamos lab.</strong> en la barra de búsqueda para ver los de todos.
+                </p>
+                <p>
+                    <strong>Fase «Pendiente validar salida»:</strong> albarán Existencias → Supp/Laboratorio creado desde
+                    <strong>Traslado Componente</strong>; valídelo cuando el material salga físicamente.
+                </p>
+                <p>
+                    <strong>Fase «Préstamo activo»:</strong> la salida ya está hecha; el técnico devuelve con el mismo wizard
+                    (Supp/Laboratorio → Existencias) y el campo <strong>Préstamo a cerrar</strong> apuntando a este albarán.
+                </p>
+                <p>
+                    <strong>Fase «Devuelto (pendiente aprobación responsable)»:</strong> la devolución ya está validada en inventario;
+                    el <strong>Responsable (lab.)</strong> debe abrir el albarán y pulsar <strong>Aprobar cierre de préstamo</strong>.
+                </p>
+                <p>
+                    <strong>Fase «Completado (devuelto)»:</strong> tras la aprobación del responsable; el registro permanece aquí.
+                    Use el filtro <strong>Lab.: ocultar completados</strong> si solo quiere pendientes.
+                </p>
+            </field>
+        </record>
+
+        <!-- Mantener xml ids antiguos por si hay favoritos: redirigen a la vista unificada -->
+        <record id="action_component_lab_open_pickings" model="ir.actions.act_window">
+            <field name="name">Seguimiento préstamos lab. (herramientas)</field>
+            <field name="res_model">stock.picking</field>
+            <field name="view_mode">list,form</field>
+            <field name="view_id" ref="view_picking_tree_component_lab_unified"/>
+            <field name="domain">['|', '|', '|', '&amp;', ('component_lab_temp_out', '=', True), ('state', 'not in', ('done', 'cancel')), '&amp;', ('component_lab_loan_active', '=', True), ('state', '=', 'done'), ('component_lab_pending_responsible_approval', '=', True), ('component_lab_loan_completed', '=', True)]</field>
+            <field name="context">{'search_default_my_lab_loans': 1}</field>
+            <field name="search_view_id" ref="stock.view_picking_internal_search"/>
+        </record>
+
+        <record id="action_component_lab_active_loans" model="ir.actions.act_window">
+            <field name="name">Seguimiento préstamos lab. (herramientas)</field>
+            <field name="res_model">stock.picking</field>
+            <field name="view_mode">list,form</field>
+            <field name="view_id" ref="view_picking_tree_component_lab_unified"/>
+            <field name="domain">['|', '|', '|', '&amp;', ('component_lab_temp_out', '=', True), ('state', 'not in', ('done', 'cancel')), '&amp;', ('component_lab_loan_active', '=', True), ('state', '=', 'done'), ('component_lab_pending_responsible_approval', '=', True), ('component_lab_loan_completed', '=', True)]</field>
+            <field name="context">{'search_default_my_lab_loans': 1}</field>
+            <field name="search_view_id" ref="stock.view_picking_internal_search"/>
+        </record>
+    </data>
+</odoo>

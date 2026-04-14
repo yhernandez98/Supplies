@@ -1,11 +1,7 @@
-# -*- coding: utf-8 -*-
-# Copyright 2026 Supplies De Colombia SAS
-# License LGPL-3.0 or later (https://www.gnu.org/licenses/lgpl-3.0.html).
-
 {
     'name': 'Calculadora de Costos y Renting',
-    'version': '19.0.1.0.0',
-    'author': 'Supplies De Colombia SAS',
+    'version': '19.0.4.0.0',
+    'author': 'Felipe Valbuena',
     'category': 'Sales/Finance',
     'summary': 'Calculadora financiera para costeo de equipos, renting y servicios técnicos',
     'description': """
@@ -17,7 +13,7 @@ Este módulo proporciona una calculadora unificada para:
 * Costeo de equipos portátiles e informáticos
 * Cálculo de opciones de renting/leasing
 * Proyecciones de flujos de caja mensuales
-* Cálculos financieros (tasas de interés, pagos periódicos, opciones de compra)
+* Cálculos financieros (tasas de interés, pagos periódicos PMT)
 
 Características:
 ---------------
@@ -26,7 +22,7 @@ Características:
 * Conversión de moneda usando TRM
 * Cálculo de tasas de interés (nominal, mensual, efectiva anual)
 * Cálculo de pagos mensuales con función PMT
-* Comparación de plazos (24, 36, 48 meses) para renting
+* Comparación de plazos (12 a 60 meses) para suscripción
 * Integración con suscripciones no contables
 * Integración con módulos de Odoo (Productos, Ventas, CRM)
     """,
@@ -41,12 +37,12 @@ Características:
     'data': [
         'security/ir.model.access.csv',
         'security/security.xml',
-        'data/parametros_financieros_data.xml',
-        'views/parametros_financieros_views.xml',
         'reports/calculadora_report.xml',
         'views/calculadora_views.xml',
         'views/menu.xml',
     ],
+    'post_init_hook': 'post_init_hook',
+    'icon': 'static/description/calculadora.png',
     'images': ['static/description/banner.png'],
     'installable': True,
     'application': True,

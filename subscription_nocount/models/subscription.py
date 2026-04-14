@@ -964,8 +964,14 @@ class SubscriptionSubscription(models.Model):
                                 if not bl or (bl.name or '').strip().upper() not in names_upper:
                                     continue
                                 products_to_add |= product
+                        # Odoo 19: los precios recurrentes suelen vivir en subscription_item_ids.
+                        # Mantener fallback a item_ids para compatibilidad.
+                        recurring_items = self.env['product.pricelist.item']
+                        if getattr(pricelist, 'subscription_item_ids', None):
+                            recurring_items |= pricelist.subscription_item_ids
                         if getattr(pricelist, 'item_ids', None):
-                            for item in pricelist.item_ids:
+                            recurring_items |= pricelist.item_ids
+                        for item in recurring_items:
                                 product = False
                                 if getattr(item, 'product_id', None):
                                     product = item.product_id
@@ -2354,45 +2360,26 @@ class SubscriptionSubscription(models.Model):
         ])
         if old_overrides:
             old_overrides.unlink()
-        existing = Override.search([('subscription_id', '=', self.id)]).mapped('lot_id').ids
+        existing = set(Override.search([('subscription_id', '=', self.id)]).mapped('lot_id').ids)
         created = 0
-        # Lotes que salieron de esta suscripción (last_subscription_id = self) con fecha salida en el mes
-        left_this_month = Lot.search([
+        # Misma fuente de fechas que Ver Detalles / facturable: incluye last_exit_date_display y congeladas.
+        lot_domain = [
+            '|',
             ('last_subscription_id', '=', self.id),
-            ('last_subscription_exit_date', '>=', first),
-            ('last_subscription_exit_date', '<=', last),
-            ('id', 'not in', existing),
-        ])
-        for lot in left_this_month:
-            entry_val = getattr(lot, 'last_subscription_entry_date', None) or getattr(lot, 'entry_date', None) or getattr(lot, 'last_entry_date_display', None)
-            exit_val = getattr(lot, 'last_subscription_exit_date', None) or getattr(lot, 'exit_date', None) or getattr(lot, 'last_exit_date_display', None)
-            if not exit_val:
-                continue
-            Override.create({
-                'subscription_id': self.id,
-                'lot_id': lot.id,
-                'entry_date': entry_val,
-                'exit_date': exit_val,
-            })
-            created += 1
-            existing.append(lot.id)
-        # Lotes con exit_date este mes que siguen asignados a esta suscripción (devolución reciente)
-        with_exit = Lot.search([
             ('active_subscription_id', '=', self.id),
-            ('exit_date', '>=', first),
-            ('exit_date', '<=', last),
-            ('id', 'not in', existing),
-        ])
-        for lot in with_exit:
-            entry_val = getattr(lot, 'entry_date', None) or getattr(lot, 'last_entry_date_display', None)
-            exit_val = getattr(lot, 'exit_date', None)
-            if not exit_val:
+        ]
+        for lot in Lot.search(lot_domain):
+            if lot.id in existing:
+                continue
+            entry_disp, exit_disp = self._lot_entry_exit_for_display(lot)
+            exit_norm = self._lot_date_for_billable(exit_disp)
+            if not exit_norm or exit_norm < first or exit_norm > last:
                 continue
             Override.create({
                 'subscription_id': self.id,
                 'lot_id': lot.id,
-                'entry_date': entry_val,
-                'exit_date': exit_val,
+                'entry_date': entry_disp,
+                'exit_date': exit_disp,
             })
             created += 1
         return {
@@ -2477,6 +2464,37 @@ class SubscriptionSubscription(models.Model):
                     break
 
         equipment_ids = list(set(equipment_ids))
+        # Un mismo serial puede estar en varios agrupados (ej. servicio renting vs EQUIPO RETIRADO).
+        # Debe prevalecer la fila coherente con el servicio del lote (mismo criterio que "Ver Detalles" por fila).
+        if equipment_ids:
+            lines = self.env['subscription.equipment.serial.line'].browse(equipment_ids)
+            by_lot = {}
+            no_lot_ids = []
+            for line in lines:
+                if line.lot_id:
+                    by_lot.setdefault(line.lot_id.id, []).append(line)
+                else:
+                    no_lot_ids.append(line.id)
+            deduped_ids = list(no_lot_ids)
+            for lot_id, candidates in by_lot.items():
+                lot = self.env['stock.lot'].browse(lot_id)
+                service = lot.subscription_service_product_id or lot.last_subscription_service_id
+                target_price = self._get_price_for_product(service, 1.0) if service else 0.0
+                target_f = float(target_price or 0.0)
+                best = None
+                best_key = None
+                for c in candidates:
+                    cr = float(c.cost_renting or 0.0)
+                    diff = abs(cr - target_f)
+                    exact = diff < 0.01
+                    # Preferir coincidencia con precio del servicio del serial; empate: menor costo (retirado = 0).
+                    key = (0 if exact else 1, diff, cr)
+                    if best is None or key < best_key:
+                        best = c
+                        best_key = key
+                if best:
+                    deduped_ids.append(best.id)
+            equipment_ids = deduped_ids
         empty_domain = [('id', '=', False)]
         domain = [('id', 'in', equipment_ids)] if equipment_ids else empty_domain
 
@@ -2782,24 +2800,31 @@ class SubscriptionSubscription(models.Model):
                 or getattr(lot, 'entry_date', None)
                 or getattr(lot, 'last_entry_date_display', None)
             )
-            exit_ = (
-                override.exit_date
-                or getattr(lot, 'last_subscription_exit_date', None)
-                or getattr(lot, 'exit_date', None)
-                or getattr(lot, 'last_exit_date_display', None)
-            )
+            if override.exit_date:
+                exit_ = override.exit_date
+            elif (
+                getattr(lot, 'active_subscription_id', None)
+                and lot.active_subscription_id.id == self.id
+            ):
+                exit_ = getattr(lot, 'exit_date', None) or getattr(lot, 'last_exit_date_display', None)
+            else:
+                exit_ = (
+                    getattr(lot, 'last_subscription_exit_date', None)
+                    or getattr(lot, 'exit_date', None)
+                    or getattr(lot, 'last_exit_date_display', None)
+                )
             return (entry, exit_)
 
         if getattr(lot, 'last_subscription_id', None) and lot.last_subscription_id.id == self.id:
             # Override por suscripción para seriales que ya salieron de esta suscripción.
             entry = getattr(lot, 'last_subscription_entry_date', None)
             exit_ = getattr(lot, 'last_subscription_exit_date', None)
+            # Si al congelar no había salida en el lote, usar lo mismo que exit_date_display en inventario.
+            if not exit_:
+                exit_ = getattr(lot, 'exit_date', None) or getattr(lot, 'last_exit_date_display', None)
             return (entry, exit_)
         if getattr(lot, 'active_subscription_id', None) and lot.active_subscription_id.id == self.id:
-            # Para la suscripción ACTUAL:
-            # - Antes devolvía exit_date = None, por eso en "Ver Detalles" no se veía fecha ni tiempo restante.
-            # - Sin romper históricos, mostramos la fecha de salida planificada
-            #   si existe (exit_date o last_exit_date_display).
+            # Misma lógica que product_suppiles exit_date_display: exit_date o respaldo last_exit_date_display.
             entry = getattr(lot, 'entry_date', None) or getattr(lot, 'last_entry_date_display', None)
             exit_ = getattr(lot, 'exit_date', None) or getattr(lot, 'last_exit_date_display', None)
             return (entry, exit_)

@@ -58,6 +58,23 @@ class CrmLead(models.Model):
         compute_sudo=True,
         help='Inventario existente en la ubicación Supp/Existencias.',
     )
+    solution_quote_ids = fields.One2many(
+        'crm.solution.quote',
+        'lead_id',
+        string='Propuestas de Solucion',
+        readonly=True,
+    )
+    solution_quote_count = fields.Integer(
+        string='Numero de Propuestas',
+        compute='_compute_solution_quote_count',
+        readonly=True,
+    )
+    current_solution_quote_id = fields.Many2one(
+        'crm.solution.quote',
+        string='Propuesta Actual',
+        compute='_compute_current_solution_quote_id',
+        readonly=True,
+    )
 
     @api.depends('purchase_alert_ids')
     def _compute_purchase_alert_count(self):
@@ -81,6 +98,17 @@ class CrmLead(models.Model):
         """Calcular número de suscripciones."""
         for lead in self:
             lead.subscription_count = len(lead.subscription_ids)
+
+    @api.depends('solution_quote_ids')
+    def _compute_solution_quote_count(self):
+        for lead in self:
+            lead.solution_quote_count = len(lead.solution_quote_ids)
+
+    @api.depends('solution_quote_ids.is_current')
+    def _compute_current_solution_quote_id(self):
+        for lead in self:
+            current = lead.solution_quote_ids.filtered(lambda q: q.is_current)
+            lead.current_solution_quote_id = current[:1].id if current else False
 
     @api.depends()
     def _compute_supplies_stock_quants(self):
@@ -352,5 +380,40 @@ class CrmLead(models.Model):
                     'type': 'info',
                 }
             }
+
+    def action_open_solution_quote_wizard(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Armar Solucion'),
+            'res_model': 'crm.solution.quote.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'active_model': 'crm.lead',
+                'active_id': self.id,
+            },
+        }
+
+    def action_view_solution_quotes(self):
+        self.ensure_one()
+        action = {
+            'type': 'ir.actions.act_window',
+            'name': _('Propuestas de Solucion'),
+            'res_model': 'crm.solution.quote',
+            'view_mode': 'list,form',
+            'domain': [('lead_id', '=', self.id)],
+            'context': {'default_lead_id': self.id},
+        }
+        if len(self.solution_quote_ids) == 1:
+            action.update({'view_mode': 'form', 'res_id': self.solution_quote_ids.id})
+        return action
+
+    def action_approve_current_solution_quote(self):
+        self.ensure_one()
+        if not self.current_solution_quote_id:
+            raise UserError(_('No hay una propuesta actual para aprobar.'))
+        self.current_solution_quote_id.action_approve()
+        return self.action_view_solution_quotes()
 
 

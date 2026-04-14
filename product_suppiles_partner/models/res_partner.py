@@ -4,6 +4,21 @@ from odoo import api, fields, models, _
 class ResPartner(models.Model):
     _inherit = "res.partner"
 
+    def name_get(self):
+        """Opcionalmente mostrar solo el nombre del contacto (sin empresa)."""
+        if self.env.context.get('only_contact_name'):
+            result = []
+            for partner in self:
+                name = (partner.name or '').strip()
+                # Si por datos llega "EMPRESA, Nombre Apellido", mostrar solo la parte final.
+                if ',' in name:
+                    parts = [p.strip() for p in name.split(',') if p and p.strip()]
+                    if parts:
+                        name = parts[-1]
+                result.append((partner.id, name))
+            return result
+        return super().name_get()
+
     lot_ids = fields.One2many(
         "stock.lot",
         "related_partner_id",

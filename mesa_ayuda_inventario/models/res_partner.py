@@ -23,8 +23,66 @@ class ResPartner(models.Model):
         string='Cantidad de Productos',
         compute='_compute_product_count',
         store=False,
+        search='_search_product_count',
         help='Cantidad de productos en inventario de este cliente'
     )
+
+    def _search_product_count(self, operator, value):
+        """Permite filtrar por cantidad de productos en dominios (ej. product_count > 0)."""
+        supported_ops = ('>', '>=', '<', '<=', '=', '!=')
+        if operator not in supported_ops:
+            return [('id', '=', False)]
+        try:
+            threshold = int(value or 0)
+        except Exception:
+            threshold = 0
+
+        # Optimización: para el caso más común (product_count > 0), prefiltrar candidatos
+        # antes de ejecutar el cómputo completo.
+        partners = self.search([('is_company', '=', True), ('property_stock_customer', '!=', False)])
+        if operator in ('>', '>=') and threshold <= 0 and partners:
+            Quant = self.env['stock.quant']
+            Lot = self.env['stock.lot']
+            candidate_ids = set()
+
+            # 1) Partners con lotes explícitamente asignados por customer_id
+            candidate_ids.update(Lot.search([('customer_id', 'in', partners.ids)]).mapped('customer_id').ids)
+
+            # 2) Partners con quants en su ubicación de cliente
+            loc_to_partner = {p.property_stock_customer.id: p.id for p in partners if p.property_stock_customer}
+            if loc_to_partner:
+                quants = Quant.search([
+                    ('location_id', 'in', list(loc_to_partner.keys())),
+                    ('quantity', '>', 0),
+                    ('lot_id', '!=', False),
+                ])
+                for q in quants:
+                    pid = loc_to_partner.get(q.location_id.id)
+                    if pid:
+                        candidate_ids.add(pid)
+
+            partners = partners.browse(list(candidate_ids)) if candidate_ids else partners.browse([])
+
+        # Reusar el cómputo actual para mantener exactamente la misma lógica de conteo.
+        partners._compute_product_count()
+
+        def _match(count):
+            if operator == '>':
+                return count > threshold
+            if operator == '>=':
+                return count >= threshold
+            if operator == '<':
+                return count < threshold
+            if operator == '<=':
+                return count <= threshold
+            if operator == '=':
+                return count == threshold
+            if operator == '!=':
+                return count != threshold
+            return False
+
+        matched_ids = [p.id for p in partners if _match(p.product_count or 0)]
+        return [('id', 'in', matched_ids)] if matched_ids else [('id', '=', False)]
     
     @api.depends('property_stock_customer')
     def _compute_product_count(self):
@@ -59,6 +117,12 @@ class ResPartner(models.Model):
         
         # 2. Buscar lotes por ubicación (una consulta para todos)
         lot_ids_by_location = {}
+        # Mapa directo ubicación -> partner para evitar filtered() por cada quant (cuello de botella)
+        location_to_partner = {
+            p.property_stock_customer.id: p.id
+            for p in partners_with_location
+            if p.property_stock_customer
+        }
         if location_ids:
             quants = Quant.search([
                 ('location_id', 'in', location_ids),
@@ -66,9 +130,8 @@ class ResPartner(models.Model):
                 ('lot_id', '!=', False),
             ])
             for quant in quants:
-                partner = partners_with_location.filtered(lambda p: p.property_stock_customer.id == quant.location_id.id)
-                if partner:
-                    partner_id = partner[0].id
+                partner_id = location_to_partner.get(quant.location_id.id)
+                if partner_id:
                     if partner_id not in lot_ids_by_location:
                         lot_ids_by_location[partner_id] = []
                     lot_ids_by_location[partner_id].append(quant.lot_id.id)

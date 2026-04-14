@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="report_component_lab_assignment_pdf">
+        <t t-call="web.html_container">
+            <t t-call="web.basic_layout">
+                <div class="page">
+                    <h2>Reporte activos laboratorio</h2>
+                    <p>Estado actual de asignaciones por serial.</p>
+                    <table class="table table-sm o_main_table">
+                        <thead>
+                            <tr>
+                                <th>Serial</th>
+                                <th>Producto</th>
+                                <th>Estado</th>
+                                <th>Responsable</th>
+                                <th>Técnico</th>
+                                <th>Fecha estimada</th>
+                                <th>Días restantes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="docs" t-as="rec">
+                                <tr>
+                                    <td><span t-esc="rec.lot_id.name or ''"/></td>
+                                    <td><span t-esc="rec.product_id.display_name or ''"/></td>
+                                    <td><span t-esc="rec.state"/></td>
+                                    <td><span t-esc="rec.responsible_user_id.display_name or ''"/></td>
+                                    <td><span t-esc="rec.technician_user_id.display_name or ''"/></td>
+                                    <td><span t-esc="rec.expected_return_date or ''"/></td>
+                                    <td>
+                                        <t t-if="rec.state == 'with_technician' and rec.expected_return_date">
+                                            <span t-esc="rec.remaining_days"/>
+                                        </t>
+                                    </td>
+                                </tr>
+                            </t>
+                        </tbody>
+                    </table>
+                </div>
+            </t>
+        </t>
+    </template>
+
+    <record id="action_report_component_lab_assignment_pdf" model="ir.actions.report">
+        <field name="name">Reporte Activos Laboratorio</field>
+        <field name="model">component.lab.assignment</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">inventory_dashboard_simple.report_component_lab_assignment_pdf</field>
+        <field name="report_file">inventory_dashboard_simple.report_component_lab_assignment_pdf</field>
+        <field name="binding_model_id" ref="model_component_lab_assignment"/>
+        <field name="binding_type">report</field>
+    </record>
+</odoo>
+

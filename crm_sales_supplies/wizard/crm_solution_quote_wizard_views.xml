@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="view_crm_solution_quote_wizard_form" model="ir.ui.view">
+            <field name="name">crm.solution.quote.wizard.form</field>
+            <field name="model">crm.solution.quote.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Armar Solucion Comercial">
+                    <sheet>
+                        <group>
+                            <group>
+                                <field name="lead_id" readonly="1" string="Oportunidad"/>
+                                <field name="partner_id" readonly="1"/>
+                                <field name="sale_order_id" readonly="1"/>
+                            </group>
+                            <group>
+                                <field name="warehouse_id"/>
+                                <field name="location_id"/>
+                                <field name="subscription_id"/>
+                                <field name="final_service_name"/>
+                                <field name="package_total_price"/>
+                            </group>
+                        </group>
+                        <group string="Lineas de la solucion">
+                            <field name="line_ids">
+                                <list editable="bottom">
+                                    <field name="line_type" string="Tipo"/>
+                                    <field name="product_id"
+                                           domain="[('id', 'in', allowed_product_ids)]"
+                                           options="{'no_create': True, 'no_create_edit': True, 'no_open': True}"/>
+                                    <field name="quantity" string="Cantidad"/>
+                                </list>
+                            </field>
+                        </group>
+                    </sheet>
+                    <footer>
+                        <button name="action_create_quote" type="object" string="Guardar solucion" class="btn-primary"/>
+                        <button string="Cerrar" special="cancel" class="btn-secondary"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+    </data>
+</odoo>

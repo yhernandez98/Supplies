@@ -28,14 +28,10 @@
                     <attribute name="string">Número de serie</attribute>
                     <attribute name="placeholder">Ingrese el número de serie</attribute>
                 </xpath>
-                <!-- Ocultar el campo debajo de Empresa (rectángulo vacío). La vista base solo tiene un following-sibling field. -->
-                <xpath expr="//sheet//field[@name='company_id'][not(ancestor::notebook)]/following-sibling::field[1]" position="attributes">
-                    <attribute name="invisible">1</attribute>
-                </xpath>
-                <!-- Ocultar el campo de texto grande debajo de Customer y encima de DESCRIPTION (el que Studio marcaba). En stock.lot suele ser "note". -->
-                <xpath expr="//sheet//field[@name='note'][not(ancestor::notebook)]" position="attributes">
-                    <attribute name="invisible">1</attribute>
-                </xpath>
+                <!-- Quitar campos vacíos debajo de Empresa (evita rectángulos fantasma) -->
+                <xpath expr="//sheet//field[@name='company_id'][not(ancestor::notebook)]/following-sibling::field[1]" position="replace"/>
+                <xpath expr="//sheet//field[@name='note'][not(ancestor::notebook)]" position="replace"/>
+                <xpath expr="//sheet//field[@name='lot_properties'][not(ancestor::notebook)]" position="replace"/>
                 <!-- Ocultar Cantidad a la mano en el formulario (como en Studio, sin depender de Studio) -->
                 <xpath expr="//field[@name='product_qty']" position="attributes">
                     <attribute name="invisible">1</attribute>
@@ -63,11 +59,15 @@
                     <field name="reining_plazo" string="Plazo Renting" help="Plazo en meses o fecha personalizada"
                            invisible="lot_classification in ('component', 'complement', 'spare')"/>
                     <field name="reining_plazo_custom_months" string="Meses (personalizado)"
-                           invisible="lot_classification in ('component', 'complement', 'spare')" optional="show"/>
+                           invisible="1" optional="hide"/>
                 </xpath>
 
                 <!-- Debajo del costo (campo estándar: standard_price) agregar checkbox Costo Adicional -->
-                <xpath expr="//sheet//field[@name='standard_price' and @widget='monetary']" position="after">
+                <xpath expr="//sheet//field[@name='standard_price']" position="attributes">
+                    <attribute name="class" add="o_lot_cost_field" separator=" "/>
+                    <attribute name="widget">float</attribute>
+                </xpath>
+                <xpath expr="//sheet//field[@name='standard_price']" position="after">
                     <field name="cost_additional"
                            string="Costo Adicional"
                            invisible="lot_classification not in ('component', 'complement', 'peripheral')"/>

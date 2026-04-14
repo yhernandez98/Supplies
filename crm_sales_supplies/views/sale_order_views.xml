@@ -12,29 +12,45 @@
                     <field name="has_stock_issues" invisible="1"/>
                     <field name="stock_availability_summary" invisible="1"/>
                     <field name="has_physical_products" invisible="1"/>
-                    <field name="generate_accounting" invisible="state != 'draft'"/>
                 </xpath>
 
-                        <!-- Agregar botones para compras -->
-                        <xpath expr="//header" position="inside">
-                            <button name="action_request_purchase_quotation" 
-                                    string="Solicitar Cotización de Compra" 
-                                    type="object" 
-                                    class="btn-warning"
-                                    invisible="state != 'draft'"
-                                    title="Crear alerta de cotización y asignar actividad a compras"/>
-                            <button name="action_view_purchase_alerts" 
-                                    string="Ver Alertas Por Cotización" 
-                                    type="object" 
-                                    class="btn-info"
-                                    invisible="purchase_alert_count == 0"
-                                    title="Ver las alertas de compra relacionadas con esta orden de venta"/>
-                            <button name="action_view_all_purchase_alerts" 
-                                    string="📋 Todas las Alertas" 
-                                    type="object" 
-                                    class="btn-secondary"
-                                    title="Ver todas las alertas por cotización del sistema"/>
-                        </xpath>
+                <!-- Selector de producto/servicio desde la lista de precios + suscripción del cliente -->
+                <xpath expr="//field[@name='pricelist_id']" position="after">
+                    <field name="pricelist_product_available_ids" invisible="1"/>
+                    <field name="pricelist_product_id"
+                           placeholder="Seleccione producto o servicio de la lista de precios"
+                           options="{'no_quick_create': false, 'no_create_edit': false}"/>
+                    <button name="action_add_pricelist_product_line"
+                            type="object"
+                            string="Agregar línea"
+                            class="btn-secondary"
+                            invisible="state not in ('draft', 'sent') or not pricelist_product_id"/>
+                    <field name="chosen_subscription_id"
+                           placeholder="Seleccione suscripción del cliente o cree una nueva"
+                           options="{'no_quick_create': false, 'no_create_edit': false}"/>
+                </xpath>
+
+                <!-- Acciones CRM resumidas en smart buttons -->
+                <xpath expr="//div[hasclass('oe_button_box')]" position="inside">
+                    <button type="object"
+                            name="action_request_purchase_quotation"
+                            class="oe_stat_button"
+                            icon="fa-shopping-cart"
+                            invisible="state != 'draft'"
+                            title="Crear alerta de cotización y asignar actividad a compras">
+                        <div class="o_stat_info">
+                            <span class="o_stat_text">Solicitar compra</span>
+                        </div>
+                    </button>
+                    <button type="object"
+                            name="action_view_purchase_alerts"
+                            class="oe_stat_button"
+                            icon="fa-exclamation-triangle"
+                            invisible="purchase_alert_count == 0"
+                            title="Ver las alertas de compra relacionadas con esta cotización">
+                        <field name="purchase_alert_count" widget="statinfo" string="Alertas de compra"/>
+                    </button>
+                </xpath>
 
                 <!-- Mostrar resumen de disponibilidad de stock -->
                 <xpath expr="//sheet" position="before">
@@ -51,20 +67,7 @@
                     <attribute name="invisible">1</attribute>
                 </xpath>
 
-                <!-- Ocultar columna "UdM" (product_uom) en las líneas de la orden -->
-                <xpath expr="//field[@name='order_line']/list/field[@name='product_uom']" position="attributes">
-                    <attribute name="column_invisible">1</attribute>
-                </xpath>
-
-                <!-- Ocultar columna "Aplica a (Renting)" en las líneas de la orden -->
-                <xpath expr="//field[@name='order_line']/list/field[@name='renting_applies_to_tmpl_id']" position="attributes">
-                    <attribute name="column_invisible">1</attribute>
-                </xpath>
-
-                <!-- Ocultar columna "Importe" (price_subtotal) en las líneas de la orden -->
-                <xpath expr="//field[@name='order_line']/list/field[@name='price_subtotal']" position="attributes">
-                    <attribute name="column_invisible">1</attribute>
-                </xpath>
+                <!-- Ocultamiento de columnas en order_line desactivado temporalmente por compatibilidad de arquitectura en Odoo 19. -->
             </field>
         </record>
     </data>

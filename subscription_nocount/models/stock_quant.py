@@ -97,28 +97,25 @@ class StockQuant(models.Model):
         string='Fecha Finalizacion Renting',
         compute='_compute_lot_exit_date',
         readonly=True,
-        help='Fecha de salida del cliente (exit_date o last_exit_date_display para coincidir con lo que ve la suscripción).',
+        help='Fecha de salida del cliente. Igual que en inventario: exit_date o last_exit_date_display si aplica.',
     )
 
     @api.depends('lot_id', 'lot_id.exit_date', 'lot_id.last_exit_date_display', 'lot_id.active_subscription_id',
                  'lot_id.last_subscription_id', 'lot_id.last_subscription_exit_date')
     def _compute_lot_exit_date(self):
-        """Mostrar exit_date o last_exit_date_display. Si el lote está en ESTA suscripción (context), no mostrar.
-        Si el lote salió de ESTA suscripción (last_subscription_id), usar last_subscription_exit_date."""
+        """Misma lógica que subscription._lot_entry_exit_for_display / exit_date_display en inventario.
+        Si el lote salió de ESTA suscripción (last_subscription_id), priorizar last_subscription_exit_date y overrides."""
         subscription_id = self.env.context.get('subscription_id') or self.env.context.get('default_subscription_id')
         for q in self:
             lot = q.lot_id
             if not lot:
                 q.lot_exit_date = False
                 continue
-            # Si el lote está actualmente en ESTA suscripción:
-            # - Antes no se mostraba nada.
-            # - Ahora, sin romper históricos, mostramos la fecha de salida planificada
-            #   si existe (exit_date o last_exit_date_display).
             if subscription_id and getattr(lot, 'active_subscription_id', None) and lot.active_subscription_id.id == subscription_id:
-                ex = getattr(lot, 'exit_date', None) and lot.exit_date
-                last_ex = getattr(lot, 'last_exit_date_display', None) and lot.last_exit_date_display
-                q.lot_exit_date = ex or last_ex
+                q.lot_exit_date = (
+                    (getattr(lot, 'exit_date', None) and lot.exit_date)
+                    or (getattr(lot, 'last_exit_date_display', None) and lot.last_exit_date_display)
+                )
                 continue
             if subscription_id and getattr(lot, 'last_subscription_id', None) and lot.last_subscription_id.id == subscription_id:
                 Override = self.env.get('subscription.lot.date.override')
@@ -130,6 +127,11 @@ class StockQuant(models.Model):
                     ], limit=1)
                     if override and override.exit_date:
                         exit_display = override.exit_date
+                if not exit_display:
+                    exit_display = (
+                        (getattr(lot, 'exit_date', None) and lot.exit_date)
+                        or (getattr(lot, 'last_exit_date_display', None) and lot.last_exit_date_display)
+                    )
                 q.lot_exit_date = exit_display
                 continue
             ex = getattr(lot, 'exit_date', None) and lot.exit_date
@@ -212,7 +214,15 @@ class StockQuant(models.Model):
     _MONTH_NAMES = ('enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
                     'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre')
 
-    @api.depends('lot_id', 'lot_id.entry_date', 'lot_id.last_entry_date_display', 'lot_id.exit_date', 'lot_id.last_exit_date_display', 'lot_id.active_subscription_id', 'lot_id.subscription_service_product_id')
+    @api.depends(
+        'lot_id',
+        'lot_id.entry_date',
+        'lot_id.last_entry_date_display',
+        'lot_id.exit_date',
+        'lot_id.last_exit_date_display',
+        'lot_id.active_subscription_id',
+        'lot_id.subscription_service_product_id',
+    )
     def _compute_lot_days_and_cost_to_date(self):
         """
         Cobro por días (equipos/servicios). Siempre muestra desglose diario aunque haya
@@ -234,6 +244,7 @@ class StockQuant(models.Model):
         else:
             current_day = days_in_month
         month_name = self._MONTH_NAMES[month - 1] if 1 <= month <= 12 else ''
+        subscription_id = self.env.context.get('subscription_id') or self.env.context.get('default_subscription_id')
 
         for quant in self:
             quant.lot_month_name = month_name
@@ -252,9 +263,16 @@ class StockQuant(models.Model):
             entry = self._lot_date_to_python(
                 getattr(lot, 'entry_date', None) or getattr(lot, 'last_entry_date_display', None)
             )
-            exit_ = self._lot_date_to_python(
-                getattr(lot, 'exit_date', None) or getattr(lot, 'last_exit_date_display', None)
-            )
+            if (
+                subscription_id
+                and getattr(lot, 'active_subscription_id', None)
+                and lot.active_subscription_id.id == subscription_id
+            ):
+                exit_ = self._lot_date_to_python(getattr(lot, 'exit_date', None))
+            else:
+                exit_ = self._lot_date_to_python(
+                    getattr(lot, 'exit_date', None) or getattr(lot, 'last_exit_date_display', None)
+                )
 
             if entry is None and exit_ is None:
                 days_used = current_day
@@ -296,11 +314,19 @@ class StockQuant(models.Model):
             except Exception:
                 pass
 
-    @api.depends('lot_id', 'lot_id.entry_date', 'lot_id.last_entry_date_display', 'lot_id.exit_date', 'lot_id.last_exit_date_display')
+    @api.depends(
+        'lot_id',
+        'lot_id.entry_date',
+        'lot_id.last_entry_date_display',
+        'lot_id.exit_date',
+        'lot_id.last_exit_date_display',
+        'lot_id.active_subscription_id',
+    )
     def _compute_lot_days_total_on_site(self):
         """Días totales desde Fecha Activación Renting hasta hoy (o hasta Fecha Finalización si ya salió)."""
         today = fields.Date.today()
         today_py = today if isinstance(today, datetime.date) else datetime.date(today.year, today.month, today.day)
+        subscription_id = self.env.context.get('subscription_id') or self.env.context.get('default_subscription_id')
         for quant in self:
             quant.lot_days_total_on_site = 0
             lot = quant.lot_id
@@ -311,9 +337,16 @@ class StockQuant(models.Model):
             )
             if not entry:
                 continue
-            exit_ = self._lot_date_to_python(
-                getattr(lot, 'exit_date', None) or getattr(lot, 'last_exit_date_display', None)
-            )
+            if (
+                subscription_id
+                and getattr(lot, 'active_subscription_id', None)
+                and lot.active_subscription_id.id == subscription_id
+            ):
+                exit_ = self._lot_date_to_python(getattr(lot, 'exit_date', None))
+            else:
+                exit_ = self._lot_date_to_python(
+                    getattr(lot, 'exit_date', None) or getattr(lot, 'last_exit_date_display', None)
+                )
             end = exit_ if exit_ and exit_ < today_py else today_py
             if end < entry:
                 continue

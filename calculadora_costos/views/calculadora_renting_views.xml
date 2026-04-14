@@ -40,10 +40,10 @@
                                 </group>
                             </group>
                         </page>
-                        <page string="Servicios Técnicos">
+                        <page string="Servicio Técnico">
                             <group>
-                                <group>
-                                    <field name="costo_servicios_completos"/>
+                                <group string="Servicio técnico (COP, independiente del costo del equipo)">
+                                    <field name="costo_servicio_tecnico_mensual_cop"/>
                                     <field name="porcentaje_margen_servicio"/>
                                     <field name="servicio_con_margen" widget="monetary" 
                                            options="{'currency_field': 'currency_id'}" readonly="1"/>
@@ -160,7 +160,8 @@
                 <filter string="24 Meses" name="plazo_24" domain="[('plazo_meses', '=', 24)]"/>
                 <filter string="36 Meses" name="plazo_36" domain="[('plazo_meses', '=', 36)]"/>
                 <filter string="48 Meses" name="plazo_48" domain="[('plazo_meses', '=', 48)]"/>
-                <group expand="0" string="Agrupar por">
+                <separator string="Agrupar por"/>
+                <group>
                     <filter string="Cliente" name="group_partner" context="{'group_by': 'partner_id'}"/>
                     <filter string="Plazo" name="group_plazo" context="{'group_by': 'plazo_meses'}"/>
                 </group>

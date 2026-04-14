@@ -2,7 +2,15 @@ id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_inventory_dashboard_group_user,inventory.dashboard.group.user,model_inventory_dashboard_group,base.group_user,1,1,1,1
 access_delivery_route_trigger_wizard_user,delivery.route.trigger.wizard.user,model_delivery_route_trigger_wizard,base.group_user,1,1,1,1
 access_delivery_route_trigger_wizard_line_user,delivery.route.trigger.wizard.line.user,model_delivery_route_trigger_wizard_line,base.group_user,1,1,1,1
+access_component_transfer_wizard_user,component.transfer.wizard.user,model_component_transfer_wizard,base.group_user,1,1,1,1
+access_component_transfer_wizard_line_user,component.transfer.wizard.line.user,model_component_transfer_wizard_line,base.group_user,1,1,1,1
 access_quant_editor_wizard_user,quant.editor.wizard.user,model_quant_editor_wizard,base.group_user,1,1,1,1
 access_internal_reference_user,internal.reference.user,model_internal_reference,base.group_user,1,1,1,1
 access_product_relation_search_user,product.relation.search.user,model_product_relation_search,base.group_user,1,1,1,1
+access_component_lab_assignment_stock,component.lab.assignment stock,model_component_lab_assignment,stock.group_stock_user,1,1,1,1
+access_component_lab_assign_tech_wizard_stock,component.lab.assign.tech.wizard stock,model_component_lab_assign_tech_wizard,stock.group_stock_user,1,1,1,1
+access_component_lab_tech_return_wizard_stock,component.lab.tech.return.wizard stock,model_component_lab_tech_return_wizard,stock.group_stock_user,1,1,1,1
+access_component_lab_responsible_return_wizard_stock,component.lab.responsible.return.wizard stock,model_component_lab_responsible_return_wizard,stock.group_stock_user,1,1,1,1
+access_component_lab_responsible_return_wizard_line_stock,component.lab.responsible.return.wizard.line stock,model_component_lab_responsible_return_wizard_line,stock.group_stock_user,1,1,1,1
+access_component_lab_acta_stock,component.lab.acta stock,model_component_lab_acta,stock.group_stock_user,1,1,1,1
 

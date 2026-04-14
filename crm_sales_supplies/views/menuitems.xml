@@ -106,10 +106,16 @@
             </field>
         </record>
         
+        <!-- Menú raíz único para centralizar opciones de CRM Supplies -->
+        <menuitem id="menu_crm_supplies_root"
+                  name="Operación CRM"
+                  parent="crm.crm_menu_root"
+                  sequence="20"/>
+
         <!-- Menú en el CRM entre Reportes y Configuración -->
         <menuitem id="menu_crm_supplies_stock"
                   name="Inventario"
-                  parent="crm.crm_menu_root"
+                  parent="menu_crm_supplies_root"
                   action="action_view_supplies_stock"
                   sequence="20"/>
         
@@ -145,7 +151,7 @@
         <!-- Menú de Cotizaciones Solicitadas para CRM -->
         <menuitem id="menu_crm_purchase_alerts"
                   name="Cotizaciones Solicitadas"
-                  parent="crm.crm_menu_root"
+                  parent="menu_crm_supplies_root"
                   action="action_purchase_alert_crm"
                   sequence="21"/>
         
@@ -157,12 +163,20 @@
         <record id="menu_crm_purchase_alerts" model="ir.ui.menu">
             <field name="sequence">21</field>
         </record>
+
+        <menuitem id="menu_crm_solution_quotes"
+                  name="Soluciones Comerciales"
+                  parent="menu_crm_supplies_root"
+                  action="action_crm_solution_quote"
+                  sequence="23"/>
+
+        <!-- Submenus de reglas removidos del menu por simplicidad operativa -->
         
         <!-- Menú de Leasing en CRM - DEBE IR PRIMERO para que los hijos puedan referenciarlo -->
         <menuitem id="menu_crm_leasing_root"
                   name="Leasing"
-                  parent="crm.crm_menu_root"
-                  sequence="22"/>
+                  parent="menu_crm_supplies_root"
+                  sequence="24"/>
         
         <!-- Menús hijos de Leasing -->
         <menuitem id="menu_crm_leasing_contracts"

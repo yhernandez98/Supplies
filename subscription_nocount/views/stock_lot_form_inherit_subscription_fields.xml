@@ -9,10 +9,11 @@
             <field name="priority" eval="25"/>
             <field name="arch" type="xml">
                 <xpath expr="//field[@name='location_id']" position="after">
+                    <field name="show_subscription_service_fields" invisible="1"/>
                     <field name="subscription_service_product_id" string="Servicio" optional="show"
-                           invisible="lot_classification in ('component', 'complement', 'spare')"/>
+                           invisible="not show_subscription_service_fields"/>
                     <field name="active_subscription_id" string="Suscripción" optional="show"
-                           invisible="lot_classification in ('component', 'complement', 'spare')"/>
+                           invisible="not show_subscription_service_fields"/>
                 </xpath>
             </field>
         </record>

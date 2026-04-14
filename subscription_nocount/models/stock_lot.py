@@ -147,7 +147,10 @@ class StockLot(models.Model):
             lot.cost_to_date_currency_id = False
             lot.cost_to_date_current = 0.0
             entry_date = getattr(lot, 'entry_date', None) or getattr(lot, 'last_entry_date_display', None)
-            exit_date = getattr(lot, 'exit_date', None) or getattr(lot, 'last_exit_date_display', None)
+            if lot.active_subscription_id:
+                exit_date = getattr(lot, 'exit_date', None)
+            else:
+                exit_date = getattr(lot, 'exit_date', None) or getattr(lot, 'last_exit_date_display', None)
             if entry_date and hasattr(entry_date, 'year'):
                 entry_date = datetime.date(entry_date.year, entry_date.month, entry_date.day)
             if exit_date and hasattr(exit_date, 'year'):

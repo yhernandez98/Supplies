@@ -116,9 +116,9 @@
                                 </field>
                             </group>
                         </group>
-                        <group string="Productos a Cotizar" invisible="not alert_line_ids">
-                            <field name="alert_line_ids" nolabel="1" readonly="1">
-                                <list>
+                        <group string="Productos a Cotizar" invisible="not alert_line_ids" colspan="2">
+                            <field name="alert_line_ids" nolabel="1" readonly="1" class="purchase-alert-lines-fixed">
+                                <list create="false" edit="false" delete="false">
                                     <field name="product_id"/>
                                     <field name="quantity_requested"/>
                                     <field name="quantity_available"/>

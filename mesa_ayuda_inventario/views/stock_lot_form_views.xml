@@ -14,13 +14,15 @@
                 <xpath expr="//field[@name='product_qty']" position="before">
                     <field name="lot_image" string="Foto del equipo" widget="image" 
                            options="{'preview_image': 'lot_image', 'size': [140, 140]}"
+                           nolabel="1"
+                           colspan="2"
                            class="o_lot_photo_field"/>
                     <button name="action_generate_life_sheet" 
                             type="object" 
-                            string="Generar Hoja de Vida" 
+                            string="Hoja De Vida" 
                             class="btn btn-primary o_lot_life_sheet_btn"
-                            style="width: 100%; margin-top: 8px;"
-                            icon="fa-file-pdf"
+                            colspan="2"
+                            style="width: 100%; margin-top: 8px; display: block; text-align: center;"
                             title="Generar PDF con la hoja de vida completa del equipo"/>
                 </xpath>
                 <!-- Pestañas de mantenimientos e historial (notebook lo crea product_suppiles) -->

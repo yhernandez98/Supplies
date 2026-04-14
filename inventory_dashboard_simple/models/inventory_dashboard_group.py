@@ -33,6 +33,11 @@ class InventoryDashboardGroup(models.Model):
     @api.depends('picking_type_ids')
     def _compute_counts(self):
         """Calcular conteos de operaciones por estado."""
+        from datetime import timedelta
+
+        now = fields.Datetime.now()
+        yesterday = now - timedelta(days=1)
+
         for group in self:
             if not group.picking_type_ids:
                 group.total_count = 0
@@ -40,38 +45,33 @@ class InventoryDashboardGroup(models.Model):
                 group.delay_count = 0
                 continue
 
-            # Buscar todas las operaciones de estos tipos
-            pickings = self.env['stock.picking'].search([
-                ('picking_type_id', 'in', group.picking_type_ids.ids),
-                ('state', '!=', 'cancel'),
-            ])
-            
-            # Separar por fecha programada
-            from odoo import fields as odoo_fields
-            from datetime import timedelta
-            now = odoo_fields.Datetime.now()
-            # Fecha de ayer (un día antes de hoy) - solo las que tienen al menos un día de retraso
-            yesterday = now - timedelta(days=1)
-            
-            # Con demora: fecha programada con al menos un día de retraso y no completado (prioridad)
-            delay = pickings.filtered(
-                lambda p: p.scheduled_date and 
-                p.scheduled_date < yesterday and 
-                p.state not in ('done', 'cancel')
+            # search_read: solo scheduled_date y state para no forzar lectura de
+            # columnas opcionales de stock.picking (p. ej. laboratorio) si la BD
+            # aún no está al día tras un despliegue parcial.
+            rows = self.env['stock.picking'].search_read(
+                [
+                    ('picking_type_id', 'in', group.picking_type_ids.ids),
+                    ('state', '!=', 'cancel'),
+                ],
+                ['scheduled_date', 'state'],
             )
-            group.delay_count = len(delay)
-            
-            # En espera: operaciones que NO están con demora y están en estados pendientes
-            # Incluye: draft, waiting, assigned, y también las de hoy o futuras
-            waiting = pickings.filtered(
-                lambda p: p.state not in ('done', 'cancel') and
-                p not in delay and  # Excluir las que ya están en demora
-                (not p.scheduled_date or p.scheduled_date >= yesterday)
-            )
-            group.waiting_count = len(waiting)
-            
-            # Total es la suma de en espera y con demora
-            group.total_count = group.waiting_count + group.delay_count
+
+            delay_count = 0
+            waiting_count = 0
+            for row in rows:
+                state = row.get('state')
+                if state in ('done', 'cancel'):
+                    continue
+                sched = row.get('scheduled_date')
+                sched_dt = fields.Datetime.to_datetime(sched) if sched else False
+                if sched_dt and sched_dt < yesterday:
+                    delay_count += 1
+                else:
+                    waiting_count += 1
+
+            group.delay_count = delay_count
+            group.waiting_count = waiting_count
+            group.total_count = delay_count + waiting_count
 
     @api.depends('picking_type_ids', 'name')
     def _compute_action_open_operations_data(self):

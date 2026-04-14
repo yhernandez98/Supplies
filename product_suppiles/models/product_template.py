@@ -127,6 +127,11 @@ class ProductTemplate(models.Model):
         help="Si está activo, al vender este producto se pedirá a qué producto objetivo (con comp./perif./compl.) aplica.",
         tracking=True,
     )
+    show_service_subscription_fields = fields.Boolean(
+        string="Mostrar campos de servicio/suscripción",
+        compute="_compute_show_service_subscription_fields",
+        store=False,
+    )
 
     renting_applicable_tmpl_ids = fields.Many2many(
         "product.template",
@@ -174,6 +179,15 @@ class ProductTemplate(models.Model):
                 rec.sale_ok = True
                 if "recurring_invoice" in rec._fields:
                     rec.recurring_invoice = True
+
+    @api.depends("type", "classification", "asset_category_id", "asset_class_id")
+    def _compute_show_service_subscription_fields(self):
+        for rec in self:
+            classification_ok = rec.classification == "complement"
+            category_name = (rec.asset_category_id.name or "").strip().lower()
+            class_name = (rec.asset_class_id.name or "").strip().lower()
+            asset_combo_ok = category_name == "telefonia" and class_name == "telefono"
+            rec.show_service_subscription_fields = rec.type == "service" or (classification_ok and asset_combo_ok)
                     
     def write(self, vals):
         """Sobrescribir write para validar componentes después de guardar las líneas."""

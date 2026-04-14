@@ -50,11 +50,31 @@
                   parent="menu_inventory_dashboard_simple"
                   action="action_delivery_route_trigger_wizard"
                   sequence="17"/>
+
+        <!-- Traslado Existencias → Laboratorio: solo inventario administrativo (no menú laboratorio) -->
+        <menuitem id="menu_component_lab_transfer_ingreso"
+                  name="Traslado Componente"
+                  parent="menu_inventory_dashboard_simple"
+                  action="action_component_transfer_wizard_lab_ingreso"
+                  groups="stock.group_stock_manager"
+                  sequence="18"/>
+
+        <!-- Hub: laboratorio / pool (agrupa flujos para no saturar el dashboard) -->
+        <menuitem id="menu_inventory_lab_hub"
+                  name="Laboratorio (herramientas)"
+                  parent="menu_inventory_dashboard_simple"
+                  sequence="19"/>
+
+        <menuitem id="menu_component_lab_assignment"
+                  name="Vista general del pool"
+                  parent="menu_inventory_lab_hub"
+                  action="action_component_lab_hub_dashboard"
+                  sequence="10"/>
+
         <menuitem id="menu_internal_reference"
                   name="Referencias Internas"
                   parent="menu_inventory_dashboard_simple"
                   action="action_internal_reference"
-                  sequence="18"/>
+                  sequence="20"/>
     </data>
 </odoo>
-

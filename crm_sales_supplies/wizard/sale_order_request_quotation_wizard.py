@@ -108,11 +108,22 @@ class SaleOrderRequestQuotationWizard(models.TransientModel):
     
     @api.model
     def _get_purchase_users_domain(self):
-        """Obtener dominio para filtrar usuarios de compras."""
-        purchase_group = self.env.ref('purchase.group_purchase_user', raise_if_not_found=False)
-        if purchase_group:
-            return [('groups_id', 'in', [purchase_group.id])]
-        return []
+        """Dominio robusto para usuarios asignables en compras."""
+        Users = self.env['res.users']
+        base_domain = [('active', '=', True), ('share', '=', False)]
+
+        purchase_user_group = self.env.ref('purchase.group_purchase_user', raise_if_not_found=False)
+        purchase_manager_group = self.env.ref('purchase.group_purchase_manager', raise_if_not_found=False)
+        group_ids = [g.id for g in (purchase_user_group, purchase_manager_group) if g]
+
+        if group_ids:
+            purchase_users = Users.search(base_domain + [('group_ids', 'in', group_ids)])
+            if purchase_users:
+                return [('id', 'in', purchase_users.ids)]
+
+        # Fallback: no bloquear el wizard si no hay grupos de compras configurados
+        fallback_users = Users.search(base_domain)
+        return [('id', 'in', fallback_users.ids)] if fallback_users else [('id', '=', False)]
     activity_type_id = fields.Many2one(
         'mail.activity.type',
         string='Tipo de Actividad',

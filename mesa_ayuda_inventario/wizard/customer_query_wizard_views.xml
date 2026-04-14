@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="view_customer_query_wizard_form" model="ir.ui.view">
+            <field name="name">customer.query.wizard.form</field>
+            <field name="model">customer.query.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Consulta de Clientes">
+                    <group>
+                        <field name="partner_id" options="{'no_create': True, 'no_open': True}"/>
+                    </group>
+                    <footer>
+                        <button name="action_open_customer_inventory" type="object" string="Consultar" class="btn-primary"/>
+                        <button string="Cerrar" special="cancel" class="btn-secondary"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+        <record id="action_customer_query_wizard" model="ir.actions.act_window">
+            <field name="name">Consulta de Clientes</field>
+            <field name="res_model">customer.query.wizard</field>
+            <field name="view_mode">form</field>
+            <field name="view_id" ref="view_customer_query_wizard_form"/>
+            <field name="target">new</field>
+        </record>
+
+        <record id="view_customer_contract_summary_line_wizard_tree" model="ir.ui.view">
+            <field name="name">customer.contract.summary.line.wizard.tree</field>
+            <field name="model">customer.contract.summary.line.wizard</field>
+            <field name="arch" type="xml">
+                <list create="false" edit="false" delete="false" string="Servicios Contratados Activos">
+                    <field name="business_line_name"/>
+                    <field name="service_name"/>
+                    <field name="is_administered" optional="hide"/>
+                    <field name="fixed_price" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                    <field name="date_start"/>
+                    <field name="date_end"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_customer_contract_summary_wizard_form" model="ir.ui.view">
+            <field name="name">customer.contract.summary.wizard.form</field>
+            <field name="model">customer.contract.summary.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Ficha Técnica de Servicios Contratados" class="customer-contract-summary-form">
+                    <group>
+                        <group>
+                            <field name="partner_id" readonly="1"/>
+                            <field name="contact_name" readonly="1"/>
+                            <field name="contact_phone" readonly="1"/>
+                            <field name="contact_email" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="line_count" readonly="1"/>
+                            <field name="sla_reference" readonly="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Servicios Administrados" name="ficha_servicios_admin">
+                            <group colspan="2" col="1">
+                                <div class="alert alert-info mb-3" role="alert">
+                                    <p class="mb-1"><strong>Servicios administrados por Supplies</strong></p>
+                                    <p class="mb-0">
+                                        Son servicios incluidos en la relación comercial para los cuales Supplies brinda
+                                        <strong>soporte técnico</strong> conforme al <strong>alcance definido en la contratación</strong>.
+                                        El técnico debe intervenir únicamente dentro de ese marco y de las condiciones acordadas con el cliente.
+                                    </p>
+                                </div>
+                            </group>
+                            <group string="Resumen por línea de negocio" colspan="2" col="1">
+                                <field name="summary_line_ids_admin" nolabel="1">
+                                    <list create="false" delete="false" edit="false" open_form_view="false" class="customer-contract-summary-list">
+                                        <field name="business_line_name" readonly="1" width="60%"/>
+                                        <field name="service_count" readonly="1" width="40%"/>
+                                    </list>
+                                </field>
+                            </group>
+                            <group string="Detalle de servicios contratados" colspan="2" col="1">
+                                <field name="line_ids_admin" nolabel="1">
+                                    <list create="false" delete="false" edit="false" open_form_view="false">
+                                        <field name="business_line_name" readonly="1" width="30%"/>
+                                        <field name="service_name" readonly="1" width="70%"/>
+                                    </list>
+                                </field>
+                            </group>
+                        </page>
+                        <page string="Servicios no Administrados" name="ficha_servicios_no_admin">
+                            <group colspan="2" col="1">
+                                <div class="alert alert-warning mb-3" role="alert">
+                                    <p class="mb-1"><strong>Servicios no administrados por Supplies</strong></p>
+                                    <p class="mb-0">
+                                        El cliente cuenta con estos servicios en su relación con Supplies, pero
+                                        <strong>sin cobertura de soporte</strong> por parte de Supplies: la operación y administración
+                                        son <strong>responsabilidad del cliente</strong>. Si se requiere asistencia o intervención,
+                                        el caso debe <strong>canalizarse a Comercial</strong> para evaluar alcance, condiciones y posible costo adicional.
+                                    </p>
+                                </div>
+                            </group>
+                            <group string="Resumen por línea de negocio" colspan="2" col="1">
+                                <field name="summary_line_ids_no_admin" nolabel="1">
+                                    <list create="false" delete="false" edit="false" open_form_view="false" class="customer-contract-summary-list">
+                                        <field name="business_line_name" readonly="1" width="60%"/>
+                                        <field name="service_count" readonly="1" width="40%"/>
+                                    </list>
+                                </field>
+                            </group>
+                            <group string="Detalle de servicios contratados" colspan="2" col="1">
+                                <field name="line_ids_no_admin" nolabel="1">
+                                    <list create="false" delete="false" edit="false" open_form_view="false">
+                                        <field name="business_line_name" readonly="1" width="30%"/>
+                                        <field name="service_name" readonly="1" width="70%"/>
+                                    </list>
+                                </field>
+                            </group>
+                        </page>
+                    </notebook>
+                    <footer>
+                        <button string="Guardar y cerrar" special="save" class="btn-primary"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+    </data>
+</odoo>

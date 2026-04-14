@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Ocultar «Asignar serial» en albarán Hecho (p. ej. ingreso lab. ya validado).
+         Hereda la vista de product_suppiles para no obligar a actualizar ese módulo aparte. -->
+    <record id="view_picking_form_supplies_hide_assign_serial_when_done" model="ir.ui.view">
+        <field name="name">stock.picking.form.supplies.hide.assign.serial.done</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="product_suppiles.view_picking_form_inherit_supplies_columns"/>
+        <field name="priority">100050</field>
+        <field name="arch" type="xml">
+            <xpath expr="//button[@name='action_open_assign_serial']" position="attributes">
+                <attribute name="invisible">supply_kind != 'parent' or picking_id.state == 'done'</attribute>
+            </xpath>
+        </field>
+    </record>
+</odoo>

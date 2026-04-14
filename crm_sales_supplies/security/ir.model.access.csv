@@ -1,7 +1,7 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_purchase_alert_user,purchase.alert.user,model_purchase_alert,base.group_user,1,1,1,1
 access_purchase_alert_manager,purchase.alert.manager,model_purchase_alert,sales_team.group_sale_manager,1,1,1,1
-access_purchase_alert_line_user,purchase.alert.line.user,model_purchase_alert_line,base.group_user,1,1,0,0
+access_purchase_alert_line_user,purchase.alert.line.user,model_purchase_alert_line,base.group_user,1,1,1,0
 access_purchase_alert_component_line_user,purchase.alert.component.line.user,model_purchase_alert_component_line,base.group_user,1,1,0,1
 access_purchase_quotation_wizard_user,purchase.quotation.wizard.user,model_purchase_quotation_wizard,base.group_user,1,1,1,1
 access_crm_lead_purchase_alert_wizard_user,crm.lead.purchase.alert.wizard.user,model_crm_lead_purchase_alert_wizard,base.group_user,1,1,1,1
@@ -17,3 +17,9 @@ access_leasing_contract_product_line_user,leasing.contract.product.line.user,mod
 access_leasing_contract_wizard_user,leasing.contract.wizard.user,model_leasing_contract_wizard,base.group_user,1,1,1,1
 access_leasing_contract_template_user,leasing.contract.template.user,model_leasing_contract_template,base.group_user,1,1,1,1
 access_leasing_contract_template_manager,leasing.contract.template.manager,model_leasing_contract_template,sales_team.group_sale_manager,1,1,1,1
+access_crm_solution_quote_user,crm.solution.quote.user,model_crm_solution_quote,base.group_user,1,1,1,1
+access_crm_solution_quote_line_user,crm.solution.quote.line.user,model_crm_solution_quote_line,base.group_user,1,1,1,1
+access_crm_solution_pricing_rule_user,crm.solution.pricing.rule.user,model_crm_solution_pricing_rule,base.group_user,1,1,1,1
+access_crm_solution_license_param_user,crm.solution.license.param.user,model_crm_solution_license_param,base.group_user,1,1,1,1
+access_crm_solution_quote_wizard_user,crm.solution.quote.wizard.user,model_crm_solution_quote_wizard,base.group_user,1,1,1,1
+access_crm_solution_quote_wizard_line_user,crm.solution.quote.wizard.line.user,model_crm_solution_quote_wizard_line,base.group_user,1,1,1,1

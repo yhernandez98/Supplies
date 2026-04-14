@@ -35,14 +35,32 @@ class PurchaseQuotationWizard(models.TransientModel):
         'wizard_id',
         'vendor_id',
         string='Proveedores',
-        domain="['|', ('tipo_contacto', 'in', ['proveedor', 'ambos']), ('supplier_rank', '>', 0)]",
+        domain="[('id', 'in', available_vendor_ids)]",
         required=True,
         help='Seleccione los proveedores a los que desea enviar la cotización.',
+    )
+    available_vendor_ids = fields.Many2many(
+        'res.partner',
+        compute='_compute_available_vendor_ids',
+        string='Proveedores disponibles',
     )
     notes = fields.Text(
         string='Notas Adicionales',
         help='Notas que se agregarán a todas las órdenes de compra',
     )
+
+    @api.depends('alert_id')
+    def _compute_available_vendor_ids(self):
+        Partner = self.env['res.partner']
+        for rec in self:
+            domain = [
+                '|', '|', '|',
+                ('tipo_contacto', 'in', ['proveedor', 'ambos']),
+                ('supplier_rank', '>', 0),
+                ('parent_id.tipo_contacto', 'in', ['proveedor', 'ambos']),
+                ('commercial_partner_id.supplier_rank', '>', 0),
+            ]
+            rec.available_vendor_ids = Partner.search(domain)
 
     @api.model
     def default_get(self, fields_list):
@@ -148,7 +166,7 @@ class PurchaseQuotationWizard(models.TransientModel):
                     order_line_vals = {
                         'product_id': product.id,
                         'product_qty': quantity,
-                        'product_uom': uom.id if uom else product.uom_id.id,
+                        'product_uom_id': uom.id if uom else product.uom_id.id,
                         'price_unit': price_unit,
                         'date_planned': fields.Datetime.now(),
                         'name': description,

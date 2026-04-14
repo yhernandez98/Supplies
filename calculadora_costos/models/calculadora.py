@@ -6,6 +6,16 @@ from decimal import Decimal, getcontext
 
 getcontext().prec = 10
 
+# Plazos permitidos para financiación y comparativas (meses)
+PLAZOS_MESES_SELECTION = [
+    ('12', '12 meses'),
+    ('24', '24 meses'),
+    ('36', '36 meses'),
+    ('48', '48 meses'),
+    ('60', '60 meses'),
+]
+PLAZOS_COMPARACION_MESES = (12, 24, 36, 48, 60)
+
 
 class Calculadora(models.Model):
     _name = 'calculadora.costos'
@@ -18,17 +28,11 @@ class Calculadora(models.Model):
         help='Nombre o descripción del cálculo'
     )
     
-    # Tipo de cálculo
-    tipo_calculo = fields.Selection([
-        ('equipo', 'Equipo'),
-        ('renting', 'Renting/Leasing')
-    ], string='Tipo de Cálculo', default='equipo', required=True,
-       help='Tipo de cálculo a realizar')
-    
     # Relación con Cliente
     partner_id = fields.Many2one(
         'res.partner',
         string='Cliente',
+        domain="[('is_company', '=', True)]",
         help='Cliente asociado a este cálculo'
     )
     
@@ -38,47 +42,36 @@ class Calculadora(models.Model):
         store=False,
         help='Cantidad de suscripciones no contables activas del cliente'
     )
-<<<<<<< HEAD
 
-    # Estado del flujo: borrador, enviada por correo, aprobada (y cargada a lista de precios si es renting)
+    # Estado del flujo: borrador, enviada por correo, aprobada
     state = fields.Selection([
         ('draft', 'Borrador'),
         ('sent', 'Enviada'),
         ('approved', 'Aprobada'),
     ], string='Estado', default='draft', required=True, copy=False,
-       help='Borrador: en edición. Enviada: cotización enviada por correo. Aprobada: cliente aprobó y (si es renting) se cargó a lista de precios.')
+       help='Borrador: en edición. Enviada: cotización enviada por correo. Aprobada: cliente aprobó el cálculo.')
 
-    # Tipo de operación: Venta (solo valor con utilidad) o Renting (con servicios, financiación, plazos)
+    # Tipo de operación: venta directa vs. esquema tipo suscripción (servicios, financiación, plazos)
     tipo_operacion = fields.Selection([
         ('venta', 'Venta'),
-        ('renting', 'Renting'),
-    ], string='Tipo de operación', default='renting', required=True,
-       help='Venta: cotización con valor del producto con utilidad. Renting: incluye servicios técnicos, parámetros financieros y opciones por plazo.')
+        ('suscripcion', 'Suscripción'),
+    ], string='Tipo de operación', default='venta', required=True,
+       help='Venta: costeo del equipo con utilidad. Suscripción: incluye servicios, parámetros financieros y plazos.')
 
-    # Moneda de cotización (el total siempre se muestra en COP)
+    # Moneda de cotización global (legado; la moneda por equipo está en cada línea)
     moneda_cotizacion = fields.Selection([
         ('usd', 'USD'),
         ('cop', 'COP (Pesos)'),
     ], string='Cotizar en', default='usd', required=True,
-       help='Moneda en la que ingresarás los valores del equipo. El total siempre se mostrará en pesos (COP).')
+       help='Referencia legacy. Los importes por equipo usan el campo «Moneda» en cada línea de equipos.')
 
-    # Tipo: Bien o Servicio (solo estas dos opciones; si es Bien se muestra categoría de activo)
+    # Tipo: Bien o Servicio (producto consumible vs servicio; sin vínculo a activos fijos:
+    # los modelos product.asset.* solo existen con módulos Enterprise / contabilidad avanzada)
     tipo_producto = fields.Selection([
         ('consu', 'Bien'),
         ('service', 'Servicio'),
     ], string='Tipo', default='consu', required=True,
-       help='Seleccione si cotiza un bien (activo) o un servicio. Si es bien, podrá elegir la categoría de activo.')
-    asset_category_id = fields.Many2one(
-        'product.asset.category',
-        string='Categoría de activo',
-        help='Categoría del activo a cotizar (visible cuando el tipo es Bien).'
-    )
-    asset_class_id = fields.Many2one(
-        'product.asset.class',
-        string='Clase de activo',
-        domain="[('category_id', '=', asset_category_id)]",
-        help='Clase del activo a cotizar (visible cuando el tipo es Bien). Filtra por la categoría seleccionada.'
-    )
+       help='Indica si la cotización corresponde a un bien o a un servicio.')
 
     # Cantidad de equipos a cotizar (1 o más)
     cantidad_equipos = fields.Integer(
@@ -88,8 +81,8 @@ class Calculadora(models.Model):
         help='Número de equipos a cotizar (1 a 20). Guarde para actualizar la lista de equipos.'
     )
     _cantidad_equipos_range = models.Constraint(
-        'CHECK(cantidad_equipos >= 1 AND cantidad_equipos <= 20)',
-        'La cantidad de equipos debe estar entre 1 y 20.',
+        'CHECK(cantidad_equipos >= 1 AND cantidad_equipos <= 100)',
+        'La cantidad de equipos debe estar entre 1 y 100.',
     )
     line_ids = fields.One2many(
         'calculadora.costos.line',
@@ -241,22 +234,19 @@ class Calculadora(models.Model):
     equipo_20_garantia_cop = fields.Float(compute='_compute_equipo_campos', inverse='_inverse_equipo_campos', string='Garantía (COP)', digits=(16, 0))
     equipo_20_costo_total_cop = fields.Float(compute='_compute_equipo_campos', string='Costo total (COP)', digits=(16, 0))
 
-    # Costos del Equipo (se mantienen para compatibilidad cuando hay 1 solo equipo)
-=======
-    
-    # Costos del Equipo
->>>>>>> 93ec7b80108b10824984b535bedfeefcfa1e85fd
+    # Agregados desde line_ids (equivalentes USD para utilidad y reportes; no editables)
     valor_usd = fields.Float(
-        string='Valor en USD',
-        required=True,
-        default=0.0,
-        help='Valor del equipo en dólares estadounidenses'
+        string='Valor equipo (equiv. USD)',
+        compute='_compute_agregados_desde_lineas',
+        store=True,
+        help='Suma de valores de equipo en equivalente USD según moneda de cada línea y TRM.'
     )
     
     valor_garantia_usd = fields.Float(
-        string='Valor Garantía Extendida (USD)',
-        default=0.0,
-        help='Costo adicional de garantía extendida en USD'
+        string='Valor garantía (equiv. USD)',
+        compute='_compute_agregados_desde_lineas',
+        store=True,
+        help='Suma de garantías en equivalente USD según moneda de cada línea y TRM.'
     )
     
     porcentaje_utilidad = fields.Float(
@@ -274,10 +264,10 @@ class Calculadora(models.Model):
     )
     
     costo_total_usd = fields.Float(
-        string='Costo Total USD',
-        compute='_compute_costo_total_usd',
+        string='Costo Total USD (base)',
+        compute='_compute_agregados_desde_lineas',
         store=True,
-        help='Costo total en USD (equipo + garantía)'
+        help='Equiv. USD del costo base (equipo + garantía) antes de utilidad, sumando líneas.'
     )
     
     costo_con_utilidad_usd = fields.Float(
@@ -288,38 +278,54 @@ class Calculadora(models.Model):
     )
     
     costo_total_cop = fields.Float(
-        string='Costo Total (COP)',
+        string='Costo Total Equipo (COP)',
         compute='_compute_costo_total_cop',
         store=True,
-        help='Costo total en pesos colombianos'
+        help='Costo del equipo en pesos (USD + garantía, utilidad y TRM). No incluye servicio técnico.'
     )
     
-    # Costos de Servicios
-    costo_servicios_completos = fields.Float(
-        string='Costo Servicios Completos',
+    # Servicio técnico (independiente del costo total del equipo)
+    costo_servicio_tecnico_mensual_cop = fields.Float(
+        string='Costo Servicio Técnico Mensual COP',
         default=0.0,
-        help='Costo base de servicios técnicos completos'
+        help='Costo base mensual del servicio técnico en COP, antes del margen.'
     )
     
     porcentaje_margen_servicio = fields.Float(
-        string='Porcentaje Margen Servicio (%)',
+        string='Margen Servicio Técnico (%)',
         default=15.0,
-        help='Porcentaje de margen aplicado a servicios (ej: 15 = 15%, 25 = 25%)'
+        help='Margen sobre el costo mensual del servicio técnico (ej: 15 = 15%).'
     )
     
     servicio_con_margen = fields.Float(
-        string='Servicio con Margen',
+        string='Servicio Técnico Mensual con Margen (COP)',
         compute='_compute_servicio_con_margen',
         store=True,
-        help='Costo de servicios con margen aplicado'
+        help='Valor mensual del servicio técnico con margen aplicado (COP).'
+    )
+    
+    total_servicio_tecnico_plazo_cop = fields.Float(
+        string='Total Servicio Técnico en el Plazo (COP)',
+        compute='_compute_total_servicio_tecnico_plazo_cop',
+        store=True,
+        help='Servicio técnico mensual con margen multiplicado por el plazo en meses.'
     )
     
     # Parámetros Financieros
+    financiacion_con_interes = fields.Boolean(
+        string='Financiación con interés (PMT)',
+        default=False,
+        help='Desactivado: la cuota del equipo reparte solo el costo del equipo en el plazo, sin interés; '
+             'el pago mensual suma esa cuota más el servicio técnico mensual. '
+             'Activado: PMT sobre el costo del equipo; el total a pagar en el plazo incluye intereses '
+             'del capital del equipo además del servicio técnico.',
+    )
+
     tasa_nominal = fields.Float(
         string='Tasa Nominal (%)',
         default=21.0,
         required=True,
-        help='Tasa de interés nominal anual en porcentaje'
+        help='Tasa de interés nominal anual en porcentaje (solo aplica si «Financiación con interés» está activa)'
     )
     
     tasa_mensual = fields.Float(
@@ -336,25 +342,12 @@ class Calculadora(models.Model):
         help='Tasa efectiva anual calculada'
     )
     
-    plazo_meses = fields.Integer(
-        string='Plazo (Meses)',
-        default=24,
+    plazo_meses = fields.Selection(
+        PLAZOS_MESES_SELECTION,
+        string='Plazo (meses)',
+        default='24',
         required=True,
-        help='Plazo del financiamiento en meses (24, 36, 48)'
-    )
-    
-    # Opción de Compra
-    porcentaje_opcion_compra = fields.Float(
-        string='Porcentaje Opción de Compra (%)',
-        default=20.0,
-        help='Porcentaje del valor del equipo para opción de compra'
-    )
-    
-    valor_opcion_compra = fields.Float(
-        string='Valor Opción de Compra (COP)',
-        compute='_compute_valor_opcion_compra',
-        store=True,
-        help='Valor calculado de la opción de compra'
+        help='Plazo del financiamiento: 12, 24, 36, 48 o 60 meses (por defecto 24).'
     )
     
     # Pago Mensual
@@ -373,7 +366,14 @@ class Calculadora(models.Model):
         help='Costo del equipo sin incluir servicios'
     )
     
-    # Valores para diferentes plazos (solo para renting)
+    # Valores para diferentes plazos (solo aplica en modo suscripción en UI)
+    valor_12_meses = fields.Float(
+        string='Valor 12 Meses',
+        compute='_compute_valores_plazos',
+        store=True,
+        help='Pago mensual calculado para 12 meses'
+    )
+    
     valor_24_meses = fields.Float(
         string='Valor 24 Meses',
         compute='_compute_valores_plazos',
@@ -395,12 +395,20 @@ class Calculadora(models.Model):
         help='Pago mensual calculado para 48 meses'
     )
     
+    valor_60_meses = fields.Float(
+        string='Valor 60 Meses',
+        compute='_compute_valores_plazos',
+        store=True,
+        help='Pago mensual calculado para 60 meses'
+    )
+    
     # Total a Pagar
     total_pagar = fields.Float(
-        string='Total a Pagar',
+        string='Total Estimado a Pagar (Plazo)',
         compute='_compute_total_pagar',
         store=True,
-        help='Total a pagar durante todo el plazo'
+        help='Suma estimada en el plazo: costo del equipo + total servicio técnico del plazo (sin interés), '
+             'o suma de cuotas si hay financiación con interés. Distinto del «Costo Total Equipo».'
     )
     
     # Información adicional
@@ -428,13 +436,69 @@ class Calculadora(models.Model):
         default=lambda self: self.env.ref('base.USD', raise_if_not_found=False),
         required=True
     )
-    
+
+    def _plazo_meses_int(self):
+        """Convierte plazo_meses (Selection) a entero para cálculos."""
+        self.ensure_one()
+        try:
+            return int(self.plazo_meses or 0)
+        except (TypeError, ValueError):
+            return 0
+
+    def _pago_mensual_solo_equipo(self, costo_equipo_cop, plazo_meses):
+        """
+        Cuota mensual correspondiente solo al capital del equipo (sin servicios recurrentes).
+
+        - Sin financiación con interés (o tasa 0 %): costo_equipo_cop / plazo (capital repartido).
+        - Con financiación con interés: fórmula PMT sobre el capital indicado.
+
+        Ejemplo sin interés (validación de negocio): 600 USD × 1,15 × 4.000 COP = 2.760.000 COP;
+        plazo 12 meses → cuota 230.000 COP/mes; 12 × 230.000 = 2.760.000 COP.
+        """
+        if plazo_meses <= 0 or costo_equipo_cop <= 0:
+            return 0.0
+        usar_pmt = self.financiacion_con_interes and (self.tasa_nominal or 0.0) > 0.0
+        if not usar_pmt:
+            return costo_equipo_cop / float(plazo_meses)
+        tasa_mensual_decimal = (self.tasa_nominal / 100.0) / 12.0
+        if tasa_mensual_decimal <= 0:
+            return costo_equipo_cop / float(plazo_meses)
+        factor = (1 + tasa_mensual_decimal) ** plazo_meses
+        return (costo_equipo_cop * tasa_mensual_decimal * factor) / (factor - 1)
+
     # Métodos de cálculo
-    @api.depends('valor_usd', 'valor_garantia_usd')
-    def _compute_costo_total_usd(self):
-        """Calcula el costo total en USD"""
+    def _equivalentes_usd_desde_lineas(self):
+        """Suma equivalentes USD por línea: USD directo; COP dividido entre TRM. Sin aplicar utilidad."""
+        self.ensure_one()
+        trm = self.trm or 4000.0
+        if trm <= 0:
+            trm = 4000.0
+        vu, vg = 0.0, 0.0
+        for line in self.line_ids:
+            amt = line.amount_equipment()
+            if line.moneda_equipo == "USD":
+                vu += amt
+                vg += line.monto_garantia or 0.0
+            else:
+                vu += amt / trm
+                vg += (line.monto_garantia or 0.0) / trm
+        return vu, vg
+
+    @api.depends(
+        "line_ids",
+        "line_ids.product_qty",
+        "line_ids.price_unit",
+        "line_ids.monto_garantia",
+        "line_ids.moneda_equipo",
+        "trm",
+    )
+    def _compute_agregados_desde_lineas(self):
+        """valor_usd / valor_garantia_usd / costo_total_usd desde líneas (una conversión TRM por línea COP)."""
         for record in self:
-            record.costo_total_usd = record.valor_usd + record.valor_garantia_usd
+            vu, vg = record._equivalentes_usd_desde_lineas()
+            record.valor_usd = vu
+            record.valor_garantia_usd = vg
+            record.costo_total_usd = vu + vg
     
     @api.depends('costo_total_usd', 'porcentaje_utilidad')
     def _compute_costo_con_utilidad(self):
@@ -449,21 +513,26 @@ class Calculadora(models.Model):
         for record in self:
             record.costo_equipo_cop = record.costo_con_utilidad_usd * record.trm
     
-    @api.depends('costo_equipo_cop', 'servicio_con_margen', 'plazo_meses')
+    @api.depends('costo_equipo_cop')
     def _compute_costo_total_cop(self):
-        """Calcula el costo total en pesos colombianos (equipo + servicios totales)"""
+        """Costo total del equipo en COP (solo apartado Costos del equipo). El servicio técnico no suma aquí."""
         for record in self:
-            # Costo total de servicios durante todo el plazo
-            costo_servicios_totales = record.servicio_con_margen * record.plazo_meses if record.plazo_meses > 0 else 0
-            # Costo total = equipo + servicios totales
-            record.costo_total_cop = record.costo_equipo_cop + costo_servicios_totales
+            record.costo_total_cop = record.costo_equipo_cop
     
-    @api.depends('costo_servicios_completos', 'porcentaje_margen_servicio')
+    @api.depends('costo_servicio_tecnico_mensual_cop', 'porcentaje_margen_servicio')
     def _compute_servicio_con_margen(self):
-        """Calcula el servicio con margen aplicado"""
+        """Servicio técnico mensual con margen (independiente del costo total equipo)."""
         for record in self:
             margen = 1 + (record.porcentaje_margen_servicio / 100.0)
-            record.servicio_con_margen = record.costo_servicios_completos * margen
+            record.servicio_con_margen = record.costo_servicio_tecnico_mensual_cop * margen
+    
+    @api.depends('servicio_con_margen', 'plazo_meses')
+    def _compute_total_servicio_tecnico_plazo_cop(self):
+        for record in self:
+            pm = record._plazo_meses_int()
+            record.total_servicio_tecnico_plazo_cop = (
+                record.servicio_con_margen * pm if pm > 0 else 0.0
+            )
     
     @api.depends('tasa_nominal')
     def _compute_tasa_mensual(self):
@@ -486,7 +555,7 @@ class Calculadora(models.Model):
         - Configuración de precisión de la celda
         """
         for record in self:
-            if record.plazo_meses > 0:
+            if record._plazo_meses_int() > 0:
                 # Calcular con mayor precisión usando Decimal
                 tasa_nominal_decimal = Decimal(str(record.tasa_nominal)) / Decimal('100')
                 tasa_mensual_decimal = tasa_nominal_decimal / Decimal('12')
@@ -497,85 +566,70 @@ class Calculadora(models.Model):
             else:
                 record.tasa_efectiva_anual = 0.0
     
-    @api.depends('costo_equipo_cop', 'porcentaje_opcion_compra')
-    def _compute_valor_opcion_compra(self):
-        """Calcula el valor de la opción de compra (solo sobre el costo del equipo, no servicios)"""
-        for record in self:
-            # La opción de compra se calcula sobre el costo del equipo, no sobre servicios
-            porcentaje = record.porcentaje_opcion_compra / 100.0
-            record.valor_opcion_compra = record.costo_equipo_cop * porcentaje
-    
-    @api.depends('costo_equipo_cop', 'tasa_nominal', 'plazo_meses', 
-                 'porcentaje_opcion_compra', 'servicio_con_margen')
+    @api.depends(
+        'costo_equipo_cop',
+        'tasa_nominal',
+        'plazo_meses',
+        'servicio_con_margen',
+        'financiacion_con_interes',
+    )
     def _compute_pago_mensual(self):
         """
-        Calcula el pago mensual usando la función PMT.
-        Usa la misma lógica que _calcular_escenario y _calcular_pago_plazo para garantizar consistencia.
+        Pago mensual = cuota del equipo (capital/plazo o PMT) + servicio técnico mensual.
+        Si no hay financiación con interés, la suma de cuotas del equipo reparte exactamente costo_equipo_cop.
         """
         for record in self:
-            if record.plazo_meses > 0:
-                tasa_mensual_decimal = (record.tasa_nominal / 100.0) / 12.0
-                
-                if tasa_mensual_decimal > 0:
-                    factor = (1 + tasa_mensual_decimal) ** record.plazo_meses
-                    # Calcular pago base solo sobre el costo del equipo
-                    pago_base = (record.costo_equipo_cop * tasa_mensual_decimal * factor) / (factor - 1)
-                    
-                    # Ajustar por opción de compra si aplica (misma lógica que _calcular_escenario)
-                    if record.porcentaje_opcion_compra > 0:
-                        porcentaje_opcion = record.porcentaje_opcion_compra / 100.0
-                        valor_opcion = record.costo_equipo_cop * porcentaje_opcion
-                        ajuste_opcion = (valor_opcion * tasa_mensual_decimal) / (factor - 1)
-                        pago_base = pago_base - ajuste_opcion
-                else:
-                    pago_base = record.costo_equipo_cop / record.plazo_meses
-                
-                # Sumar el servicio mensual al pago base
+            pm = record._plazo_meses_int()
+            if pm > 0:
+                pago_base = record._pago_mensual_solo_equipo(record.costo_equipo_cop, pm)
                 record.pago_mensual = pago_base + record.servicio_con_margen
             else:
                 record.pago_mensual = 0.0
     
-    @api.depends('costo_equipo_cop', 'tasa_nominal', 'servicio_con_margen', 'valor_opcion_compra')
+    @api.depends(
+        'costo_equipo_cop',
+        'tasa_nominal',
+        'servicio_con_margen',
+        'financiacion_con_interes',
+    )
     def _compute_valores_plazos(self):
-        """Calcula valores para diferentes plazos (24, 36, 48 meses)"""
+        """Calcula valores para comparación de plazos (12 a 60 meses)."""
         for record in self:
+            record.valor_12_meses = self._calcular_pago_plazo(record, 12)
             record.valor_24_meses = self._calcular_pago_plazo(record, 24)
             record.valor_36_meses = self._calcular_pago_plazo(record, 36)
             record.valor_48_meses = self._calcular_pago_plazo(record, 48)
+            record.valor_60_meses = self._calcular_pago_plazo(record, 60)
     
     def _calcular_pago_plazo(self, record, plazo):
         """
-        Método auxiliar para calcular pago en un plazo específico.
-        Usa la misma lógica que _calcular_escenario para garantizar consistencia.
+        Pago mensual total para un plazo de comparación (mismo criterio que el formulario).
         """
         if plazo > 0:
-            tasa_mensual_decimal = (record.tasa_nominal / 100.0) / 12.0
-            
-            if tasa_mensual_decimal > 0:
-                factor = (1 + tasa_mensual_decimal) ** plazo
-                # Calcular pago base solo sobre el costo del equipo
-                pago_base = (record.costo_equipo_cop * tasa_mensual_decimal * factor) / (factor - 1)
-                
-                # Ajustar por opción de compra si aplica (misma lógica que _calcular_escenario)
-                if record.porcentaje_opcion_compra > 0:
-                    porcentaje_opcion = record.porcentaje_opcion_compra / 100.0
-                    valor_opcion = record.costo_equipo_cop * porcentaje_opcion
-                    ajuste_opcion = (valor_opcion * tasa_mensual_decimal) / (factor - 1)
-                    pago_base = pago_base - ajuste_opcion
-            else:
-                pago_base = record.costo_equipo_cop / plazo
-            
-            # Sumar el servicio mensual al pago base
+            pago_base = record._pago_mensual_solo_equipo(record.costo_equipo_cop, plazo)
             return pago_base + record.servicio_con_margen
         return 0.0
     
-    @api.depends('pago_mensual', 'plazo_meses')
+    @api.depends(
+        'pago_mensual',
+        'plazo_meses',
+        'costo_equipo_cop',
+        'servicio_con_margen',
+        'financiacion_con_interes',
+        'tasa_nominal',
+    )
     def _compute_total_pagar(self):
-        """Calcula el total a pagar durante todo el plazo (solo cuotas mensuales)"""
+        """Estimado a pagar en el plazo: costo equipo + total servicio técnico del plazo (sin interés);
+        con PMT, suma de cuotas mensuales (incluye intereses sobre el equipo)."""
         for record in self:
-            # Total a pagar = suma de todas las cuotas mensuales
-            # La opción de compra es un pago adicional opcional al final, no se incluye aquí
-            record.total_pagar = record.pago_mensual * record.plazo_meses
+            pm = record._plazo_meses_int()
+            if pm <= 0:
+                record.total_pagar = 0.0
+                continue
+            if not record.financiacion_con_interes or not (record.tasa_nominal or 0.0):
+                record.total_pagar = record.costo_equipo_cop + record.servicio_con_margen * pm
+            else:
+                record.total_pagar = record.pago_mensual * pm
     
     @api.depends('partner_id')
     def _compute_subscription_count(self):
@@ -622,41 +676,54 @@ class Calculadora(models.Model):
                 'search_default_partner_id': self.partner_id.id,
             },
         }
-    
-    @api.model
-    def create(self, vals):
-        """Sobrescribir create para cargar valores por defecto"""
-        parametros = self.env['calculadora.parametros.financieros'].search([], limit=1)
-        if parametros:
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Valores por defecto locales por cotización (sin parámetros globales)."""
+        for vals in vals_list:
+            if 'tipo_operacion' not in vals:
+                vals['tipo_operacion'] = 'venta'
+            tipo = vals.get('tipo_operacion')
             if 'trm' not in vals or not vals.get('trm'):
-                vals['trm'] = parametros.trm_actual
+                vals['trm'] = 4000.0
             if 'porcentaje_utilidad' not in vals:
-                vals['porcentaje_utilidad'] = parametros.porcentaje_utilidad_default
+                vals['porcentaje_utilidad'] = 10.0
             if 'tasa_nominal' not in vals:
-                vals['tasa_nominal'] = parametros.tasa_nominal_default
+                vals['tasa_nominal'] = 21.0
             if 'porcentaje_margen_servicio' not in vals:
-                # Usar margen_servicio_default si existe, sino 15% por defecto
-                if hasattr(parametros, 'margen_servicio_default'):
-                    vals['porcentaje_margen_servicio'] = parametros.margen_servicio_default
-                else:
-                    vals['porcentaje_margen_servicio'] = 15.0
-            # Ajustar valores por defecto según tipo
-            if 'tipo_calculo' not in vals:
-                vals['tipo_calculo'] = 'equipo'
-            if vals.get('tipo_calculo') == 'renting':
-                if 'plazo_meses' not in vals:
-                    vals['plazo_meses'] = 48
-                if 'porcentaje_opcion_compra' not in vals:
-                    vals['porcentaje_opcion_compra'] = 0.0
-                if 'porcentaje_margen_servicio' not in vals:
-                    vals['porcentaje_margen_servicio'] = 25.0
-            else:  # equipo
-                if 'plazo_meses' not in vals:
-                    vals['plazo_meses'] = 24
-                if 'porcentaje_opcion_compra' not in vals:
-                    vals['porcentaje_opcion_compra'] = 20.0
-        return super(Calculadora, self).create(vals)
-    
+                vals['porcentaje_margen_servicio'] = 25.0 if tipo == 'suscripcion' else 15.0
+            if 'plazo_meses' not in vals:
+                vals['plazo_meses'] = '24'
+            if vals.get('tipo_operacion') == 'venta':
+                vals['financiacion_con_interes'] = False
+        records = super(Calculadora, self).create(vals_list)
+        Line = self.env["calculadora.costos.line"]
+        for rec in records:
+            if not rec.line_ids:
+                Line.create(
+                    {
+                        "calculadora_id": rec.id,
+                        "sequence": 10,
+                        "name": rec.name or "Equipo",
+                        "moneda_equipo": "USD",
+                        "product_qty": 1.0,
+                        "price_unit": 0.0,
+                        "monto_garantia": 0.0,
+                    }
+                )
+        return records
+
+    def write(self, vals):
+        if vals.get('tipo_operacion') == 'venta':
+            vals = dict(vals)
+            vals['financiacion_con_interes'] = False
+        return super().write(vals)
+
+    @api.onchange('tipo_operacion')
+    def _onchange_tipo_operacion_financiacion(self):
+        if self.tipo_operacion == 'venta':
+            self.financiacion_con_interes = False
+
     def _calcular_escenario(self, incluir_seguro=True, incluir_servicios=True, plazo=None):
         """
         Calcula los valores para un escenario específico
@@ -667,7 +734,7 @@ class Calculadora(models.Model):
         :return: Diccionario con los valores calculados
         """
         self.ensure_one()
-        plazo_calc = plazo if plazo else self.plazo_meses
+        plazo_calc = plazo if plazo is not None else self._plazo_meses_int()
         
         # Calcular costo del equipo base (sin garantía)
         costo_equipo_base_usd = self.valor_usd
@@ -685,25 +752,10 @@ class Calculadora(models.Model):
         if incluir_servicios:
             servicio_mensual = self.servicio_con_margen
         
-        # Calcular pago mensual del equipo (usando PMT)
-        # Usar la misma lógica que _calcular_pago_plazo para consistencia
-        tasa_mensual_decimal = (self.tasa_nominal / 100.0) / 12.0
-        pago_base_equipo = 0.0
-        
-        if plazo_calc > 0:
-            if tasa_mensual_decimal > 0:
-                factor = (1 + tasa_mensual_decimal) ** plazo_calc
-                pago_base_equipo = (costo_equipo_cop * tasa_mensual_decimal * factor) / (factor - 1)
-                
-                # Ajustar por opción de compra si aplica (misma lógica que _calcular_pago_plazo)
-                # La opción de compra se calcula sobre el costo_equipo_cop del escenario
-                if self.porcentaje_opcion_compra > 0:
-                    porcentaje_opcion = self.porcentaje_opcion_compra / 100.0
-                    valor_opcion = costo_equipo_cop * porcentaje_opcion
-                    ajuste_opcion = (valor_opcion * tasa_mensual_decimal) / (factor - 1)
-                    pago_base_equipo = pago_base_equipo - ajuste_opcion
-            else:
-                pago_base_equipo = costo_equipo_cop / plazo_calc
+        # Cuota del equipo: reparto lineal del capital o PMT según configuración
+        pago_base_equipo = (
+            self._pago_mensual_solo_equipo(costo_equipo_cop, plazo_calc) if plazo_calc > 0 else 0.0
+        )
         
         # Pago mensual total (equipo + servicios)
         pago_mensual_total = pago_base_equipo + servicio_mensual
@@ -737,10 +789,9 @@ class Calculadora(models.Model):
         Los escenarios muestran el desglose de los valores calculados.
         
         IMPORTANTE: El Escenario 1 (con seguro y servicios) debería coincidir con
-        los valores valor_24_meses, valor_36_meses, valor_48_meses mostrados en
-        la interfaz web cuando el equipo tiene garantía configurada.
+        los valores por plazo mostrados en la interfaz cuando el equipo tiene garantía configurada.
         
-        :return: Diccionario con los 4 escenarios y sus valores para 24, 36 y 48 meses
+        :return: Diccionario con los 4 escenarios y sus valores por plazo
         """
         self.ensure_one()
         
@@ -774,7 +825,7 @@ class Calculadora(models.Model):
         # Calcular valores para cada escenario en los diferentes plazos
         # Usa _calcular_escenario que ya tiene toda la lógica de cálculo
         for esc_key, esc_data in escenarios.items():
-            for plazo in [24, 36, 48]:
+            for plazo in PLAZOS_COMPARACION_MESES:
                 valores = self._calcular_escenario(
                     incluir_seguro=esc_data['incluir_seguro'],
                     incluir_servicios=esc_data['incluir_servicios'],
@@ -818,20 +869,141 @@ class Calculadora(models.Model):
         
         # Validar que pago_mensual coincida con el escenario correspondiente
         # según el plazo configurado
-        if self.plazo_meses in [24, 36, 48]:
+        pm = self._plazo_meses_int()
+        if pm in PLAZOS_COMPARACION_MESES:
             escenario_1 = self.get_escenarios_resumen()['escenario_1']
-            valor_plazo_escenario = escenario_1['plazos'][self.plazo_meses]['pago_mensual_total']
+            valor_plazo_escenario = escenario_1['plazos'][pm]['pago_mensual_total']
             diferencia = abs(self.pago_mensual - valor_plazo_escenario)
             
             if diferencia > 1.0:
                 resultados['valido'] = False
                 resultados['errores'].append(
                     f"pago_mensual ({self.pago_mensual:,.2f}) no coincide con "
-                    f"Escenario 1 a {self.plazo_meses} meses ({valor_plazo_escenario:,.2f}). "
+                    f"Escenario 1 a {pm} meses ({valor_plazo_escenario:,.2f}). "
                     f"Diferencia: {diferencia:,.2f} COP"
                 )
         
         return resultados
+
+    def _ensure_line_count(self):
+        """Mantiene line_ids sincronizado con cantidad_equipos.
+
+        En formularios nuevos (padre sin guardar) no se debe usar create()/unlink()
+        sobre las líneas: el cliente web espera ids virtuales (NewId) y mezclar
+        enteros reales rompe el diff del onchange (AttributeError: 'int' has no 'origin').
+        """
+        Line = self.env["calculadora.costos.line"]
+        for record in self:
+            target = max(1, min(100, record.cantidad_equipos or 1))
+            lines = record.line_ids.sorted("sequence")
+            current = len(lines)
+            if current < target:
+                if record._origin:
+                    vals_list = []
+                    for seq in range(current + 1, target + 1):
+                        vals_list.append({
+                            "calculadora_id": record.id,
+                            "sequence": seq,
+                        })
+                    Line.create(vals_list)
+                else:
+                    record.line_ids = [
+                        (
+                            0,
+                            0,
+                            {
+                                "sequence": seq,
+                                "name": record.name or "Equipo",
+                                "moneda_equipo": "USD",
+                                "product_qty": 1.0,
+                                "price_unit": 0.0,
+                                "monto_garantia": 0.0,
+                            },
+                        )
+                        for seq in range(current + 1, target + 1)
+                    ]
+            elif current > target:
+                to_remove = lines[target:]
+                if record._origin:
+                    to_remove.unlink()
+                else:
+                    record.line_ids = [(2, line.id) for line in to_remove]
+
+    @api.depends(
+        "line_ids",
+        "line_ids.name",
+        "line_ids.product_id",
+        "line_ids.product_qty",
+        "line_ids.price_unit",
+        "line_ids.monto_garantia",
+        "line_ids.moneda_equipo",
+        "line_ids.subtotal_base_cop",
+        "trm",
+    )
+    def _compute_equipo_campos(self):
+        for record in self:
+            trm = record.trm or 4000.0
+            if trm <= 0:
+                trm = 4000.0
+            lines = record.line_ids.sorted("sequence")
+            for idx in range(1, 21):
+                line = lines[idx - 1] if len(lines) >= idx else False
+                setattr(record, f"equipo_{idx}_nombre", line.name if line else False)
+                setattr(record, f"equipo_{idx}_product_id", line.product_id if line else False)
+                if line:
+                    amt = line.amount_equipment()
+                    if line.moneda_equipo == "USD":
+                        evu, eg = amt, line.monto_garantia
+                        evc, egc = amt * trm, line.monto_garantia * trm
+                    else:
+                        evc, egc = amt, line.monto_garantia
+                        evu, eg = amt / trm, line.monto_garantia / trm
+                    st = line.subtotal_base_cop
+                else:
+                    evu = eg = evc = egc = st = 0.0
+                setattr(record, f"equipo_{idx}_valor_usd", evu)
+                setattr(record, f"equipo_{idx}_garantia_usd", eg)
+                setattr(record, f"equipo_{idx}_valor_cop", evc)
+                setattr(record, f"equipo_{idx}_garantia_cop", egc)
+                setattr(record, f"equipo_{idx}_costo_total_cop", st)
+
+    def _inverse_equipo_campos(self):
+        for record in self:
+            record._ensure_line_count()
+            lines = record.line_ids.sorted("sequence")
+            for idx in range(1, min(record.cantidad_equipos, 20) + 1):
+                line = lines[idx - 1]
+                vu = getattr(record, f"equipo_{idx}_valor_usd", 0.0) or 0.0
+                vg = getattr(record, f"equipo_{idx}_garantia_usd", 0.0) or 0.0
+                vc = getattr(record, f"equipo_{idx}_valor_cop", 0.0) or 0.0
+                gc = getattr(record, f"equipo_{idx}_garantia_cop", 0.0) or 0.0
+                # Prefer COP si el usuario editó esos campos; si no, USD
+                if vc or gc:
+                    line.write({
+                        "name": getattr(record, f"equipo_{idx}_nombre", False) or False,
+                        "product_id": getattr(record, f"equipo_{idx}_product_id", False).id
+                        if getattr(record, f"equipo_{idx}_product_id", False)
+                        else False,
+                        "moneda_equipo": "COP",
+                        "product_qty": 1.0,
+                        "price_unit": vc,
+                        "monto_garantia": gc,
+                    })
+                else:
+                    line.write({
+                        "name": getattr(record, f"equipo_{idx}_nombre", False) or False,
+                        "product_id": getattr(record, f"equipo_{idx}_product_id", False).id
+                        if getattr(record, f"equipo_{idx}_product_id", False)
+                        else False,
+                        "moneda_equipo": "USD",
+                        "product_qty": 1.0,
+                        "price_unit": vu,
+                        "monto_garantia": vg,
+                    })
+
+    @api.onchange("cantidad_equipos")
+    def _onchange_cantidad_equipos(self):
+        self._ensure_line_count()
     
     def action_print_report(self):
         """Acción para imprimir el reporte PDF"""

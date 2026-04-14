@@ -43,14 +43,32 @@ class PurchaseAlertManualQuotationWizard(models.TransientModel):
         'wizard_id',
         'vendor_id',
         string='Proveedores',
-        domain="['|', ('tipo_contacto', 'in', ['proveedor', 'ambos']), ('supplier_rank', '>', 0)]",
+        domain="[('id', 'in', available_vendor_ids)]",
         required=True,
         help='Seleccione los proveedores a los que desea enviar la cotización.',
+    )
+    available_vendor_ids = fields.Many2many(
+        'res.partner',
+        compute='_compute_available_vendor_ids',
+        string='Proveedores disponibles',
     )
     notes = fields.Text(
         string='Notas Adicionales',
         help='Notas que se agregarán a todas las órdenes de compra',
     )
+
+    @api.depends('partner_id')
+    def _compute_available_vendor_ids(self):
+        Partner = self.env['res.partner']
+        for rec in self:
+            domain = [
+                '|', '|', '|',
+                ('tipo_contacto', 'in', ['proveedor', 'ambos']),
+                ('supplier_rank', '>', 0),
+                ('parent_id.tipo_contacto', 'in', ['proveedor', 'ambos']),
+                ('commercial_partner_id.supplier_rank', '>', 0),
+            ]
+            rec.available_vendor_ids = Partner.search(domain)
 
     @api.model
     def default_get(self, fields_list):
@@ -124,7 +142,7 @@ class PurchaseAlertManualQuotationWizard(models.TransientModel):
                         'product_id': False,  # Sin producto específico
                         'name': description_base,
                         'product_qty': 1.0,
-                        'product_uom': False,
+                        'product_uom_id': False,
                         'price_unit': 0.0,  # Precio a definir
                         'date_planned': fields.Datetime.now(),
                     })],

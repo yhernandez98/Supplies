@@ -13,16 +13,19 @@
     ''',
     'author': 'Supplies De Colombia SAS',
     'category': 'Inventory/Helpdesk',
-    'version': '19.0.1.0.6',
+    'version': '19.0.1.0.34',
     'depends': [
         'stock',
         'product_suppiles',
         'product_suppiles_partner',
+        # Licencias por equipo/usuario (license.equipment, pestañas en stock.lot)
+        'subscription_licenses',
         'mail',
         'web',
         'sign',  # Módulo que contiene el widget signature
         'helpdesk',  # ✅ Módulo nativo - Para integrar tickets
         'repair',  # ✅ Módulo nativo - Para reparaciones
+        'sale_subscription',  # Para extender lista de precios recurrentes del cliente
         'calendar',  # ✅ Para calendario de visitas y mantenimientos programados
         'account',  # Para account.analytic.line (líneas de hoja de horas / timer)
         'hr_timesheet',  # Proporciona action_timer_stop en account.analytic.line (timer en tickets)
@@ -49,6 +52,9 @@
         'wizard/request_element_wizard_views.xml',  # ✅ Wizard para solicitar elemento/componente
         'wizard/activity_assignment_wizard_views.xml',  # ✅ Wizard para asignar actividades
         'wizard/escalate_ticket_wizard_views.xml',  # Escalar ticket a otro equipo/responsable
+        'wizard/customer_query_wizard_views.xml',
+        'wizard/service_order_solicitudes_wizard_views.xml',
+        'wizard/service_order_retiro_usuario_equipo_wizard_views.xml',
         'views/alertas_renting_views.xml',  # Alertas > Equipos a terminar Renting (por fecha finalización)
         'views/helpdesk_ticket_category_views.xml',
         'views/helpdesk_ticket_views.xml',  # ✅ Activado - Vistas y acción de tickets
@@ -56,6 +62,7 @@
         'views/helpdesk_timer_pause_request_views.xml',
         'views/helpdesk_ticket_pause_request_views.xml',
         'views/repair_order_views.xml',  # ✅ Activado - Vistas de reparaciones
+        'views/pricelist_admin_supplies_views.xml',
         'views/menuitems.xml',  # ✅ Cargar menús antes de debug_log_views
         'views/debug_log_views.xml',  # ✅ Herramienta de debug (después de menuitems para que el menú padre exista)
         'reports/stock_lot_life_sheet_report.xml',

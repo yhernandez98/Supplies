@@ -17,4 +17,5 @@ from . import attachment_cleanup  # ✅ Limpieza automática de attachments temp
 from . import account_analytic_line  # ✅ Timer: tiempo real al detener; pausa con autorización
 from . import helpdesk_timer_pause_request  # ✅ Solicitud de pausa (timer Odoo / líneas)
 from . import helpdesk_ticket_pause_request  # ✅ Solicitud de pausa cronómetro propio (tickets)
+from . import product_pricelist_item
 

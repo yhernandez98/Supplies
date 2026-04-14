@@ -518,10 +518,10 @@ class StockLotMaintenance(models.Model):
             
             # Si ambas firmas están presentes y el estado es borrador, cambiar a completado
             if record.technician_signature and record.customer_signature and record.status == 'draft':
-                self.env.cr.execute(
-                    "UPDATE stock_lot_maintenance SET status = %s WHERE id = %s",
-                    ('completed', record.id)
-                )
+                record.with_context(
+                    skip_signature_check=True,
+                    skip_status_validation=True,
+                ).write({'status': 'completed'})
                 record.invalidate_recordset(['status'])
                 
                 # Notificar al chatter

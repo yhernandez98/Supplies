@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from dateutil.relativedelta import relativedelta
 from odoo import api, fields, models, _
 from odoo.exceptions import ValidationError
 from odoo.tools import float_round
@@ -428,7 +429,7 @@ class LicenseAssignment(models.Model):
         if not self.env.context.get('ignore_custom_price', False):
             if self.use_custom_price and self.price_usd:
                 return self.price_usd
-
+        
         product = self.license_id and self.license_id.product_id
         if not self.partner_id or not product:
             return 0.0
@@ -1070,12 +1071,26 @@ class LicenseAssignment(models.Model):
                 rec.start_date = fields.Date.today()
             rec.state = 'active'
 
-    def action_cancel(self):
-        """Cancela la asignación de licencia"""
+    def _apply_cancel_state(self):
+        """Pasa la asignación a cancelada (usado tras confirmar en el wizard de advertencia)."""
         for rec in self:
             if rec.state == 'cancelled':
                 continue
             rec.state = 'cancelled'
+
+    def action_cancel(self):
+        """Abre el wizard de advertencia antes de cancelar la asignación."""
+        self.ensure_one()
+        if self.state in ('cancelled', 'draft'):
+            return True
+        return {
+            'name': _('Advertencia - Cancelar asignación'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'license.assignment.cancel.warning.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {'default_assignment_id': self.id},
+        }
 
     def action_open_add_multiple_equipment(self):
         """Abre wizard de añadir varios equipos. Si el contrato es anual, muestra antes la advertencia."""
@@ -1153,12 +1168,44 @@ class LicenseAssignment(models.Model):
 
     @api.model
     def _cron_check_expired_licenses(self):
-        """Cron job para verificar y marcar licencias vencidas"""
+        """Cron job para renovar automáticamente y luego marcar licencias vencidas."""
         today = fields.Date.today()
+        # 1) Renovar primero las activas/vencidas con auto-renovación habilitada.
+        renewable = self.search([
+            ('state', 'in', ['active', 'expired']),
+            ('auto_renewal', '=', True),
+            ('end_date', '<', today),
+            ('end_date', '!=', False),
+        ])
+        for rec in renewable:
+            if rec.contracting_type == 'monthly_monthly':
+                step_months = 1
+            else:
+                # annual y annual_monthly_commitment
+                step_months = 12
+            if step_months <= 0:
+                continue
+
+            # Avanzar tantos períodos como sea necesario para dejarla vigente hoy.
+            while rec.end_date and rec.end_date < today:
+                next_start = rec.end_date + relativedelta(days=1)
+                next_end = next_start + relativedelta(months=step_months) - relativedelta(days=1)
+                # Escribir ambas fechas en un solo write para no disparar validación intermedia
+                # start_date > end_date cuando se cambia campo por campo.
+                rec.with_context(skip_sync_provider_report=True).write({
+                    'start_date': next_start,
+                    'end_date': next_end,
+                })
+
+            # Blindaje de estado por si venía desalineado.
+            if rec.state != 'active':
+                rec.state = 'active'
+
+        # 2) Las que no aplican a renovación o siguen fuera de vigencia quedan vencidas.
         expired = self.search([
             ('state', '=', 'active'),
             ('end_date', '<', today),
-            ('end_date', '!=', False)
+            ('end_date', '!=', False),
         ])
         expired.action_expire()
 

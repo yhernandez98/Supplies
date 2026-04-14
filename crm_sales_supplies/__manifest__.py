@@ -4,7 +4,7 @@
 
 {
     'name': 'CRM Sales Supplies Integration',
-    'version': '19.0.1.0.0',
+    'version': '19.0.1.0.21',
     'author': 'Supplies De Colombia SAS',
     'category': 'Sales/CRM',
     'depends': [
@@ -25,6 +25,9 @@
         'security/ir.model.access.csv',
         'views/purchase_alert_views.xml',
         'views/crm_lead_views.xml',
+        'views/crm_lead_solution_quote_views.xml',
+        'views/crm_solution_quote_views.xml',
+        'views/sale_order_solution_quote_views.xml',
         'views/sale_order_views.xml',
         'views/purchase_order_views.xml',
         'views/product_views.xml',
@@ -39,6 +42,7 @@
         'wizard/sale_order_request_quotation_wizard_views.xml',
         'wizard/purchase_alert_manual_quotation_wizard_views.xml',
         'wizard/leasing_contract_wizard_views.xml',
+        'wizard/crm_solution_quote_wizard_views.xml',
         'views/menuitems.xml',
     ],
     'installable': True,

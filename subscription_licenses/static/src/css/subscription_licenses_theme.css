@@ -813,3 +813,11 @@ form.o_subscription_form .o_list_view tbody tr:nth-child(even) td:first-child {
 .o_list_consolidado_top_scroll_bar::-webkit-scrollbar-thumb:hover {
     background: rgba(15, 118, 110, 0.5);
 }
+
+/* Ocultar "Agregar una línea" en subpestañas de licencias del stock.lot
+   (se usa solo el botón "Agregar Asignación"). */
+.o_license_no_inline_add .o_field_x2many_list_row_add,
+.o_license_no_inline_add tr.o_field_x2many_list_row_add,
+.o_license_no_inline_add .o_list_button_add {
+    display: none !important;
+}

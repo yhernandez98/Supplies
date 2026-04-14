@@ -43,27 +43,28 @@ class CalculadoraRenting(models.Model):
     )
     
     costo_total_cop = fields.Float(
-        string='Costo Total (COP)',
+        string='Costo Total Equipo (COP)',
         compute='_compute_costo_total_cop',
-        store=True
+        store=True,
+        help='Costo del equipo en COP (sin servicio técnico).',
     )
     
-    # Costos de Servicios
-    costo_servicios_completos = fields.Float(
-        string='Costo Servicios Completos',
-        default=0.0
+    costo_servicio_tecnico_mensual_cop = fields.Float(
+        string='Costo Servicio Técnico Mensual COP',
+        default=0.0,
+        help='Costo base mensual del servicio técnico en COP, antes del margen.',
     )
     
     porcentaje_margen_servicio = fields.Float(
-        string='Porcentaje Margen Servicio (%)',
+        string='Margen Servicio Técnico (%)',
         default=25.0,
-        help='Porcentaje de margen aplicado a servicios (ej: 25 = 25%)'
+        help='Margen sobre el costo mensual del servicio técnico (ej: 25 = 25%).',
     )
     
     servicio_con_margen = fields.Float(
-        string='Servicio con Margen',
+        string='Servicio Técnico Mensual con Margen (COP)',
         compute='_compute_servicio_con_margen',
-        store=True
+        store=True,
     )
     
     # Parámetros Financieros
@@ -129,6 +130,7 @@ class CalculadoraRenting(models.Model):
     partner_id = fields.Many2one(
         'res.partner',
         string='Cliente',
+        domain="[('is_company', '=', True)]",
         help='Cliente asociado a esta calculadora de renting'
     )
     
@@ -175,13 +177,12 @@ class CalculadoraRenting(models.Model):
             costo_con_utilidad = costo_total_usd * factor_utilidad
             record.costo_total_cop = costo_con_utilidad * record.trm
     
-    @api.depends('costo_servicios_completos', 'porcentaje_margen_servicio')
+    @api.depends('costo_servicio_tecnico_mensual_cop', 'porcentaje_margen_servicio')
     def _compute_servicio_con_margen(self):
-        """Calcula el servicio con margen aplicado"""
+        """Servicio técnico mensual con margen (independiente del costo total equipo)."""
         for record in self:
-            # Aplicar margen: Precio = Costo × (1 + Margen/100)
             margen = 1 + (record.porcentaje_margen_servicio / 100.0)
-            record.servicio_con_margen = record.costo_servicios_completos * margen
+            record.servicio_con_margen = record.costo_servicio_tecnico_mensual_cop * margen
     
     @api.depends('tasa_nominal', 'plazo_meses')
     def _compute_tasa_efectiva_anual(self):
@@ -300,15 +301,14 @@ class CalculadoraRenting(models.Model):
             },
         }
     
-    @api.model
-    def create(self, vals):
-        """Sobrescribir create para cargar valores por defecto"""
-        parametros = self.env['calculadora.parametros.financieros'].search([], limit=1)
-        if parametros:
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Valores por defecto locales (sin parámetros globales)."""
+        for vals in vals_list:
             if 'trm' not in vals or not vals.get('trm'):
-                vals['trm'] = parametros.trm_actual
+                vals['trm'] = 4000.0
             if 'porcentaje_utilidad' not in vals:
-                vals['porcentaje_utilidad'] = 10.0  # 10% por defecto
+                vals['porcentaje_utilidad'] = 10.0
             if 'tasa_nominal' not in vals:
-                vals['tasa_nominal'] = parametros.tasa_nominal_default
-        return super(CalculadoraRenting, self).create(vals)
+                vals['tasa_nominal'] = 21.0
+        return super(CalculadoraRenting, self).create(vals_list)

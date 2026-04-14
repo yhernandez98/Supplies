@@ -1,5 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <record id="paperformat_export_licenses_equipos_landscape" model="report.paperformat">
+        <field name="name">Exportar Licencias y Equipos (horizontal)</field>
+        <field name="default" eval="False"/>
+        <field name="format">A4</field>
+        <field name="orientation">Landscape</field>
+        <field name="margin_top">12</field>
+        <field name="margin_bottom">12</field>
+        <field name="margin_left">7</field>
+        <field name="margin_right">7</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">0</field>
+        <field name="dpi">90</field>
+    </record>
+
     <!-- PDF Exportar Licencias y Equipos -->
     <record id="action_report_export_licenses_equipos_pdf" model="ir.actions.report">
         <field name="name">Exportar Licencias y Equipos (PDF)</field>
@@ -8,6 +22,7 @@
         <field name="report_name">subscription_nocount.report_export_licenses_equipos_pdf</field>
         <field name="report_file">subscription_nocount.report_export_licenses_equipos_pdf</field>
         <field name="print_report_name">'Exportar Licencias y Equipos - %s' % (object.name or '')</field>
+        <field name="paperformat_id" ref="subscription_nocount.paperformat_export_licenses_equipos_landscape"/>
     </record>
 
     <template id="report_export_licenses_equipos_pdf">
@@ -23,100 +38,148 @@
                         <!-- Licencias -->
                         <div class="mt-3 mb-2">
                             <h3 style="font-size: 1.1rem;">Licencias</h3>
-                            <table class="table table-sm table-bordered">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Agrupamiento</th>
-                                        <th>Producto</th>
-                                        <th>Número de serie/lote</th>
-                                        <th>Placa de Inventario</th>
-                                        <th>Usuario Asignado</th>
-                                        <th>Licencia/Servicio Asignado</th>
-                                        <th class="text-end">Costo</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <t t-set="license_lines" t-value="doc._get_export_license_serial_lines()"/>
-                                    <t t-foreach="license_lines" t-as="l">
+                            <t t-if="not lic_col_count">
+                                <p class="text-muted">No se seleccionaron columnas para esta sección.</p>
+                            </t>
+                            <t t-if="lic_col_count">
+                                <t t-set="license_lines" t-value="doc._get_export_license_serial_lines()"/>
+                                <table class="table table-sm table-bordered">
+                                    <thead class="table-light">
                                         <tr>
-                                            <td><t t-esc="l.business_line_name or ''"/></td>
-                                            <td><t t-esc="l.product_id.display_name if l.product_id else ''"/></td>
-                                            <td><t t-esc="l.lot_id.name if l.lot_id else ''"/></td>
-                                            <td><t t-esc="l.inventory_plate or ''"/></td>
-                                            <td><t t-esc="l.assigned_user_display_name or ''"/></td>
-                                            <td><t t-esc="l.license_service_name or ''"/></td>
-                                            <td class="text-end">
-                                                <t t-if="l.cost_currency_id">
-                                                    <t t-esc="l.cost_currency_id.format(l.cost or 0)"/>
-                                                </t>
-                                                <t t-else="">
-                                                    <t t-esc="l.cost or 0"/>
-                                                </t>
-                                            </td>
+                                            <t t-if="lic_col['grouping']"><th>Agrupamiento</th></t>
+                                            <t t-if="lic_col['product']"><th>Producto</th></t>
+                                            <t t-if="lic_col['serial']"><th>Número de serie/lote</th></t>
+                                            <t t-if="lic_col['inventory_plate']"><th>Placa de Inventario</th></t>
+                                            <t t-if="lic_col['user']"><th>Usuario Asignado</th></t>
+                                            <t t-if="lic_col['license_service']"><th>Licencia/Servicio Asignado</th></t>
+                                            <t t-if="lic_col['cost']"><th class="text-end">Costo</th></t>
+                                            <t t-if="lic_col['currency']"><th>Moneda</th></t>
                                         </tr>
-                                    </t>
-                                    <t t-if="not license_lines">
-                                        <tr>
-                                            <td colspan="7" class="text-center text-muted">Sin datos</td>
-                                        </tr>
-                                    </t>
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        <t t-foreach="license_lines" t-as="l">
+                                            <tr>
+                                                <t t-if="lic_col['grouping']"><td><t t-esc="l.business_line_name or ''"/></td></t>
+                                                <t t-if="lic_col['product']"><td><t t-esc="l.product_id.display_name if l.product_id else ''"/></td></t>
+                                                <t t-if="lic_col['serial']"><td><t t-esc="l.lot_id.name if l.lot_id else ''"/></td></t>
+                                                <t t-if="lic_col['inventory_plate']"><td><t t-esc="l.inventory_plate or ''"/></td></t>
+                                                <t t-if="lic_col['user']"><td><t t-esc="l.assigned_user_display_name or ''"/></td></t>
+                                                <t t-if="lic_col['license_service']"><td><t t-esc="l.license_service_name or ''"/></td></t>
+                                                <t t-if="lic_col['cost']">
+                                                    <td class="text-end">
+                                                        <t t-if="l.cost_currency_id">
+                                                            <t t-esc="l.cost_currency_id.format(l.cost or 0)"/>
+                                                        </t>
+                                                        <t t-else="">
+                                                            <t t-esc="l.cost or 0"/>
+                                                        </t>
+                                                    </td>
+                                                </t>
+                                                <t t-if="lic_col['currency']"><td><t t-esc="l.cost_currency_id.name if l.cost_currency_id else ''"/></td></t>
+                                            </tr>
+                                        </t>
+                                        <t t-if="not license_lines">
+                                            <tr>
+                                                <td t-att-colspan="lic_col_count" class="text-center text-muted">Sin datos</td>
+                                            </tr>
+                                        </t>
+                                    </tbody>
+                                </table>
+                            </t>
                         </div>
 
                         <!-- Equipos -->
                         <div class="mt-4 mb-2">
                             <h3 style="font-size: 1.1rem;">Equipos</h3>
-                            <table class="table table-sm table-bordered">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Agrupamiento</th>
-                                        <th>Producto</th>
-                                        <th>Placa de Inventario</th>
-                                        <th>Serial/Lote</th>
-                                        <th>Usuario Asignado</th>
-                                        <th class="text-end">Costo Renting</th>
-                                        <th class="text-end">Costo Adicional</th>
-                                        <th>Fecha Activación</th>
-                                        <th>Fecha Finalización</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <t t-set="equipment_lines" t-value="doc._get_export_equipment_serial_lines()"/>
-                                    <t t-foreach="equipment_lines" t-as="e">
+                            <t t-if="not eq_col_count">
+                                <p class="text-muted">No se seleccionaron columnas para esta sección.</p>
+                            </t>
+                            <t t-if="eq_col_count">
+                                <t t-set="equipment_lines" t-value="doc._get_export_equipment_serial_lines()"/>
+                                <table class="table table-sm table-bordered">
+                                    <thead class="table-light">
                                         <tr>
-                                            <td><t t-esc="e.business_line_name or ''"/></td>
-                                            <td><t t-esc="e.product_name or ''"/></td>
-                                            <td><t t-esc="e.inventory_plate or ''"/></td>
-                                            <td><t t-esc="e.lot_name or ''"/></td>
-                                            <td><t t-esc="e.assigned_user_display_name or ''"/></td>
-                                            <td class="text-end">
-                                                <t t-if="e.currency_id">
-                                                    <t t-esc="e.currency_id.format(e.cost_renting_total or 0)"/>
-                                                </t>
-                                                <t t-else="">
-                                                    <t t-esc="e.cost_renting_total or 0"/>
-                                                </t>
-                                            </td>
-                                            <td class="text-end">
-                                                <t t-if="e.currency_id">
-                                                    <t t-esc="e.currency_id.format(e.cost_additional or 0)"/>
-                                                </t>
-                                                <t t-else="">
-                                                    <t t-esc="e.cost_additional or 0"/>
-                                                </t>
-                                            </td>
-                                            <td><t t-esc="e.entry_date or ''"/></td>
-                                            <td><t t-esc="e.exit_date or ''"/></td>
+                                            <t t-if="eq_col['grouping']"><th>Agrupamiento</th></t>
+                                            <t t-if="eq_col['product']"><th>Producto</th></t>
+                                            <t t-if="eq_col['inventory_plate']"><th>Placa de Inventario</th></t>
+                                            <t t-if="eq_col['serial']"><th>Serial/Lote</th></t>
+                                            <t t-if="eq_col['user']"><th>Usuario Asignado</th></t>
+                                            <t t-if="eq_col['cost_renting']"><th class="text-end">Costo Renting</th></t>
+                                            <t t-if="eq_col['cost_additional']"><th class="text-end">Costo Adicional</th></t>
+                                            <t t-if="eq_col['entry_date']"><th>Fecha Activación</th></t>
+                                            <t t-if="eq_col['exit_date']"><th>Fecha Finalización</th></t>
+                                            <t t-if="eq_col['reining_plazo']"><th>Plazo Renting</th></t>
+                                            <t t-if="eq_col['tiempo_sitio']"><th>Tiempo En Sitio</th></t>
+                                            <t t-if="eq_col['tiempo_restante']"><th>Tiempo Restante</th></t>
+                                            <t t-if="eq_col['days_service']"><th>Días En Servicio</th></t>
+                                            <t t-if="eq_col['cost_daily']"><th class="text-end">Costo Diario</th></t>
+                                            <t t-if="eq_col['cost_to_date']"><th class="text-end">Costo Días En Servicio</th></t>
                                         </tr>
-                                    </t>
-                                    <t t-if="not equipment_lines">
-                                        <tr>
-                                            <td colspan="9" class="text-center text-muted">Sin datos</td>
-                                        </tr>
-                                    </t>
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        <t t-foreach="equipment_lines" t-as="e">
+                                            <tr>
+                                                <t t-if="eq_col['grouping']"><td><t t-esc="e.business_line_name or ''"/></td></t>
+                                                <t t-if="eq_col['product']"><td><t t-esc="e.product_name or ''"/></td></t>
+                                                <t t-if="eq_col['inventory_plate']"><td><t t-esc="e.inventory_plate or ''"/></td></t>
+                                                <t t-if="eq_col['serial']"><td><t t-esc="e.lot_name or ''"/></td></t>
+                                                <t t-if="eq_col['user']"><td><t t-esc="e.assigned_user_display_name or ''"/></td></t>
+                                                <t t-if="eq_col['cost_renting']">
+                                                    <td class="text-end">
+                                                        <t t-if="e.currency_id">
+                                                            <t t-esc="e.currency_id.format(e.cost_renting_total or 0)"/>
+                                                        </t>
+                                                        <t t-else="">
+                                                            <t t-esc="e.cost_renting_total or 0"/>
+                                                        </t>
+                                                    </td>
+                                                </t>
+                                                <t t-if="eq_col['cost_additional']">
+                                                    <td class="text-end">
+                                                        <t t-if="e.currency_id">
+                                                            <t t-esc="e.currency_id.format(e.cost_additional or 0)"/>
+                                                        </t>
+                                                        <t t-else="">
+                                                            <t t-esc="e.cost_additional or 0"/>
+                                                        </t>
+                                                    </td>
+                                                </t>
+                                                <t t-if="eq_col['entry_date']"><td><t t-esc="e.entry_date or ''"/></td></t>
+                                                <t t-if="eq_col['exit_date']"><td><t t-esc="e.exit_date or ''"/></td></t>
+                                                <t t-if="eq_col['reining_plazo']"><td><t t-esc="e.reining_plazo or ''"/></td></t>
+                                                <t t-if="eq_col['tiempo_sitio']"><td><t t-esc="e.tiempo_en_sitio_display or ''"/></td></t>
+                                                <t t-if="eq_col['tiempo_restante']"><td><t t-esc="e.tiempo_restante_display or ''"/></td></t>
+                                                <t t-if="eq_col['days_service']"><td class="text-center"><t t-esc="e.days_in_service or 0"/></td></t>
+                                                <t t-if="eq_col['cost_daily']">
+                                                    <td class="text-end">
+                                                        <t t-if="e.currency_id">
+                                                            <t t-esc="e.currency_id.format(e.cost_daily or 0)"/>
+                                                        </t>
+                                                        <t t-else="">
+                                                            <t t-esc="e.cost_daily or 0"/>
+                                                        </t>
+                                                    </td>
+                                                </t>
+                                                <t t-if="eq_col['cost_to_date']">
+                                                    <td class="text-end">
+                                                        <t t-if="e.currency_id">
+                                                            <t t-esc="e.currency_id.format(e.cost_to_date or 0)"/>
+                                                        </t>
+                                                        <t t-else="">
+                                                            <t t-esc="e.cost_to_date or 0"/>
+                                                        </t>
+                                                    </td>
+                                                </t>
+                                            </tr>
+                                        </t>
+                                        <t t-if="not equipment_lines">
+                                            <tr>
+                                                <td t-att-colspan="eq_col_count" class="text-center text-muted">Sin datos</td>
+                                            </tr>
+                                        </t>
+                                    </tbody>
+                                </table>
+                            </t>
                         </div>
                     </div>
                 </t>
@@ -134,4 +197,3 @@
         <field name="print_report_name">'Exportar Licencias y Equipos - %s' % (object.name or '')</field>
     </record>
 </odoo>
-

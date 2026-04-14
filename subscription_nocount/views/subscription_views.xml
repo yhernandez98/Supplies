@@ -155,7 +155,8 @@
                 <field name="current_day_of_month" string="Día del mes" optional="hide"/>
                 <field name="month_display" string="Mes" optional="hide"/>
                 <field name="location_id" string="Ubicación" optional="hide"/>
-                <field name="subscription_id" string="Suscripción" optional="hide"/>
+                <!-- Misma suscripción para todas las filas; Many2one en lista puede verse como doble control -->
+                <field name="subscription_id" column_invisible="1"/>
                 <field name="currency_id" column_invisible="True"/>
                 <field name="lot_id" column_invisible="True"/>
             </list>
@@ -917,6 +918,46 @@
                         <field name="subscription_id" readonly="1"/>
                         <field name="billable_id" readonly="1"/>
                     </group>
+                    <div class="mb-2">
+                        <button name="action_select_all_columns" type="object" string="Marcar todas las columnas" class="btn-link"/>
+                    </div>
+                    <notebook>
+                        <page string="Columnas Licencias">
+                            <group>
+                                <group string="Licencias">
+                                    <field name="exp_lic_grouping"/>
+                                    <field name="exp_lic_product"/>
+                                    <field name="exp_lic_serial"/>
+                                    <field name="exp_lic_inventory_plate"/>
+                                    <field name="exp_lic_user"/>
+                                    <field name="exp_lic_license_service"/>
+                                    <field name="exp_lic_cost"/>
+                                    <field name="exp_lic_currency"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Columnas Equipos">
+                            <group>
+                                <group string="Equipos">
+                                    <field name="exp_eq_grouping"/>
+                                    <field name="exp_eq_product"/>
+                                    <field name="exp_eq_inventory_plate"/>
+                                    <field name="exp_eq_serial"/>
+                                    <field name="exp_eq_user"/>
+                                    <field name="exp_eq_cost_renting"/>
+                                    <field name="exp_eq_cost_additional"/>
+                                    <field name="exp_eq_entry_date"/>
+                                    <field name="exp_eq_exit_date"/>
+                                    <field name="exp_eq_reining_plazo"/>
+                                    <field name="exp_eq_tiempo_sitio"/>
+                                    <field name="exp_eq_tiempo_restante"/>
+                                    <field name="exp_eq_days_service"/>
+                                    <field name="exp_eq_cost_daily"/>
+                                    <field name="exp_eq_cost_to_date"/>
+                                </group>
+                            </group>
+                        </page>
+                    </notebook>
                 </sheet>
                 <footer>
                     <button name="action_export_excel" type="object" string="Excel" class="btn-primary"/>

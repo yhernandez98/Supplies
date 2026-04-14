@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="seq_crm_solution_quote" model="ir.sequence">
+            <field name="name">CRM Solution Quote</field>
+            <field name="code">crm.solution.quote</field>
+            <field name="prefix">SOLQ/</field>
+            <field name="padding">5</field>
+            <field name="company_id" eval="False"/>
+        </record>
+
+        <record id="view_crm_solution_quote_list" model="ir.ui.view">
+            <field name="name">crm.solution.quote.list</field>
+            <field name="model">crm.solution.quote</field>
+            <field name="arch" type="xml">
+                <list>
+                    <field name="name"/>
+                    <field name="lead_id"/>
+                    <field name="sale_order_id"/>
+                    <field name="partner_id"/>
+                    <field name="version"/>
+                    <field name="state"/>
+                    <field name="total_cost"/>
+                    <field name="total_price"/>
+                    <field name="margin_percent"/>
+                    <field name="subscription_id"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_crm_solution_quote_form" model="ir.ui.view">
+            <field name="name">crm.solution.quote.form</field>
+            <field name="model">crm.solution.quote</field>
+            <field name="arch" type="xml">
+                <form string="Propuesta de Solucion">
+                    <header>
+                        <button name="action_validate_availability" type="object" string="Validar disponibilidad"
+                                class="btn-secondary" invisible="state in ('approved','cancelled')"/>
+                        <button name="action_approve" type="object" string="Aprobar" class="btn-primary"
+                                invisible="state in ('approved','cancelled')"/>
+                        <button name="action_new_revision" type="object" string="Nueva revision" class="btn-secondary"
+                                invisible="state != 'approved'"/>
+                        <button name="action_reset_draft" type="object" string="Volver a borrador" class="btn-secondary"
+                                invisible="state == 'draft'"/>
+                        <button name="action_cancel" type="object" string="Cancelar" class="btn-secondary"
+                                invisible="state in ('approved','cancelled')"/>
+                        <field name="state" widget="statusbar" statusbar_visible="draft,review,approved,cancelled"/>
+                    </header>
+                    <sheet>
+                        <group>
+                            <group>
+                                <field name="name" readonly="1"/>
+                                <field name="lead_id" readonly="1"/>
+                                <field name="sale_order_id" readonly="1"/>
+                                <field name="partner_id" readonly="1"/>
+                                <field name="version" readonly="1"/>
+                                <field name="is_current" readonly="1"/>
+                            </group>
+                            <group>
+                                <field name="warehouse_id" readonly="state in ('approved','cancelled')"/>
+                                <field name="location_id" readonly="state in ('approved','cancelled')"/>
+                                <field name="subscription_target_id" readonly="state in ('approved','cancelled')"/>
+                                <field name="final_service_name" readonly="state in ('approved','cancelled')"/>
+                                <field name="package_total_price" readonly="state in ('approved','cancelled')"/>
+                                <field name="subscription_id" readonly="1"/>
+                                <field name="approved_by" readonly="1"/>
+                                <field name="approved_date" readonly="1"/>
+                            </group>
+                        </group>
+                        <notebook>
+                            <page string="Lineas">
+                                <field name="line_ids" readonly="state in ('approved','cancelled')">
+                                    <list editable="bottom">
+                                        <field name="sequence" widget="handle"/>
+                                        <field name="line_type"/>
+                                        <field name="product_id"/>
+                                        <field name="description"/>
+                                        <field name="quantity"/>
+                                        <field name="available_qty" readonly="1"/>
+                                        <field name="missing_qty" readonly="1"/>
+                                        <field name="fulfillment_state" readonly="1"/>
+                                        <field name="requires_purchase_alert"/>
+                                        <field name="purchase_alert_id" readonly="1"/>
+                                    </list>
+                                </field>
+                            </page>
+                            <page string="Resultado">
+                                <group>
+                                    <field name="total_cost" readonly="1"/>
+                                    <field name="total_price" readonly="1"/>
+                                    <field name="margin_amount" readonly="1"/>
+                                    <field name="margin_percent" readonly="1"/>
+                                </group>
+                                <group string="Operaciones generadas">
+                                    <field name="purchase_alert_ids" readonly="1" widget="many2many_tags"/>
+                                    <field name="picking_ids" readonly="1" widget="many2many_tags"/>
+                                </group>
+                            </page>
+                        </notebook>
+                    </sheet>
+                    <chatter/>
+                </form>
+            </field>
+        </record>
+
+        <record id="action_crm_solution_quote" model="ir.actions.act_window">
+            <field name="name">Propuestas de Solucion</field>
+            <field name="res_model">crm.solution.quote</field>
+            <field name="view_mode">list,form</field>
+            <field name="context">{}</field>
+        </record>
+
+        <record id="view_crm_solution_pricing_rule_list" model="ir.ui.view">
+            <field name="name">crm.solution.pricing.rule.list</field>
+            <field name="model">crm.solution.pricing.rule</field>
+            <field name="arch" type="xml">
+                <list>
+                    <field name="name"/>
+                    <field name="applies_to"/>
+                    <field name="method"/>
+                    <field name="fixed_price"/>
+                    <field name="markup_percent"/>
+                    <field name="min_margin_percent"/>
+                    <field name="active"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_crm_solution_pricing_rule_form" model="ir.ui.view">
+            <field name="name">crm.solution.pricing.rule.form</field>
+            <field name="model">crm.solution.pricing.rule</field>
+            <field name="arch" type="xml">
+                <form>
+                    <sheet>
+                        <group>
+                            <field name="name"/>
+                            <field name="active"/>
+                            <field name="applies_to"/>
+                            <field name="method"/>
+                            <field name="fixed_price"/>
+                            <field name="markup_percent"/>
+                            <field name="min_margin_percent"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="action_crm_solution_pricing_rule" model="ir.actions.act_window">
+            <field name="name">Reglas de Pricing</field>
+            <field name="res_model">crm.solution.pricing.rule</field>
+            <field name="view_mode">list,form</field>
+        </record>
+
+        <record id="view_crm_solution_license_param_list" model="ir.ui.view">
+            <field name="name">crm.solution.license.param.list</field>
+            <field name="model">crm.solution.license.param</field>
+            <field name="arch" type="xml">
+                <list>
+                    <field name="product_categ_id"/>
+                    <field name="default_rule_id"/>
+                    <field name="currency_mode"/>
+                    <field name="min_margin_percent"/>
+                    <field name="active"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_crm_solution_license_param_form" model="ir.ui.view">
+            <field name="name">crm.solution.license.param.form</field>
+            <field name="model">crm.solution.license.param</field>
+            <field name="arch" type="xml">
+                <form>
+                    <sheet>
+                        <group>
+                            <field name="product_categ_id"/>
+                            <field name="default_rule_id"/>
+                            <field name="currency_mode"/>
+                            <field name="min_margin_percent"/>
+                            <field name="active"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="action_crm_solution_license_param" model="ir.actions.act_window">
+            <field name="name">Parametros de Licencia</field>
+            <field name="res_model">crm.solution.license.param</field>
+            <field name="view_mode">list,form</field>
+        </record>
+    </data>
+</odoo>

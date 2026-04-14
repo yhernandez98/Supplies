@@ -15,4 +15,5 @@ from . import leasing_contract
 from . import leasing_contract_template
 from . import product_template
 from . import product_product
+from . import crm_solution_quote
 

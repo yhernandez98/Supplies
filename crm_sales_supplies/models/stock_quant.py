@@ -168,6 +168,45 @@ class StockQuant(models.Model):
                 quant.related_products_ids = self.env['product.product']
     
     @api.model
+    def _crm_ss_fetch_associated_component_lot_ids(self):
+        """IDs de lotes hijos (related_lot_id) en líneas componente/periférico/complemento.
+        Equivale al filtro de exclusión anterior sin cargar miles de registros ORM."""
+        table = self.env['stock.lot.supply.line']._table
+        self.env.cr.execute(
+            """
+            SELECT DISTINCT related_lot_id
+            FROM {table}
+            WHERE item_type IN %s
+              AND related_lot_id IS NOT NULL
+              AND lot_id IS NOT NULL
+            """.format(table=table),
+            (('component', 'peripheral', 'complement'),),
+        )
+        return [row[0] for row in self.env.cr.fetchall() if row and row[0]]
+
+    @api.model
+    def _crm_ss_fetch_parent_lot_ids_for_product_ids(self, product_ids):
+        """Lotes principales (lot_id) que tienen alguna línea de suministro con esos productos.
+        Respeta el espíritu del límite 5000 del ORM: solo las primeras 5000 líneas por id."""
+        if not product_ids:
+            return []
+        table = self.env['stock.lot.supply.line']._table
+        self.env.cr.execute(
+            """
+            SELECT DISTINCT lot_id FROM (
+                SELECT lot_id
+                FROM {table}
+                WHERE product_id = ANY(%s)
+                  AND lot_id IS NOT NULL
+                ORDER BY id
+                LIMIT 5000
+            ) sub
+            """.format(table=table),
+            (list(product_ids),),
+        )
+        return [row[0] for row in self.env.cr.fetchall() if row and row[0]]
+
+    @api.model
     def _search(self, domain, offset=0, limit=None, order=None, **kwargs):
         """Extender búsqueda para filtrar por producto principal o por características de componentes.
         kwargs: active_test, bypass_access, etc. (Odoo 19).
@@ -212,24 +251,27 @@ class StockQuant(models.Model):
                                 break
                 
                 # Si hay término de búsqueda, buscar también en hardware asociado
-                if search_term and product_filter_idx is not None:
+                # Mínimo 2 caracteres: una sola letra dispara demasiadas coincidencias y carga.
+                if (
+                    search_term
+                    and len(search_term) >= 2
+                    and product_filter_idx is not None
+                ):
                     try:
                         # Buscar productos que coincidan con el término (componentes)
                         matching_products = self.env['product.product'].sudo().search([
                             ('name', 'ilike', search_term)
-                        ], limit=500)
+                        ], limit=300)
                         
-                        # Buscar lotes principales que tienen estos productos como hardware asociado
                         matching_lot_ids = set()
                         if matching_products:
-                            SupplyLine = self.env['stock.lot.supply.line']
-                            supply_lines = SupplyLine.sudo().search([
-                                ('product_id', 'in', matching_products.ids)
-                            ], limit=5000)
-                            
-                            # Obtener los lotes principales (lot_id) que tienen estos productos como hardware
-                            parent_lot_ids = supply_lines.mapped('lot_id').ids
-                            matching_lot_ids = set([lid for lid in parent_lot_ids if lid and isinstance(lid, int)])
+                            parent_lot_ids = self._crm_ss_fetch_parent_lot_ids_for_product_ids(
+                                matching_products.ids
+                            )
+                            matching_lot_ids = {
+                                lid for lid in parent_lot_ids
+                                if lid and isinstance(lid, int)
+                            }
                         
                         # Si encontramos lotes con hardware asociado, expandir el dominio con OR
                         if matching_lot_ids:
@@ -248,28 +290,11 @@ class StockQuant(models.Model):
             # Solo aplicar el filtro si es la vista de inventario
             if is_inventory_view:
                 try:
-                    # Buscar lotes que están asociados a productos principales
-                    # En stock.lot.supply.line:
-                    # - lot_id = lote del producto principal
-                    # - related_lot_id = lote del componente/periférico/complemento asociado
-                    SupplyLine = self.env['stock.lot.supply.line']
-                    associated_lines = SupplyLine.sudo().search([
-                        ('item_type', 'in', ['component', 'peripheral', 'complement']),
-                        ('related_lot_id', '!=', False),
-                        ('lot_id', '!=', False),
-                    ], limit=10000)  # Limitar para evitar problemas
-                    
-                    # Obtener los IDs de los lotes asociados (related_lot_id son los componentes/periféricos/complementos)
-                    associated_lot_ids = []
-                    for line in associated_lines:
-                        try:
-                            if line.related_lot_id and hasattr(line.related_lot_id, 'id') and line.related_lot_id.id:
-                                associated_lot_ids.append(line.related_lot_id.id)
-                        except Exception:
-                            continue
-                    
-                    # Eliminar duplicados y asegurar que son enteros
-                    associated_lot_ids = list(set([lid for lid in associated_lot_ids if isinstance(lid, int) and lid > 0]))
+                    # Excluir quants cuyo lote es un componente/periférico/complemento ligado a un principal
+                    associated_lot_ids = [
+                        lid for lid in self._crm_ss_fetch_associated_component_lot_ids()
+                        if isinstance(lid, int) and lid > 0
+                    ]
                     
                     # Si hay lotes asociados, agregar filtro al dominio para excluirlos
                     if associated_lot_ids:

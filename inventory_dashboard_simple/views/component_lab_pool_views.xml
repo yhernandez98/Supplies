@@ -1,0 +1,352 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="view_component_lab_assignment_search" model="ir.ui.view">
+            <field name="name">component.lab.assignment.search</field>
+            <field name="model">component.lab.assignment</field>
+            <field name="arch" type="xml">
+                <search>
+                    <field name="name"/>
+                    <field name="lot_id"/>
+                    <field name="product_id"/>
+                    <field name="responsible_user_id"/>
+                    <field name="technician_user_id"/>
+                    <filter string="Activas (sin devuelto a Exist.)"
+                            name="filter_active_pool"
+                            domain="[('state', '!=', 'returned_to_exist')]"
+                            help="Oculta seriales ya devueltos al almacén para ver solo lo que sigue en circuito en laboratorio."/>
+                    <separator/>
+                    <filter string="En pool (disponible)" name="filter_pool" domain="[('state', '=', 'in_lab_pool')]"/>
+                    <filter string="Con técnico" name="filter_tech" domain="[('state', '=', 'with_technician')]"/>
+                    <filter string="Pendiente aprobación devolución" name="filter_pending_return_approval" domain="[('state', '=', 'tech_return_pending_approval')]"/>
+                    <filter string="Con responsable en lab." name="filter_resp" domain="[('state', '=', 'returned_to_responsible')]"/>
+                    <filter string="Devuelto a Existencias" name="filter_exist" domain="[('state', '=', 'returned_to_exist')]"/>
+                </search>
+            </field>
+        </record>
+
+        <record id="view_component_lab_assignment_form" model="ir.ui.view">
+            <field name="name">component.lab.assignment.form</field>
+            <field name="model">component.lab.assignment</field>
+            <field name="arch" type="xml">
+                <form string="Asignación laboratorio" class="o_lab_hub_form">
+                    <sheet>
+                        <field name="lab_eligible_product_ids" invisible="1"/>
+                        <field name="lab_eligible_lot_ids" invisible="1"/>
+                        <group>
+                            <group>
+                                <field name="intake_picking_id"
+                                       options="{'no_create': True}"
+                                       placeholder="Albarán de ingreso a laboratorio (afina el filtro a su ubicación destino)"/>
+                                <field name="responsible_user_id"/>
+                                <field name="product_id"
+                                       domain="[('id', 'in', lab_eligible_product_ids)]"
+                                       options="{'no_create': True}"/>
+                                <field name="lot_id"
+                                       domain="[('id', 'in', lab_eligible_lot_ids), ('product_id', '=?', product_id)]"
+                                       options="{'no_create': True}"/>
+                                <field name="name"/>
+                                <field name="availability_display"/>
+                            </group>
+                            <group>
+                                <field name="state"/>
+                                <field name="technician_user_id"/>
+                                <field name="expected_return_date"/>
+                                <field name="remaining_days"/>
+                                <field name="extension_request_state"/>
+                                <field name="extension_request_date"/>
+                                <field name="exit_picking_id"/>
+                                <field name="company_id" groups="base.group_multi_company"/>
+                            </group>
+                        </group>
+                        <notebook>
+                            <page string="Actas">
+                                <field name="acta_ids" nolabel="1">
+                                    <list create="false" delete="false">
+                                        <field name="name"/>
+                                        <field name="event_date"/>
+                                        <field name="acta_type"/>
+                                        <field name="created_by_user_id"/>
+                                        <field name="technician_user_id"/>
+                                        <field name="expected_return_date"/>
+                                        <field name="note"/>
+                                    </list>
+                                </field>
+                            </page>
+                        </notebook>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="action_component_lab_assignment_manual" model="ir.actions.act_window">
+            <field name="name">Crear asignación manual (pool)</field>
+            <field name="res_model">component.lab.assignment</field>
+            <field name="view_mode">form</field>
+            <field name="view_id" ref="view_component_lab_assignment_form"/>
+            <field name="target">current</field>
+            <field name="context">{'default_state': 'in_lab_pool'}</field>
+        </record>
+
+        <!-- Wizards (antes de lista/kanban: los botones referencian estas acciones) -->
+        <record id="view_component_lab_assign_tech_wizard_form" model="ir.ui.view">
+            <field name="name">component.lab.assign.tech.wizard.form</field>
+            <field name="model">component.lab.assign.tech.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Asignar a técnico (laboratorio)" class="o_lab_hub_form">
+                    <group>
+                        <field name="assignment_ids" widget="many2many_tags"
+                               domain="[('state', '=', 'in_lab_pool')]"
+                               options="{'no_create': True}"/>
+                        <field name="technician_user_id"/>
+                        <field name="expected_return_date"/>
+                    </group>
+                    <footer>
+                        <button name="action_apply" type="object" string="Registrar asignación" class="btn-primary"/>
+                        <button string="Cancelar" special="cancel" class="btn-secondary"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+        <record id="action_component_lab_assign_tech_wizard" model="ir.actions.act_window">
+            <field name="name">Asignar a técnico (laboratorio)</field>
+            <field name="res_model">component.lab.assign.tech.wizard</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+        </record>
+
+        <record id="view_component_lab_tech_return_wizard_form" model="ir.ui.view">
+            <field name="name">component.lab.tech.return.wizard.form</field>
+            <field name="model">component.lab.tech.return.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Devolución técnico → responsable (laboratorio)" class="o_lab_hub_form">
+                    <p class="text-muted">El stock permanece en laboratorio; solo cambia el control interno.</p>
+                    <group>
+                        <field name="assignment_ids" widget="many2many_tags"
+                               domain="[('state', '=', 'with_technician')]"
+                               options="{'no_create': True}"/>
+                    </group>
+                    <footer>
+                        <button name="action_apply" type="object" string="Registrar devolución al responsable" class="btn-primary"/>
+                        <button string="Cancelar" special="cancel" class="btn-secondary"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+        <record id="action_component_lab_tech_return_wizard" model="ir.actions.act_window">
+            <field name="name">Devolución técnico → responsable</field>
+            <field name="res_model">component.lab.tech.return.wizard</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+        </record>
+
+        <record id="view_component_lab_responsible_return_line_tree" model="ir.ui.view">
+            <field name="name">component.lab.responsible.return.wizard.line.list</field>
+            <field name="model">component.lab.responsible.return.wizard.line</field>
+            <field name="arch" type="xml">
+                <list editable="bottom" create="true" delete="true">
+                    <field name="assignment_id"
+                           domain="[('state', 'in', ('in_lab_pool', 'returned_to_responsible'))]"
+                           options="{'no_create': True}"/>
+                    <field name="product_id"/>
+                    <field name="lot_id"/>
+                    <field name="quantity"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_component_lab_responsible_return_wizard_form" model="ir.ui.view">
+            <field name="name">component.lab.responsible.return.wizard.form</field>
+            <field name="model">component.lab.responsible.return.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Responsable: devolver a Existencias" class="o_lab_hub_form">
+                    <p class="text-muted">Solo el responsable de laboratorio de cada asignación (o inventario) puede procesar este traslado.</p>
+                    <group>
+                        <field name="note" placeholder="Observación opcional..."/>
+                    </group>
+                    <field name="line_ids" nolabel="1"/>
+                    <footer>
+                        <button name="action_process" type="object" string="Procesar y validar traslado" class="btn-primary"/>
+                        <button string="Cancelar" special="cancel" class="btn-secondary"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+        <record id="action_component_lab_responsible_return_wizard" model="ir.actions.act_window">
+            <field name="name">Responsable → Existencias</field>
+            <field name="res_model">component.lab.responsible.return.wizard</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+        </record>
+
+        <record id="view_component_lab_assignment_tree" model="ir.ui.view">
+            <field name="name">component.lab.assignment.list</field>
+            <field name="model">component.lab.assignment</field>
+            <field name="arch" type="xml">
+                <list string="Asignaciones laboratorio"
+                      class="o_lab_assignment_list"
+                      decoration-success="state == 'in_lab_pool'"
+                      decoration-warning="state == 'with_technician'"
+                      decoration-info="state == 'returned_to_responsible'"
+                      decoration-muted="state == 'returned_to_exist'">
+                    <header>
+                        <button name="%(inventory_dashboard_simple.action_component_lab_assign_tech_wizard)d"
+                                type="action"
+                                string="Asignar técnico"
+                                class="btn-primary o_lab_hub_entry_btn"
+                                display="always"/>
+                        <button name="%(inventory_dashboard_simple.action_component_lab_tech_return_wizard)d"
+                                type="action"
+                                string="Devol. técnico"
+                                class="btn-secondary o_lab_hub_entry_btn"
+                                display="always"/>
+                        <button name="%(inventory_dashboard_simple.action_component_lab_responsible_return_wizard)d"
+                                type="action"
+                                string="Devolver a existencias"
+                                class="btn-secondary o_lab_hub_entry_btn"
+                                display="always"/>
+                        <button name="%(inventory_dashboard_simple.action_component_lab_loan_tracking)d"
+                                type="action"
+                                string="Legado: seguimiento préstamos"
+                                class="btn-secondary o_lab_hub_entry_btn"
+                                display="always"/>
+                        <button name="%(inventory_dashboard_simple.action_component_lab_assignment_manual)d"
+                                type="action"
+                                string="Asignación manual"
+                                class="btn-secondary o_lab_hub_entry_btn"
+                                display="always"/>
+                    </header>
+                    <field name="name"/>
+                    <field name="product_id"/>
+                    <field name="lot_id"/>
+                    <field name="responsible_user_id"/>
+                    <field name="technician_user_id"/>
+                    <field name="state"/>
+                    <field name="availability_display"/>
+                    <field name="expected_return_date" optional="show"/>
+                    <field name="intake_picking_id" optional="hide"/>
+                    <field name="exit_picking_id" optional="hide"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_component_lab_assignment_kanban" model="ir.ui.view">
+            <field name="name">component.lab.assignment.kanban</field>
+            <field name="model">component.lab.assignment</field>
+            <field name="arch" type="xml">
+                <kanban class="o_lab_hub_kanban" default_group_by="state" default_order="id desc">
+                    <field name="name"/>
+                    <field name="product_id"/>
+                    <field name="lot_id"/>
+                    <field name="responsible_user_id"/>
+                    <field name="technician_user_id"/>
+                    <field name="state"/>
+                    <field name="availability_display"/>
+                    <field name="expected_return_date"/>
+                    <header>
+                        <button name="%(inventory_dashboard_simple.action_component_lab_assign_tech_wizard)d"
+                                type="action"
+                                string="Asignar técnico"
+                                class="btn-primary o_lab_hub_entry_btn"
+                                display="always"/>
+                        <button name="%(inventory_dashboard_simple.action_component_lab_tech_return_wizard)d"
+                                type="action"
+                                string="Devol. técnico"
+                                class="btn-secondary o_lab_hub_entry_btn"
+                                display="always"/>
+                        <button name="%(inventory_dashboard_simple.action_component_lab_responsible_return_wizard)d"
+                                type="action"
+                                string="Devolver a existencias"
+                                class="btn-secondary o_lab_hub_entry_btn"
+                                display="always"/>
+                        <button name="%(inventory_dashboard_simple.action_component_lab_loan_tracking)d"
+                                type="action"
+                                string="Legado: seguimiento préstamos"
+                                class="btn-secondary o_lab_hub_entry_btn"
+                                display="always"/>
+                        <button name="%(inventory_dashboard_simple.action_component_lab_assignment_manual)d"
+                                type="action"
+                                string="Asignación manual"
+                                class="btn-secondary o_lab_hub_entry_btn"
+                                display="always"/>
+                    </header>
+                    <templates>
+                        <t t-name="card">
+                            <div class="oe_kanban_card oe_kanban_global_click o_lab_hub_card"
+                                 t-attf-class="o_lab_hub_card o_lab_hub_card_#{record.state.raw_value}">
+                                <div class="o_lab_hub_card_title">
+                                    <strong><field name="product_id"/></strong>
+                                </div>
+                                <div class="o_lab_hub_card_serial">
+                                    <span>Serial:</span>
+                                    <strong><field name="lot_id"/></strong>
+                                </div>
+                                <div class="o_lab_hub_card_meta">
+                                    <div><i class="fa fa-user"/> <field name="responsible_user_id"/></div>
+                                    <div t-if="record.technician_user_id.raw_value"><i class="fa fa-user-circle-o"/> <field name="technician_user_id"/></div>
+                                </div>
+                                <div class="o_lab_hub_card_availability">
+                                    <field name="availability_display"/>
+                                </div>
+                                <div class="o_lab_hub_card_footer">
+                                    <span class="o_lab_hub_state_chip" t-if="record.state.raw_value == 'in_lab_pool'">En pool</span>
+                                    <span class="o_lab_hub_state_chip" t-if="record.state.raw_value == 'with_technician'">Con técnico</span>
+                                    <span class="o_lab_hub_state_chip" t-if="record.state.raw_value == 'returned_to_responsible'">Con responsable</span>
+                                    <span class="o_lab_hub_state_chip" t-if="record.state.raw_value == 'returned_to_exist'">Devuelto</span>
+                                    <span t-if="record.expected_return_date.raw_value"><i class="fa fa-calendar"/> <field name="expected_return_date"/></span>
+                                </div>
+                                <div class="o_lab_hub_card_actions">
+                                    <button t-if="record.state.raw_value == 'in_lab_pool'"
+                                            type="object"
+                                            name="action_open_assign_tech_wizard"
+                                            class="btn btn-sm btn-primary">
+                                        Asignar
+                                    </button>
+                                    <button t-if="record.state.raw_value == 'with_technician'"
+                                            type="object"
+                                            name="action_open_tech_return_wizard"
+                                            class="btn btn-sm btn-secondary">
+                                        Registrar devolución
+                                    </button>
+                                    <button t-if="record.state.raw_value == 'returned_to_responsible'"
+                                            type="object"
+                                            name="action_open_responsible_return_wizard"
+                                            class="btn btn-sm btn-secondary">
+                                        Devolver a Existencias
+                                    </button>
+                                </div>
+                            </div>
+                        </t>
+                    </templates>
+                    <progressbar field="state" colors='{"in_lab_pool": "success", "with_technician": "warning", "returned_to_responsible": "info", "returned_to_exist": "secondary"}'/>
+                </kanban>
+            </field>
+        </record>
+
+        <record id="action_component_lab_assignment" model="ir.actions.act_window">
+            <field name="name">Vista general del pool (laboratorio)</field>
+            <field name="res_model">component.lab.assignment</field>
+            <field name="view_mode">kanban,list,form</field>
+            <field name="search_view_id" ref="view_component_lab_assignment_search"/>
+            <field name="context">{'search_default_filter_active_pool': 1, 'group_by': ['state']}</field>
+            <field name="help" type="html">
+                <p>
+                    <strong>Flujo centralizado desde esta vista:</strong>
+                    use los botones superiores para asignar técnico, registrar devoluciones y abrir seguimiento legado.
+                </p>
+                <p>
+                    El traslado <strong>Existencias → Laboratorio</strong> se hace desde el menú Dashboard
+                    (<strong>Traslado Componente</strong>, inventario). Al pulsar <strong>Procesar traslado</strong>,
+                    se valida de inmediato y los seriales aparecen aquí.
+                </p>
+                <p>
+                    Use <strong>Crear asignación manual</strong> solo para casos excepcionales.
+                    Por defecto se ocultan las ya devueltas a Existencias para enfocarse en trabajo activo.
+                </p>
+            </field>
+        </record>
+    </data>
+</odoo>

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="view_crm_lead_form_solution_quote_inherit" model="ir.ui.view">
+            <field name="name">crm.lead.form.solution.quote.inherit</field>
+            <field name="model">crm.lead</field>
+            <field name="inherit_id" ref="crm.crm_lead_view_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//div[hasclass('oe_button_box')]" position="inside">
+                    <button type="object" name="action_view_solution_quotes" class="oe_stat_button" icon="fa-cubes">
+                        <field name="solution_quote_count" widget="statinfo" string="Soluciones"/>
+                    </button>
+                </xpath>
+
+                <xpath expr="//notebook" position="inside">
+                    <page string="Solucion Comercial">
+                        <group>
+                            <field name="current_solution_quote_id" readonly="1"/>
+                        </group>
+                        <field name="solution_quote_ids" nolabel="1">
+                            <list>
+                                <field name="name"/>
+                                <field name="version"/>
+                                <field name="state"/>
+                                <field name="total_cost"/>
+                                <field name="total_price"/>
+                                <field name="margin_percent"/>
+                                <field name="subscription_id"/>
+                            </list>
+                        </field>
+                    </page>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</odoo>

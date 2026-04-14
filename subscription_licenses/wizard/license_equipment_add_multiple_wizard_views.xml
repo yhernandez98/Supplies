@@ -4,7 +4,7 @@
         <field name="name">license.equipment.add.multiple.wizard.form</field>
         <field name="model">license.equipment.add.multiple.wizard</field>
         <field name="arch" type="xml">
-            <form string="Seleccionar equipos o contactos (varios o todos)" class="o_subscription_form">
+            <form string="Seleccionar equipos o contactos (varios o todos)" class="o_subscription_form license-add-multiple-wizard-form">
                 <group>
                     <field name="assignment_id" readonly="1"/>
                     <field name="add_type" readonly="1"/>
@@ -14,12 +14,12 @@
                         <strong>Marque la casilla de cada elemento que desee asignar.</strong> Use «Seleccionar todos» o «Deseleccionar todos» y luego «Añadir seleccionados».
                     </div>
                 </group>
-                <group string="Lista (marque los que desee añadir)">
+                <group string="Lista (marque los que desee añadir)" colspan="2" col="1">
                     <field name="line_ids" nolabel="1">
-                        <list create="0" delete="0" edit="1" limit="200" multi_edit="1">
-                            <field name="selected" string="Seleccionar" widget="boolean_toggle"/>
-                            <field name="lot_id" string="Equipo (Lote/Serie)" optional="show"/>
-                            <field name="contact_id" string="Contacto" optional="show"/>
+                        <list create="0" delete="0" edit="1" limit="200" multi_edit="1" open_form_view="false">
+                            <field name="selected" string="Seleccionar" widget="boolean_toggle" width="10%"/>
+                            <field name="lot_id" string="Equipo (Lote/Serie)" optional="show" width="28%"/>
+                            <field name="contact_id" string="Contacto" optional="show" width="62%"/>
                         </list>
                     </field>
                 </group>

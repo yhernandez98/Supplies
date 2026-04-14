@@ -60,30 +60,29 @@ class CalculadoraEquipo(models.Model):
     )
     
     costo_total_cop = fields.Float(
-        string='Costo Total (COP)',
+        string='Costo Total Equipo (COP)',
         compute='_compute_costo_total_cop',
         store=True,
-        help='Costo total en pesos colombianos'
+        help='Costo del equipo en pesos colombianos (sin servicio técnico).'
     )
     
-    # Costos de Servicios
-    costo_servicios_completos = fields.Float(
-        string='Costo Servicios Completos',
+    costo_servicio_tecnico_mensual_cop = fields.Float(
+        string='Costo Servicio Técnico Mensual COP',
         default=0.0,
-        help='Costo base de servicios técnicos completos'
+        help='Costo base mensual del servicio técnico en COP, antes del margen.'
     )
     
     margen_servicio = fields.Float(
-        string='Margen de Servicio (%)',
+        string='Margen Servicio Técnico (%)',
         default=15.0,
-        help='Porcentaje de margen aplicado a servicios (ej: 15 = 15%)'
+        help='Margen sobre el costo mensual del servicio técnico (ej: 15 = 15%).'
     )
     
     servicio_con_margen = fields.Float(
-        string='Servicio con Margen',
+        string='Servicio Técnico Mensual con Margen (COP)',
         compute='_compute_servicio_con_margen',
         store=True,
-        help='Costo de servicios con margen aplicado'
+        help='Valor mensual del servicio técnico con margen aplicado (COP).'
     )
     
     # Parámetros Financieros
@@ -198,12 +197,12 @@ class CalculadoraEquipo(models.Model):
         for record in self:
             record.costo_total_cop = record.costo_con_utilidad_usd * record.trm
     
-    @api.depends('costo_servicios_completos', 'margen_servicio')
+    @api.depends('costo_servicio_tecnico_mensual_cop', 'margen_servicio')
     def _compute_servicio_con_margen(self):
-        """Calcula el servicio con margen aplicado"""
+        """Calcula el servicio técnico mensual con margen aplicado."""
         for record in self:
             margen = 1 + (record.margen_servicio / 100.0)
-            record.servicio_con_margen = record.costo_servicios_completos * margen
+            record.servicio_con_margen = record.costo_servicio_tecnico_mensual_cop * margen
     
     @api.depends('tasa_nominal')
     def _compute_tasa_mensual(self):
@@ -257,18 +256,16 @@ class CalculadoraEquipo(models.Model):
             else:
                 record.pago_mensual = 0.0
     
-    @api.model
-    def create(self, vals):
-        """Sobrescribir create para cargar valores por defecto"""
-        # Cargar parámetros por defecto si no se especifican
-        parametros = self.env['calculadora.parametros.financieros'].search([], limit=1)
-        if parametros:
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Valores por defecto locales (sin parámetros globales)."""
+        for vals in vals_list:
             if 'trm' not in vals or not vals.get('trm'):
-                vals['trm'] = parametros.trm_actual
+                vals['trm'] = 4000.0
             if 'porcentaje_utilidad' not in vals:
-                vals['porcentaje_utilidad'] = parametros.porcentaje_utilidad_default
+                vals['porcentaje_utilidad'] = 10.0
             if 'tasa_nominal' not in vals:
-                vals['tasa_nominal'] = parametros.tasa_nominal_default
+                vals['tasa_nominal'] = 21.0
             if 'margen_servicio' not in vals:
-                vals['margen_servicio'] = parametros.margen_servicio_default
-        return super(CalculadoraEquipo, self).create(vals)
+                vals['margen_servicio'] = 15.0
+        return super(CalculadoraEquipo, self).create(vals_list)

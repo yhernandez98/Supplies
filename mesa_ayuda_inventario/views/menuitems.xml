@@ -8,104 +8,125 @@
                   name="Mesa de Ayuda"
                   sequence="100"
                   web_icon="mesa_ayuda_inventario,static/description/icon.png"/>
-        
+
+        <!-- Secciones raíz: orden funcional (Configuración al final); hijos por orden alfabético -->
         <!-- ========================================== -->
         <!-- SECCIÓN: ALERTAS -->
         <!-- ========================================== -->
         <menuitem id="menu_alertas_root"
-                  name="Alertas"
+                  name="🔔 Alertas"
                   parent="menu_helpdesk_inventory_root"
                   sequence="15"/>
-        
+
         <menuitem id="menu_alertas_renting_por_vencer"
                   name="Equipos a terminar Renting"
                   parent="menu_alertas_root"
                   action="action_alertas_renting_por_vencer"
                   sequence="10"/>
-        
+
         <!-- ========================================== -->
-        <!-- SECCIÓN 2: INVENTARIO -->
+        <!-- INVENTARIO -->
         <!-- ========================================== -->
         <menuitem id="menu_inventory_root"
                   name="📦 Inventario"
                   parent="menu_helpdesk_inventory_root"
                   sequence="20"/>
-        
-        <menuitem id="menu_customer_inventory"
-                  name="Inventario de Clientes"
-                  parent="menu_inventory_root"
-                  sequence="10"/>
-        
-        <menuitem id="menu_customer_inventory_kanban"
-                  name="Vista de Clientes"
-                  parent="menu_customer_inventory"
-                  action="action_customer_list"
-                  sequence="10"
-                  active="False"/>
-        
-        <!-- Menú para la Vista de Inventario Detallado -->
-        <menuitem id="menu_customer_inventory_detailed"
-                  name="Cliente Supplies"
-                  parent="menu_customer_inventory"
-                  action="action_customer_inventory_detailed"
-                  sequence="15"/>
-        
-        <menuitem id="menu_lot_maintenance"
-                  name="Lotes y Mantenimientos"
-                  parent="menu_inventory_root"
-                  action="action_lot_maintenance"
-                  sequence="20"/>
-        
+
         <menuitem id="menu_component_changes"
                   name="Cambios de Componentes"
                   parent="menu_inventory_root"
                   action="action_maintenance_component_change"
+                  sequence="10"/>
+
+        <menuitem id="menu_inventory_consulta_retiro_usuario_equipo"
+                  name="Consulta"
+                  parent="menu_inventory_root"
+                  action="action_mesa_service_retiro_usuario_equipo_wizard_consulta"
+                  sequence="20"/>
+
+        <menuitem id="menu_customer_query_wizard"
+                  name="Consulta de Clientes"
+                  parent="menu_inventory_root"
+                  action="action_customer_query_wizard"
                   sequence="30"/>
-        
+
+        <menuitem id="menu_customer_inventory"
+                  name="Inventario de Clientes"
+                  parent="menu_inventory_root"
+                  sequence="40"/>
+
+        <menuitem id="menu_customer_inventory_detailed"
+                  name="Cliente Supplies"
+                  parent="menu_customer_inventory"
+                  action="action_customer_inventory_detailed"
+                  sequence="10"/>
+
+        <menuitem id="menu_customer_inventory_kanban"
+                  name="Vista de Clientes"
+                  parent="menu_customer_inventory"
+                  action="action_customer_list"
+                  sequence="20"
+                  active="False"/>
+
+        <menuitem id="menu_lot_maintenance"
+                  name="Lotes y Mantenimientos"
+                  parent="menu_inventory_root"
+                  action="action_lot_maintenance"
+                  sequence="50"/>
+
         <!-- ========================================== -->
-        <!-- SECCIÓN 3: ÓRDENES DE SERVICIO -->
+        <!-- ÓRDENES DE SERVICIO -->
         <!-- ========================================== -->
         <menuitem id="menu_service_orders_root"
                   name="🔧 Órdenes de Servicio"
                   parent="menu_helpdesk_inventory_root"
                   sequence="30"/>
-        
-        <menuitem id="menu_maintenance_order"
-                  name="Órdenes de Servicio"
-                  parent="menu_service_orders_root"
-                  action="action_maintenance_order"
-                  sequence="10"/>
-        
+
         <menuitem id="menu_maintenance_order_calendar"
                   name="Calendario de Visitas"
                   parent="menu_service_orders_root"
                   action="action_maintenance_order_calendar"
-                  sequence="20"
+                  sequence="10"
                   groups="base.group_user"/>
-        
+
+        <menuitem id="menu_maintenance_order"
+                  name="Órdenes de Servicio"
+                  parent="menu_service_orders_root"
+                  action="action_maintenance_order"
+                  sequence="20"/>
+
+        <menuitem id="menu_mesa_service_solicitudes"
+                  name="Solicitudes"
+                  parent="menu_service_orders_root"
+                  action="action_mesa_service_solicitudes_wizard"
+                  sequence="30"
+                  groups="base.group_user"/>
+
         <!-- ========================================== -->
-        <!-- SECCIÓN 4: TICKETS Y REPARACIONES -->
+        <!-- TICKETS Y REPARACIONES -->
         <!-- ========================================== -->
         <menuitem id="menu_support_root"
                   name="🎫 Tickets y Reparaciones"
                   parent="menu_helpdesk_inventory_root"
                   sequence="40"/>
-        
-        <menuitem id="menu_mesa_ayuda_ticket"
-                  name="Tickets"
-                  parent="menu_support_root"
-                  action="action_mesa_ayuda_ticket"
-                  sequence="10"/>
+
         <menuitem id="menu_helpdesk_ticket_category"
                   name="Categorías"
                   parent="menu_support_root"
                   action="action_helpdesk_ticket_category"
-                  sequence="5"/>
+                  sequence="10"/>
+
         <menuitem id="menu_repair_order"
                   name="Reparaciones"
                   parent="menu_support_root"
                   action="action_repair_order"
                   sequence="20"/>
+
+        <menuitem id="menu_mesa_ayuda_ticket"
+                  name="Tickets"
+                  parent="menu_support_root"
+                  action="action_mesa_ayuda_ticket"
+                  sequence="30"/>
 
         <!-- ========================================== -->
         <!-- CONFIGURACIÓN -->
@@ -119,23 +140,23 @@
                   parent="menu_mesa_ayuda_config"
                   action="action_mesa_ayuda_teams"
                   sequence="10"/>
-        <menuitem id="menu_helpdesk_timer_pause_request"
-                  name="Solicitudes de pausa (temporizador)"
-                  parent="menu_mesa_ayuda_config"
-                  action="action_helpdesk_timer_pause_request"
-                  sequence="14"/>
-        <menuitem id="menu_helpdesk_ticket_pause_request"
-                  name="Solicitudes de pausa (tickets)"
-                  parent="menu_mesa_ayuda_config"
-                  action="action_helpdesk_ticket_pause_request"
-                  sequence="15"/>
-        <!-- Menú Políticas SLA omitido: requiere módulo helpdesk_sla (modelo helpdesk.sla.policy) -->
         <menuitem id="menu_mesa_ayuda_ticket_templates"
                   name="Plantillas de ticket"
                   parent="menu_mesa_ayuda_config"
                   action="action_helpdesk_ticket_template"
                   sequence="20"/>
+        <menuitem id="menu_helpdesk_timer_pause_request"
+                  name="Solicitudes de pausa (temporizador)"
+                  parent="menu_mesa_ayuda_config"
+                  action="action_helpdesk_timer_pause_request"
+                  sequence="30"/>
+        <menuitem id="menu_helpdesk_ticket_pause_request"
+                  name="Solicitudes de pausa (tickets)"
+                  parent="menu_mesa_ayuda_config"
+                  action="action_helpdesk_ticket_pause_request"
+                  sequence="40"/>
+        <!-- Menú Políticas SLA omitido: requiere módulo helpdesk_sla (modelo helpdesk.sla.policy) -->
         <!-- Menú Base de conocimiento omitido: requiere app Knowledge (modelo knowledge.article) -->
-        
+
     </data>
 </odoo>

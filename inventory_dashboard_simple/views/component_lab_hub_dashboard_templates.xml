@@ -1,0 +1,1169 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="lab_hub_dashboard_page" name="Hub Laboratorio Dashboard">
+        <html>
+            <head>
+                <meta charset="utf-8"/>
+                <meta name="viewport" content="width=device-width, initial-scale=1"/>
+                <title>Hub de laboratorio</title>
+                <style>
+                    * { box-sizing: border-box; }
+                    body { margin: 0; font-family: "Inter", "Segoe UI", system-ui, sans-serif; background: linear-gradient(135deg, #f0f9ff 0%, #e2e8f0 100%); color: #1e293b; }
+                    .lh_header { background: linear-gradient(135deg, #1e3a5f 0%, #3b82f6 100%); color: #fff; padding: 1rem 1.5rem; box-shadow: 0 8px 30px rgba(37, 99, 235, 0.24); }
+                    .lh_header_top { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+                    .lh_title { margin: 0; font-size: 1.45rem; font-weight: 800; letter-spacing: -0.02em; }
+                    .lh_sub { opacity: 0.95; margin-top: 0.15rem; }
+                    .lh_link { color: #fff; text-decoration: none; border: 1px solid rgba(255,255,255,0.35); border-radius: 10px; padding: 0.45rem 0.9rem; font-weight: 600; font-size: 0.88rem; }
+                    .lh_link:hover { background: rgba(255,255,255,0.15); }
+                    .lh_container { max-width: 1280px; margin: 0 auto; padding: 1.25rem; }
+                    .lh_actions { display: flex; gap: 0.55rem; flex-wrap: wrap; margin-bottom: 1rem; }
+                    .lh_btn { text-decoration: none; border-radius: 999px; padding: 0.52rem 0.95rem; font-size: 0.86rem; font-weight: 700; border: 1px solid transparent; }
+                    .lh_btn.primary { background: linear-gradient(145deg, #4aa3c9 0%, #3a8fb5 100%); color: #fff; }
+                    .lh_btn.soft { background: #fff; color: #2f6f8f; border-color: #c5e3ee; }
+                    .lh_btn:hover { transform: translateY(-1px); }
+                    .lh_kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.9rem; margin-bottom: 1rem; }
+                    .lh_kpi { background: #fff; border-radius: 14px; padding: 0.95rem 1rem; box-shadow: 0 3px 14px rgba(0,0,0,0.06); border: 1px solid rgba(74,163,201,0.16); }
+                    .lh_kpi .label { font-size: 0.75rem; text-transform: uppercase; color: #64748b; font-weight: 700; letter-spacing: 0.05em; }
+                    .lh_kpi .value { font-size: 2rem; font-weight: 800; color: #1e3a5f; line-height: 1.1; margin-top: 0.2rem; }
+                    .lh_grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; }
+                    .lh_col { background: rgba(255,255,255,0.72); border: 1px solid rgba(74,163,201,0.2); border-radius: 14px; padding: 0.8rem; }
+                    .lh_col_head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.55rem; }
+                    .lh_col_title { margin: 0; font-size: 1.05rem; font-weight: 800; color: #1e293b; }
+                    .lh_col_count { font-size: 0.9rem; font-weight: 700; color: #475569; }
+                    .lh_section_title { margin: 0.5rem 0 0.35rem; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.04em; color: #475569; font-weight: 800; }
+                    .lh_section_title.extension { color: #92400e; }
+                    .lh_section_title.request { color: #1d4ed8; }
+                    .lh_section_title.return { color: #991b1b; }
+                    .lh_card { background: #fff; border: 1px solid #dbeafe; border-radius: 12px; padding: 0.75rem; margin-bottom: 0.7rem; box-shadow: 0 2px 10px rgba(0,0,0,0.04); }
+                    .lh_card.extension { border-color: #fcd34d; background: #fffbeb; }
+                    .lh_card.request { border-color: #93c5fd; background: #eff6ff; }
+                    .lh_card.return { border-color: #fca5a5; background: #fef2f2; }
+                    .lh_card:last-child { margin-bottom: 0; }
+                    .lh_card_title { font-size: 0.95rem; font-weight: 800; color: #0f172a; margin: 0 0 0.2rem 0; }
+                    .lh_card_meta { font-size: 0.82rem; color: #475569; margin-bottom: 0.22rem; }
+                    .lh_card_av { font-size: 0.83rem; color: #0369a1; margin-top: 0.3rem; padding-top: 0.3rem; border-top: 1px solid #e2e8f0; }
+                    .lh_empty { border: 1px dashed #cbd5e1; border-radius: 12px; text-align: center; color: #64748b; background: rgba(255,255,255,0.55); padding: 1.5rem 1rem; font-size: 0.9rem; }
+                    .lh_notice { border-radius: 10px; padding: 0.7rem 0.9rem; margin-bottom: 0.9rem; font-size: 0.9rem; }
+                    .lh_notice.success { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+                    .lh_notice.error { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+                    .lh_quick_actions { background: #fff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 0.8rem; margin-bottom: 0.9rem; display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; }
+                    .lh_quick_actions .qa-btn { border: 1px solid #c5e3ee; border-radius: 999px; padding: 0.42rem 0.8rem; font-size: 0.82rem; font-weight: 700; background: #eef6fb; color: #2f6f8f; cursor: pointer; }
+                    .lh_quick_actions .qa-btn.primary { background: #4aa3c9; color: #fff; border-color: #3a8fb5; }
+                    .lh_quick_actions .qa-btn:hover { filter: brightness(0.98); }
+                    .lh_quick_actions .qa-tip { width: 100%; font-size: 0.78rem; color: #64748b; margin-top: 0.2rem; }
+                    .lh_menu_wrap { position: relative; }
+                    .lh_menu_btn { border: 1px solid #c5e3ee; border-radius: 999px; padding: 0.42rem 0.85rem; font-size: 0.83rem; font-weight: 700; background: #eef6fb; color: #2f6f8f; cursor: pointer; }
+                    .lh_menu_list { position: absolute; top: calc(100% + 6px); left: 0; min-width: 260px; background: #fff; border: 1px solid #cbd5e1; border-radius: 10px; box-shadow: 0 12px 30px rgba(15, 23, 42, 0.14); padding: 0.35rem; display: none; z-index: 12; }
+                    .lh_menu_list button { width: 100%; text-align: left; border: none; background: transparent; padding: 0.45rem 0.5rem; border-radius: 8px; font-size: 0.83rem; color: #334155; cursor: pointer; }
+                    .lh_menu_list button:hover { background: #f1f5f9; }
+                    .lh_rp_tabs { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.6rem; }
+                    .lh_rp_tab { border: 1px solid #cbd5e1; border-radius: 999px; padding: 0.35rem 0.75rem; font-size: 0.78rem; font-weight: 700; background: #f8fafc; color: #475569; cursor: pointer; }
+                    .lh_rp_tab.active { background: #4aa3c9; color: #fff; border-color: #3a8fb5; }
+                    .lh_rp_panel { max-height: 42vh; overflow: auto; margin-bottom: 0.5rem; }
+                    .lh_modal_backdrop { position: fixed; inset: 0; background: rgba(2, 6, 23, 0.45); display: none; align-items: center; justify-content: center; z-index: 9999; }
+                    .lh_modal { width: min(520px, 92vw); background: #fff; border-radius: 14px; border: 1px solid #dbeafe; box-shadow: 0 18px 60px rgba(15, 23, 42, 0.35); padding: 1rem; }
+                    .lh_modal_title { margin: 0 0 0.45rem 0; font-size: 1rem; font-weight: 800; color: #0f172a; }
+                    .lh_modal_desc { margin: 0 0 0.8rem 0; color: #475569; font-size: 0.9rem; }
+                    .lh_modal_row { margin-bottom: 0.7rem; }
+                    .lh_modal_row label { display: block; margin-bottom: 0.25rem; font-size: 0.84rem; color: #334155; font-weight: 700; }
+                    .lh_modal_row select, .lh_modal_row input, .lh_modal_row textarea { width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0.45rem 0.55rem; }
+                    .lh_modal_actions { display: flex; justify-content: flex-end; gap: 0.45rem; }
+                    .lh_modal_btn { border-radius: 999px; border: 1px solid #c5e3ee; padding: 0.4rem 0.85rem; font-weight: 700; font-size: 0.82rem; cursor: pointer; background: #eef6fb; color: #2f6f8f; }
+                    .lh_modal_btn.primary { background: #4aa3c9; color: #fff; border-color: #3a8fb5; }
+                    .lh_modal_btn:hover { filter: brightness(0.98); }
+                    .lh_inv_table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+                    .lh_inv_table th, .lh_inv_table td { border-bottom: 1px solid #e2e8f0; padding: 0.35rem; text-align: left; }
+                    .lh_inv_modal { width: min(980px, 96vw); max-height: 82vh; overflow: auto; }
+                    .lh_assign_list_wrap { max-height: 38vh; overflow: auto; margin-bottom: 0.65rem; border: 1px solid #e2e8f0; border-radius: 10px; padding: 0.35rem; background: #fafafa; }
+                    .lh_request_search { width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0.5rem 0.6rem; margin-bottom: 0.6rem; }
+                    .lh_request_item { border: 1px solid #e2e8f0; border-radius: 10px; padding: 0.45rem 0.55rem; margin-bottom: 0.4rem; display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; }
+                    .lh_request_item.disabled { background: #f8fafc; opacity: 0.82; }
+                    .lh_request_meta { font-size: 0.8rem; color: #475569; }
+                    .pill { border-radius: 999px; padding: 2px 8px; font-size: 11px; font-weight: 700; }
+                    .pill.ok { background: #dcfce7; color: #166534; }
+                    .pill.warn { background: #fef3c7; color: #92400e; }
+                    .pill.info { background: #dbeafe; color: #1e40af; }
+                    .pill.danger { background: #fee2e2; color: #991b1b; }
+                    .lh_acta_print_link { font-size: 0.82rem; font-weight: 700; color: #2f6f8f; text-decoration: none; border-bottom: 1px solid #c5e3ee; }
+                    .lh_acta_print_link:hover { color: #1e3a5f; }
+                    @media (max-width: 1100px) { .lh_grid { grid-template-columns: 1fr; } }
+                </style>
+            </head>
+            <body>
+                <header class="lh_header">
+                    <div class="lh_header_top">
+                        <div>
+                            <h1 class="lh_title">Activos en laboratorio</h1>
+                            <div class="lh_sub">Hub centralizado de préstamos y devoluciones</div>
+                        </div>
+                        <div>
+                            <a t-attf-href="#{url_back}" class="lh_link">Volver</a>
+                        </div>
+                    </div>
+                </header>
+                <div class="lh_container">
+                    <t t-if="notice">
+                        <div t-attf-class="lh_notice #{notice_type}">
+                            <span t-esc="notice"/>
+                        </div>
+                    </t>
+                    <div class="lh_actions">
+                        <button type="button" class="lh_btn soft" id="open_acta_modal">Actas</button>
+                        <button type="button" class="lh_btn soft" id="open_inventory_modal">Inventario en laboratorio</button>
+                        <a t-attf-href="#{url_report_pdf}" class="lh_btn soft" target="_blank">Reporte PDF</a>
+                    </div>
+                    <div class="lh_quick_actions">
+                        <div class="lh_menu_wrap">
+                            <button type="button" class="lh_menu_btn" data-menu-target="menu_responsable">Responsable</button>
+                            <div class="lh_menu_list" id="menu_responsable">
+                                <button type="button" data-action="assign_tech" class="js-open-action">Asignar técnico</button>
+                                <button type="button" data-action="responsible_return_picker" class="js-open-action">Devolver a existencias</button>
+                                <button type="button" data-action="responsible_pending_picker" class="js-open-action">Resolver pendientes</button>
+                            </div>
+                        </div>
+                        <div class="lh_menu_wrap">
+                            <button type="button" class="lh_menu_btn" data-menu-target="menu_tecnico">Tecnico</button>
+                            <div class="lh_menu_list" id="menu_tecnico">
+                                <button type="button" data-action="tech_return_picker" class="js-open-action">Devolución</button>
+                                <button type="button" data-action="tech_request_picker" class="js-open-action">Solicitar</button>
+                                <button type="button" data-action="request_extension_picker" class="js-open-action">Solicitar prórroga</button>
+                            </div>
+                        </div>
+                        <div class="qa-tip">Use los menús Responsable o Técnico: cada opción abre un cuadro donde elige activos o actas y confirma la operación.</div>
+                    </div>
+                    <form id="lh-action-form" method="post" action="/inventory_dashboard_simple/lab_hub/action" style="display:none;">
+                        <input type="hidden" name="csrf_token" t-att-value="csrf_token"/>
+                        <input type="hidden" name="assignment_ids" id="selected_assignment_ids"/>
+                        <input type="hidden" name="acta_numbers" id="selected_acta_numbers"/>
+                        <input type="hidden" name="action" id="action_name"/>
+                        <input type="hidden" name="technician_id" id="technician_id_hidden"/>
+                        <input type="hidden" name="expected_return_date" id="expected_return_date_hidden"/>
+                        <input type="hidden" name="extension_date" id="extension_date_hidden"/>
+                        <input type="hidden" name="extension_reason" id="extension_reason_hidden"/>
+                        <input type="hidden" name="reject_reason" id="reject_reason_hidden"/>
+                        <input type="hidden" name="return_decision" id="return_decision_hidden"/>
+                        <input type="hidden" name="pending_kind" id="pending_kind_hidden"/>
+                    </form>
+
+                    <div class="lh_kpis">
+                        <div class="lh_kpi"><div class="label">Total activos</div><div class="value" t-esc="kpi_total_activos"/></div>
+                        <div class="lh_kpi"><div class="label">En pool</div><div class="value" t-esc="kpi_pool"/></div>
+                        <div class="lh_kpi"><div class="label">Con técnico</div><div class="value" t-esc="kpi_tech"/></div>
+                        <div class="lh_kpi"><div class="label">Dev. técnico pendiente</div><div class="value" t-esc="kpi_pending_return_approval"/></div>
+                        <div class="lh_kpi"><div class="label">Solicitud técnico pendiente</div><div class="value" t-esc="kpi_pending_request_approval"/></div>
+                        <div class="lh_kpi"><div class="label">Devueltos</div><div class="value" t-esc="kpi_devueltos"/></div>
+                    </div>
+
+                    <div class="lh_grid">
+                        <section class="lh_col">
+                            <div class="lh_col_head"><h3 class="lh_col_title">En pool laboratorio</h3><span class="lh_col_count" t-esc="kpi_pool"/></div>
+                            <t t-if="cards_pool">
+                                <t t-foreach="cards_pool" t-as="c">
+                                    <div class="lh_card">
+                                        <div class="lh_card_title" t-esc="c['product']"/>
+                                        <div class="lh_card_meta">Serial: <strong t-esc="c['serial']"/></div>
+                                        <div class="lh_card_meta">Responsable: <span t-esc="c['responsible']"/></div>
+                                        <div class="lh_card_av" t-esc="c['availability']"/>
+                                        <div class="lh_card_meta" t-if="c['extension_request_state'] == 'pending'">
+                                            <span class="pill warn">Prórroga pendiente</span>
+                                        </div>
+                                    </div>
+                                </t>
+                            </t>
+                            <t t-else=""><div class="lh_empty">Sin activos en pool</div></t>
+                        </section>
+
+                        <section class="lh_col">
+                            <div class="lh_col_head"><h3 class="lh_col_title">Con técnico (actas)</h3><span class="lh_col_count" t-esc="kpi_tech"/></div>
+                            <t t-if="tech_actas">
+                                <t t-foreach="tech_actas" t-as="a">
+                                    <div class="lh_card acta-card" t-att-data-acta="a['acta_number']" data-acta-state="with_technician">
+                                        <div class="lh_card_title">Acta: <t t-esc="a['acta_number']"/></div>
+                                        <div class="lh_card_meta">Items: <strong t-esc="a['count']"/></div>
+                                        <div class="lh_card_meta">Técnico: <span t-esc="a['technician']"/></div>
+                                        <div class="lh_card_meta">Responsable: <span t-esc="a['responsible']"/></div>
+                                        <div class="lh_card_meta">Fecha estimada devolución:
+                                            <t t-if="a.get('expected_return_display')"><strong t-esc="a['expected_return_display']"/></t>
+                                            <t t-else=""><span class="lh_request_meta">Sin definir</span></t>
+                                        </div>
+                                        <div class="lh_card_meta"><button type="button" class="qa-btn js-view-acta-items" t-att-data-acta="a['acta_number']">Consultar acta</button></div>
+                                        <div class="acta-items-json" style="display:none;" t-att-data-items="a['items_json']"/>
+                                    </div>
+                                </t>
+                            </t>
+                            <t t-else=""><div class="lh_empty">Sin actas activas con técnico</div></t>
+                        </section>
+
+                        <section class="lh_col">
+                            <div class="lh_col_head"><h3 class="lh_col_title">Pendientes aprobación (actas)</h3><span class="lh_col_count" t-esc="kpi_pending_return_approval + kpi_pending_request_approval + kpi_pending_extension_approval"/></div>
+                            <t t-if="extension_pending_actas">
+                                <div class="lh_section_title extension">Pendiente prórrogas</div>
+                                <t t-foreach="extension_pending_actas" t-as="a">
+                                    <div class="lh_card acta-card extension" t-att-data-acta="a['acta_number']" data-acta-state="with_technician">
+                                        <div class="lh_card_title">Acta: <t t-esc="a['acta_number']"/></div>
+                                        <div class="lh_card_meta">Items: <strong t-esc="a['count']"/></div>
+                                        <div class="lh_card_meta">Técnico: <span t-esc="a['technician']"/></div>
+                                        <div class="lh_card_meta">Responsable: <span t-esc="a['responsible']"/></div>
+                                        <div class="lh_card_meta"><button type="button" class="qa-btn js-view-acta-items" t-att-data-acta="a['acta_number']">Consultar prórroga</button></div>
+                                        <div class="acta-items-json" style="display:none;" t-att-data-items="a['items_json']"/>
+                                    </div>
+                                </t>
+                            </t>
+                            <t t-if="request_pending_actas">
+                                <div class="lh_section_title request">Pendiente solicitudes</div>
+                                <t t-foreach="request_pending_actas" t-as="a">
+                                    <div class="lh_card acta-card request" t-att-data-acta="a['acta_number']" data-acta-state="tech_request_pending_approval">
+                                        <div class="lh_card_title">Solicitud: <t t-esc="a['acta_number']"/></div>
+                                        <div class="lh_card_meta">Items: <strong t-esc="a['count']"/></div>
+                                        <div class="lh_card_meta">Solicitado por: <span t-esc="a['technician']"/></div>
+                                        <div class="lh_card_meta">Responsable: <span t-esc="a['responsible']"/></div>
+                                        <div class="lh_card_meta"><button type="button" class="qa-btn js-view-acta-items" t-att-data-acta="a['acta_number']">Consultar solicitud</button></div>
+                                        <div class="acta-items-json" style="display:none;" t-att-data-items="a['items_json']"/>
+                                    </div>
+                                </t>
+                            </t>
+                            <t t-if="pending_actas">
+                                <div class="lh_section_title return">Pendiente devoluciones</div>
+                                <t t-foreach="pending_actas" t-as="a">
+                                    <div class="lh_card acta-card return" t-att-data-acta="a['acta_number']" data-acta-state="tech_return_pending_approval">
+                                        <div class="lh_card_title">Acta: <t t-esc="a['acta_number']"/></div>
+                                        <div class="lh_card_meta">Items: <strong t-esc="a['count']"/></div>
+                                        <div class="lh_card_meta">Técnico: <span t-esc="a['technician']"/></div>
+                                        <div class="lh_card_meta">Responsable: <span t-esc="a['responsible']"/></div>
+                                        <div class="lh_card_meta"><button type="button" class="qa-btn js-view-acta-items" t-att-data-acta="a['acta_number']">Consultar acta</button></div>
+                                        <div class="acta-items-json" style="display:none;" t-att-data-items="a['items_json']"/>
+                                    </div>
+                                </t>
+                            </t>
+                            <t t-if="not pending_actas and not request_pending_actas and not extension_pending_actas"><div class="lh_empty">Sin solicitudes pendientes</div></t>
+                        </section>
+                    </div>
+                </div>
+                <div class="lh_modal_backdrop" id="lh_modal_backdrop">
+                    <div class="lh_modal">
+                        <h3 class="lh_modal_title" id="lh_modal_title">Operación</h3>
+                        <p class="lh_modal_desc" id="lh_modal_desc"/>
+                        <div class="lh_modal_row" id="lh_modal_tech_row" style="display:none;">
+                            <label for="lh_modal_technician">Técnico</label>
+                            <select id="lh_modal_technician">
+                                <option value="">-- Seleccione técnico --</option>
+                                <t t-foreach="technicians" t-as="tech">
+                                    <option t-att-value="tech.id"><t t-esc="tech.display_name"/></option>
+                                </t>
+                            </select>
+                        </div>
+                        <div class="lh_modal_row" id="lh_modal_expected_date_row" style="display:none;">
+                            <label for="lh_modal_expected_date">Fecha estimada devolución</label>
+                            <input type="date" id="lh_modal_expected_date"/>
+                        </div>
+                        <div class="lh_modal_row" id="lh_modal_extension_date_row" style="display:none;">
+                            <label for="lh_modal_extension_date">Nueva fecha estimada</label>
+                            <input type="date" id="lh_modal_extension_date"/>
+                        </div>
+                        <div class="lh_modal_row" id="lh_modal_extension_reason_row" style="display:none;">
+                            <label for="lh_modal_extension_reason">Motivo de prórroga</label>
+                            <textarea id="lh_modal_extension_reason" rows="3" placeholder="Describa por qué necesita más tiempo..."/>
+                        </div>
+                        <div class="lh_modal_row" id="lh_modal_reject_reason_row" style="display:none;">
+                            <label for="lh_modal_reject_reason">Motivo de rechazo</label>
+                            <textarea id="lh_modal_reject_reason" rows="3" placeholder="Motivo opcional del rechazo..."/>
+                        </div>
+                        <div class="lh_modal_row" id="lh_modal_return_decision_row" style="display:none;">
+                            <label for="lh_modal_return_decision">Decisión</label>
+                            <select id="lh_modal_return_decision">
+                                <option value="approve">Aprobar devolución</option>
+                                <option value="reject">Rechazar devolución</option>
+                            </select>
+                        </div>
+                        <div class="lh_modal_actions">
+                            <button type="button" class="lh_modal_btn" id="lh_modal_cancel">Cancelar</button>
+                            <button type="button" class="lh_modal_btn primary" id="lh_modal_confirm">Confirmar</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="lh_modal_backdrop" id="lh_inventory_backdrop">
+                    <div class="lh_modal lh_inv_modal">
+                        <h3 class="lh_modal_title">Inventario actualmente en laboratorio</h3>
+                        <p class="lh_modal_desc">Activos en pool, con técnico o con responsable.</p>
+                        <table class="lh_inv_table">
+                            <thead>
+                                <tr>
+                                    <th>Serial</th>
+                                    <th>Producto</th>
+                                    <th>Estado</th>
+                                    <th>Responsable</th>
+                                    <th>Técnico</th>
+                                    <th>Fecha estimada</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="inventory_rows" t-as="r">
+                                    <tr>
+                                        <td t-esc="r.lot_id.name or ''"/>
+                                        <td t-esc="r.product_id.display_name or ''"/>
+                                        <td t-esc="r.state"/>
+                                        <td t-esc="r.responsible_user_id.display_name or ''"/>
+                                        <td t-esc="r.technician_user_id.display_name or ''"/>
+                                        <td t-esc="r.expected_return_date or ''"/>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+                        <div class="lh_modal_actions" style="margin-top:0.7rem;">
+                            <button type="button" class="lh_modal_btn" id="lh_inventory_close">Cerrar</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="lh_modal_backdrop" id="lh_acta_backdrop">
+                    <div class="lh_modal lh_inv_modal">
+                        <h3 class="lh_modal_title">Actas registradas</h3>
+                        <p class="lh_modal_desc">Historial de entregas y devoluciones en laboratorio.</p>
+                        <div class="lh_acta_filters" style="display:flex; flex-wrap:wrap; gap:0.65rem; align-items:flex-end; margin-bottom:0.75rem;">
+                            <div class="lh_modal_row" style="margin:0; min-width:140px;">
+                                <label for="lh_acta_filter_date_from" style="font-size:0.78rem;">Fecha desde</label>
+                                <input type="date" id="lh_acta_filter_date_from" style="width:100%;"/>
+                            </div>
+                            <div class="lh_modal_row" style="margin:0; min-width:140px;">
+                                <label for="lh_acta_filter_date_to" style="font-size:0.78rem;">Fecha hasta</label>
+                                <input type="date" id="lh_acta_filter_date_to" style="width:100%;"/>
+                            </div>
+                            <div class="lh_modal_row" style="margin:0; flex:1; min-width:200px;">
+                                <label for="lh_acta_filter_tech" style="font-size:0.78rem;">Técnico</label>
+                                <select id="lh_acta_filter_tech" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:0.45rem 0.55rem;">
+                                    <option value="">Todos</option>
+                                    <t t-foreach="acta_filter_technicians" t-as="tx">
+                                        <option t-att-value="tx['id']"><t t-esc="tx['name']"/></option>
+                                    </t>
+                                </select>
+                            </div>
+                        </div>
+                        <table class="lh_inv_table">
+                            <thead>
+                                <tr>
+                                    <th>Número</th>
+                                    <th>Fecha</th>
+                                    <th>Tipo</th>
+                                    <th>Serial</th>
+                                    <th>Producto</th>
+                                    <th>Responsable</th>
+                                    <th>Técnico</th>
+                                    <th>Imprimir</th>
+                                    <th>Registrado por</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lh_acta_table_body">
+                                <t t-foreach="acta_rows" t-as="a">
+                                    <tr class="lh_acta_table_row" t-att-data-filter-date="a.event_date.strftime('%Y-%m-%d') if a.event_date else ''" t-att-data-filter-tech="a.technician_user_id.id if a.technician_user_id else ''">
+                                        <td t-esc="a.name or ''"/>
+                                        <td t-esc="a.event_date or ''"/>
+                                        <td t-esc="a.acta_type"/>
+                                        <td t-esc="a.assignment_id.lot_id.name or ''"/>
+                                        <td t-esc="a.assignment_id.product_id.display_name or ''"/>
+                                        <td t-esc="a.responsible_user_id.display_name or ''"/>
+                                        <td t-esc="a.technician_user_id.display_name or ''"/>
+                                        <td>
+                                            <a t-attf-href="#{hub_base_url}/report/pdf/inventory_dashboard_simple.report_component_lab_acta_pdf/#{a.id}" target="_blank" rel="noopener noreferrer" class="lh_acta_print_link">Imprimir</a>
+                                        </td>
+                                        <td t-esc="a.created_by_user_id.display_name or ''"/>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+                        <div class="lh_modal_actions" style="margin-top:0.7rem;">
+                            <button type="button" class="lh_modal_btn" id="lh_acta_close">Cerrar</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="lh_modal_backdrop" id="lh_acta_items_backdrop">
+                    <div class="lh_modal lh_inv_modal">
+                        <h3 class="lh_modal_title" id="lh_acta_items_title">Detalle acta</h3>
+                        <table class="lh_inv_table">
+                            <thead>
+                                <tr>
+                                    <th>Serial</th>
+                                    <th>Producto</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lh_acta_items_body"></tbody>
+                        </table>
+                        <div class="lh_modal_actions" style="margin-top:0.7rem;">
+                            <button type="button" class="lh_modal_btn" id="lh_acta_items_close">Cerrar</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="lh_modal_backdrop" id="lh_request_backdrop">
+                    <div class="lh_modal lh_inv_modal">
+                        <h3 class="lh_modal_title">Solicitar activos</h3>
+                        <p class="lh_modal_desc">Busque el activo. Si no está disponible, se mostrará como "No disponible".</p>
+                        <input type="text" id="lh_request_search" class="lh_request_search" placeholder="Buscar por serial o producto..."/>
+                        <div id="lh_request_list">
+                            <t t-foreach="request_catalog" t-as="r">
+                                <div class="lh_request_item" t-attf-class="lh_request_item #{'' if r['is_available'] else 'disabled'}" t-att-data-available="1 if r['is_available'] else 0" t-att-data-id="r['id']" t-att-data-search="(r['serial'] + ' ' + r['product']).lower()">
+                                    <div>
+                                        <div><strong t-esc="r['product']"/></div>
+                                        <div class="lh_request_meta">Serial: <span t-esc="r['serial']"/> | Estado: <span t-esc="r['state']"/></div>
+                                    </div>
+                                    <div>
+                                        <span t-if="r['is_available']" class="pill ok">Disponible</span>
+                                        <span t-if="not r['is_available']" class="pill danger">No disponible</span>
+                                        <input t-if="r['is_available']" type="checkbox" class="lh_request_check" t-att-value="r['id']"/>
+                                    </div>
+                                </div>
+                            </t>
+                        </div>
+                        <div class="lh_modal_actions" style="margin-top:0.7rem;">
+                            <button type="button" class="lh_modal_btn" id="lh_request_close">Cancelar</button>
+                            <button type="button" class="lh_modal_btn primary" id="lh_request_confirm">Solicitar</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="lh_modal_backdrop" id="lh_tech_return_backdrop">
+                    <div class="lh_modal lh_inv_modal">
+                        <h3 class="lh_modal_title">Devolucion de actas asignadas</h3>
+                        <p class="lh_modal_desc">Seleccione las actas que desea devolver. Se muestran solo actas asignadas al tecnico en sesion.</p>
+                        <input type="text" id="lh_tech_return_search" class="lh_request_search" placeholder="Buscar por acta, serial o producto..."/>
+                        <div id="lh_tech_return_list">
+                            <t t-foreach="my_tech_actas" t-as="a">
+                                <div class="lh_request_item" t-att-data-acta="a['acta_number']" t-att-data-search="(a['acta_number'] + ' ' + ' '.join([(i.get('serial') or '') + ' ' + (i.get('product') or '') for i in a['items']])).lower()">
+                                    <div>
+                                        <div><strong>Acta: <t t-esc="a['acta_number']"/></strong> - <span class="lh_request_meta">Items: <t t-esc="a['count']"/></span></div>
+                                        <div class="lh_request_meta">Responsable: <t t-esc="a['responsible']"/></div>
+                                        <div class="lh_request_meta">
+                                            <t t-foreach="a['items']" t-as="it">
+                                                <span><t t-esc="it['serial']"/> - <t t-esc="it['product']"/>; </span>
+                                            </t>
+                                        </div>
+                                    </div>
+                                    <div><input type="checkbox" class="lh_tech_return_check" t-att-value="a['acta_number']"/></div>
+                                </div>
+                            </t>
+                            <t t-if="not my_tech_actas">
+                                <div class="lh_empty">No tiene actas asignadas para devolucion.</div>
+                            </t>
+                        </div>
+                        <div class="lh_modal_actions" style="margin-top:0.7rem;">
+                            <button type="button" class="lh_modal_btn" id="lh_tech_return_close">Cancelar</button>
+                            <button type="button" class="lh_modal_btn primary" id="lh_tech_return_confirm">Solicitar devolucion</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="lh_modal_backdrop" id="lh_extension_backdrop">
+                    <div class="lh_modal lh_inv_modal">
+                        <h3 class="lh_modal_title">Solicitar prórroga por acta</h3>
+                        <p class="lh_modal_desc">Seleccione las actas del técnico en sesión, indique nueva fecha y motivo. Quedará pendiente aprobación.</p>
+                        <input type="text" id="lh_extension_search" class="lh_request_search" placeholder="Buscar por acta, serial o producto..."/>
+                        <div id="lh_extension_list">
+                            <t t-foreach="my_tech_actas" t-as="a">
+                                <div class="lh_request_item" t-att-data-acta="a['acta_number']" t-att-data-search="(a['acta_number'] + ' ' + ' '.join([(i.get('serial') or '') + ' ' + (i.get('product') or '') for i in a['items']])).lower()">
+                                    <div>
+                                        <div><strong>Acta: <t t-esc="a['acta_number']"/></strong> - <span class="lh_request_meta">Items: <t t-esc="a['count']"/></span></div>
+                                        <div class="lh_request_meta">Responsable: <t t-esc="a['responsible']"/></div>
+                                    </div>
+                                    <div><input type="checkbox" class="lh_extension_check" t-att-value="a['acta_number']"/></div>
+                                </div>
+                            </t>
+                            <t t-if="not my_tech_actas">
+                                <div class="lh_empty">No tiene actas asignadas para prórroga.</div>
+                            </t>
+                        </div>
+                        <div class="lh_modal_row" style="margin-top:0.6rem;">
+                            <label for="lh_extension_date_picker">Nueva fecha estimada</label>
+                            <input type="date" id="lh_extension_date_picker"/>
+                        </div>
+                        <div class="lh_modal_row">
+                            <label for="lh_extension_reason_picker">Motivo de prórroga</label>
+                            <textarea id="lh_extension_reason_picker" rows="3" placeholder="Describa por qué necesita más tiempo..."></textarea>
+                        </div>
+                        <div class="lh_modal_actions" style="margin-top:0.7rem;">
+                            <button type="button" class="lh_modal_btn" id="lh_extension_close">Cancelar</button>
+                            <button type="button" class="lh_modal_btn primary" id="lh_extension_confirm">Enviar solicitud</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="lh_modal_backdrop" id="lh_assign_tech_backdrop">
+                    <div class="lh_modal lh_inv_modal">
+                        <h3 class="lh_modal_title">Asignar activo a técnico</h3>
+                        <p class="lh_modal_desc">Seleccione uno o varios activos en pool laboratorio, técnico y fecha estimada de devolución.</p>
+                        <input type="text" id="lh_assign_tech_search" class="lh_request_search" placeholder="Buscar por serial o producto..."/>
+                        <div class="lh_assign_list_wrap" id="lh_assign_tech_list_wrap">
+                            <div id="lh_assign_tech_list">
+                                <t t-foreach="pool_return_catalog" t-as="r">
+                                    <div class="lh_request_item lh_assign_tech_row" t-att-data-id="r['id']" t-att-data-search="(r['serial'] + ' ' + r['product']).lower()">
+                                        <div>
+                                            <div><strong t-esc="r['product']"/></div>
+                                            <div class="lh_request_meta">Serial: <span t-esc="r['serial']"/> | Estado: <span t-esc="r['state']"/></div>
+                                        </div>
+                                        <div><input type="checkbox" class="lh_assign_tech_check" t-att-value="r['id']"/></div>
+                                    </div>
+                                </t>
+                                <t t-if="not pool_return_catalog">
+                                    <div class="lh_empty">No hay activos en pool laboratorio para asignar.</div>
+                                </t>
+                            </div>
+                        </div>
+                        <div class="lh_modal_row">
+                            <label for="lh_assign_tech_technician">Técnico</label>
+                            <select id="lh_assign_tech_technician">
+                                <option value="">-- Seleccione técnico --</option>
+                                <t t-foreach="technicians" t-as="tech">
+                                    <option t-att-value="tech.id"><t t-esc="tech.display_name"/></option>
+                                </t>
+                            </select>
+                        </div>
+                        <div class="lh_modal_row">
+                            <label for="lh_assign_tech_expected_date">Fecha estimada devolución</label>
+                            <input type="date" id="lh_assign_tech_expected_date"/>
+                        </div>
+                        <div class="lh_modal_actions" style="margin-top:0.7rem;">
+                            <button type="button" class="lh_modal_btn" id="lh_assign_tech_close">Cancelar</button>
+                            <button type="button" class="lh_modal_btn primary" id="lh_assign_tech_confirm">Confirmar</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="lh_modal_backdrop" id="lh_pool_return_backdrop">
+                    <div class="lh_modal lh_inv_modal">
+                        <h3 class="lh_modal_title">Devolver a existencias</h3>
+                        <p class="lh_modal_desc">Seleccione uno o varios activos en laboratorio (pool o con responsable) para devolver a existencias.</p>
+                        <input type="text" id="lh_pool_return_search" class="lh_request_search" placeholder="Buscar por serial o producto..."/>
+                        <div id="lh_pool_return_list">
+                            <t t-foreach="pool_return_catalog" t-as="r">
+                                <div class="lh_request_item lh_pool_return_row" t-att-data-id="r['id']" t-att-data-search="(r['serial'] + ' ' + r['product']).lower()">
+                                    <div>
+                                        <div><strong t-esc="r['product']"/></div>
+                                        <div class="lh_request_meta">Serial: <span t-esc="r['serial']"/> | Estado: <span t-esc="r['state']"/></div>
+                                    </div>
+                                    <div><input type="checkbox" class="lh_pool_return_check" t-att-value="r['id']"/></div>
+                                </div>
+                            </t>
+                            <t t-if="not pool_return_catalog">
+                                <div class="lh_empty">No hay activos disponibles para esta operación.</div>
+                            </t>
+                        </div>
+                        <div class="lh_modal_actions" style="margin-top:0.7rem;">
+                            <button type="button" class="lh_modal_btn" id="lh_pool_return_close">Cancelar</button>
+                            <button type="button" class="lh_modal_btn primary" id="lh_pool_return_confirm">Confirmar</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="lh_modal_backdrop" id="lh_rpending_backdrop">
+                    <div class="lh_modal lh_inv_modal">
+                        <h3 class="lh_modal_title">Resolver pendientes</h3>
+                        <p class="lh_modal_desc">Elija pestaña, seleccione actas y apruebe o rechace. En solicitudes, al aprobar puede indicar fecha estimada de devolución.</p>
+                        <div class="lh_rp_tabs">
+                            <button type="button" class="lh_rp_tab active" data-rp-tab="devoluciones">Devoluciones</button>
+                            <button type="button" class="lh_rp_tab" data-rp-tab="prorrogas">Prórrogas</button>
+                            <button type="button" class="lh_rp_tab" data-rp-tab="solicitudes">Solicitudes</button>
+                        </div>
+                        <div id="lh_rp_panel_devoluciones" class="lh_rp_panel">
+                            <input type="text" id="lh_rp_search_devoluciones" class="lh_request_search" placeholder="Buscar devolución..."/>
+                            <t t-foreach="pending_actas" t-as="a">
+                                <div class="lh_request_item lh_rp_acta_row" data-rp-kind="devoluciones" t-att-data-acta="a['acta_number']" t-att-data-search="(a['acta_number'] + ' ' + ' '.join([(i.get('serial') or '') + ' ' + (i.get('product') or '') for i in a['items']])).lower()">
+                                    <div>
+                                        <div><strong>Acta: <t t-esc="a['acta_number']"/></strong> — <span class="lh_request_meta"><t t-esc="a['count']"/> ítem(s)</span></div>
+                                        <div class="lh_request_meta">Técnico: <t t-esc="a['technician']"/></div>
+                                    </div>
+                                    <div><input type="checkbox" class="lh_rp_check" t-att-value="a['acta_number']"/></div>
+                                </div>
+                            </t>
+                            <t t-if="not pending_actas">
+                                <div class="lh_empty">Sin devoluciones pendientes.</div>
+                            </t>
+                        </div>
+                        <div id="lh_rp_panel_prorrogas" class="lh_rp_panel" style="display:none;">
+                            <input type="text" id="lh_rp_search_prorrogas" class="lh_request_search" placeholder="Buscar prórroga..."/>
+                            <t t-foreach="extension_pending_actas" t-as="a">
+                                <div class="lh_request_item lh_rp_acta_row" data-rp-kind="prorrogas" t-att-data-acta="a['acta_number']" t-att-data-search="(a['acta_number'] + ' ' + ' '.join([(i.get('serial') or '') + ' ' + (i.get('product') or '') for i in a['items']])).lower()">
+                                    <div>
+                                        <div><strong>Acta: <t t-esc="a['acta_number']"/></strong> — <span class="lh_request_meta"><t t-esc="a['count']"/> ítem(s)</span></div>
+                                        <div class="lh_request_meta">Técnico: <t t-esc="a['technician']"/></div>
+                                    </div>
+                                    <div><input type="checkbox" class="lh_rp_check" t-att-value="a['acta_number']"/></div>
+                                </div>
+                            </t>
+                            <t t-if="not extension_pending_actas">
+                                <div class="lh_empty">Sin prórrogas pendientes.</div>
+                            </t>
+                        </div>
+                        <div id="lh_rp_panel_solicitudes" class="lh_rp_panel" style="display:none;">
+                            <input type="text" id="lh_rp_search_solicitudes" class="lh_request_search" placeholder="Buscar solicitud..."/>
+                            <t t-foreach="request_pending_actas" t-as="a">
+                                <div class="lh_request_item lh_rp_acta_row" data-rp-kind="solicitudes" t-att-data-acta="a['acta_number']" t-att-data-search="(a['acta_number'] + ' ' + ' '.join([(i.get('serial') or '') + ' ' + (i.get('product') or '') for i in a['items']])).lower()">
+                                    <div>
+                                        <div><strong>Acta: <t t-esc="a['acta_number']"/></strong> — <span class="lh_request_meta"><t t-esc="a['count']"/> ítem(s)</span></div>
+                                        <div class="lh_request_meta">Solicitado por: <t t-esc="a['technician']"/></div>
+                                    </div>
+                                    <div><input type="checkbox" class="lh_rp_check" t-att-value="a['acta_number']"/></div>
+                                </div>
+                            </t>
+                            <t t-if="not request_pending_actas">
+                                <div class="lh_empty">Sin solicitudes pendientes.</div>
+                            </t>
+                        </div>
+                        <div class="lh_modal_row" id="lh_rp_expected_wrap" style="display:none;">
+                            <label for="lh_rp_expected_date">Fecha estimada devolución (aprobar solicitud)</label>
+                            <input type="date" id="lh_rp_expected_date"/>
+                        </div>
+                        <div class="lh_modal_row">
+                            <label for="lh_rp_decision">Decisión</label>
+                            <select id="lh_rp_decision">
+                                <option value="approve">Aprobar</option>
+                                <option value="reject">Rechazar</option>
+                            </select>
+                        </div>
+                        <div class="lh_modal_row" id="lh_rp_reject_wrap" style="display:none;">
+                            <label for="lh_rp_reject_reason">Motivo de rechazo</label>
+                            <textarea id="lh_rp_reject_reason" rows="3" placeholder="Opcional salvo que desee dejar constancia..."></textarea>
+                        </div>
+                        <div class="lh_modal_actions" style="margin-top:0.7rem;">
+                            <button type="button" class="lh_modal_btn" id="lh_rpending_close">Cancelar</button>
+                            <button type="button" class="lh_modal_btn primary" id="lh_rpending_confirm">Confirmar</button>
+                        </div>
+                    </div>
+                </div>
+                <script>
+                    (function () {
+                        var selectedInput = document.getElementById('selected_assignment_ids');
+                        var selectedActaInput = document.getElementById('selected_acta_numbers');
+                        var actionButtons = document.querySelectorAll('.js-open-action');
+                        var viewActaButtons = document.querySelectorAll('.js-view-acta-items');
+                        var menuTriggers = document.querySelectorAll('[data-menu-target]');
+                        var actionMenus = document.querySelectorAll('.lh_menu_list');
+                        var modal = document.getElementById('lh_modal_backdrop');
+                        var modalTitle = document.getElementById('lh_modal_title');
+                        var modalDesc = document.getElementById('lh_modal_desc');
+                        var modalTechRow = document.getElementById('lh_modal_tech_row');
+                        var modalTech = document.getElementById('lh_modal_technician');
+                        var expectedDateRow = document.getElementById('lh_modal_expected_date_row');
+                        var expectedDate = document.getElementById('lh_modal_expected_date');
+                        var extDateRow = document.getElementById('lh_modal_extension_date_row');
+                        var extReasonRow = document.getElementById('lh_modal_extension_reason_row');
+                        var extDate = document.getElementById('lh_modal_extension_date');
+                        var extReason = document.getElementById('lh_modal_extension_reason');
+                        var rejectReasonRow = document.getElementById('lh_modal_reject_reason_row');
+                        var rejectReason = document.getElementById('lh_modal_reject_reason');
+                        var returnDecisionRow = document.getElementById('lh_modal_return_decision_row');
+                        var returnDecision = document.getElementById('lh_modal_return_decision');
+                        var modalCancel = document.getElementById('lh_modal_cancel');
+                        var modalConfirm = document.getElementById('lh_modal_confirm');
+                        var actionInput = document.getElementById('action_name');
+                        var technicianHidden = document.getElementById('technician_id_hidden');
+                        var expectedReturnDateHidden = document.getElementById('expected_return_date_hidden');
+                        var extensionDateHidden = document.getElementById('extension_date_hidden');
+                        var extensionReasonHidden = document.getElementById('extension_reason_hidden');
+                        var rejectReasonHidden = document.getElementById('reject_reason_hidden');
+                        var returnDecisionHidden = document.getElementById('return_decision_hidden');
+                        var submitForm = document.getElementById('lh-action-form');
+                        var inventoryModal = document.getElementById('lh_inventory_backdrop');
+                        var openInventoryBtn = document.getElementById('open_inventory_modal');
+                        var closeInventoryBtn = document.getElementById('lh_inventory_close');
+                        var actaModal = document.getElementById('lh_acta_backdrop');
+                        var openActaBtn = document.getElementById('open_acta_modal');
+                        var closeActaBtn = document.getElementById('lh_acta_close');
+                        var actaItemsModal = document.getElementById('lh_acta_items_backdrop');
+                        var actaItemsTitle = document.getElementById('lh_acta_items_title');
+                        var actaItemsBody = document.getElementById('lh_acta_items_body');
+                        var closeActaItemsBtn = document.getElementById('lh_acta_items_close');
+                        var requestModal = document.getElementById('lh_request_backdrop');
+                        var requestSearch = document.getElementById('lh_request_search');
+                        var requestClose = document.getElementById('lh_request_close');
+                        var requestConfirm = document.getElementById('lh_request_confirm');
+                        var requestRows = document.querySelectorAll('#lh_request_list .lh_request_item');
+                        var techReturnModal = document.getElementById('lh_tech_return_backdrop');
+                        var techReturnSearch = document.getElementById('lh_tech_return_search');
+                        var techReturnClose = document.getElementById('lh_tech_return_close');
+                        var techReturnConfirm = document.getElementById('lh_tech_return_confirm');
+                        var techReturnRows = document.querySelectorAll('#lh_tech_return_list .lh_request_item');
+                        var extensionModal = document.getElementById('lh_extension_backdrop');
+                        var extensionSearch = document.getElementById('lh_extension_search');
+                        var extensionClose = document.getElementById('lh_extension_close');
+                        var extensionConfirm = document.getElementById('lh_extension_confirm');
+                        var extensionRows = document.querySelectorAll('#lh_extension_list .lh_request_item');
+                        var extensionDatePicker = document.getElementById('lh_extension_date_picker');
+                        var extensionReasonPicker = document.getElementById('lh_extension_reason_picker');
+                        var poolReturnModal = document.getElementById('lh_pool_return_backdrop');
+                        var poolReturnSearch = document.getElementById('lh_pool_return_search');
+                        var poolReturnClose = document.getElementById('lh_pool_return_close');
+                        var poolReturnConfirm = document.getElementById('lh_pool_return_confirm');
+                        var poolReturnRows = document.querySelectorAll('#lh_pool_return_list .lh_pool_return_row');
+                        var assignTechModal = document.getElementById('lh_assign_tech_backdrop');
+                        var assignTechSearch = document.getElementById('lh_assign_tech_search');
+                        var assignTechClose = document.getElementById('lh_assign_tech_close');
+                        var assignTechConfirm = document.getElementById('lh_assign_tech_confirm');
+                        var assignTechRows = document.querySelectorAll('#lh_assign_tech_list .lh_assign_tech_row');
+                        var assignTechTechnician = document.getElementById('lh_assign_tech_technician');
+                        var assignTechExpectedDate = document.getElementById('lh_assign_tech_expected_date');
+                        var rpModal = document.getElementById('lh_rpending_backdrop');
+                        var rpClose = document.getElementById('lh_rpending_close');
+                        var rpConfirm = document.getElementById('lh_rpending_confirm');
+                        var rpTabs = document.querySelectorAll('[data-rp-tab]');
+                        var rpPanels = {
+                            devoluciones: document.getElementById('lh_rp_panel_devoluciones'),
+                            prorrogas: document.getElementById('lh_rp_panel_prorrogas'),
+                            solicitudes: document.getElementById('lh_rp_panel_solicitudes')
+                        };
+                        var rpActiveTab = 'devoluciones';
+                        var rpExpectedWrap = document.getElementById('lh_rp_expected_wrap');
+                        var rpExpectedDate = document.getElementById('lh_rp_expected_date');
+                        var rpDecision = document.getElementById('lh_rp_decision');
+                        var rpRejectWrap = document.getElementById('lh_rp_reject_wrap');
+                        var rpRejectReason = document.getElementById('lh_rp_reject_reason');
+                        var pendingKindHidden = document.getElementById('pending_kind_hidden');
+                        var currentAction = '';
+                        function closeModal() {
+                            modal.style.display = 'none';
+                            currentAction = '';
+                        }
+                        function openModal(action) {
+                            if (action === 'assign_tech') {
+                                modal.style.display = 'none';
+                                if (assignTechSearch) assignTechSearch.value = '';
+                                assignTechRows.forEach(function (row) { row.style.display = ''; });
+                                document.querySelectorAll('.lh_assign_tech_check').forEach(function (c) { c.checked = false; });
+                                if (assignTechTechnician) assignTechTechnician.value = '';
+                                if (assignTechExpectedDate) assignTechExpectedDate.value = '';
+                                if (pendingKindHidden) pendingKindHidden.value = '';
+                                if (assignTechModal) assignTechModal.style.display = 'flex';
+                                return;
+                            }
+                            currentAction = action;
+                            actionInput.value = action;
+                            technicianHidden.value = '';
+                            expectedReturnDateHidden.value = '';
+                            extensionDateHidden.value = '';
+                            extensionReasonHidden.value = '';
+                            rejectReasonHidden.value = '';
+                            returnDecisionHidden.value = '';
+                            modalTech.value = '';
+                            expectedDate.value = '';
+                            extDate.value = '';
+                            extReason.value = '';
+                            rejectReason.value = '';
+                            returnDecision.value = 'approve';
+                            modalTechRow.style.display = 'none';
+                            expectedDateRow.style.display = 'none';
+                            extDateRow.style.display = 'none';
+                            extReasonRow.style.display = 'none';
+                            rejectReasonRow.style.display = 'none';
+                            returnDecisionRow.style.display = 'none';
+                            if (action === 'request_extension') {
+                                modalTitle.textContent = 'Solicitar prórroga';
+                                modalDesc.textContent = 'El técnico solicita más tiempo; el responsable podrá aprobar.';
+                                extDateRow.style.display = 'block';
+                                extReasonRow.style.display = 'block';
+                            } else if (action === 'tech_request_picker') {
+                                modal.style.display = 'none';
+                                actionInput.value = 'tech_request';
+                                if (requestModal) requestModal.style.display = 'flex';
+                                return;
+                            } else if (action === 'request_extension_picker') {
+                                modal.style.display = 'none';
+                                actionInput.value = 'request_extension';
+                                if (extensionModal) extensionModal.style.display = 'flex';
+                                return;
+                            } else if (action === 'tech_return_picker') {
+                                modal.style.display = 'none';
+                                actionInput.value = 'tech_return';
+                                if (techReturnModal) techReturnModal.style.display = 'flex';
+                                return;
+                            } else if (action === 'responsible_return_picker') {
+                                modal.style.display = 'none';
+                                actionInput.value = 'responsible_return';
+                                if (poolReturnModal) poolReturnModal.style.display = 'flex';
+                                return;
+                            } else if (action === 'responsible_pending_picker') {
+                                modal.style.display = 'none';
+                                actionInput.value = 'resolve_responsible_pending';
+                                if (rpModal) {
+                                    rpActiveTab = 'devoluciones';
+                                    rpTabs.forEach(function (t) {
+                                        t.classList.toggle('active', t.dataset.rpTab === 'devoluciones');
+                                    });
+                                    Object.keys(rpPanels).forEach(function (k) {
+                                        if (rpPanels[k]) rpPanels[k].style.display = (k === 'devoluciones') ? 'block' : 'none';
+                                    });
+                                    document.querySelectorAll('.lh_rp_check').forEach(function (c) { c.checked = false; });
+                                    if (rpDecision) rpDecision.value = 'approve';
+                                    if (rpExpectedDate) rpExpectedDate.value = '';
+                                    if (rpRejectReason) rpRejectReason.value = '';
+                                    rpSyncExpectedVisibility();
+                                    rpSyncRejectVisibility();
+                                    rpModal.style.display = 'flex';
+                                }
+                                return;
+                            } else {
+                                modalTitle.textContent = 'Operación';
+                                modalDesc.textContent = '';
+                            }
+                            modal.style.display = 'flex';
+                        }
+                        menuTriggers.forEach(function (btn) {
+                            btn.addEventListener('click', function () {
+                                var target = document.getElementById(btn.dataset.menuTarget);
+                                actionMenus.forEach(function (m) { if (m !== target) m.style.display = 'none'; });
+                                target.style.display = (target.style.display === 'block') ? 'none' : 'block';
+                            });
+                        });
+                        document.addEventListener('click', function (ev) {
+                            if (!ev.target.closest('.lh_menu_wrap')) {
+                                actionMenus.forEach(function (m) { m.style.display = 'none'; });
+                            }
+                        });
+                        actionButtons.forEach(function (btn) {
+                            btn.addEventListener('click', function () {
+                                actionMenus.forEach(function (m) { m.style.display = 'none'; });
+                                openModal(btn.dataset.action);
+                            });
+                        });
+                        modalCancel.addEventListener('click', closeModal);
+                        modal.addEventListener('click', function (ev) {
+                            if (ev.target === modal) closeModal();
+                        });
+                        if (openInventoryBtn) {
+                            openInventoryBtn.addEventListener('click', function () { inventoryModal.style.display = 'flex'; });
+                        }
+                        if (closeInventoryBtn) {
+                            closeInventoryBtn.addEventListener('click', function () { inventoryModal.style.display = 'none'; });
+                        }
+                        if (inventoryModal) {
+                            inventoryModal.addEventListener('click', function (ev) {
+                                if (ev.target === inventoryModal) inventoryModal.style.display = 'none';
+                            });
+                        }
+                        function applyActaTableFilters() {
+                            var df = document.getElementById('lh_acta_filter_date_from');
+                            var dt = document.getElementById('lh_acta_filter_date_to');
+                            var tech = document.getElementById('lh_acta_filter_tech');
+                            var fromV = (df &amp;&amp; df.value) ? df.value : '';
+                            var toV = (dt &amp;&amp; dt.value) ? dt.value : '';
+                            var techV = (tech &amp;&amp; tech.value) ? tech.value : '';
+                            document.querySelectorAll('.lh_acta_table_row').forEach(function (tr) {
+                                var d = tr.getAttribute('data-filter-date') || '';
+                                var t = tr.getAttribute('data-filter-tech') || '';
+                                var ok = true;
+                                if ((fromV || toV) &amp;&amp; !d) ok = false;
+                                if (fromV &amp;&amp; d &amp;&amp; d &lt; fromV) ok = false;
+                                if (toV &amp;&amp; d &amp;&amp; d &gt; toV) ok = false;
+                                if (techV &amp;&amp; String(t) !== String(techV)) ok = false;
+                                tr.style.display = ok ? '' : 'none';
+                            });
+                        }
+                        var actaFilterFrom = document.getElementById('lh_acta_filter_date_from');
+                        var actaFilterTo = document.getElementById('lh_acta_filter_date_to');
+                        var actaFilterTech = document.getElementById('lh_acta_filter_tech');
+                        if (actaFilterFrom) actaFilterFrom.addEventListener('change', applyActaTableFilters);
+                        if (actaFilterTo) actaFilterTo.addEventListener('change', applyActaTableFilters);
+                        if (actaFilterTech) actaFilterTech.addEventListener('change', applyActaTableFilters);
+                        if (openActaBtn) {
+                            openActaBtn.addEventListener('click', function () {
+                                if (actaFilterFrom) actaFilterFrom.value = '';
+                                if (actaFilterTo) actaFilterTo.value = '';
+                                if (actaFilterTech) actaFilterTech.value = '';
+                                applyActaTableFilters();
+                                actaModal.style.display = 'flex';
+                            });
+                        }
+                        if (closeActaBtn) {
+                            closeActaBtn.addEventListener('click', function () { actaModal.style.display = 'none'; });
+                        }
+                        if (actaModal) {
+                            actaModal.addEventListener('click', function (ev) {
+                                if (ev.target === actaModal) actaModal.style.display = 'none';
+                            });
+                        }
+                        viewActaButtons.forEach(function (btn) {
+                            btn.addEventListener('click', function () {
+                                var acta = btn.dataset.acta || '';
+                                var container = btn.closest('.acta-card');
+                                var hidden = container ? container.querySelector('.acta-items-json') : null;
+                                var items = [];
+                                try {
+                                    items = JSON.parse((hidden &amp;&amp; hidden.dataset.items) || '[]');
+                                } catch (err) {
+                                    items = [];
+                                }
+                                actaItemsTitle.textContent = 'Detalle acta: ' + acta;
+                                actaItemsBody.innerHTML = '';
+                                items.forEach(function (it) {
+                                    var tr = document.createElement('tr');
+                                    tr.innerHTML = '<td>' + (it.serial || '') + '</td><td>' + (it.product || '') + '</td><td>' + (it.state || '') + '</td>';
+                                    actaItemsBody.appendChild(tr);
+                                });
+                                if (!items.length) {
+                                    var tr = document.createElement('tr');
+                                    tr.innerHTML = '<td colspan="3">Sin ítems para mostrar</td>';
+                                    actaItemsBody.appendChild(tr);
+                                }
+                                actaItemsModal.style.display = 'flex';
+                            });
+                        });
+                        if (closeActaItemsBtn) {
+                            closeActaItemsBtn.addEventListener('click', function () { actaItemsModal.style.display = 'none'; });
+                        }
+                        if (actaItemsModal) {
+                            actaItemsModal.addEventListener('click', function (ev) {
+                                if (ev.target === actaItemsModal) actaItemsModal.style.display = 'none';
+                            });
+                        }
+                        if (requestSearch) {
+                            requestSearch.addEventListener('input', function () {
+                                var q = (requestSearch.value || '').toLowerCase().trim();
+                                requestRows.forEach(function (row) {
+                                    var text = (row.dataset.search || '');
+                                    row.style.display = (!q || text.indexOf(q) !== -1) ? '' : 'none';
+                                });
+                            });
+                        }
+                        if (requestClose) {
+                            requestClose.addEventListener('click', function () { requestModal.style.display = 'none'; });
+                        }
+                        if (requestModal) {
+                            requestModal.addEventListener('click', function (ev) {
+                                if (ev.target === requestModal) requestModal.style.display = 'none';
+                            });
+                        }
+                        if (requestConfirm) {
+                            requestConfirm.addEventListener('click', function () {
+                                var ids = [];
+                                document.querySelectorAll('.lh_request_check:checked').forEach(function (c) { ids.push(c.value); });
+                                if (!ids.length) {
+                                    alert('Seleccione al menos un activo disponible para solicitar.');
+                                    return;
+                                }
+                                selectedInput.value = ids.join(',');
+                                selectedActaInput.value = '';
+                                actionInput.value = 'tech_request';
+                                submitForm.submit();
+                            });
+                        }
+                        if (techReturnSearch) {
+                            techReturnSearch.addEventListener('input', function () {
+                                var q = (techReturnSearch.value || '').toLowerCase().trim();
+                                techReturnRows.forEach(function (row) {
+                                    var text = (row.dataset.search || '');
+                                    row.style.display = (!q || text.indexOf(q) !== -1) ? '' : 'none';
+                                });
+                            });
+                        }
+                        if (techReturnClose) {
+                            techReturnClose.addEventListener('click', function () { techReturnModal.style.display = 'none'; });
+                        }
+                        if (techReturnModal) {
+                            techReturnModal.addEventListener('click', function (ev) {
+                                if (ev.target === techReturnModal) techReturnModal.style.display = 'none';
+                            });
+                        }
+                        if (techReturnConfirm) {
+                            techReturnConfirm.addEventListener('click', function () {
+                                var actas = [];
+                                document.querySelectorAll('.lh_tech_return_check:checked').forEach(function (c) { actas.push(c.value); });
+                                if (!actas.length) {
+                                    alert('Seleccione al menos un acta para solicitar devolucion.');
+                                    return;
+                                }
+                                selectedInput.value = '';
+                                selectedActaInput.value = actas.join(',');
+                                actionInput.value = 'tech_return';
+                                submitForm.submit();
+                            });
+                        }
+                        if (extensionSearch) {
+                            extensionSearch.addEventListener('input', function () {
+                                var q = (extensionSearch.value || '').toLowerCase().trim();
+                                extensionRows.forEach(function (row) {
+                                    var text = (row.dataset.search || '');
+                                    row.style.display = (!q || text.indexOf(q) !== -1) ? '' : 'none';
+                                });
+                            });
+                        }
+                        if (extensionClose) {
+                            extensionClose.addEventListener('click', function () { extensionModal.style.display = 'none'; });
+                        }
+                        if (extensionModal) {
+                            extensionModal.addEventListener('click', function (ev) {
+                                if (ev.target === extensionModal) extensionModal.style.display = 'none';
+                            });
+                        }
+                        if (extensionConfirm) {
+                            extensionConfirm.addEventListener('click', function () {
+                                var actas = [];
+                                document.querySelectorAll('.lh_extension_check:checked').forEach(function (c) { actas.push(c.value); });
+                                if (!actas.length) {
+                                    alert('Seleccione al menos un acta para solicitar prórroga.');
+                                    return;
+                                }
+                                if (!extensionDatePicker.value) {
+                                    alert('Debe indicar una fecha de prórroga.');
+                                    return;
+                                }
+                                selectedInput.value = '';
+                                selectedActaInput.value = actas.join(',');
+                                actionInput.value = 'request_extension';
+                                extensionDateHidden.value = extensionDatePicker.value;
+                                extensionReasonHidden.value = (extensionReasonPicker.value || '').trim();
+                                submitForm.submit();
+                            });
+                        }
+                        function rpSyncExpectedVisibility() {
+                            if (!rpExpectedWrap) return;
+                            rpExpectedWrap.style.display = (rpActiveTab === 'solicitudes') ? 'block' : 'none';
+                        }
+                        function rpSyncRejectVisibility() {
+                            if (!rpRejectWrap || !rpDecision) return;
+                            rpRejectWrap.style.display = (rpDecision.value === 'reject') ? 'block' : 'none';
+                        }
+                        if (rpTabs.length) {
+                            rpTabs.forEach(function (tab) {
+                                tab.addEventListener('click', function () {
+                                    rpActiveTab = tab.dataset.rpTab || 'devoluciones';
+                                    rpTabs.forEach(function (t) { t.classList.toggle('active', t === tab); });
+                                    Object.keys(rpPanels).forEach(function (k) {
+                                        if (rpPanels[k]) rpPanels[k].style.display = (k === rpActiveTab) ? 'block' : 'none';
+                                    });
+                                    rpSyncExpectedVisibility();
+                                });
+                            });
+                        }
+                        if (rpDecision) {
+                            rpDecision.addEventListener('change', rpSyncRejectVisibility);
+                        }
+                        if (rpClose) {
+                            rpClose.addEventListener('click', function () { if (rpModal) rpModal.style.display = 'none'; });
+                        }
+                        if (rpModal) {
+                            rpModal.addEventListener('click', function (ev) {
+                                if (ev.target === rpModal) rpModal.style.display = 'none';
+                            });
+                        }
+                        if (rpConfirm) {
+                            rpConfirm.addEventListener('click', function () {
+                                var kindMap = { devoluciones: 'return', prorrogas: 'extension', solicitudes: 'request' };
+                                var kind = kindMap[rpActiveTab] || 'return';
+                                var panel = rpPanels[rpActiveTab];
+                                if (!panel) return;
+                                var actas = [];
+                                panel.querySelectorAll('.lh_rp_check:checked').forEach(function (c) { actas.push(c.value); });
+                                if (!actas.length) {
+                                    alert('Seleccione al menos un acta en la pestaña activa.');
+                                    return;
+                                }
+                                if (rpActiveTab === 'solicitudes' &amp;&amp; rpDecision.value === 'approve' &amp;&amp; rpExpectedDate &amp;&amp; !rpExpectedDate.value) {
+                                    alert('Indique fecha estimada de devolución para aprobar la solicitud.');
+                                    return;
+                                }
+                                if (pendingKindHidden) pendingKindHidden.value = kind;
+                                selectedActaInput.value = actas.join(',');
+                                selectedInput.value = '';
+                                returnDecisionHidden.value = rpDecision.value || 'approve';
+                                expectedReturnDateHidden.value = (rpActiveTab === 'solicitudes' &amp;&amp; rpDecision.value === 'approve' &amp;&amp; rpExpectedDate) ? rpExpectedDate.value : '';
+                                rejectReasonHidden.value = (rpDecision.value === 'reject' &amp;&amp; rpRejectReason) ? (rpRejectReason.value || '') : '';
+                                actionInput.value = 'resolve_responsible_pending';
+                                if (rpModal) rpModal.style.display = 'none';
+                                submitForm.submit();
+                            });
+                        }
+                        [['lh_rp_search_devoluciones', 'lh_rp_panel_devoluciones'], ['lh_rp_search_prorrogas', 'lh_rp_panel_prorrogas'], ['lh_rp_search_solicitudes', 'lh_rp_panel_solicitudes']].forEach(function (pair) {
+                            var inp = document.getElementById(pair[0]);
+                            var panel = document.getElementById(pair[1]);
+                            if (inp &amp;&amp; panel) {
+                                inp.addEventListener('input', function () {
+                                    var q = (inp.value || '').toLowerCase().trim();
+                                    panel.querySelectorAll('.lh_rp_acta_row').forEach(function (row) {
+                                        var text = (row.dataset.search || '');
+                                        row.style.display = (!q || text.indexOf(q) !== -1) ? '' : 'none';
+                                    });
+                                });
+                            }
+                        });
+                        if (assignTechSearch) {
+                            assignTechSearch.addEventListener('input', function () {
+                                var q = (assignTechSearch.value || '').toLowerCase().trim();
+                                assignTechRows.forEach(function (row) {
+                                    var text = (row.dataset.search || '');
+                                    row.style.display = (!q || text.indexOf(q) !== -1) ? '' : 'none';
+                                });
+                            });
+                        }
+                        if (assignTechClose) {
+                            assignTechClose.addEventListener('click', function () { if (assignTechModal) assignTechModal.style.display = 'none'; });
+                        }
+                        if (assignTechModal) {
+                            assignTechModal.addEventListener('click', function (ev) {
+                                if (ev.target === assignTechModal) assignTechModal.style.display = 'none';
+                            });
+                        }
+                        if (assignTechConfirm) {
+                            assignTechConfirm.addEventListener('click', function () {
+                                var ids = [];
+                                document.querySelectorAll('.lh_assign_tech_check:checked').forEach(function (c) { ids.push(c.value); });
+                                if (!ids.length) {
+                                    alert('Seleccione al menos un activo en pool laboratorio.');
+                                    return;
+                                }
+                                if (!assignTechTechnician || !assignTechTechnician.value) {
+                                    alert('Debe seleccionar un técnico.');
+                                    return;
+                                }
+                                if (!assignTechExpectedDate || !assignTechExpectedDate.value) {
+                                    alert('Debe indicar fecha estimada de devolución.');
+                                    return;
+                                }
+                                selectedInput.value = ids.join(',');
+                                selectedActaInput.value = '';
+                                technicianHidden.value = assignTechTechnician.value;
+                                expectedReturnDateHidden.value = assignTechExpectedDate.value;
+                                if (pendingKindHidden) pendingKindHidden.value = '';
+                                actionInput.value = 'assign_tech';
+                                if (assignTechModal) assignTechModal.style.display = 'none';
+                                submitForm.submit();
+                            });
+                        }
+                        if (poolReturnSearch) {
+                            poolReturnSearch.addEventListener('input', function () {
+                                var q = (poolReturnSearch.value || '').toLowerCase().trim();
+                                poolReturnRows.forEach(function (row) {
+                                    var text = (row.dataset.search || '');
+                                    row.style.display = (!q || text.indexOf(q) !== -1) ? '' : 'none';
+                                });
+                            });
+                        }
+                        if (poolReturnClose) {
+                            poolReturnClose.addEventListener('click', function () { if (poolReturnModal) poolReturnModal.style.display = 'none'; });
+                        }
+                        if (poolReturnModal) {
+                            poolReturnModal.addEventListener('click', function (ev) {
+                                if (ev.target === poolReturnModal) poolReturnModal.style.display = 'none';
+                            });
+                        }
+                        if (poolReturnConfirm) {
+                            poolReturnConfirm.addEventListener('click', function () {
+                                var ids = [];
+                                document.querySelectorAll('.lh_pool_return_check:checked').forEach(function (c) { ids.push(c.value); });
+                                if (!ids.length) {
+                                    alert('Seleccione al menos un activo.');
+                                    return;
+                                }
+                                selectedInput.value = ids.join(',');
+                                selectedActaInput.value = '';
+                                actionInput.value = 'responsible_return';
+                                if (pendingKindHidden) pendingKindHidden.value = '';
+                                if (poolReturnModal) poolReturnModal.style.display = 'none';
+                                submitForm.submit();
+                            });
+                        }
+                        modalConfirm.addEventListener('click', function () {
+                            submitForm.submit();
+                        });
+                    })();
+                </script>
+            </body>
+        </html>
+    </template>
+
+    <record id="action_component_lab_hub_dashboard" model="ir.actions.act_url">
+        <field name="name">Vista general del pool</field>
+        <field name="url">/inventory_dashboard_simple/lab_hub</field>
+        <field name="target">self</field>
+    </record>
+</odoo>
+

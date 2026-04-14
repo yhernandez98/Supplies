@@ -57,6 +57,41 @@ class SaleOrder(models.Model):
         store=False,
         help='Indica si la orden está en cotización o ya está confirmada como compra',
     )
+    solution_quote_ids = fields.One2many(
+        'crm.solution.quote',
+        'sale_order_id',
+        string='Soluciones Comerciales',
+        readonly=True,
+    )
+    solution_quote_count = fields.Integer(
+        string='Numero de Soluciones',
+        compute='_compute_solution_quote_count',
+        readonly=True,
+    )
+    current_solution_quote_id = fields.Many2one(
+        'crm.solution.quote',
+        string='Solucion Actual',
+        compute='_compute_current_solution_quote_id',
+        readonly=True,
+    )
+    pricelist_product_available_ids = fields.Many2many(
+        'product.product',
+        string='Productos/Servicios de la lista',
+        compute='_compute_pricelist_product_available_ids',
+        store=False,
+    )
+    pricelist_product_id = fields.Many2one(
+        'product.product',
+        string='Producto/Servicio (Lista de precios)',
+        domain="[('id', 'in', pricelist_product_available_ids)]",
+        help='Permite elegir un producto/servicio ya configurado en la lista de precios del cliente.',
+    )
+    chosen_subscription_id = fields.Many2one(
+        'subscription.subscription',
+        string='Suscripción del cliente',
+        domain="[('partner_id', '=', partner_id)]",
+        help='Puede seleccionar una suscripción existente del cliente o crear una nueva.',
+    )
 
     @api.depends('purchase_alert_ids')
     def _compute_purchase_alert_count(self):
@@ -76,6 +111,65 @@ class SaleOrder(models.Model):
                 order.order_type_display = _('Cancelada')
             else:
                 order.order_type_display = _('Desconocido')
+
+    @api.depends('solution_quote_ids')
+    def _compute_solution_quote_count(self):
+        for order in self:
+            order.solution_quote_count = len(order.solution_quote_ids)
+
+    @api.depends('solution_quote_ids.is_current')
+    def _compute_current_solution_quote_id(self):
+        for order in self:
+            current = order.solution_quote_ids.filtered(lambda q: q.is_current)
+            order.current_solution_quote_id = current[:1].id if current else False
+
+    @api.depends('pricelist_id', 'pricelist_id.item_ids', 'pricelist_id.subscription_item_ids')
+    def _compute_pricelist_product_available_ids(self):
+        for order in self:
+            products = self.env['product.product']
+            pricelist = order.pricelist_id
+            if not pricelist:
+                order.pricelist_product_available_ids = products
+                continue
+            item_sets = []
+            if getattr(pricelist, 'item_ids', False):
+                item_sets.append(pricelist.item_ids)
+            if getattr(pricelist, 'subscription_item_ids', False):
+                item_sets.append(pricelist.subscription_item_ids)
+            for items in item_sets:
+                for item in items:
+                    if getattr(item, 'product_id', False):
+                        products |= item.product_id
+                    elif getattr(item, 'product_tmpl_id', False):
+                        variants = item.product_tmpl_id.product_variant_ids
+                        if variants:
+                            products |= variants
+            order.pricelist_product_available_ids = products
+
+    def action_add_pricelist_product_line(self):
+        """Agrega una línea en cotización desde el selector de lista de precios."""
+        self.ensure_one()
+        if self.state not in ('draft', 'sent'):
+            raise UserError(_('Solo puede agregar líneas en cotizaciones en borrador o enviadas.'))
+        if not self.pricelist_product_id:
+            raise UserError(_('Seleccione primero un producto o servicio de la lista de precios.'))
+        product = self.pricelist_product_id
+        if not (product.sale_ok and product.active):
+            raise UserError(_('El producto/servicio seleccionado no está disponible para venta.'))
+        try:
+            price_unit = self.pricelist_id._get_product_price(product, 1.0, self.partner_id) if self.pricelist_id else 0.0
+        except Exception:
+            price_unit = product.lst_price or 0.0
+        line_name = product.get_product_multiline_description_sale() if hasattr(product, 'get_product_multiline_description_sale') else product.display_name
+        self.env['sale.order.line'].create({
+            'order_id': self.id,
+            'product_id': product.id,
+            'name': line_name or product.display_name,
+            'product_uom_qty': 1.0,
+            'product_uom': product.uom_id.id,
+            'price_unit': price_unit or 0.0,
+        })
+        self.pricelist_product_id = False
 
     @api.depends('order_line.product_id', 'order_line.product_uom_qty', 'warehouse_id')
     def _compute_stock_availability(self):
@@ -618,7 +712,14 @@ class SaleOrder(models.Model):
         _logger.info(">>> Dominio de búsqueda: %s", domain)
         existing_subscription = Subscription.search(domain, limit=1)
         
-        if existing_subscription:
+        if self.chosen_subscription_id:
+            subscription = self.chosen_subscription_id
+            if subscription.partner_id.id != self.partner_id.id:
+                raise UserError(_('La suscripción seleccionada no pertenece al cliente de esta cotización.'))
+            _logger.info(">>> Usando suscripción seleccionada manualmente: %s (ID: %s)", subscription.name, subscription.id)
+            if products:
+                subscription._sync_subscription_lines(products, remove_missing=False, track_usage=True)
+        elif existing_subscription:
             _logger.info(">>> Suscripción existente encontrada: %s (ID: %s)", 
                        existing_subscription.name, existing_subscription.id)
             # Si ya existe, usar esa suscripción y sincronizar productos
@@ -799,3 +900,76 @@ class SaleOrder(models.Model):
             'domain': [],
             'context': {'create': False},
         }
+
+    def action_open_solution_quote_wizard(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Armar Solucion Comercial'),
+            'res_model': 'crm.solution.quote.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'active_model': 'sale.order',
+                'active_id': self.id,
+            },
+        }
+
+    def action_view_solution_quotes(self):
+        self.ensure_one()
+        action = {
+            'type': 'ir.actions.act_window',
+            'name': _('Soluciones Comerciales'),
+            'res_model': 'crm.solution.quote',
+            'view_mode': 'list,form',
+            'domain': [('sale_order_id', '=', self.id)],
+            'context': {'default_sale_order_id': self.id, 'default_lead_id': self.opportunity_id.id},
+        }
+        if len(self.solution_quote_ids) == 1:
+            action.update({'view_mode': 'form', 'res_id': self.solution_quote_ids.id})
+        return action
+
+    def action_approve_current_solution_quote(self):
+        self.ensure_one()
+        if not self.current_solution_quote_id:
+            raise UserError(_('No hay solucion actual para aprobar en esta cotizacion.'))
+        self.current_solution_quote_id.action_approve()
+        return self.action_view_solution_quotes()
+
+    def action_cancel(self):
+        """Al cancelar, limpia la línea de paquete CRM y elimina/archiva su producto técnico."""
+        package_lines = self.order_line.filtered(
+            lambda l: l.product_id and l.product_id.default_code == 'CRM_PACKAGE_LINE'
+        )
+        package_products = package_lines.mapped('product_id')
+
+        res = super().action_cancel()
+
+        # Quitar la línea técnica de paquete de la cotización cancelada.
+        if package_lines:
+            package_lines.unlink()
+
+        # Si el producto técnico quedó sin uso en líneas de venta, eliminarlo del catálogo.
+        for product in package_products:
+            remaining = self.env['sale.order.line'].sudo().search_count([
+                ('product_id', '=', product.id),
+            ])
+            if remaining:
+                continue
+            template = product.product_tmpl_id
+            try:
+                product.sudo().unlink()
+                if template.exists() and not template.product_variant_ids:
+                    template.sudo().unlink()
+            except Exception as err:
+                # Fallback seguro si hay referencias adicionales.
+                _logger.warning(
+                    "No se pudo eliminar producto técnico CRM_PACKAGE_LINE (%s): %s. Se archivará.",
+                    product.display_name,
+                    err,
+                )
+                if product.exists():
+                    product.sudo().write({'active': False})
+                if template.exists():
+                    template.sudo().write({'active': False})
+        return res

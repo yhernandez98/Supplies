@@ -7,10 +7,14 @@
     <field name="inherit_id" ref="product_suppiles.view_production_lot_form_inherit_supplies"/>
     <field name="arch" type="xml">
       
-      <!-- Usuario antes de Fecha Renting (posición intercambiada) -->
-      <xpath expr="//field[@name='entry_date']" position="before">
-        <field name="related_partner_id" string="Usuario" options="{'no_create': True}" placeholder="Seleccione un usuario relacionado de la empresa según la ubicación..."
-               invisible="lot_classification in ('component', 'complement', 'spare')"/>
+      <!-- Usuario fuera de columnas, arriba del bloque de 2 columnas -->
+      <xpath expr="//group[contains(@class, 'o_stock_lot_left_col')]/ancestor::group[1]" position="before">
+        <group col="2" class="o_usuario_box_row"
+               style="background: #ffffff; border: 1px solid rgba(74, 163, 201, 0.15); border-radius: 10px; padding: 10px 12px;">
+          <field name="related_partner_id" string="Usuario" colspan="2" class="o_usuario_box_field"
+                 options="{'no_create': True}" placeholder="Seleccione un usuario relacionado de la empresa según la ubicación..."
+                 context="{'only_contact_name': 1}"/>
+        </group>
       </xpath>
       
     </field>

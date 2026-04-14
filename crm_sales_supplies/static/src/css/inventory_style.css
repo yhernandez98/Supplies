@@ -170,3 +170,32 @@
     background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%) !important;
 }
 
+/* Tabla fija para "Productos a Cotizar" (evita saltos/reacomodo de columnas). */
+.purchase-alert-lines-fixed .o_list_view .o_list_table,
+.purchase-alert-lines-fixed .o_list_table {
+    table-layout: auto !important;
+    width: 100% !important;
+    min-width: 560px !important;
+}
+
+.purchase-alert-lines-fixed .o_list_view .o_list_table th,
+.purchase-alert-lines-fixed .o_list_table th {
+    white-space: nowrap !important;
+}
+
+.purchase-alert-lines-fixed .o_list_renderer {
+    overflow-x: auto !important;
+}
+
+.purchase-alert-lines-fixed .o_list_view .o_list_table td,
+.purchase-alert-lines-fixed .o_list_table td {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+.purchase-alert-lines-fixed .o_list_view .o_list_table td.o_data_cell.o_list_number,
+.purchase-alert-lines-fixed .o_list_table td.o_data_cell.o_list_number {
+    text-align: right !important;
+}
+

@@ -15,6 +15,7 @@
                                 <field name="quantity_missing" readonly="1"/>
                             </group>
                             <group>
+                                <field name="available_vendor_ids" invisible="1"/>
                                 <field name="vendor_ids" 
                                        widget="many2many_tags" 
                                        options="{'no_create': True, 'no_create_edit': True, 'no_open': True}"

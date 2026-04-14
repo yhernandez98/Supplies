@@ -42,8 +42,8 @@
                                     <tr>
                                         <td style="padding: 8px; font-weight: bold; color: #495057;">Tipo de Cálculo:</td>
                                         <td style="padding: 8px; color: #212529;">
-                                            <t t-if="calc.tipo_calculo == 'equipo'">Equipo</t>
-                                            <t t-if="calc.tipo_calculo == 'renting'">Renting/Leasing</t>
+                                            <t t-if="calc.tipo_operacion == 'venta'">Venta</t>
+                                            <t t-if="calc.tipo_operacion == 'suscripcion'">Suscripción</t>
                                         </td>
                                     </tr>
                                     <tr>
@@ -60,7 +60,7 @@
                                             $<t t-esc="'{:,.0f}'.format(garantia_cop)"/>
                                         </td>
                                     </tr>
-                                    <tr t-if="calc.costo_servicios_completos > 0">
+                                    <tr t-if="calc.costo_servicio_tecnico_mensual_cop > 0">
                                         <td style="padding: 8px; font-weight: bold; color: #495057;">Servicio Técnico:</td>
                                         <td style="padding: 8px; color: #212529;">$<t t-esc="'{:,.0f}'.format(calc.servicio_con_margen)"/></td>
                                     </tr>
@@ -86,7 +86,7 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr t-foreach="[24, 36, 48]" t-as="plazo">
+                                        <tr t-foreach="[12, 24, 36, 48, 60]" t-as="plazo">
                                             <t t-set="valores" t-value="escenarios['escenario_1']['plazos'][plazo]"/>
                                             <td style="padding: 10px; border-bottom: 1px solid #dee2e6; font-weight: bold;"><t t-esc="plazo"/> meses</td>
                                             <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right;">$<t t-esc="'{:,.0f}'.format(valores['valor_equipo_sin_garantia_cop'])"/></td>
@@ -114,7 +114,7 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr t-foreach="[24, 36, 48]" t-as="plazo">
+                                        <tr t-foreach="[12, 24, 36, 48, 60]" t-as="plazo">
                                             <t t-set="valores" t-value="escenarios['escenario_2']['plazos'][plazo]"/>
                                             <td style="padding: 10px; border-bottom: 1px solid #dee2e6; font-weight: bold;"><t t-esc="plazo"/> meses</td>
                                             <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right;">$<t t-esc="'{:,.0f}'.format(valores['valor_equipo_sin_garantia_cop'])"/></td>
@@ -142,7 +142,7 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr t-foreach="[24, 36, 48]" t-as="plazo">
+                                        <tr t-foreach="[12, 24, 36, 48, 60]" t-as="plazo">
                                             <t t-set="valores" t-value="escenarios['escenario_3']['plazos'][plazo]"/>
                                             <td style="padding: 10px; border-bottom: 1px solid #dee2e6; font-weight: bold;"><t t-esc="plazo"/> meses</td>
                                             <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right;">$<t t-esc="'{:,.0f}'.format(valores['valor_equipo_sin_garantia_cop'])"/></td>
@@ -170,7 +170,7 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr t-foreach="[24, 36, 48]" t-as="plazo">
+                                        <tr t-foreach="[12, 24, 36, 48, 60]" t-as="plazo">
                                             <t t-set="valores" t-value="escenarios['escenario_4']['plazos'][plazo]"/>
                                             <td style="padding: 10px; border-bottom: 1px solid #dee2e6; font-weight: bold;"><t t-esc="plazo"/> meses</td>
                                             <td style="padding: 10px; border-bottom: 1px solid #dee2e6; text-align: right;">$<t t-esc="'{:,.0f}'.format(valores['valor_equipo_sin_garantia_cop'])"/></td>
@@ -328,7 +328,7 @@
                                     <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 10px; border-left: 4px solid #4a90e2;">
                                         <p style="color: #495057; margin: 0; font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.8;">
                                             <strong>Paso 1:</strong> Tomar el costo base de servicios técnicos<br/>
-                                            &#160;&#160;&#160;&#160;Costo Base = Costo Servicios Completos (COP)<br/><br/>
+                                            &#160;&#160;&#160;&#160;Costo Base = Costo Servicio Técnico Mensual COP (antes del margen)<br/><br/>
                                             <strong>Paso 2:</strong> Aplicar el porcentaje de margen de servicio<br/>
                                             &#160;&#160;&#160;&#160;Servicio Mensual = Costo Base × (1 + Margen Servicio% / 100)
                                         </p>
@@ -352,16 +352,13 @@
                                             &#160;&#160;&#160;&#160;Factor = (1 + Tasa Mensual)^Plazo<br/><br/>
                                             <strong>Paso 3:</strong> Calcular el pago base del equipo<br/>
                                             &#160;&#160;&#160;&#160;Pago Base = (Valor Equipo × Tasa Mensual × Factor) / (Factor - 1)<br/><br/>
-                                            <strong>Paso 4:</strong> Ajustar por opción de compra (si aplica)<br/>
-                                            &#160;&#160;&#160;&#160;Ajuste = (Valor Opción × Tasa Mensual) / (Factor - 1)<br/>
-                                            &#160;&#160;&#160;&#160;Pago Base Ajustado = Pago Base - Ajuste<br/><br/>
-                                            <strong>Paso 5:</strong> Sumar el servicio técnico mensual<br/>
-                                            &#160;&#160;&#160;&#160;Pago Mensual Total = Pago Base Ajustado + Servicio Mensual
+                                            <strong>Paso 4:</strong> Sumar el servicio técnico mensual<br/>
+                                            &#160;&#160;&#160;&#160;Pago Mensual Total = Pago Base + Servicio Mensual
                                         </p>
                                     </div>
                                     <p style="color: #495057; line-height: 1.6; margin-bottom: 0; font-size: 13px;">
-                                        <strong>Ejemplo:</strong> Con un equipo de 2,760,000 COP, tasa 21%, plazo 24 meses, opción 20% y servicio 34,500:<br/>
-                                        Tasa Mensual = 1.75% → Factor = 1.5196 → Pago Base = 141,230 → Con opción = 122,619 → Con servicio = 157,119 COP/mes
+                                        <strong>Ejemplo:</strong> Con un equipo de 2,760,000 COP, tasa 21%, plazo 24 meses y servicio 34,500:<br/>
+                                        Tasa Mensual = 1.75% → Factor = 1.5196 → Pago Base = 141,230 → Con servicio = 175,730 COP/mes
                                     </p>
                                 </div>
                                 

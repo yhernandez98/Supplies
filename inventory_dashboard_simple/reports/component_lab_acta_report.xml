@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="report_component_lab_acta_pdf">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-call="web.basic_layout">
+                    <div class="page">
+                        <h2>Acta de laboratorio</h2>
+                        <table class="table table-sm">
+                            <tr><th>Número</th><td><span t-esc="doc.name or ''"/></td></tr>
+                            <tr><th>Fecha</th><td><span t-esc="doc.event_date or ''"/></td></tr>
+                            <tr><th>Tipo</th><td>
+                                <t t-if="doc.acta_type == 'assign_technician'">Entrega a técnico</t>
+                                <t t-elif="doc.acta_type == 'tech_return_request'">Solicitud devolución técnico</t>
+                                <t t-elif="doc.acta_type == 'tech_return_approved'">Aprobación devolución técnico</t>
+                                <t t-elif="doc.acta_type == 'tech_return_rejected'">Rechazo devolución técnico</t>
+                                <t t-else=""><span t-esc="doc.acta_type or ''"/></t>
+                            </td></tr>
+                            <tr><th>Serial</th><td><span t-esc="doc.assignment_id.lot_id.name or ''"/></td></tr>
+                            <tr><th>Producto</th><td><span t-esc="doc.assignment_id.product_id.display_name or ''"/></td></tr>
+                            <tr><th>Responsable</th><td><span t-esc="doc.responsible_user_id.display_name or ''"/></td></tr>
+                            <tr><th>Técnico</th><td><span t-esc="doc.technician_user_id.display_name or ''"/></td></tr>
+                            <tr><th>Fecha estimada devolución</th><td><span t-esc="doc.expected_return_date or ''"/></td></tr>
+                            <tr><th>Registrado por</th><td><span t-esc="doc.created_by_user_id.display_name or ''"/></td></tr>
+                        </table>
+                        <p t-if="doc.note"><strong>Detalle:</strong><br/><span t-esc="doc.note"/></p>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+
+    <record id="action_report_component_lab_acta_pdf" model="ir.actions.report">
+        <field name="name">Acta laboratorio</field>
+        <field name="model">component.lab.acta</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">inventory_dashboard_simple.report_component_lab_acta_pdf</field>
+        <field name="report_file">inventory_dashboard_simple.report_component_lab_acta_pdf</field>
+        <field name="binding_model_id" ref="model_component_lab_acta"/>
+        <field name="binding_type">report</field>
+    </record>
+</odoo>

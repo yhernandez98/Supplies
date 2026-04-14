@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Columna Admin Supplies en la pestaña de precios recurrentes -->
+        <record id="view_pricelist_form_admin_supplies_mh" model="ir.ui.view">
+            <field name="name">product.pricelist.form.admin.supplies.mh</field>
+            <field name="model">product.pricelist</field>
+            <field name="inherit_id" ref="sale_subscription.product_pricelist_view"/>
+            <field name="priority" eval="40"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='subscription_item_ids']/list/field[@name='price']" position="after">
+                    <field name="admin_supplies_mh" string="Admin Supplies" optional="show"/>
+                </xpath>
+            </field>
+        </record>
+
+        <!-- Casilla Admin Supplies en el formulario modal al abrir/editar una línea de precio recurrente -->
+        <record id="view_pricelist_item_form_recurring_admin_supplies_mh" model="ir.ui.view">
+            <field name="name">product.pricelist.item.form.recurring.admin.supplies.mh</field>
+            <field name="model">product.pricelist.item</field>
+            <field name="inherit_id" ref="sale_subscription.product_pricelist_item_form_view_recurring"/>
+            <field name="priority" eval="45"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='plan_id']" position="after">
+                    <field name="admin_supplies_mh" string="Admin Supplies"/>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</odoo>

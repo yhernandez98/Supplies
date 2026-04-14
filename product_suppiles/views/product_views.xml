@@ -8,7 +8,8 @@
         <field name="arch" type="xml">
             <xpath expr="//sheet[1]/field[5]" position="after">
                 <group>
-                    <field name="business_line_id" invisible="not type == 'service'"/>
+                    <field name="show_service_subscription_fields" invisible="1"/>
+                    <field name="business_line_id" invisible="not show_service_subscription_fields"/>
                     <field name="ui_apply_defaults" invisible="1"/>
                 </group>
             </xpath>
@@ -39,7 +40,7 @@
             <xpath expr="//sheet/notebook" position="before">
                 <group>
                     <field name="classification" invisible="type == 'service'"/>
-                    <field name="product_renting" invisible="not type == 'service'"/>
+                    <field name="product_renting" invisible="not show_service_subscription_fields"/>
                     <field name="component_cost_method" invisible="1"/>
                     <field name="receive_parent_stock" invisible="not is_composite"/>
                     <field name="parent_valuation_policy" invisible="1"/>

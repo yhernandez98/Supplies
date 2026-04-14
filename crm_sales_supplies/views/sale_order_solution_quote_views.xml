@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="view_sale_order_form_solution_quote_inherit" model="ir.ui.view">
+            <field name="name">sale.order.form.solution.quote.inherit</field>
+            <field name="model">sale.order</field>
+            <field name="inherit_id" ref="sale.view_order_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//div[hasclass('oe_button_box')]" position="inside">
+                    <button type="object" name="action_view_solution_quotes" class="oe_stat_button" icon="fa-cubes">
+                        <field name="solution_quote_count" widget="statinfo" string="Soluciones"/>
+                    </button>
+                    <button name="action_open_solution_quote_wizard"
+                            string="Armar combo/paquete"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-magic"
+                            invisible="state not in ('draft','sent')">
+                        <div class="o_stat_info">
+                            <span class="o_stat_text">Armar combo/paquete</span>
+                        </div>
+                    </button>
+                </xpath>
+
+            </field>
+        </record>
+    </data>
+</odoo>
