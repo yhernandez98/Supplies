@@ -5,13 +5,16 @@
         <field name="name">delivery.route.trigger.wizard.line.tree</field>
         <field name="model">delivery.route.trigger.wizard.line</field>
         <field name="arch" type="xml">
-            <list editable="bottom" create="true" delete="true">
-                <field name="lot_id" 
+            <list editable="bottom" create="true" delete="true"
+                  class="o_route_wizard_line_list"
+                  decoration-muted="not lot_id">
+                <field name="lot_id"
+                       string="Número de Serie"
                        options="{'no_create': True, 'no_open': True}"
-                       placeholder="Buscar por número de serie o placa de inventario..."/>
-                <field name="product_id" readonly="1"/>
+                       placeholder="Buscar por número de serie..."/>
+                <field name="product_id" readonly="1" optional="show"/>
                 <field name="quantity"/>
-                <field name="product_uom_id" readonly="1"/>
+                <field name="product_uom_id" readonly="1" optional="hide"/>
             </list>
         </field>
     </record>
@@ -21,34 +24,55 @@
         <field name="name">delivery.route.trigger.wizard.form</field>
         <field name="model">delivery.route.trigger.wizard</field>
         <field name="arch" type="xml">
-            <form string="Procesar Ruta de Entrega/Devolución">
+            <form string="Procesar Ruta"
+                  class="o_route_trigger_wizard">
                 <sheet>
+                    <field name="available_route_ids" invisible="1"/>
+                    <div class="o_route_wizard_hero">
+                        <div class="o_route_wizard_hero_inner">
+                            <h2 class="o_route_wizard_title">Procesar Ruta</h2>
+                            <p class="o_route_wizard_subtitle">
+                                Elija el tipo de operación y el cliente; la ruta se completa automáticamente.
+                                Agregue los seriales principales del movimiento.
+                            </p>
+                        </div>
+                    </div>
                     <group>
-                        <group>
-                            <field name="operation_type"/>
-                            <field name="partner_id" 
+                        <group string="Operación y cliente">
+                            <field name="operation_type"
+                                   widget="radio"
+                                   options="{'horizontal': true}"/>
+                            <field name="partner_id"
                                    options="{'no_open': True}"
                                    placeholder="Seleccione un cliente"/>
                         </group>
-                        <group>
-                            <field name="route_code"/>
-                            <field name="route_id" 
+                        <group string="Ruta logística">
+                            <field name="route_code"
+                                   placeholder="Se completa al elegir cliente y tipo"/>
+                            <field name="route_id"
                                    options="{'no_open': True}"
                                    placeholder="Seleccione una ruta"/>
                         </group>
                     </group>
-                    
                     <notebook>
-                        <page string="Productos por Número de Serie">
+                        <page string="Bienes" name="route_serial_lines">
+                            <div class="o_route_wizard_lines_hint">
+                                Busque por número de serie. Solo aparecen equipos disponibles
+                                en la ubicación correspondiente (Existencias o cliente).
+                            </div>
                             <field name="line_ids" nolabel="1"/>
                         </page>
                     </notebook>
                 </sheet>
-                
                 <footer>
-                    <button name="action_trigger_route" type="object" 
-                            string="Procesar Ruta" class="btn-primary"/>
-                    <button string="Cancelar" special="cancel" class="btn-secondary"/>
+                    <button name="action_trigger_route"
+                            type="object"
+                            string="Procesar"
+                            class="btn-primary"
+                            icon="fa-truck"/>
+                    <button string="Cancelar"
+                            special="cancel"
+                            class="btn-secondary"/>
                 </footer>
             </form>
         </field>
@@ -56,11 +80,10 @@
 
     <!-- Acción del wizard -->
     <record id="action_delivery_route_trigger_wizard" model="ir.actions.act_window">
-        <field name="name">Procesar Ruta de Entrega/Devolución</field>
+        <field name="name">Procesar Ruta</field>
         <field name="res_model">delivery.route.trigger.wizard</field>
         <field name="view_mode">form</field>
         <field name="target">new</field>
         <field name="view_id" ref="view_delivery_route_trigger_wizard_form"/>
     </record>
 </odoo>
-

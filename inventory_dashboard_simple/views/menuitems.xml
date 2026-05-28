@@ -40,7 +40,7 @@
                   action="action_supplies_hub_dashboard"
                   sequence="20"/>
         <menuitem id="menu_trigger_delivery_route"
-                  name="Procesar Ruta de Entrega/Devolución"
+                  name="Procesar Ruta"
                   parent="menu_inventory_dashboard_operations"
                   action="action_delivery_route_trigger_wizard"
                   sequence="30"/>

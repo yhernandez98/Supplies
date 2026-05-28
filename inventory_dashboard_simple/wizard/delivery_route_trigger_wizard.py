@@ -216,27 +216,67 @@ class DeliveryRouteTriggerWizard(models.TransientModel):
             wizard.available_route_ids = routes_by_location
             _logger.debug("Rutas disponibles para cliente %s, tipo %s: %d", 
                          wizard.partner_id.name, wizard.operation_type, len(routes_by_location))
+
+    def _pick_default_route_from_available(self):
+        """Elige la ruta más adecuada según cliente y tipo de operación."""
+        self.ensure_one()
+        routes = self.available_route_ids
+        if not routes:
+            return self.env['stock.route']
+        if len(routes) == 1:
+            return routes[:1]
+
+        partner = self.partner_id
+        if partner:
+            name_up = (partner.name or '').upper()
+            tokens = [
+                w for w in name_up.replace('.', ' ').replace(',', ' ').split()
+                if len(w) >= 3
+            ]
+            for token in sorted(set(tokens), key=len, reverse=True):
+                matched = routes.filtered(lambda r, t=token: t in (r.name or '').upper())
+                if not matched:
+                    continue
+                if self.operation_type == 'delivery':
+                    delivery_routes = matched.filtered(
+                        lambda r: 'DEVOLUC' not in (r.name or '').upper()
+                        and 'DEVOLUCI' not in (r.name or '').upper()
+                    )
+                    if delivery_routes:
+                        matched = delivery_routes
+                elif self.operation_type == 'return':
+                    return_routes = matched.filtered(
+                        lambda r: 'DEVOLUC' in (r.name or '').upper()
+                        or 'DEVOLUCI' in (r.name or '').upper()
+                    )
+                    if return_routes:
+                        matched = return_routes
+                return matched.sorted(key=lambda r: r.name or '')[:1]
+
+        return routes.sorted(key=lambda r: r.name or '')[:1]
+
+    def _apply_auto_route_selection(self):
+        """Asigna ruta y código automáticamente si hay opciones válidas."""
+        for wizard in self:
+            if not wizard.partner_id or not wizard.operation_type:
+                wizard.route_id = False
+                wizard.route_code = False
+                continue
+            wizard._compute_available_route_ids()
+            routes = wizard.available_route_ids
+            if wizard.route_id and wizard.route_id in routes:
+                wizard.route_code = wizard.route_id.name
+                continue
+            picked = wizard._pick_default_route_from_available()
+            wizard.route_id = picked
+            wizard.route_code = picked.name if picked else False
     
     @api.onchange('partner_id', 'operation_type')
     def _onchange_partner_or_operation(self):
-        """Limpiar ruta seleccionada cuando cambia el cliente o el tipo de operación."""
-        _logger.info("=== _onchange_partner_or_operation ===")
-        _logger.info("Partner: %s, Operation Type: %s", 
-                    self.partner_id.name if self.partner_id else 'None', 
-                    self.operation_type)
-        
+        """Recalcula rutas y asigna ruta/código según cliente y tipo de operación."""
         if self.partner_id:
-            # Forzar recálculo de rutas disponibles
-            self._compute_available_route_ids()
-            # Limpiar la ruta seleccionada si no está en las disponibles
-            if self.route_id and self.route_id not in self.available_route_ids:
-                self.route_id = False
-                self.route_code = False
-            
-            # Forzar recálculo de lotes disponibles en las líneas
-            _logger.info("Forzando recálculo de lotes para %d líneas", len(self.line_ids))
+            self._apply_auto_route_selection()
             for line in self.line_ids:
-                # Invalidar el campo computed para forzar su recálculo
                 line._compute_available_lot_ids()
                 if line.lot_id and line.lot_id not in line.available_lot_ids:
                     line.lot_id = False
@@ -244,7 +284,6 @@ class DeliveryRouteTriggerWizard(models.TransientModel):
             self.route_id = False
             self.route_code = False
             self.available_route_ids = False
-            # Limpiar lotes disponibles en las líneas
             for line in self.line_ids:
                 line.available_lot_ids = False
                 line.lot_id = False
@@ -430,6 +469,26 @@ class DeliveryRouteTriggerWizard(models.TransientModel):
 
         if not self.line_ids:
             raise UserError(_('Debe agregar al menos un producto por número de serie.'))
+
+        component_lines = self.line_ids.filtered(
+            lambda line: (
+                line.lot_id
+                and line._product_is_excluded_route_component(line.lot_id.product_id)
+            )
+        )
+        if component_lines:
+            details = '\n'.join(
+                '%s — %s (Clasificación: Componente, Categoría: %s)' % (
+                    line.lot_id.name or line.lot_id.display_name,
+                    line.lot_id.product_id.display_name,
+                    line.lot_id.product_id.asset_category_id.name or '-',
+                )
+                for line in component_lines[:15]
+            )
+            raise UserError(_(
+                'No puede procesar la ruta con productos que tengan Clasificación '
+                '«Componente» y Categoría de activo «COMPONENTES».\n\n%s'
+            ) % details)
 
         _logger.info("Procesando ruta %s para cliente %s con %d productos (Tipo: %s)",
                     self.route_id.name, self.partner_id.name, len(self.line_ids), self.operation_type)
@@ -721,10 +780,10 @@ class DeliveryRouteTriggerWizardLine(models.TransientModel):
 
     lot_id = fields.Many2one(
         'stock.lot',
-        string='Número de Serie / Placa de Inventario',
+        string='Número de Serie',
         required=True,
         domain="[('id', 'in', available_lot_ids)]",
-        help='Seleccione el número de serie o busque por placa de inventario. Los lotes disponibles dependen del tipo de operación seleccionado.'
+        help='Seriales según operación y ubicación. No se listan si Clasificación = Componente y Categoría de activo = COMPONENTES.'
     )
     
     available_lot_ids = fields.Many2many(
@@ -735,6 +794,33 @@ class DeliveryRouteTriggerWizardLine(models.TransientModel):
         help='Lotes disponibles en Supp/Existencias'
     )
     
+    @api.model
+    def _asset_category_is_componentes(self, category):
+        """True si la categoría de activo es COMPONENTES (o equivalente)."""
+        if not category:
+            return False
+        name = (category.name or '').strip().upper().replace('Á', 'A')
+        return name in ('COMPONENTES', 'COMPONENTE') or name.startswith('COMPONENTE')
+
+    @api.model
+    def _product_is_excluded_route_component(self, product):
+        """Excluir solo si cumple las dos: Clasificación Componente + Categoría COMPONENTES."""
+        if not product:
+            return False
+        if getattr(product, 'classification', None) != 'component':
+            return False
+        if 'asset_category_id' not in product._fields:
+            return False
+        return self._asset_category_is_componentes(product.asset_category_id)
+
+    def _filter_lots_excluding_route_components(self, lots):
+        """Quita seriales con Clasificación Componente y Categoría de activo COMPONENTES."""
+        if not lots:
+            return lots
+        return lots.filtered(
+            lambda lot: not self._product_is_excluded_route_component(lot.product_id)
+        )
+
     @api.depends('wizard_id', 'wizard_id.operation_type', 'wizard_id.partner_id')
     def _compute_available_lot_ids(self):
         """Calcular lotes disponibles según el tipo de operación."""
@@ -823,8 +909,10 @@ class DeliveryRouteTriggerWizardLine(models.TransientModel):
             _logger.debug("%s: Quants encontrados: %d en ubicaciones %s", 
                          operation_type.upper(), len(quants), location_ids[:5] if location_ids else [])
             
-            # Obtener IDs únicos de lotes disponibles
-            lot_ids = quants.mapped('lot_id')
+            # Sin seriales: Clasificación Componente + Categoría de activo COMPONENTES
+            lot_ids = line._filter_lots_excluding_route_components(
+                quants.mapped('lot_id')
+            )
             line.available_lot_ids = lot_ids
             
             _logger.info("Lotes disponibles para línea (operación: %s, cliente: %s): %d lotes", 
