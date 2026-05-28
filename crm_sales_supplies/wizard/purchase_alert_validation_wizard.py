@@ -113,6 +113,10 @@ class PurchaseAlertValidationWizard(models.TransientModel):
             'validated_date': fields.Datetime.now(),
             'validation_notes': self.validation_notes,
         })
+
+        # Si se aprobaron cotizaciones, llevar automáticamente sus productos
+        # a la cotización del cliente relacionada con la alerta.
+        self._sync_sale_order_lines_from_approved_quotes(approved_orders)
         
         # Crear mensaje con detalles de las cotizaciones aprobadas y rechazadas
         approved_list = '\n'.join(['- %s: %s' % (po.name, po.partner_id.display_name) for po in approved_orders])
@@ -163,4 +167,54 @@ class PurchaseAlertValidationWizard(models.TransientModel):
                 'sticky': False,
             }
         }
+
+    def _sync_sale_order_lines_from_approved_quotes(self, approved_orders):
+        """Crear/actualizar líneas en la cotización cliente desde compras aprobadas."""
+        self.ensure_one()
+        sale_order = self.alert_id.sale_order_id
+        if not sale_order or not approved_orders:
+            return
+        if sale_order.state not in ('draft', 'sent'):
+            return
+
+        SaleOrderLine = self.env['sale.order.line'].with_context(skip_auto_create_alerts=True)
+        for po in approved_orders:
+            for po_line in po.order_line.filtered(lambda l: l.product_id):
+                product = po_line.product_id
+                # Usar la UoM de venta del producto y convertir cantidad de compra.
+                sale_uom = product.uom_id
+                purchase_uom = po_line.product_uom_id or product.uom_po_id or sale_uom
+                qty = purchase_uom._compute_quantity(po_line.product_qty, sale_uom)
+
+                existing_line = sale_order.order_line.filtered(
+                    lambda l: l.purchase_origin_line_id.id == po_line.id
+                )[:1]
+
+                if existing_line:
+                    existing_line.write({
+                        'product_uom_qty': qty,
+                    })
+                    continue
+
+                try:
+                    price_unit = sale_order.pricelist_id._get_product_price(
+                        product, qty or 1.0, sale_order.partner_id
+                    ) if sale_order.pricelist_id else (product.lst_price or 0.0)
+                except Exception:
+                    price_unit = product.lst_price or 0.0
+
+                line_name = (
+                    product.get_product_multiline_description_sale()
+                    if hasattr(product, 'get_product_multiline_description_sale')
+                    else product.display_name
+                )
+                SaleOrderLine.create({
+                    'order_id': sale_order.id,
+                    'product_id': product.id,
+                    'name': line_name or product.display_name,
+                    'product_uom_qty': qty or 1.0,
+                    'product_uom_id': sale_uom.id,
+                    'price_unit': price_unit or 0.0,
+                    'purchase_origin_line_id': po_line.id,
+                })
 

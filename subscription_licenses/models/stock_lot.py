@@ -10,117 +10,70 @@ class StockLot(models.Model):
     """Extender stock.lot para mostrar licencias asignadas"""
     _inherit = 'stock.lot'
 
-    # Campo One2many directo para licencias asignadas a este equipo
-    license_equipment_ids = fields.One2many(
+    # Todas las líneas license.equipment enlazadas a este serial (fuente única para recomputos)
+    license_line_ids = fields.One2many(
         'license.equipment',
         'lot_id',
-        string='Licencias Asignadas al Equipo',
-        domain="[('state', '=', 'assigned')]",
-        help='Licencias asignadas directamente a este equipo'
+        string='Líneas de licencia (todas)',
+        help='Relación técnica con todas las asignaciones de este serial.',
     )
-    
-    # Campo Many2many computado para licencias asignadas al usuario relacionado
+
+    # Many2many calculado: misma regla que _equipment_tab_lines_for_lot (no confiar solo en dominio One2many en la vista web).
+    license_equipment_ids = fields.Many2many(
+        'license.equipment',
+        string='Licencias Asignadas al Equipo',
+        compute='_compute_license_equipment_ids',
+        inverse='_inverse_license_equipment_ids',
+        store=False,
+        readonly=False,
+        help='Filtrado en servidor para la pestaña Licencias del Equipo.',
+    )
+
     license_user_ids = fields.Many2many(
         'license.equipment',
         string='Licencias Asignadas al Usuario',
         compute='_compute_license_user_ids',
-        inverse='_inverse_license_user_ids',
         store=False,
-        readonly=False,
-        help='Licencias asignadas al usuario relacionado de este equipo'
+        readonly=True,
+        help='Listado del contacto «Usuario»: licencias de usuario ya asignadas. Use «Agregar asignación» '
+             'para vincular una licencia contratada que aún no tenga este usuario.',
     )
-    
-    @api.depends('related_partner_id', 'location_partner_id')
+
+    @api.depends(
+        'license_line_ids',
+        'license_line_ids.state',
+        'license_line_ids.contact_id',
+        'license_line_ids.license_id',
+        'license_line_ids.license_id.applies_to_equipment',
+        'license_line_ids.license_id.applies_to_user',
+        'license_line_ids.assignment_id',
+    )
+    def _compute_license_equipment_ids(self):
+        Le = self.env['license.equipment']
+        for lot in self:
+            lot.license_equipment_ids = Le._equipment_tab_lines_for_lot(lot)
+
+    def _inverse_license_equipment_ids(self):
+        """Eliminar líneas que ya no están en la grilla de equipo."""
+        Le = self.env['license.equipment']
+        for lot in self:
+            before = Le._equipment_tab_lines_for_lot(lot)
+            after = lot.license_equipment_ids
+            (before - after).unlink()
+
+    @api.depends('related_partner_id')
     def _compute_license_user_ids(self):
-        """Calcula las licencias asignadas al usuario relacionado"""
+        Le = self.env['license.equipment']
         for lot in self:
             if not hasattr(lot, 'related_partner_id') or not lot.related_partner_id:
                 lot.license_user_ids = False
                 continue
-            
-            # Obtener cliente y ubicación del lote
-            location_partner_id = False
-            lot_location_id = False
-            
-            # Obtener el cliente de la ubicación
-            try:
-                if hasattr(lot, 'location_partner_id') and lot.location_partner_id:
-                    location_partner_id = lot.location_partner_id.id
-            except Exception:
-                pass
-            
-            # Obtener la ubicación del lote (desde quants)
-            try:
-                quant = self.env['stock.quant'].search([
-                    ('lot_id', '=', lot.id),
-                    ('quantity', '>', 0),
-                    ('location_id.usage', '=', 'internal'),
-                ], order='quantity desc, in_date desc', limit=1)
-                
-                if quant and quant.location_id:
-                    lot_location_id = quant.location_id.id
-            except Exception:
-                pass
-            
-            # Construir dominio
-            domain = [
-                ('contact_id', '=', lot.related_partner_id.id),
-                ('state', '=', 'assigned')
-            ]
-            
-            # Filtrar por cliente si tenemos location_partner_id
-            if location_partner_id:
-                domain.append(('partner_id', '=', location_partner_id))
-            
-            # Filtrar por ubicación si tenemos lot_location_id
-            if lot_location_id:
-                domain.append(('location_id', '=', lot_location_id))
-            
-            # Buscar las licencias
-            try:
-                license_equipment = self.env['license.equipment'].search(domain)
-                lot.license_user_ids = license_equipment
-            except Exception as e:
-                _logger.warning("Error al calcular license_user_ids: %s", str(e))
-                lot.license_user_ids = False
+            lot.license_user_ids = Le._user_tab_lines_for_lot(lot)
 
-    def _inverse_license_user_ids(self):
-        """Permite edición en línea desde la subpestaña 'Licencias del Usuario'."""
-        for lot in self:
-            if not hasattr(lot, 'related_partner_id') or not lot.related_partner_id:
-                continue
-
-            location_partner_id, lot_location_id = lot._get_license_scope_data()
-            domain = [
-                ('contact_id', '=', lot.related_partner_id.id),
-                ('state', '=', 'assigned'),
-            ]
-            if location_partner_id:
-                domain.append(('partner_id', '=', location_partner_id))
-            if lot_location_id:
-                domain.append(('location_id', '=', lot_location_id))
-
-            current = self.env['license.equipment'].search(domain)
-            desired = lot.license_user_ids.filtered(lambda r: r and r.exists())
-
-            # Quitar los que ya no quedaron en la grilla
-            (current - desired).unlink()
-
-            # Completar datos de los que quedaron/crearon
-            for rec in desired:
-                vals = {}
-                if not rec.contact_id or rec.contact_id.id != lot.related_partner_id.id:
-                    vals['contact_id'] = lot.related_partner_id.id
-                if not rec.assignment_date:
-                    vals['assignment_date'] = fields.Date.today()
-                if vals:
-                    rec.write(vals)
-    
     def action_view_user_licenses(self):
         """Abrir vista de licencias asignadas al usuario relacionado"""
         self.ensure_one()
-        
-        # Verificar si el campo related_partner_id existe
+
         if not hasattr(self, 'related_partner_id') or not self.related_partner_id:
             return {
                 'type': 'ir.actions.client',
@@ -132,46 +85,10 @@ class StockLot(models.Model):
                     'sticky': False,
                 }
             }
-        
-        # Obtener cliente y ubicación del lote
-        location_partner_id = False
-        lot_location_id = False
-        
-        # Obtener el cliente de la ubicación
-        try:
-            if hasattr(self, 'location_partner_id') and self.location_partner_id:
-                location_partner_id = self.location_partner_id.id
-        except Exception:
-            pass
-        
-        # Obtener la ubicación del lote (desde quants)
-        try:
-            quant = self.env['stock.quant'].search([
-                ('lot_id', '=', self.id),
-                ('quantity', '>', 0),
-                ('location_id.usage', '=', 'internal'),
-            ], order='quantity desc, in_date desc', limit=1)
-            
-            if quant and quant.location_id:
-                lot_location_id = quant.location_id.id
-        except Exception:
-            pass
-        
-        # Construir dominio
-        domain = [
-            ('contact_id', '=', self.related_partner_id.id),
-            ('state', '=', 'assigned')
-        ]
-        
-        # Filtrar por cliente si tenemos location_partner_id
-        if location_partner_id:
-            domain.append(('partner_id', '=', location_partner_id))
-        
-        # Filtrar por ubicación si tenemos lot_location_id
-        if lot_location_id:
-            domain.append(('location_id', '=', lot_location_id))
-        
-        # Retornar acción para abrir vista de license.equipment
+
+        tab_ids = self.env['license.equipment']._user_tab_lines_for_lot(self).ids
+        domain = [('id', 'in', tab_ids)] if tab_ids else [('id', 'in', [])]
+
         return {
             'name': _('Licencias del Usuario: %s') % self.related_partner_id.name,
             'type': 'ir.actions.act_window',
@@ -188,6 +105,11 @@ class StockLot(models.Model):
     def _get_license_scope_data(self):
         """Obtiene cliente/ubicación relevantes para filtrar licencias del lote actual."""
         self.ensure_one()
+        forced_partner_id = self.env.context.get('force_license_partner_id')
+        forced_location_id = self.env.context.get('force_license_location_id')
+        if forced_partner_id or forced_location_id:
+            return forced_partner_id or False, forced_location_id or False
+
         location_partner_id = False
         lot_location_id = False
 
@@ -215,11 +137,8 @@ class StockLot(models.Model):
         self.ensure_one()
         location_partner_id, lot_location_id = self._get_license_scope_data()
 
-        domain = [('lot_id', '=', self.id)]
-        if location_partner_id:
-            domain.append(('partner_id', '=', location_partner_id))
-        if lot_location_id:
-            domain.append(('location_id', '=', lot_location_id))
+        tab_ids = self.env['license.equipment']._equipment_tab_lines_for_lot(self).ids
+        domain = [('id', 'in', tab_ids)] if tab_ids else [('id', 'in', [])]
 
         return {
             'name': _('Licencias del Equipo: %s') % (self.name or self.display_name),
@@ -253,11 +172,8 @@ class StockLot(models.Model):
             }
 
         location_partner_id, lot_location_id = self._get_license_scope_data()
-        domain = [('contact_id', '=', self.related_partner_id.id)]
-        if location_partner_id:
-            domain.append(('partner_id', '=', location_partner_id))
-        if lot_location_id:
-            domain.append(('location_id', '=', lot_location_id))
+        tab_ids = self.env['license.equipment']._user_tab_lines_for_lot(self).ids
+        domain = [('id', 'in', tab_ids)] if tab_ids else [('id', 'in', [])]
 
         return {
             'name': _('Licencias del Usuario: %s') % self.related_partner_id.name,
@@ -287,7 +203,6 @@ class StockLot(models.Model):
             tab_type = 'equipment'
 
         if tab_type == 'user' and not getattr(self, 'related_partner_id', False):
-            # Se reutiliza el mismo mensaje/validación que ya se usa en otras acciones.
             raise UserError(_('Este equipo no tiene un usuario relacionado asignado.'))
 
         return {
@@ -299,5 +214,7 @@ class StockLot(models.Model):
             'context': {
                 'default_lot_id': self.id,
                 'default_license_tab_type': tab_type,
+                'force_license_partner_id': self.env.context.get('force_license_partner_id') or False,
+                'force_license_location_id': self.env.context.get('force_license_location_id') or False,
             }
         }

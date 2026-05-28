@@ -15,14 +15,32 @@ class StockLot(models.Model):
         store=False,
         help='Cliente asociado a la ubicación del lote (para filtrar contactos)'
     )
+
+    user_scope_partner_id = fields.Many2one(
+        'res.partner',
+        string='Cliente para filtro de usuario',
+        compute='_compute_user_scope_partner',
+        store=False,
+        help='Cliente efectivo para filtrar usuarios en el serial: usa cliente forzado del contexto o el cliente de la ubicación.'
+    )
     
     related_partner_id = fields.Many2one(
         "res.partner",
         string="Usuario",
-        domain="[('parent_id', '=', location_partner_id), ('is_company', '=', False)]",
+        domain="[('parent_id', '=', user_scope_partner_id), ('is_company', '=', False)]",
         help="Usuario (contacto) relacionado de la empresa según la ubicación del producto serializado.",
         index=True,
     )
+
+    @api.depends('location_partner_id')
+    def _compute_user_scope_partner(self):
+        for lot in self:
+            forced_partner_id = self.env.context.get('force_license_partner_id')
+            if forced_partner_id:
+                forced_partner = self.env['res.partner'].browse(forced_partner_id)
+                lot.user_scope_partner_id = forced_partner.commercial_partner_id if forced_partner else False
+            else:
+                lot.user_scope_partner_id = lot.location_partner_id.commercial_partner_id if lot.location_partner_id else False
     
     @api.depends('quant_ids', 'quant_ids.location_id', 'quant_ids.quantity')
     def _compute_location_partner(self):
@@ -64,6 +82,10 @@ class StockLot(models.Model):
 
     def write(self, vals):
         """Propaga el contacto a todos los elementos relacionados (componentes, periféricos, complementos)"""
+        # En el editor modal de ruta solo debe afectar el serial editado.
+        if self.env.context.get('from_route_lot_editor'):
+            return super().write(vals)
+
         # Evitar recursión: si ya estamos propagando, no propagar de nuevo
         if 'related_partner_id' in vals and not self.env.context.get('skip_propagation', False):
             partner_id = vals.get('related_partner_id')

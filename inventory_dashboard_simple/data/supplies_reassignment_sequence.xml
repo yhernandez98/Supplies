@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="seq_supplies_assignment_reassignment" model="ir.sequence">
+        <field name="name">Acta Reasignacion Supplies</field>
+        <field name="code">supplies.assignment.reassignment</field>
+        <field name="prefix">SUPP/REASIG/</field>
+        <field name="padding">5</field>
+        <field name="implementation">standard</field>
+    </record>
+</odoo>

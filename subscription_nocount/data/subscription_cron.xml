@@ -56,4 +56,34 @@
         <field name="state">code</field>
         <field name="code">model.with_context(force_generate_proforma=True).cron_generate_monthly_proformas()</field>
     </record>
+
+    <record id="ir_cron_subscription_annual_proforma_custom" model="ir.cron">
+        <field name="name">Suscripciones: Proforma anual (fecha personalizada)</field>
+        <field name="model_id" ref="model_subscription_subscription"/>
+        <field name="state">code</field>
+        <field name="code">model.cron_generate_annual_proforma_custom()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="active" eval="True"/>
+    </record>
+
+    <record id="ir_cron_subscription_expiring_menu_badge" model="ir.cron">
+        <field name="name">Suscripciones: Actualizar menú «a vencer»</field>
+        <field name="model_id" ref="model_subscription_subscription"/>
+        <field name="state">code</field>
+        <field name="code">model.cron_update_expiring_menu_badge()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="active" eval="True"/>
+    </record>
+
+    <record id="ir_cron_subscription_annual_end_of_term" model="ir.cron">
+        <field name="name">Suscripciones: Anuales — renovar o cancelar al vencer período</field>
+        <field name="model_id" ref="model_subscription_subscription"/>
+        <field name="state">code</field>
+        <field name="code">model.cron_annual_subscription_end_of_term()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="active" eval="True"/>
+    </record>
 </odoo>

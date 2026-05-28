@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
+import logging
+
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError
 from odoo.tools.float_utils import float_is_zero
+
+_logger = logging.getLogger(__name__)
 
 
 class StockPicking(models.Model):
@@ -145,6 +149,50 @@ class StockPicking(models.Model):
                 'sticky': False,
             },
         }
+
+    def _is_return_route_first_stage_from_client(self):
+        """True si es la primera validación de una ruta (E1) que saca stock del cliente."""
+        self.ensure_one()
+        if self.state != 'done':
+            return False
+        origin = (self.origin or '').strip()
+        if not origin.startswith('Ruta-'):
+            return False
+        stage = self._route_stage_from_origin(origin)
+        if stage != 1:
+            return False
+        for move in self.move_ids.filtered(lambda m: m.state == 'done'):
+            if self._is_client_stock_location(move.location_id):
+                return True
+        return False
+
+    def _lots_leaving_client_on_picking(self):
+        """Seriales que salen de una ubicación de inventario del cliente en este albarán."""
+        lots = self.env['stock.lot']
+        for move in self.move_ids.filtered(lambda m: m.state == 'done'):
+            if not self._is_client_stock_location(move.location_id):
+                continue
+            for line in move.move_line_ids:
+                if line.lot_id:
+                    lots |= line.lot_id
+        return lots
+
+    def _run_return_route_client_cleanup(self):
+        """Tras validar E1 de devolución: licencias de equipo + limpieza de campos en el serial."""
+        for picking in self:
+            if not picking._is_return_route_first_stage_from_client():
+                continue
+            lots = picking._lots_leaving_client_on_picking()
+            if not lots:
+                continue
+            for lot in lots:
+                try:
+                    lot.cleanup_after_return_from_client_location(picking=picking)
+                except Exception as exc:
+                    _logger.exception(
+                        'Error limpiando lote %s tras devolución (picking %s): %s',
+                        lot.name, picking.display_name, exc,
+                    )
 
     def _action_done(self):
         res = super()._action_done()

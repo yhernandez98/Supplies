@@ -3,6 +3,39 @@
 // Función para aplicar estilo rojo y negrita a la pestaña "Información de Asociación"
 (function() {
     'use strict';
+    var horizontalLockTimer = null;
+
+    function patchScrollIntoViewForSuppliesPage() {
+        try {
+            if (!window.Element || !Element.prototype || !Element.prototype.scrollIntoView) {
+                return;
+            }
+            if (Element.prototype._suppliesScrollPatchApplied) {
+                return;
+            }
+            var originalScrollIntoView = Element.prototype.scrollIntoView;
+            Element.prototype.scrollIntoView = function(arg) {
+                try {
+                    if (this && this.closest && this.closest('.supplies-main-products-page')) {
+                        var options = { block: 'nearest', inline: 'nearest' };
+                        if (typeof arg === 'object' && arg !== null) {
+                            options = Object.assign({}, arg, { inline: 'nearest' });
+                            if (!options.block) {
+                                options.block = 'nearest';
+                            }
+                        }
+                        return originalScrollIntoView.call(this, options);
+                    }
+                } catch (_patchErr) {
+                    // Fallback al comportamiento nativo.
+                }
+                return originalScrollIntoView.apply(this, arguments);
+            };
+            Element.prototype._suppliesScrollPatchApplied = true;
+        } catch (_e) {
+            // No bloquear carga del cliente.
+        }
+    }
     
     function styleAssociatedInfoTab() {
         // Buscar pestañas por atributo data-name

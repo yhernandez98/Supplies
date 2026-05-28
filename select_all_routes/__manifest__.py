@@ -1,12 +1,10 @@
-# -*- coding: utf-8 -*-
-# Copyright 2026 Supplies De Colombia SAS
-# License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl.html).
+# __manifest__.py
 {
     'name': 'Select All Routes',
     'summary': 'Adds buttons to quickly select and deselect all available stock routes on a product.',
     'version': '19.0.1.0.0',
     'category': 'Inventory/Stock',
-    'author': 'Supplies De Colombia SAS',
+    'author': 'Tu Nombre',
     'license': 'AGPL-3',
     'depends': [
         'product', 

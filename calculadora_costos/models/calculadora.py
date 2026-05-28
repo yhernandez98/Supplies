@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from odoo import models, fields, api
-from odoo.exceptions import UserError
+from odoo.exceptions import UserError, ValidationError
 from decimal import Decimal, getcontext
 
 getcontext().prec = 10
@@ -15,6 +15,10 @@ PLAZOS_MESES_SELECTION = [
     ('60', '60 meses'),
 ]
 PLAZOS_COMPARACION_MESES = (12, 24, 36, 48, 60)
+CALCULATION_TYPE_SELECTION = [
+    ('sale', 'Venta'),
+    ('subscription', 'Suscripción'),
+]
 
 
 class Calculadora(models.Model):
@@ -51,6 +55,24 @@ class Calculadora(models.Model):
     ], string='Estado', default='draft', required=True, copy=False,
        help='Borrador: en edición. Enviada: cotización enviada por correo. Aprobada: cliente aprobó el cálculo.')
 
+    company_id = fields.Many2one(
+        'res.company',
+        string='Compañía',
+        required=True,
+        default=lambda self: self.env.company,
+        index=True,
+    )
+
+    calculation_type = fields.Selection(
+        CALCULATION_TYPE_SELECTION,
+        string='Tipo de cálculo',
+        compute='_compute_calculation_type',
+        inverse='_inverse_calculation_type',
+        store=False,
+        required=True,
+        help='Fuente de verdad funcional del cálculo: venta o suscripción.',
+    )
+
     # Tipo de operación: venta directa vs. esquema tipo suscripción (servicios, financiación, plazos)
     tipo_operacion = fields.Selection([
         ('venta', 'Venta'),
@@ -62,8 +84,15 @@ class Calculadora(models.Model):
     moneda_cotizacion = fields.Selection([
         ('usd', 'USD'),
         ('cop', 'COP (Pesos)'),
-    ], string='Cotizar en', default='usd', required=True,
+    ], string='Cotizar en', compute='_compute_moneda_cotizacion', store=False, readonly=False,
        help='Referencia legacy. Los importes por equipo usan el campo «Moneda» en cada línea de equipos.')
+
+    rate_date = fields.Date(
+        string='Fecha de tasa',
+        default=fields.Date.context_today,
+        required=True,
+        help='Fecha usada para resolver la tasa de conversión de la cotización.',
+    )
 
     # Tipo: Bien o Servicio (producto consumible vs servicio; sin vínculo a activos fijos:
     # los modelos product.asset.* solo existen con módulos Enterprise / contabilidad avanzada)
@@ -258,9 +287,18 @@ class Calculadora(models.Model):
     
     trm = fields.Float(
         string='TRM (COP/USD)',
-        required=True,
-        default=4000.0,
-        help='Tasa Representativa del Mercado para conversión'
+        compute='_compute_trm',
+        store=False,
+        readonly=True,
+        help='Tasa representativa aplicada desde las tasas de moneda de Odoo.'
+    )
+
+    applied_currency_rate = fields.Float(
+        string='Tasa aplicada',
+        compute='_compute_applied_currency_rate',
+        store=True,
+        readonly=True,
+        help='Snapshot de la tasa usada para convertir la moneda de cotización a la moneda base de la compañía.',
     )
     
     costo_total_usd = fields.Float(
@@ -410,6 +448,30 @@ class Calculadora(models.Model):
         help='Suma estimada en el plazo: costo del equipo + total servicio técnico del plazo (sin interés), '
              'o suma de cuotas si hay financiación con interés. Distinto del «Costo Total Equipo».'
     )
+
+    quote_equipment_total = fields.Monetary(
+        string='Total equipo cotización',
+        currency_field='currency_id',
+        compute='_compute_quote_amounts',
+        store=True,
+        help='Costo total del equipo expresado en la moneda de la cotización.',
+    )
+
+    quote_monthly_amount = fields.Monetary(
+        string='Cuota cotización',
+        currency_field='currency_id',
+        compute='_compute_quote_amounts',
+        store=True,
+        help='Cuota mensual expresada en la moneda de la cotización.',
+    )
+
+    quote_contract_total = fields.Monetary(
+        string='Total contrato cotización',
+        currency_field='currency_id',
+        compute='_compute_quote_amounts',
+        store=True,
+        help='Total estimado del contrato expresado en la moneda de la cotización.',
+    )
     
     # Información adicional
     active = fields.Boolean(
@@ -429,6 +491,13 @@ class Calculadora(models.Model):
         default=lambda self: self.env.ref('base.COP', raise_if_not_found=False),
         required=True
     )
+
+    company_currency_id = fields.Many2one(
+        'res.currency',
+        string='Moneda base compañía',
+        compute='_compute_company_currency_id',
+        store=False,
+    )
     
     currency_usd_id = fields.Many2one(
         'res.currency',
@@ -436,6 +505,109 @@ class Calculadora(models.Model):
         default=lambda self: self.env.ref('base.USD', raise_if_not_found=False),
         required=True
     )
+
+    is_quote_currency_usd = fields.Boolean(
+        compute='_compute_currency_flags',
+        store=False,
+    )
+    is_quote_currency_cop = fields.Boolean(
+        compute='_compute_currency_flags',
+        store=False,
+    )
+
+    @api.depends('tipo_operacion')
+    def _compute_calculation_type(self):
+        for record in self:
+            record.calculation_type = 'subscription' if record.tipo_operacion == 'suscripcion' else 'sale'
+
+    def _inverse_calculation_type(self):
+        for record in self:
+            record.tipo_operacion = 'suscripcion' if record.calculation_type == 'subscription' else 'venta'
+
+    @api.depends('currency_id')
+    def _compute_moneda_cotizacion(self):
+        usd = self.env.ref('base.USD', raise_if_not_found=False)
+        for record in self:
+            record.moneda_cotizacion = 'usd' if usd and record.currency_id == usd else 'cop'
+
+    @api.depends('company_id')
+    def _compute_company_currency_id(self):
+        for record in self:
+            record.company_currency_id = record.company_id.currency_id or self.env.company.currency_id
+
+    @api.depends('currency_id')
+    def _compute_currency_flags(self):
+        usd = self.env.ref('base.USD', raise_if_not_found=False)
+        cop = self.env.ref('base.COP', raise_if_not_found=False)
+        for record in self:
+            record.is_quote_currency_usd = bool(usd and record.currency_id == usd)
+            record.is_quote_currency_cop = bool(cop and record.currency_id == cop)
+
+    def _get_company_currency(self):
+        self.ensure_one()
+        return self.company_id.currency_id or self.env.company.currency_id
+
+    def _get_quote_currency(self):
+        self.ensure_one()
+        return self.currency_id or self._get_company_currency()
+
+    def _get_rate_date(self):
+        self.ensure_one()
+        return self.rate_date or fields.Date.context_today(self)
+
+    def _get_applied_rate(self, source_currency=None, target_currency=None, date=None):
+        self.ensure_one()
+        source_currency = source_currency or self._get_quote_currency()
+        target_currency = target_currency or self._get_company_currency()
+        if not source_currency or not target_currency:
+            return 0.0
+        if source_currency == target_currency:
+            return 1.0
+        try:
+            return source_currency._convert(
+                1.0,
+                target_currency,
+                self.company_id or self.env.company,
+                date or self._get_rate_date(),
+                round=False,
+            )
+        except Exception:
+            return 0.0
+
+    def _convert_currency_amount(self, amount, source_currency, target_currency, date=None):
+        self.ensure_one()
+        if not amount:
+            return 0.0
+        if not source_currency or not target_currency:
+            return 0.0
+        if source_currency == target_currency:
+            return amount
+        return source_currency._convert(
+            amount,
+            target_currency,
+            self.company_id or self.env.company,
+            date or self._get_rate_date(),
+            round=False,
+        )
+
+    def _convert_to_company_currency(self, amount, source_currency):
+        self.ensure_one()
+        return self._convert_currency_amount(amount, source_currency, self._get_company_currency())
+
+    def _convert_from_company_currency(self, amount, target_currency=None):
+        self.ensure_one()
+        return self._convert_currency_amount(amount, self._get_company_currency(), target_currency or self._get_quote_currency())
+
+    @api.depends('currency_id', 'rate_date', 'company_id')
+    def _compute_applied_currency_rate(self):
+        for record in self:
+            record.applied_currency_rate = record._get_applied_rate()
+
+    @api.depends('applied_currency_rate', 'currency_id')
+    def _compute_trm(self):
+        usd = self.env.ref('base.USD', raise_if_not_found=False)
+        for record in self:
+            record.trm = record.applied_currency_rate if usd and record.currency_id == usd else 0.0
 
     def _plazo_meses_int(self):
         """Convierte plazo_meses (Selection) a entero para cálculos."""
@@ -466,22 +638,27 @@ class Calculadora(models.Model):
         factor = (1 + tasa_mensual_decimal) ** plazo_meses
         return (costo_equipo_cop * tasa_mensual_decimal * factor) / (factor - 1)
 
+    def _line_source_currency(self, line):
+        self.ensure_one()
+        usd = self.env.ref("base.USD", raise_if_not_found=False)
+        cop = self.env.ref("base.COP", raise_if_not_found=False)
+        return usd if line.moneda_equipo == "USD" else cop
+
     # Métodos de cálculo
     def _equivalentes_usd_desde_lineas(self):
         """Suma equivalentes USD por línea: USD directo; COP dividido entre TRM. Sin aplicar utilidad."""
         self.ensure_one()
-        trm = self.trm or 4000.0
-        if trm <= 0:
-            trm = 4000.0
+        usd = self.env.ref("base.USD", raise_if_not_found=False)
+        if not usd:
+            return 0.0, 0.0
         vu, vg = 0.0, 0.0
         for line in self.line_ids:
             amt = line.amount_equipment()
-            if line.moneda_equipo == "USD":
-                vu += amt
-                vg += line.monto_garantia or 0.0
-            else:
-                vu += amt / trm
-                vg += (line.monto_garantia or 0.0) / trm
+            source_currency = self._line_source_currency(line)
+            if not source_currency:
+                continue
+            vu += self._convert_currency_amount(amt, source_currency, usd)
+            vg += self._convert_currency_amount(line.monto_garantia or 0.0, source_currency, usd)
         return vu, vg
 
     @api.depends(
@@ -490,7 +667,8 @@ class Calculadora(models.Model):
         "line_ids.price_unit",
         "line_ids.monto_garantia",
         "line_ids.moneda_equipo",
-        "trm",
+        "applied_currency_rate",
+        "rate_date",
     )
     def _compute_agregados_desde_lineas(self):
         """valor_usd / valor_garantia_usd / costo_total_usd desde líneas (una conversión TRM por línea COP)."""
@@ -507,11 +685,12 @@ class Calculadora(models.Model):
             factor_utilidad = 1 + (record.porcentaje_utilidad / 100.0)
             record.costo_con_utilidad_usd = record.costo_total_usd * factor_utilidad
     
-    @api.depends('costo_con_utilidad_usd', 'trm')
+    @api.depends('costo_con_utilidad_usd', 'applied_currency_rate', 'company_id')
     def _compute_costo_equipo_cop(self):
         """Calcula el costo del equipo en pesos colombianos (sin servicios)"""
+        usd = self.env.ref("base.USD", raise_if_not_found=False)
         for record in self:
-            record.costo_equipo_cop = record.costo_con_utilidad_usd * record.trm
+            record.costo_equipo_cop = record._convert_to_company_currency(record.costo_con_utilidad_usd, usd) if usd else 0.0
     
     @api.depends('costo_equipo_cop')
     def _compute_costo_total_cop(self):
@@ -526,12 +705,12 @@ class Calculadora(models.Model):
             margen = 1 + (record.porcentaje_margen_servicio / 100.0)
             record.servicio_con_margen = record.costo_servicio_tecnico_mensual_cop * margen
     
-    @api.depends('servicio_con_margen', 'plazo_meses')
+    @api.depends('servicio_con_margen', 'plazo_meses', 'calculation_type')
     def _compute_total_servicio_tecnico_plazo_cop(self):
         for record in self:
             pm = record._plazo_meses_int()
             record.total_servicio_tecnico_plazo_cop = (
-                record.servicio_con_margen * pm if pm > 0 else 0.0
+                record.servicio_con_margen * pm if pm > 0 and record.calculation_type == 'subscription' else 0.0
             )
     
     @api.depends('tasa_nominal')
@@ -580,7 +759,9 @@ class Calculadora(models.Model):
         """
         for record in self:
             pm = record._plazo_meses_int()
-            if pm > 0:
+            if record.calculation_type != 'subscription':
+                record.pago_mensual = 0.0
+            elif pm > 0:
                 pago_base = record._pago_mensual_solo_equipo(record.costo_equipo_cop, pm)
                 record.pago_mensual = pago_base + record.servicio_con_margen
             else:
@@ -595,6 +776,13 @@ class Calculadora(models.Model):
     def _compute_valores_plazos(self):
         """Calcula valores para comparación de plazos (12 a 60 meses)."""
         for record in self:
+            if record.calculation_type != 'subscription':
+                record.valor_12_meses = 0.0
+                record.valor_24_meses = 0.0
+                record.valor_36_meses = 0.0
+                record.valor_48_meses = 0.0
+                record.valor_60_meses = 0.0
+                continue
             record.valor_12_meses = self._calcular_pago_plazo(record, 12)
             record.valor_24_meses = self._calcular_pago_plazo(record, 24)
             record.valor_36_meses = self._calcular_pago_plazo(record, 36)
@@ -622,14 +810,31 @@ class Calculadora(models.Model):
         """Estimado a pagar en el plazo: costo equipo + total servicio técnico del plazo (sin interés);
         con PMT, suma de cuotas mensuales (incluye intereses sobre el equipo)."""
         for record in self:
-            pm = record._plazo_meses_int()
-            if pm <= 0:
-                record.total_pagar = 0.0
-                continue
-            if not record.financiacion_con_interes or not (record.tasa_nominal or 0.0):
-                record.total_pagar = record.costo_equipo_cop + record.servicio_con_margen * pm
+            if record.calculation_type != 'subscription':
+                record.total_pagar = record._compute_sale_totals()
             else:
-                record.total_pagar = record.pago_mensual * pm
+                record.total_pagar = record._compute_subscription_totals()
+
+    @api.depends('costo_equipo_cop', 'pago_mensual', 'total_pagar', 'currency_id', 'company_id', 'rate_date')
+    def _compute_quote_amounts(self):
+        for record in self:
+            quote_currency = record._get_quote_currency()
+            record.quote_equipment_total = record._convert_from_company_currency(record.costo_equipo_cop, quote_currency)
+            record.quote_monthly_amount = record._convert_from_company_currency(record.pago_mensual, quote_currency)
+            record.quote_contract_total = record._convert_from_company_currency(record.total_pagar, quote_currency)
+
+    def _compute_sale_totals(self):
+        self.ensure_one()
+        return self.costo_equipo_cop
+
+    def _compute_subscription_totals(self):
+        self.ensure_one()
+        pm = self._plazo_meses_int()
+        if pm <= 0:
+            return 0.0
+        if not self.financiacion_con_interes or not (self.tasa_nominal or 0.0):
+            return self.costo_equipo_cop + self.servicio_con_margen * pm
+        return self.pago_mensual * pm
     
     @api.depends('partner_id')
     def _compute_subscription_count(self):
@@ -681,11 +886,15 @@ class Calculadora(models.Model):
     def create(self, vals_list):
         """Valores por defecto locales por cotización (sin parámetros globales)."""
         for vals in vals_list:
+            if vals.get('calculation_type') and 'tipo_operacion' not in vals:
+                vals['tipo_operacion'] = 'suscripcion' if vals['calculation_type'] == 'subscription' else 'venta'
             if 'tipo_operacion' not in vals:
                 vals['tipo_operacion'] = 'venta'
             tipo = vals.get('tipo_operacion')
-            if 'trm' not in vals or not vals.get('trm'):
-                vals['trm'] = 4000.0
+            if 'company_id' not in vals:
+                vals['company_id'] = self.env.company.id
+            if 'rate_date' not in vals:
+                vals['rate_date'] = fields.Date.context_today(self)
             if 'porcentaje_utilidad' not in vals:
                 vals['porcentaje_utilidad'] = 10.0
             if 'tasa_nominal' not in vals:
@@ -714,15 +923,66 @@ class Calculadora(models.Model):
         return records
 
     def write(self, vals):
+        if vals.get('calculation_type') and 'tipo_operacion' not in vals:
+            vals = dict(vals)
+            vals['tipo_operacion'] = 'suscripcion' if vals['calculation_type'] == 'subscription' else 'venta'
         if vals.get('tipo_operacion') == 'venta':
             vals = dict(vals)
             vals['financiacion_con_interes'] = False
         return super().write(vals)
 
+    @api.onchange('currency_id', 'rate_date')
+    def _onchange_quote_currency(self):
+        if self.line_ids and self._origin:
+            return {
+                'warning': {
+                    'title': 'Cambio de moneda de cotización',
+                    'message': (
+                        'La moneda de cotización o la fecha de tasa cambiaron. '
+                        'Se recalcularán equivalencias y totales usando las tasas de Odoo.'
+                    ),
+                }
+            }
+
     @api.onchange('tipo_operacion')
     def _onchange_tipo_operacion_financiacion(self):
         if self.tipo_operacion == 'venta':
             self.financiacion_con_interes = False
+        if self.line_ids and self._origin:
+            return {
+                'warning': {
+                    'title': 'Cambio de tipo de cálculo',
+                    'message': (
+                        'El flujo de cálculo cambió entre venta y suscripción. '
+                        'Revise cuotas, plazos y servicios técnicos antes de continuar.'
+                    ),
+                }
+            }
+
+    @api.constrains('currency_id', 'company_id')
+    def _check_quote_currency(self):
+        usd = self.env.ref('base.USD', raise_if_not_found=False)
+        cop = self.env.ref('base.COP', raise_if_not_found=False)
+        allowed_ids = {c.id for c in (usd, cop) if c}
+        for record in self:
+            if not record.currency_id:
+                raise ValidationError('La calculadora debe tener una moneda de cotización definida.')
+            if allowed_ids and record.currency_id.id not in allowed_ids:
+                raise ValidationError('La calculadora solo admite cotización en COP o USD.')
+
+    @api.constrains('currency_id', 'applied_currency_rate', 'company_id')
+    def _check_quote_rate(self):
+        for record in self:
+            if record.currency_id and record.currency_id != record._get_company_currency() and not record.applied_currency_rate:
+                raise ValidationError(
+                    'No existe una tasa configurada en Odoo para la moneda de cotización en la fecha seleccionada.'
+                )
+
+    @api.constrains('calculation_type', 'plazo_meses')
+    def _check_subscription_requirements(self):
+        for record in self:
+            if record.calculation_type == 'subscription' and record._plazo_meses_int() <= 0:
+                raise ValidationError('Las suscripciones requieren un plazo válido.')
 
     def _calcular_escenario(self, incluir_seguro=True, incluir_servicios=True, plazo=None):
         """
@@ -745,7 +1005,8 @@ class Calculadora(models.Model):
         costo_con_utilidad_usd = costo_equipo_base_usd * (1 + self.porcentaje_utilidad / 100.0)
         
         # Convertir a COP
-        costo_equipo_cop = costo_con_utilidad_usd * self.trm
+        usd = self.env.ref('base.USD', raise_if_not_found=False)
+        costo_equipo_cop = self._convert_to_company_currency(costo_con_utilidad_usd, usd) if usd else 0.0
         
         # Calcular servicios
         servicio_mensual = 0.0
@@ -764,12 +1025,18 @@ class Calculadora(models.Model):
         total_pagar = pago_mensual_total * plazo_calc
         
         # Calcular valor del equipo sin garantía (siempre)
-        valor_equipo_sin_garantia_cop = self.valor_usd * (1 + self.porcentaje_utilidad / 100.0) * self.trm
+        valor_equipo_sin_garantia_cop = self._convert_to_company_currency(
+            self.valor_usd * (1 + self.porcentaje_utilidad / 100.0),
+            usd,
+        ) if usd else 0.0
         
         # Calcular valor de garantía en COP si está incluida
         garantia_cop = 0.0
         if incluir_seguro and self.valor_garantia_usd > 0:
-            garantia_cop = self.valor_garantia_usd * (1 + self.porcentaje_utilidad / 100.0) * self.trm
+            garantia_cop = self._convert_to_company_currency(
+                self.valor_garantia_usd * (1 + self.porcentaje_utilidad / 100.0),
+                usd,
+            ) if usd else 0.0
         
         return {
             'costo_equipo_usd': costo_equipo_base_usd,
@@ -938,13 +1205,13 @@ class Calculadora(models.Model):
         "line_ids.monto_garantia",
         "line_ids.moneda_equipo",
         "line_ids.subtotal_base_cop",
-        "trm",
+        "applied_currency_rate",
+        "rate_date",
     )
     def _compute_equipo_campos(self):
+        usd = self.env.ref("base.USD", raise_if_not_found=False)
+        cop = self.env.ref("base.COP", raise_if_not_found=False)
         for record in self:
-            trm = record.trm or 4000.0
-            if trm <= 0:
-                trm = 4000.0
             lines = record.line_ids.sorted("sequence")
             for idx in range(1, 21):
                 line = lines[idx - 1] if len(lines) >= idx else False
@@ -952,12 +1219,11 @@ class Calculadora(models.Model):
                 setattr(record, f"equipo_{idx}_product_id", line.product_id if line else False)
                 if line:
                     amt = line.amount_equipment()
-                    if line.moneda_equipo == "USD":
-                        evu, eg = amt, line.monto_garantia
-                        evc, egc = amt * trm, line.monto_garantia * trm
-                    else:
-                        evc, egc = amt, line.monto_garantia
-                        evu, eg = amt / trm, line.monto_garantia / trm
+                    source_currency = record._line_source_currency(line)
+                    evu = record._convert_currency_amount(amt, source_currency, usd) if usd and source_currency else 0.0
+                    eg = record._convert_currency_amount(line.monto_garantia or 0.0, source_currency, usd) if usd and source_currency else 0.0
+                    evc = record._convert_currency_amount(amt, source_currency, cop) if cop and source_currency else 0.0
+                    egc = record._convert_currency_amount(line.monto_garantia or 0.0, source_currency, cop) if cop and source_currency else 0.0
                     st = line.subtotal_base_cop
                 else:
                     evu = eg = evc = egc = st = 0.0

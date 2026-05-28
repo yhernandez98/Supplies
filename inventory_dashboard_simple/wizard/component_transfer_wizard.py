@@ -13,7 +13,6 @@ class ComponentTransferWizard(models.TransientModel):
             ('lab_to_prep', 'Laboratorio (Existencias -> Alistamiento)'),
             ('prep_to_exist', 'Entrega Inventario (Alistamiento -> Existencias)'),
             ('exist_to_lab', 'Laboratorio (Existencias -> Supp/Laboratorio)'),
-            ('lab_to_exist', 'LEGADO: Lab. → Existencias (préstamo directo)'),
         ],
         string='Tipo de traslado',
         required=True,
@@ -60,12 +59,6 @@ class ComponentTransferWizard(models.TransientModel):
         string='Responsable',
         domain=[('share', '=', False)],
         help='Usuario interno responsable del traslado hacia laboratorio.',
-    )
-    assigned_technician_user_id = fields.Many2one(
-        'res.users',
-        string='Técnico (opcional, legado)',
-        domain=[('share', '=', False)],
-        help='Opcional en el flujo por pool: la asignación a técnicos se hace después con el menú correspondiente.',
     )
     loan_source_picking_id = fields.Many2one(
         'stock.picking',
@@ -262,6 +255,7 @@ class ComponentTransferWizard(models.TransientModel):
         vals = {
             'name': 'Laboratorio: Ingreso Pool',
             'code': 'internal',
+            'sequence_code': 'LABIN',
             'sequence_id': seq.id,
             'default_location_src_id': source.id,
             'default_location_dest_id': dest.id,
@@ -310,6 +304,7 @@ class ComponentTransferWizard(models.TransientModel):
         vals = {
             'name': 'Laboratorio: Devolución a Existencias',
             'code': 'internal',
+            'sequence_code': 'LABOUT',
             'sequence_id': seq.id,
             'default_location_src_id': source.id,
             'default_location_dest_id': dest.id,
@@ -431,17 +426,14 @@ class ComponentTransferWizard(models.TransientModel):
             loan_src.write({'component_lab_return_picking_id': picking.id})
 
         if self.operation_type == 'exist_to_lab':
-            tech_txt = self.assigned_technician_user_id.display_name if self.assigned_technician_user_id else _('(ninguno; use «Asignar a técnico»)')
             extra_note = _(
                 'Responsable (lab.): %(resp)s\n'
-                'Técnico en ingreso (opcional): %(tech)s\n'
                 'Flujo pool: las filas en «Asignaciones laboratorio» se crean al validar este ingreso (validación inmediata).\n'
                 'El material se asigna a técnicos desde el menú del laboratorio; la devolución del técnico no mueve Existencias; '
                 'solo el responsable devuelve a Existencias con el wizard correspondiente.\n'
                 'Seguimiento legado de préstamos: menú «Seguimiento préstamos lab.».'
             ) % {
                 'resp': self.responsible_user_id.display_name,
-                'tech': tech_txt,
             }
             full_note = '\n\n'.join([p for p in [picking.note, extra_note] if p])
             picking.write({
@@ -449,7 +441,6 @@ class ComponentTransferWizard(models.TransientModel):
                 'component_lab_temp_out': True,
                 'component_lab_pool_intake': True,
                 'lab_responsible_user_id': self.responsible_user_id.id,
-                'lab_technician_user_id': self.assigned_technician_user_id.id if self.assigned_technician_user_id else False,
             })
 
         validate_res = picking.button_validate()

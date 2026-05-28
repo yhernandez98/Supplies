@@ -11,32 +11,42 @@
     ''',
     'author': 'Supplies De Colombia SAS',
     'category': 'Inventory/Inventory',
-    'version': '19.0.0.0.50',
+    'version': '19.0.0.0.99',
     'depends': [
         'stock',
         'product_suppiles',  # Para usar el campo inventory_plate en stock.lot y mover productos relacionados
         'mesa_ayuda_inventario',  # Para acceso a inventario de clientes
+        'subscription_nocount',  # Servicio / Suscripción en stock.lot (pending info + badge)
     ],
     'assets': {
         'web.assets_backend': [
             'inventory_dashboard_simple/static/src/css/dashboard_kanban.css',
             'inventory_dashboard_simple/static/src/css/lab_hub_theme.css',
             'inventory_dashboard_simple/static/src/js/inventory_lab_hub_theme.js',
+            'inventory_dashboard_simple/static/src/css/stock_lot_pending_info_menu_badge.css',
+            'inventory_dashboard_simple/static/src/js/stock_lot_pending_info_menu_badge.js',
         ],
     },
     'data': [
         'security/ir.model.access.csv',
         'data/component_lab_acta_sequence.xml',
+        'data/supplies_assignment_sequence.xml',
+        'data/supplies_reassignment_sequence.xml',
         'views/internal_reference_views.xml',
         'views/stock_lot_views.xml',
+        'views/stock_lot_serial_conflict_views.xml',
         'views/stock_quant_views.xml',
+        'views/supplies_assignment_views.xml',
+        'views/supplies_hub_dashboard_templates.xml',
         'wizard/delivery_route_trigger_wizard_views.xml',
+        'views/delivery_route_billing_views.xml',
         'wizard/component_transfer_wizard_views.xml',
         'views/component_lab_pending_views.xml',
         'views/component_lab_pool_views.xml',
         'views/component_lab_hub_dashboard_templates.xml',
         'reports/component_lab_assignment_report.xml',
         'reports/component_lab_acta_report.xml',
+        'reports/supplies_assignment_report.xml',
         'views/stock_picking_supplies_lab_inherit.xml',
         'wizard/quant_editor_wizard_views.xml',
         'views/inventory_dashboard_views.xml',

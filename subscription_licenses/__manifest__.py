@@ -4,7 +4,7 @@
 
 {
     'name': 'Subscription Licenses',
-    'version': '19.0.1.0.7',
+    'version': '19.0.1.0.36',
     'author': 'Supplies De Colombia SAS',
     'category': 'Sales/Subscriptions',
     'depends': ['sale', 'stock', 'account', 'product', 'base', 'web', 'product_suppiles', 'subscription_nocount'],
@@ -33,6 +33,7 @@
         'wizard/license_assignment_cancel_warning_wizard_views.xml',
         'wizard/license_quantity_warning_wizard_views.xml',
         'wizard/license_assignment_pick_wizard_views.xml',
+        'views/license_unassignment_history_views.xml',
         'views/license_assignment_views.xml',
         'views/license_views.xml',
         'views/license_dashboard_templates.xml',

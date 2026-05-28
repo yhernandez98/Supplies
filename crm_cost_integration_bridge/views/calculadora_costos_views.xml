@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data>
+    <record id="view_calculadora_costos_form_bridge" model="ir.ui.view">
+        <field name="name">calculadora.costos.form.bridge</field>
+        <field name="model">calculadora.costos</field>
+        <field name="inherit_id" ref="calculadora_costos.view_calculadora_form"/>
+        <field name="arch" type="xml">
+            <!-- Odoo 19+: no usar @string en xpath; anclar por campo único del formulario base -->
+            <xpath expr="//field[@name='porcentaje_utilidad']" position="after">
+                <group string="Integración CRM (IVA y seguro)">
+                    <field name="integration_case_id" readonly="1" invisible="not integration_case_id"/>
+                    <field name="source_purchase_order_id" readonly="1" invisible="not source_purchase_order_id"/>
+                    <field name="bridge_manual_insurance_cop"/>
+                    <field name="bridge_apply_tax"/>
+                    <field name="bridge_tax_percent" invisible="not bridge_apply_tax"/>
+                    <field name="bridge_amount_before_tax_cop" widget="monetary" options="{'currency_field': 'company_currency_id'}" readonly="1"/>
+                    <field name="bridge_tax_amount_cop" widget="monetary" options="{'currency_field': 'company_currency_id'}" readonly="1"/>
+                    <field name="bridge_precio_final_cliente_cop" widget="monetary" options="{'currency_field': 'company_currency_id'}" readonly="1"/>
+                    <field name="bridge_amount_before_tax" widget="monetary" options="{'currency_field': 'currency_id'}" readonly="1"/>
+                    <field name="bridge_tax_amount" widget="monetary" options="{'currency_field': 'currency_id'}" readonly="1"/>
+                    <field name="bridge_precio_final_cliente" widget="monetary" options="{'currency_field': 'currency_id'}" readonly="1"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+</data>

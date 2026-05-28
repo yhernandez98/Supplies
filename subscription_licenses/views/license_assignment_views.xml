@@ -94,6 +94,7 @@
                         </group>
                         <group string="Detalles Contratación">
                             <field name="contracting_type" 
+                                   required="1"
                                    placeholder="Seleccione el tipo de contratación"/>
                             <field name="contracting_type_description" nolabel="1" readonly="1" 
                                    invisible="not contracting_type"
@@ -133,16 +134,17 @@
                             </group>
                             <!-- Lista para filas de equipo: Equipo primero, Asignado después -->
                             <group string="Equipos" invisible="not license_applies_to_equipment">
-                                <field name="equipment_ids" nolabel="1" create="0" domain="[('lot_id', '!=', False)]">
+                                <field name="equipment_ids" nolabel="1" create="0"
+                                       domain="[('lot_id', '!=', False), ('state', '=', 'assigned')]">
                                     <list create="0" delete="0" edit="1">
                                         <field name="display_lot_id" string="Equipo" optional="show"/>
-                                        <field name="assigned_partner_id" string="Asignado" optional="show"/>
+                                        <field name="assigned_name_display" string="Asignado" optional="show"/>
                                         <field name="lot_id" column_invisible="1"/>
                                         <field name="contact_id" column_invisible="1"/>
                                         <field name="inventory_plate" optional="hide"/>
                                         <field name="product_id" optional="hide"/>
                                         <field name="assignment_date" string="Fecha asignación"/>
-                                        <field name="assignment_end_date" string="Fecha de desasignación"/>
+                                        <field name="unassignment_date" string="Fecha de desasignación"/>
                                         <field name="state" widget="badge"
                                                decoration-success="state == 'assigned'"
                                                decoration-muted="state == 'unassigned'"/>
@@ -177,16 +179,16 @@
                             </group>
                             <!-- Lista para filas de usuario: Asignado primero, Equipo después -->
                             <group string="Usuarios" invisible="not license_applies_to_user">
-                                <field name="equipment_ids" nolabel="1" create="0" domain="[('lot_id', '=', False), ('contact_id', '!=', False)]">
+                                <field name="equipment_ids" nolabel="1" create="0"
+                                       domain="[('lot_id', '=', False), ('contact_id', '!=', False), ('state', '=', 'assigned')]">
                                     <list create="0" delete="0" edit="1">
-                                        <field name="assigned_partner_id" string="Asignado" optional="show"/>
-                                        <field name="display_lot_id" string="Equipo" optional="show"/>
+                                        <field name="assigned_name_display" string="Asignado" optional="show"/>
                                         <field name="lot_id" column_invisible="1"/>
                                         <field name="contact_id" column_invisible="1"/>
                                         <field name="inventory_plate" optional="hide"/>
                                         <field name="product_id" optional="hide"/>
                                         <field name="assignment_date" string="Fecha asignación"/>
-                                        <field name="assignment_end_date" string="Fecha de desasignación"/>
+                                        <field name="unassignment_date" string="Fecha de desasignación"/>
                                         <field name="state" widget="badge"
                                                decoration-success="state == 'assigned'"
                                                decoration-muted="state == 'unassigned'"/>
@@ -219,6 +221,22 @@
                                     </form>
                                 </field>
                             </group>
+                        </page>
+                        <page string="Historial de desasignaciones" name="unassignment_history">
+                            <field name="unassignment_history_ids" nolabel="1">
+                                <list create="0" edit="0" delete="0">
+                                    <field name="unassignment_date" string="Fecha desasignación"/>
+                                    <field name="equipment_serial" string="Equipo"/>
+                                    <field name="assigned_name" string="Asignado"/>
+                                    <field name="category_name" string="Categoría"/>
+                                    <field name="license_product_name" string="Licencia"/>
+                                    <field name="assignment_date" string="Fecha asignación"/>
+                                    <field name="state_label" string="Estado"/>
+                                    <field name="source" string="Origen"/>
+                                    <field name="helpdesk_ticket_name" string="Ticket"/>
+                                    <field name="removed_by_id" string="Registrado por" optional="hide"/>
+                                </list>
+                            </field>
                         </page>
                     </notebook>
                 </sheet>

@@ -57,6 +57,7 @@ class LicenseAssignmentPickWizard(models.TransientModel):
             domain = [('state', '=', 'active')]
             if rec.license_tab_type == 'equipment':
                 domain.append(('license_applies_to_equipment', '=', True))
+                domain.append(('license_applies_to_user', '=', False))
             else:
                 domain.append(('license_applies_to_user', '=', True))
 
@@ -65,7 +66,26 @@ class LicenseAssignmentPickWizard(models.TransientModel):
             if lot_location_id:
                 domain.append(('location_id', '=', lot_location_id))
 
-            rec.available_assignment_ids = self.env['license.assignment'].search(domain)
+            assignments = self.env['license.assignment'].search(domain)
+            LicenseEquipment = self.env['license.equipment']
+
+            lot_user = getattr(rec.lot_id, 'related_partner_id', False) if rec.lot_id else False
+            if rec.license_tab_type == 'user' and lot_user:
+                # Solo contratos que este usuario aún no tiene cubiertos con una línea asignada
+                # (evita error por duplicado y deja claro «qué falta» en el desplegable).
+                taken_aids = LicenseEquipment.search([
+                    ('contact_id', '=', lot_user.id),
+                    ('state', '=', 'assigned'),
+                ]).mapped('assignment_id').ids
+                assignments = assignments.filtered(lambda a: a.id not in taken_aids)
+            elif rec.license_tab_type == 'equipment' and rec.lot_id:
+                taken_aids = LicenseEquipment.search([
+                    ('lot_id', '=', rec.lot_id.id),
+                    ('state', '=', 'assigned'),
+                ]).mapped('assignment_id').ids
+                assignments = assignments.filtered(lambda a: a.id not in taken_aids)
+
+            rec.available_assignment_ids = assignments
 
     def action_confirm(self):
         self.ensure_one()
@@ -107,15 +127,42 @@ class LicenseAssignmentPickWizard(models.TransientModel):
                 ('state', '=', 'assigned'),
             ], limit=1)
             if existing:
-                raise UserError(_('Esta asignación ya está creada para este usuario.'))
+                # Ya existe línea de usuario: solo actualizar vínculo de equipo/serial si aplica.
+                if not existing.lot_id:
+                    existing.write({'lot_id': self.lot_id.id})
+                    LicenseEquipment.search([
+                        ('assignment_id', '=', assignment.id),
+                        ('lot_id', '=', self.lot_id.id),
+                        ('contact_id', '=', False),
+                        ('state', '=', 'assigned'),
+                    ]).unlink()
+                    return {'type': 'ir.actions.act_window_close'}
+                if existing.lot_id.id == self.lot_id.id:
+                    return {'type': 'ir.actions.act_window_close'}
+                # Misma licencia de usuario asociada a otro serial: mover vínculo a este equipo.
+                existing.write({'lot_id': self.lot_id.id})
+                LicenseEquipment.search([
+                    ('assignment_id', '=', assignment.id),
+                    ('lot_id', '=', self.lot_id.id),
+                    ('contact_id', '=', False),
+                    ('state', '=', 'assigned'),
+                ]).unlink()
+                return {'type': 'ir.actions.act_window_close'}
 
             LicenseEquipment.create({
                 'assignment_id': assignment.id,
-                'lot_id': False,
+                'lot_id': self.lot_id.id,
                 'contact_id': related_partner_id.id,
                 'state': 'assigned',
                 'assignment_date': assignment_date,
             })
+            # Blindaje: si existía una fila de equipo para la misma asignación/serial, eliminarla.
+            LicenseEquipment.search([
+                ('assignment_id', '=', assignment.id),
+                ('lot_id', '=', self.lot_id.id),
+                ('contact_id', '=', False),
+                ('state', '=', 'assigned'),
+            ]).unlink()
 
         return {'type': 'ir.actions.act_window_close'}
 

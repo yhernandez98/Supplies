@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data>
+    <record id="view_commercial_customer_proposal_list" model="ir.ui.view">
+        <field name="name">commercial.customer.proposal.list</field>
+        <field name="model">commercial.customer.proposal</field>
+        <field name="arch" type="xml">
+            <list string="Propuestas cliente">
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="state" widget="badge"/>
+                <field name="snap_total_customer_cop" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_commercial_customer_proposal_form" model="ir.ui.view">
+        <field name="name">commercial.customer.proposal.form</field>
+        <field name="model">commercial.customer.proposal</field>
+        <field name="arch" type="xml">
+            <form string="Propuesta al cliente">
+                <header>
+                    <button name="action_send_proposal" type="object" string="Enviar (congelar snapshot)"
+                            class="btn-primary" invisible="state != 'draft'"/>
+                    <button name="action_register_customer_approved" type="object" string="Cliente aprobó"
+                            class="btn-primary" invisible="state != 'sent'"/>
+                    <button name="action_register_customer_rejected" type="object" string="Cliente rechazó"
+                            class="btn-secondary" invisible="state != 'sent'"/>
+                    <button name="action_cancel" type="object" string="Cancelar"
+                            invisible="state in ('approved', 'rejected', 'cancelled')"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,sent,approved,rejected"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name" readonly="1"/>
+                            <field name="case_id" readonly="state != 'draft'"/>
+                            <field name="partner_id" readonly="1"/>
+                            <field name="calculadora_id" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="currency_id" readonly="state != 'draft'"/>
+                            <field name="company_currency_id" readonly="1"/>
+                            <field name="applied_currency_rate" readonly="1"/>
+                            <field name="sent_date" readonly="1"/>
+                            <field name="customer_response_date" readonly="1"/>
+                        </group>
+                    </group>
+                    <group string="Snapshot cotización">
+                        <field name="snap_base_cop" widget="monetary" options="{'currency_field': 'currency_id'}" readonly="1"/>
+                        <field name="snap_iva_cop" widget="monetary" options="{'currency_field': 'currency_id'}" readonly="1"/>
+                        <field name="snap_insurance_cop" widget="monetary" options="{'currency_field': 'currency_id'}" readonly="1"/>
+                        <field name="snap_total_customer_cop" widget="monetary" options="{'currency_field': 'currency_id'}" readonly="1"/>
+                        <field name="snap_monthly_cop" widget="monetary" options="{'currency_field': 'currency_id'}" readonly="1"/>
+                        <field name="snap_contract_total_cop" widget="monetary" options="{'currency_field': 'currency_id'}" readonly="1"/>
+                    </group>
+                    <group string="Escenario cliente (renting)">
+                        <field name="selected_term_months" readonly="state != 'sent'"/>
+                        <field name="selected_monthly_amount" widget="monetary" options="{'currency_field': 'currency_id'}" readonly="1"/>
+                    </group>
+                    <group string="Proyección mensual por producto">
+                        <field name="product_projection_ids" nolabel="1" readonly="1">
+                            <list>
+                                <field name="product_id"/>
+                                <field name="name"/>
+                                <field name="product_uom_qty"/>
+                                <field name="monthly_24" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                                <field name="monthly_36" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                                <field name="monthly_48" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                                <field name="currency_id" optional="hide"/>
+                            </list>
+                        </field>
+                    </group>
+                    <group string="Cotizaciones de proveedor (referencia interna)">
+                        <field name="proposal_option_ids" nolabel="1" readonly="1">
+                            <list>
+                                <field name="name"/>
+                                <field name="partner_id"/>
+                                <field name="purchase_order_id"/>
+                                <field name="amount_total" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                                <field name="currency_id" optional="hide"/>
+                            </list>
+                            <form string="Opción de Propuesta">
+                                <sheet>
+                                    <group>
+                                        <group>
+                                            <field name="name" readonly="1"/>
+                                            <field name="partner_id" readonly="1"/>
+                                            <field name="purchase_order_id" readonly="1"/>
+                                        </group>
+                                        <group>
+                                            <field name="amount_total" widget="monetary" options="{'currency_field': 'currency_id'}" readonly="1"/>
+                                            <field name="currency_id" readonly="1"/>
+                                        </group>
+                                    </group>
+                                    <group string="Ítems de la opción">
+                                        <field name="option_line_ids" nolabel="1" readonly="1">
+                                            <list>
+                                                <field name="product_id"/>
+                                                <field name="name"/>
+                                                <field name="product_uom_qty"/>
+                                                <field name="product_uom_id"/>
+                                                <field name="price_unit" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                                                <field name="price_subtotal" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                                                <field name="currency_id" optional="hide"/>
+                                            </list>
+                                        </field>
+                                    </group>
+                                </sheet>
+                            </form>
+                        </field>
+                    </group>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_commercial_customer_proposal" model="ir.actions.act_window">
+        <field name="name">Propuestas cliente</field>
+        <field name="res_model">commercial.customer.proposal</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</data>

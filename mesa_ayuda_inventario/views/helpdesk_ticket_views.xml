@@ -6,11 +6,12 @@
             <field name="name">helpdesk.ticket.list</field>
             <field name="model">helpdesk.ticket</field>
             <field name="arch" type="xml">
-                <list string="Tickets">
+                <list string="Tickets" class="mesa_helpdesk_ticket_list">
+                    <field name="id" string="ID"/>
                     <field name="name"/>
                     <field name="partner_id"/>
                     <field name="category_id" optional="show"/>
-                    <field name="maintenance_order_id" optional="hide" string="Orden servicio"/>
+                    <field name="maintenance_order_id" optional="hide" string="Orden"/>
                     <field name="urgency" optional="hide"/>
                     <field name="impact" optional="hide"/>
                     <field name="stage_id"/>
@@ -25,36 +26,120 @@
             <field name="model">helpdesk.ticket</field>
             <field name="inherit_id" ref="helpdesk.helpdesk_ticket_view_form"/>
             <field name="arch" type="xml">
+                <xpath expr="//form" position="attributes">
+                    <attribute name="class" add="mesa_helpdesk_ticket_executive"/>
+                </xpath>
+                <xpath expr="//field[@name='partner_id']" position="before">
+                    <field name="mesa_ticket_edit_blocked" invisible="1"/>
+                    <field name="mesa_category_readonly" invisible="1"/>
+                </xpath>
                 <xpath expr="//field[@name='user_id']" position="attributes">
                     <attribute name="required">1</attribute>
+                    <attribute name="readonly">mesa_ticket_edit_blocked</attribute>
+                </xpath>
+                <xpath expr="//field[@name='name']" position="attributes">
+                    <attribute name="readonly">mesa_ticket_edit_blocked</attribute>
+                </xpath>
+                <xpath expr="//field[@name='partner_id']" position="attributes">
+                    <attribute name="readonly">mesa_ticket_edit_blocked</attribute>
                 </xpath>
                 <xpath expr="//field[@name='team_id']" position="attributes">
                     <attribute name="help">Equipo de soporte (ej. Nivel 1, Nivel 2). Configurar en: Mesa de Ayuda → Configuración → Equipos.</attribute>
+                    <attribute name="readonly">mesa_ticket_edit_blocked</attribute>
                 </xpath>
+                <!-- Tras cliente: solo campos técnicos (SLA y aviso van tras CC del correo) -->
                 <xpath expr="//field[@name='partner_id']" position="after">
-                    <field name="category_id"/>
+                    <field name="visit_helpdesk_category_locked" invisible="1"/>
                     <field name="values_from_category" invisible="1"/>
-                    <field name="maintenance_order_id" readonly="1"/>
-                    <button name="action_escalate_ticket" type="object" string="Escalar a otro equipo / responsable" class="btn-secondary" icon="fa-level-up" help="Cambiar equipo (ej. Nivel 2) o asignar a otra persona"/>
-                    <field name="urgency" readonly="1"/>
-                    <field name="impact" readonly="1"/>
-                    <field name="location_site" placeholder="Sede o ubicación"/>
+                </xpath>
+                <!-- Columna derecha: SLA debajo de CC del correo; aviso debajo de los SLA -->
+                <xpath expr="//field[@name='email_cc']" position="after">
                     <field name="date_deadline_response" readonly="1"/>
                     <field name="date_deadline_resolution" readonly="1"/>
-                    <div class="alert alert-info" role="alert" style="margin-top: 8px;">
+                    <div class="alert alert-info mesa_ticket_exec_alert" role="alert" style="margin-top: 12px;">
                         Al cerrar el ticket puede enviarse una encuesta de satisfacción al cliente (app Rating / Valoración de Odoo).
                     </div>
                 </xpath>
-                <xpath expr="//field[@name='stage_id']" position="after">
-                    <group string="Tiempo" name="custom_timer_group">
-                        <field name="custom_timer_display" readonly="1" nolabel="1" class="fw-bold"/>
-                        <field name="custom_timer_start" invisible="1"/>
-                        <field name="custom_timer_accumulated_hours" invisible="1"/>
-                        <field name="custom_timer_can_stop" invisible="1"/>
-                    </group>
+                <!-- Urgencia / impacto / sede: columna izquierda (más equilibrio con la derecha) -->
+                <xpath expr="//field[@name='priority']" position="after">
+                    <field name="urgency" readonly="1"/>
+                    <field name="impact" readonly="1"/>
+                    <field name="location_site" placeholder="Sede o ubicación" readonly="mesa_ticket_edit_blocked"/>
+                </xpath>
+                <!-- Cronómetro: junto al responsable (evita grupo extra al pie que dibujaba rectángulos vacíos) -->
+                <xpath expr="//field[@name='user_id']" position="after">
+                    <field name="custom_timer_start" invisible="1"/>
+                    <field name="custom_timer_accumulated_hours" invisible="1"/>
+                    <field name="custom_timer_can_stop" invisible="1"/>
+                    <field name="custom_timer_display" readonly="1" string="Cronómetro" class="mesa_ticket_timer_readout fw-bold"/>
+                </xpath>
+                <xpath expr="//field[@name='stage_id']" position="attributes">
+                    <attribute name="readonly">mesa_ticket_edit_blocked</attribute>
                 </xpath>
                 <xpath expr="//field[@name='priority']" position="attributes">
                     <attribute name="readonly">1</attribute>
+                </xpath>
+                <xpath expr="//field[@name='description']" position="before">
+                    <field name="mesa_ticket_detail_html" invisible="1"/>
+                </xpath>
+                <xpath expr="//field[@name='description']" position="attributes">
+                    <attribute name="widget">html</attribute>
+                    <attribute name="readonly">mesa_ticket_edit_blocked</attribute>
+                </xpath>
+                <xpath expr="//field[@name='tag_ids']" position="attributes">
+                    <attribute name="readonly">mesa_ticket_edit_blocked</attribute>
+                </xpath>
+                <xpath expr="//field[@name='tag_ids']" position="after">
+                    <field name="category_id" readonly="mesa_category_readonly"/>
+                    <field name="maintenance_order_id" readonly="1" string="Orden"/>
+                    <field name="mesa_hide_visit_acta_notebook_pages" invisible="1"/>
+                    <field name="mesa_acta_request_type" invisible="1"/>
+                    <field name="mesa_acta_origin_visit_ticket_id" readonly="1" string="Origen"
+                           invisible="not mesa_acta_origin_visit_ticket_id"/>
+                    <button name="action_escalate_ticket" type="object" string="Escalar a otro equipo / responsable" class="btn-secondary" icon="fa-level-up" help="Cambiar equipo (ej. Nivel 2) o asignar a otra persona" invisible="mesa_ticket_edit_blocked"/>
+                    <field name="mesa_show_visit_child_relations" invisible="1"/>
+                    <field name="mesa_parent_visit_ticket_id" readonly="1"
+                           invisible="not mesa_parent_visit_ticket_id"
+                           string="Hijo de"/>
+                </xpath>
+                <!-- Realizado (acta) y Tickets Hijos: después de la pestaña Descripción, antes de Información adicional. -->
+                <xpath expr="//field[@name='description']/ancestor::page[1]" position="after">
+                    <page string="Realizado" name="mesa_visit_acta_page"
+                          invisible="not maintenance_order_id or mesa_parent_visit_ticket_id or mesa_hide_visit_acta_notebook_pages">
+                        <group name="mesa_visit_acta_block" class="mesa_visit_acta_tab" colspan="2">
+                            <group col="3" class="mesa_acta_toolbar">
+                            <button name="action_acta_insert_equipment_table" type="object"
+                                    string="Equipos" class="btn-secondary"
+                                    invisible="mesa_ticket_edit_blocked"
+                                    help="Lista productos principales del cliente; elija cuáles insertar en el acta."/>
+                            <button name="action_acta_insert_participants_table" type="object"
+                                    string="Usuario" class="btn-secondary"
+                                    invisible="mesa_ticket_edit_blocked"
+                                    help="Contactos del mismo comercial que el cliente; inserta bloque en el acta y ticket hijo al completar."/>
+                            <button name="action_acta_open_other_operations_wizard" type="object"
+                                    string="Otras operaciones" class="btn-secondary"
+                                    invisible="mesa_ticket_edit_blocked"
+                                    help="Espacio para acciones adicionales que defina el área."/>
+                            </group>
+                            <field name="visit_acta_html" widget="html" nolabel="1" colspan="2"
+                                   readonly="mesa_ticket_edit_blocked"
+                                   placeholder="Detalle de lo realizado en terreno (estilo documento). Guarde el ticket para conservar los cambios."/>
+                        </group>
+                    </page>
+                    <page string="Tickets Hijos" name="mesa_visit_followup_page"
+                          invisible="not mesa_show_visit_child_relations or mesa_hide_visit_acta_notebook_pages">
+                        <group name="mesa_visit_followup_block" class="mesa_visit_followup_tab" colspan="2">
+                            <field name="mesa_child_visit_ticket_ids" nolabel="1" colspan="2" readonly="1">
+                                <list create="false" delete="false" edit="false" class="mesa_followup_embed_list">
+                                    <field name="id" string="ID"/>
+                                    <field name="name" string="Asunto"/>
+                                    <field name="lot_id" string="Equipo" optional="show"/>
+                                    <field name="mesa_acta_followup_contact_id" string="Contacto" optional="show"/>
+                                    <field name="stage_id" string="Etapa" optional="show"/>
+                                </list>
+                            </field>
+                        </group>
+                    </page>
                 </xpath>
             </field>
         </record>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="seq_supplies_assignment" model="ir.sequence">
+        <field name="name">Asignaciones Supplies</field>
+        <field name="code">supplies.assignment</field>
+        <field name="prefix">SUPP/ASIG/</field>
+        <field name="padding">5</field>
+        <field name="implementation">no_gap</field>
+    </record>
+</odoo>

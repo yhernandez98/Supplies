@@ -139,8 +139,7 @@ class LicenseEquipmentDeleteWarningWizard(models.TransientModel):
         assignment_quantity = self.assignment_quantity
         contracting_type = self.contracting_type
         
-        # Eliminar el registro
-        equipment.unlink()
+        equipment.remove_from_assignment_list(source='manual_delete')
         
         # Cerrar el wizard (la ventana se cierra; el listado se actualiza y se ve el cambio)
         return {'type': 'ir.actions.act_window_close'}

@@ -5,6 +5,7 @@ from . import license_category
 from . import license_template
 from . import license_assignment
 from . import license_equipment
+from . import license_equipment_unassignment_history
 from . import res_config_settings
 # from . import license_trm_wizard  # Eliminado - ya no se usa Recalcular TRM
 from . import license_report_wizard

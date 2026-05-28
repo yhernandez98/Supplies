@@ -1,0 +1,900 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="supplies_hub_dashboard_page" name="Hub Asignaciones Supplies">
+        <html>
+            <head>
+                <meta charset="utf-8"/>
+                <meta name="viewport" content="width=device-width, initial-scale=1"/>
+                <title>Asignaciones Supplies</title>
+                <style>
+                    * { box-sizing: border-box; }
+                    body { margin: 0; font-family: "Inter", "Segoe UI", system-ui, sans-serif; background: linear-gradient(135deg, #f3f7fb 0%, #e6edf5 100%); color: #1f2937; }
+                    .sh_header { background: linear-gradient(135deg, #0f3b66 0%, #1f6fb2 100%); color: #fff; padding: 1rem 1.4rem; box-shadow: 0 8px 24px rgba(17, 46, 88, 0.28); }
+                    .sh_header_top { display: flex; justify-content: space-between; gap: 1rem; align-items: center; flex-wrap: wrap; }
+                    .sh_title { margin: 0; font-size: 1.45rem; font-weight: 800; }
+                    .sh_sub { margin-top: 0.2rem; opacity: 0.92; font-size: 0.92rem; }
+                    .sh_link { color: #fff; text-decoration: none; border: 1px solid rgba(255,255,255,0.35); border-radius: 10px; padding: 0.4rem 0.85rem; font-weight: 700; font-size: 0.85rem; }
+                    .sh_wrap { max-width: 1320px; margin: 0 auto; padding: 1.2rem; }
+                    .sh_notice { border-radius: 10px; padding: 0.7rem 0.9rem; margin-bottom: 0.9rem; font-size: 0.9rem; }
+                    .sh_notice.success { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+                    .sh_notice.error { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+                    .sh_actions { display: flex; gap: 0.55rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
+                    .sh_btn { text-decoration: none; border-radius: 999px; padding: 0.5rem 0.95rem; font-size: 0.85rem; font-weight: 700; border: 1px solid #c6d6ea; background: #fff; color: #1f4f7a; cursor: pointer; }
+                    .sh_btn.primary { background: linear-gradient(145deg, #3c8fd0 0%, #2d79b4 100%); color: #fff; border-color: #2d79b4; }
+                    .sh_btn.sh_btn--muted { opacity: 0.65; cursor: not-allowed; pointer-events: none; }
+                    .sh_kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0.85rem; margin-bottom: 1rem; }
+                    .sh_kpi { background: #fff; border-radius: 14px; padding: 0.9rem 1rem; border: 1px solid rgba(60, 143, 208, 0.2); box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+                    .sh_kpi .label { font-size: 0.74rem; text-transform: uppercase; color: #64748b; font-weight: 800; }
+                    .sh_kpi .value { font-size: 1.95rem; font-weight: 800; color: #0f3b66; line-height: 1.1; margin-top: 0.15rem; }
+                    .sh_kpis .sh_kpi:nth-child(1) { background: #fdf2f8; border-color: #fbcfe8; }
+                    .sh_kpis .sh_kpi:nth-child(2) { background: #eff6ff; border-color: #bfdbfe; }
+                    .sh_kpis .sh_kpi:nth-child(3) { background: #ecfeff; border-color: #a5f3fc; }
+                    .sh_kpis .sh_kpi:nth-child(4) { background: #f0fdf4; border-color: #bbf7d0; }
+                    .sh_kpis .sh_kpi:nth-child(5) { background: #fffbeb; border-color: #fde68a; }
+                    .sh_grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+                    .sh_col { background: rgba(255,255,255,0.75); border: 1px solid #d4deea; border-radius: 14px; padding: 0.8rem; }
+                    .sh_col_head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem; }
+                    .sh_col_title { margin: 0; font-size: 1.02rem; font-weight: 800; color: #0f172a; }
+                    .sh_col_count { font-size: 0.88rem; color: #475569; font-weight: 700; }
+                    .sh_card { background: #fff; border: 1px solid #dbe6f2; border-radius: 12px; padding: 0.72rem; margin-bottom: 0.65rem; box-shadow: 0 2px 10px rgba(0,0,0,0.04); }
+                    .sh_card:last-child { margin-bottom: 0; }
+                    .sh_card_title { font-size: 0.95rem; font-weight: 800; color: #0f172a; margin-bottom: 0.2rem; }
+                    .sh_meta { font-size: 0.82rem; color: #4b5563; margin-bottom: 0.18rem; }
+                    .sh_status { margin-top: 0.25rem; padding-top: 0.28rem; border-top: 1px solid #e2e8f0; font-size: 0.82rem; color: #0369a1; }
+                    .sh_act_badge { font-size: 0.75rem; font-weight: 700; border-radius: 999px; padding: 0.12rem 0.5rem; display: inline-flex; align-items: center; gap: 0.28rem; border: 1px solid transparent; }
+                    .sh_act_badge.entrega { color: #0b4f8a; background: #e0eefc; border-color: #bed7f5; }
+                    .sh_act_badge.devolucion { color: #8a3f00; background: #fff0e0; border-color: #ffd2a8; }
+                    .sh_empty { border: 1px dashed #cbd5e1; border-radius: 12px; text-align: center; color: #64748b; background: rgba(255,255,255,0.6); padding: 1.2rem 0.8rem; font-size: 0.88rem; }
+                    .sh_modal_backdrop { position: fixed; inset: 0; background: rgba(2, 6, 23, 0.45); display: none; align-items: center; justify-content: center; z-index: 9999; padding: 0.6rem; box-sizing: border-box; }
+                    .sh_modal { width: min(620px, 94vw); max-width: 100%; background: #fff; border-radius: 14px; border: 1px solid #d7e3f0; box-shadow: 0 16px 50px rgba(15, 23, 42, 0.35); padding: 1rem; box-sizing: border-box; overflow: hidden; }
+                    .sh_modal--table { width: min(960px, calc(100vw - 1.5rem)); max-width: 100%; }
+                    .sh_table_scroll { width: 100%; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 0.45rem; border-radius: 10px; border: 1px solid #e2e8f0; background: #fafbfc; }
+                    .sh_table_scroll .sh_table { margin-top: 0; min-width: 680px; }
+                    .sh_table_scroll .sh_btn { padding: 0.28rem 0.55rem; font-size: 0.74rem; white-space: nowrap; max-width: 100%; box-sizing: border-box; }
+                    .sh_modal_title { margin: 0 0 0.4rem; font-size: 1rem; font-weight: 800; color: #111827; }
+                    .sh_modal_desc { margin: 0 0 0.8rem; color: #475569; font-size: 0.88rem; }
+                    .sh_modal_notice { margin: 0 0 0.85rem; padding: 0.55rem 0.65rem; border-radius: 10px; border: 1px solid #fde68a; background: #fffbeb; color: #92400e; font-size: 0.82rem; line-height: 1.35; }
+                    .sh_row { margin-bottom: 0.65rem; }
+                    .sh_row label { display: block; margin-bottom: 0.2rem; font-size: 0.82rem; font-weight: 700; color: #334155; }
+                    .sh_row select, .sh_row input, .sh_row textarea { width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0.46rem 0.55rem; }
+                    .sh_modal_actions { display: flex; justify-content: flex-end; gap: 0.45rem; flex-wrap: wrap; margin-top: 0.65rem; width: 100%; box-sizing: border-box; }
+                    .sh_table { width: 100%; border-collapse: collapse; font-size: 0.83rem; margin-top: 0.5rem; table-layout: auto; }
+                    .sh_table th, .sh_table td { border-bottom: 1px solid #e2e8f0; padding: 0.38rem 0.42rem; text-align: left; vertical-align: middle; word-break: break-word; max-width: 220px; }
+                    .sh_table th:last-child, .sh_table td:last-child { max-width: none; white-space: nowrap; }
+                    .sh_user_grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.75rem; }
+                    .sh_user_tile { background: #eef7ff; border: 1px solid #d3e6f8; border-radius: 14px; padding: 0.75rem; text-align: center; }
+                    .sh_user_tile .sh_card_title { font-size: 0.86rem; margin-bottom: 0.45rem; min-height: 34px; display: flex; align-items: center; justify-content: center; }
+                    .sh_badge { display: inline-block; border: 1px solid #d7e3f0; background: #fff; border-radius: 999px; padding: 0.2rem 0.6rem; font-size: 0.78rem; font-weight: 700; color: #334155; margin-bottom: 0.45rem; }
+                    @media (max-width: 1100px) { .sh_grid { grid-template-columns: 1fr; } }
+                </style>
+            </head>
+            <body>
+                <header class="sh_header">
+                    <div class="sh_header_top">
+                        <div>
+                            <h1 class="sh_title">Asignaciones Supplies</h1>
+                            <div class="sh_sub">Control centralizado de activos asignados al personal</div>
+                        </div>
+                        <div>
+                            <a t-attf-href="#{url_back}" class="sh_link">Volver</a>
+                        </div>
+                    </div>
+                </header>
+                <div class="sh_wrap">
+                    <t t-if="notice">
+                        <div t-attf-class="sh_notice #{notice_type}">
+                            <span t-esc="notice"/>
+                        </div>
+                    </t>
+                    <div class="sh_actions">
+                        <button type="button" class="sh_btn primary" id="sh_open_assign">Nueva Asignacion</button>
+                        <button type="button" class="sh_btn" id="sh_open_pending_signatures">Actas Sin Firma</button>
+                        <button type="button" class="sh_btn" id="sh_open_delivery_history">Historico Entregas</button>
+                        <button type="button" class="sh_btn" id="sh_open_history">Historico Devueltos</button>
+                        <button type="button" class="sh_btn" id="sh_open_reassignment_history">Historico Reasignaciones</button>
+                        <button type="button" class="sh_btn" id="sh_open_return">Registrar Devolucion</button>
+                    </div>
+
+                    <form id="sh_action_form" method="post" action="/inventory_dashboard_simple/supplies_hub/action" style="display:none;">
+                        <input type="hidden" name="csrf_token" t-att-value="csrf_token"/>
+                        <input type="hidden" name="action" id="sh_action"/>
+                        <input type="hidden" name="assignment_ids" id="sh_assignment_ids"/>
+                        <input type="hidden" name="user_id" id="sh_user_id"/>
+                        <input type="hidden" name="employee_id" id="sh_employee_id"/>
+                        <input type="hidden" name="lot_id" id="sh_lot_id"/>
+                        <input type="hidden" name="quantity" id="sh_quantity"/>
+                        <input type="hidden" name="note" id="sh_note"/>
+                        <input type="hidden" name="return_assignment_id" id="sh_return_assignment_id"/>
+                        <input type="hidden" name="return_mode" id="sh_return_mode"/>
+                    </form>
+
+                    <div class="sh_kpis">
+                        <div class="sh_kpi"><div class="label">Total asignados</div><div class="value" t-esc="kpi_assigned_total"/></div>
+                        <div class="sh_kpi"><div class="label">Personal con asignacion</div><div class="value" t-esc="kpi_users_with_assignments"/></div>
+                        <div class="sh_kpi"><div class="label">Disponibles en existencias</div><div class="value" t-esc="kpi_available_exist"/></div>
+                        <div class="sh_kpi"><div class="label">Historico devueltos</div><div class="value" t-esc="kpi_returned_total"/></div>
+                        <div class="sh_kpi"><div class="label">Actas sin firma</div><div class="value" t-esc="kpi_pending_signatures"/></div>
+                    </div>
+
+                    <div class="sh_grid">
+                        <section class="sh_col">
+                            <div class="sh_col_head">
+                                <h3 class="sh_col_title">Activos asignados</h3>
+                                <span class="sh_col_count" t-esc="kpi_assigned_total"/>
+                            </div>
+                            <div class="sh_row" style="margin-bottom:0.5rem;">
+                                <label for="sh_user_filter">Buscar por empleado</label>
+                                <input id="sh_user_filter" placeholder="Escriba el nombre del empleado..."/>
+                            </div>
+                            <t t-if="user_cards">
+                                <div class="sh_user_grid">
+                                    <t t-foreach="user_cards" t-as="u">
+                                        <div class="sh_user_tile sh_user_card" t-att-data-user="u['user_key']">
+                                            <div class="sh_card_title"><t t-esc="u['user']"/></div>
+                                            <div class="sh_badge"><t t-esc="u['assigned_count']"/> equipo(s)</div>
+                                            <div>
+                                                <button type="button" class="sh_btn sh_user_details_btn">Ver Detalles</button>
+                                            </div>
+                                            <div class="sh_user_detail_data" style="display:none;">
+                                                <div class="sh_meta"><strong>Empleado:</strong> <t t-esc="u['user']"/></div>
+                                                <div class="sh_meta"><strong>Línea de vida de equipos</strong></div>
+                                                <ul class="sh_meta" style="margin:0.2rem 0 0.6rem 1rem; padding:0;">
+                                                    <t t-foreach="u['timeline']" t-as="h">
+                                                        <li>
+                                                            <t t-esc="h['date']"/> - <t t-esc="h['state_label']"/>:
+                                                            <t t-esc="h['product']"/> (<t t-esc="h['serial']"/>)
+                                                        </li>
+                                                    </t>
+                                                </ul>
+                                                <t t-foreach="u['items']" t-as="c">
+                                                    <div class="sh_card" style="margin-top:0.4rem;">
+                                                        <div class="sh_card_title"><t t-esc="c['product']"/></div>
+                                                        <div class="sh_meta">Ref: <strong t-esc="c['ref']"/></div>
+                                                        <div class="sh_meta">Serial: <strong t-esc="c['serial']"/></div>
+                                                        <div class="sh_meta">Cantidad: <span t-esc="c['qty']"/></div>
+                                                        <div class="sh_meta">Fecha: <span t-esc="c['assigned_date']"/></div>
+                                                        <div class="sh_meta">Estado acta: <strong t-esc="c['signature_state_label']"/></div>
+                                                        <div class="sh_meta" t-if="c['associated_items']">
+                                                            <strong>Elementos asociados:</strong>
+                                                            <ul style="margin:0.2rem 0 0 1rem; padding:0;">
+                                                                <t t-foreach="c['associated_items']" t-as="a">
+                                                                    <li>
+                                                                        <t t-esc="a['name']"/>
+                                                                        <t t-if="a['serial']"> - Serial: <t t-esc="a['serial']"/></t>
+                                                                        <t t-if="a['qty']"> (x<t t-esc="a['qty']"/>)</t>
+                                                                    </li>
+                                                                </t>
+                                                            </ul>
+                                                        </div>
+                                                        <div class="sh_status" t-esc="c['availability']"/>
+                                                        <div class="sh_meta">
+                                                            <t t-if="c['signature_state'] == 'signed'">
+                                                                <a class="sh_btn" t-attf-href="/report/pdf/inventory_dashboard_simple.report_supplies_assignment_entrega_pdf/#{c['id']}" target="_blank">Acta entrega</a>
+                                                            </t>
+                                                            <t t-else="">
+                                                                <span class="sh_btn" style="opacity:0.65; cursor:not-allowed;" title="Primero se requieren ambas firmas">Acta entrega (pendiente firmas)</span>
+                                                            </t>
+                                                            <a class="sh_btn" t-attf-href="#{c['sign_url']}">Firmas acta</a>
+                                                            <button type="button"
+                                                                    class="sh_btn sh_replace_btn"
+                                                                    t-att-data-assignment-id="c['id']"
+                                                                    t-att-data-user="c['user']"
+                                                                    t-att-data-product="c['product']"
+                                                                    t-att-data-serial="c['serial']">Cambiar equipo</button>
+                                                        </div>
+                                                    </div>
+                                                </t>
+                                            </div>
+                                        </div>
+                                    </t>
+                                </div>
+                            </t>
+                            <t t-else=""><div class="sh_empty">Sin activos asignados actualmente.</div></t>
+                        </section>
+                    </div>
+                </div>
+
+                <div class="sh_modal_backdrop" id="sh_assign_modal">
+                    <div class="sh_modal">
+                        <h3 class="sh_modal_title">Nueva Asignacion</h3>
+                        <p class="sh_modal_desc">Seleccione empleado, producto y serial. Al confirmar, el producto sale de Supp/Existencias.</p>
+                        <p class="sh_modal_notice">Importante: el acta de entrega queda cerrada solo cuando existan las dos firmas obligatorias (Entrega y Recibe). Use “Actas sin firma” o “Firmas acta” para completarlas.</p>
+                        <div class="sh_row">
+                            <label for="sh_assign_user">Empleado</label>
+                            <select id="sh_assign_user">
+                                <option value="">-- Seleccione empleado --</option>
+                                <t t-foreach="employees" t-as="emp">
+                                    <option t-att-value="emp.id"><t t-esc="emp.name"/></option>
+                                </t>
+                            </select>
+                        </div>
+                        <div class="sh_row">
+                            <label for="sh_assign_product">Producto (escriba para buscar)</label>
+                            <input id="sh_assign_product" list="sh_assign_products" placeholder="Escriba el nombre del producto..."/>
+                            <datalist id="sh_assign_products">
+                                <t t-foreach="available_products" t-as="p">
+                                    <option t-att-value="p['name']"/>
+                                </t>
+                            </datalist>
+                        </div>
+                        <div class="sh_row">
+                            <label for="sh_assign_serial">Serial (escriba para buscar)</label>
+                            <input id="sh_assign_serial" list="sh_assign_serials" placeholder="Escriba serial..."/>
+                            <datalist id="sh_assign_serials"/>
+                            <select id="sh_assign_lot_data" style="display:none;">
+                                <t t-foreach="available_catalog" t-as="a">
+                                    <option t-att-value="a['lot_id']" t-att-data-product-id="a['product_id']" t-att-data-serial="a['serial']" t-att-data-product-name="a['product']"/>
+                                </t>
+                            </select>
+                        </div>
+                        <div class="sh_row">
+                            <label for="sh_assign_note">Nota</label>
+                            <textarea id="sh_assign_note" rows="3" placeholder="Observaciones opcionales..."></textarea>
+                        </div>
+                        <div class="sh_modal_actions">
+                            <button type="button" class="sh_btn" id="sh_assign_cancel">Cancelar</button>
+                            <button type="button" class="sh_btn primary" id="sh_assign_confirm">Confirmar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sh_modal_backdrop" id="sh_return_modal">
+                    <div class="sh_modal sh_modal--table">
+                        <h3 class="sh_modal_title">Registrar Devolucion</h3>
+                        <p class="sh_modal_desc">Seleccione una asignación activa para devolver a Supp/Existencias.</p>
+                        <p class="sh_modal_notice">Importante: la devolución solo se puede cerrar con las dos firmas obligatorias del acta de devolución (Entrega del empleado y Recibe del analista). Sin ambas firmas el sistema no registra la devolución.</p>
+                        <div class="sh_row">
+                            <label for="sh_return_user_filter">Buscar por empleado</label>
+                            <input id="sh_return_user_filter" type="text" placeholder="Escriba nombre del empleado..."/>
+                        </div>
+                        <t t-if="return_pick_rows">
+                            <div class="sh_table_scroll">
+                            <table class="sh_table">
+                                <thead>
+                                    <tr>
+                                        <th>Sel</th><th>Ref</th><th>Empleado</th><th>Producto</th><th>Serial</th><th>Fecha asignacion</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="return_pick_rows" t-as="rp">
+                                        <tr class="sh_return_pick_row" t-att-data-user="rp['user'] or ''">
+                                            <td><input type="radio" name="sh_return_pick" class="sh_return_pick" t-att-value="rp['id']"/></td>
+                                            <td t-esc="rp['ref']"/>
+                                            <td t-esc="rp['user']"/>
+                                            <td t-esc="rp['product']"/>
+                                            <td t-esc="rp['serial']"/>
+                                            <td t-esc="rp['assigned_date']"/>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                            </div>
+                        </t>
+                        <t t-else=""><div class="sh_empty">No hay asignaciones activas para devolución.</div></t>
+                        <div class="sh_modal_actions">
+                            <button type="button" class="sh_btn" id="sh_return_cancel">Cancelar</button>
+                            <button type="button" class="sh_btn primary" id="sh_return_confirm">Confirmar Devolucion</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sh_modal_backdrop" id="sh_history_modal">
+                    <div class="sh_modal sh_modal--table">
+                        <h3 class="sh_modal_title">Historico de Devueltos</h3>
+                        <p class="sh_modal_desc">Consulta de equipos devueltos a Supp/Existencias.</p>
+                        <div class="sh_row">
+                            <label for="sh_history_user_filter">Buscar por empleado</label>
+                            <input id="sh_history_user_filter" type="text" placeholder="Escriba nombre del empleado..."/>
+                        </div>
+                        <t t-if="returned_rows">
+                            <div class="sh_table_scroll">
+                            <table class="sh_table">
+                                <thead>
+                                    <tr>
+                                        <th>Ref</th>
+                                        <th>Empleado</th>
+                                        <th>Producto</th>
+                                        <th>Serial</th>
+                                        <th>Fecha devolucion</th>
+                                        <th>PDF</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="returned_rows" t-as="r">
+                                        <tr t-att-data-user="r['user'] or ''" class="sh_history_row">
+                                            <td t-esc="r['ref']"/>
+                                            <td t-esc="r['user']"/>
+                                            <td t-esc="r['product']"/>
+                                            <td t-esc="r['serial']"/>
+                                            <td t-esc="r['return_date']"/>
+                                            <td><a class="sh_btn" t-attf-href="/report/pdf/inventory_dashboard_simple.report_supplies_assignment_devolucion_pdf/#{r['id']}" target="_blank">Descargar</a></td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                            </div>
+                        </t>
+                        <t t-else=""><div class="sh_empty">Aún no hay devoluciones registradas.</div></t>
+                        <div class="sh_modal_actions">
+                            <button type="button" class="sh_btn" id="sh_history_close">Cerrar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sh_modal_backdrop" id="sh_delivery_history_modal">
+                    <div class="sh_modal sh_modal--table">
+                        <h3 class="sh_modal_title">Historico de Entregas</h3>
+                        <p class="sh_modal_desc">Consulta de equipos entregados al personal.</p>
+                        <div class="sh_row">
+                            <label for="sh_delivery_user_filter">Buscar por empleado</label>
+                            <input id="sh_delivery_user_filter" type="text" placeholder="Escriba nombre del empleado..."/>
+                        </div>
+                        <t t-if="delivery_rows">
+                            <div class="sh_table_scroll">
+                            <table class="sh_table">
+                                <thead>
+                                    <tr>
+                                        <th>Ref</th><th>Empleado</th><th>Producto</th><th>Serial</th><th>Fecha entrega</th><th>Estado acta</th><th>PDF</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="delivery_rows" t-as="d">
+                                        <tr t-att-data-user="d['user'] or ''" class="sh_delivery_row">
+                                            <td t-esc="d['ref']"/>
+                                            <td t-esc="d['user']"/>
+                                            <td t-esc="d['product']"/>
+                                            <td t-esc="d['serial']"/>
+                                            <td t-esc="d['assignment_date']"/>
+                                            <td t-esc="d['signature_state_label']"/>
+                                            <td>
+                                                <t t-if="d['signature_state'] == 'signed'">
+                                                    <a class="sh_btn" t-attf-href="/report/pdf/inventory_dashboard_simple.report_supplies_assignment_entrega_pdf/#{d['id']}" target="_blank">Descargar</a>
+                                                </t>
+                                                <t t-else="">
+                                                    <span class="sh_btn sh_btn--muted">Pendiente firmas</span>
+                                                </t>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                            </div>
+                        </t>
+                        <t t-else=""><div class="sh_empty">Aún no hay entregas registradas.</div></t>
+                        <div class="sh_modal_actions">
+                            <button type="button" class="sh_btn" id="sh_delivery_history_close">Cerrar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sh_modal_backdrop" id="sh_user_details_modal">
+                    <div class="sh_modal">
+                        <h3 class="sh_modal_title">Detalle de empleado</h3>
+                        <div id="sh_user_details_body"/>
+                        <div class="sh_modal_actions">
+                            <button type="button" class="sh_btn" id="sh_user_details_close">Cerrar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sh_modal_backdrop" id="sh_reassignment_history_modal">
+                    <div class="sh_modal sh_modal--table">
+                        <h3 class="sh_modal_title">Historico de Reasignaciones</h3>
+                        <p class="sh_modal_desc">Cambios de equipos entre empleados con acta automática.</p>
+                        <div class="sh_row">
+                            <label for="sh_reassignment_user_filter">Buscar por empleado</label>
+                            <input id="sh_reassignment_user_filter" type="text" placeholder="Escriba nombre del empleado..."/>
+                        </div>
+                        <t t-if="reassignment_rows">
+                            <div class="sh_table_scroll">
+                            <table class="sh_table">
+                                <thead>
+                                    <tr>
+                                        <th>Acta</th><th>Fecha</th><th>Empleado</th><th>Equipo anterior</th><th>Equipo nuevo</th><th>PDF</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="reassignment_rows" t-as="rr">
+                                        <tr t-att-data-user="rr['user'] or ''" class="sh_reassignment_row">
+                                            <td t-esc="rr['acta']"/>
+                                            <td t-esc="rr['date']"/>
+                                            <td t-esc="rr['user']"/>
+                                            <td><t t-esc="rr['old_product']"/> (<t t-esc="rr['old_serial']"/>)</td>
+                                            <td><t t-esc="rr['new_product']"/> (<t t-esc="rr['new_serial']"/>)</td>
+                                            <td><a class="sh_btn" t-attf-href="/report/pdf/inventory_dashboard_simple.report_supplies_assignment_reassignment_pdf/#{rr['id']}" target="_blank">Descargar</a></td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                            </div>
+                        </t>
+                        <t t-else=""><div class="sh_empty">Aún no hay reasignaciones registradas.</div></t>
+                        <div class="sh_modal_actions">
+                            <button type="button" class="sh_btn" id="sh_reassignment_history_close">Cerrar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sh_modal_backdrop" id="sh_pending_signatures_modal">
+                    <div class="sh_modal sh_modal--table">
+                        <h3 class="sh_modal_title">Actas pendientes por firmas</h3>
+                        <p class="sh_modal_desc">Asignaciones que aún no tienen las dos firmas.</p>
+                        <p class="sh_modal_notice">Entrega y Devolución: en ambos casos son obligatorias las dos firmas para considerar el acta cerrada. Use Abrir para firmar en Odoo.</p>
+                        <div class="sh_row">
+                            <label for="sh_pending_user_filter">Buscar por empleado</label>
+                            <input id="sh_pending_user_filter" type="text" placeholder="Escriba nombre del empleado..."/>
+                        </div>
+                        <t t-if="pending_signature_rows">
+                            <div class="sh_table_scroll">
+                            <table class="sh_table">
+                                <thead>
+                                    <tr>
+                                        <th>Tipo</th><th>Acta</th><th>Empleado</th><th>Producto</th><th>Serial</th><th>Fecha</th><th>Firmar</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="pending_signature_rows" t-as="p">
+                                        <tr t-att-data-user="p['user'] or ''" class="sh_pending_row">
+                                            <td>
+                                                <span t-attf-class="sh_act_badge #{(p['act_type'] or '').lower()}">
+                                                    <t t-if="(p['act_type'] or '').lower() == 'entrega'">📤</t>
+                                                    <t t-elif="(p['act_type'] or '').lower() == 'devolucion'">📥</t>
+                                                    <t t-esc="p['act_type']"/>
+                                                </span>
+                                            </td>
+                                            <td t-esc="p['ref']"/>
+                                            <td t-esc="p['user']"/>
+                                            <td t-esc="p['product']"/>
+                                            <td t-esc="p['serial']"/>
+                                            <td t-esc="p['assigned_date']"/>
+                                            <td><a class="sh_btn" t-attf-href="#{p['sign_url']}">Abrir</a></td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                            </div>
+                        </t>
+                        <t t-else=""><div class="sh_empty">No hay actas pendientes de firma.</div></t>
+                        <div class="sh_modal_actions">
+                            <button type="button" class="sh_btn" id="sh_pending_signatures_close">Cerrar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sh_modal_backdrop" id="sh_replace_modal">
+                    <div class="sh_modal">
+                        <h3 class="sh_modal_title">Cambiar equipo asignado</h3>
+                        <p class="sh_modal_desc">Se devolverá el equipo actual y se asignará uno nuevo al mismo empleado.</p>
+                        <p class="sh_modal_notice">Importante: la devolución del equipo anterior exige las dos firmas de devolución; la nueva asignación exige las dos firmas de entrega del nuevo equipo. Complételas desde el registro o “Actas sin firma”.</p>
+                        <div class="sh_row">
+                            <label>Empleado</label>
+                            <input id="sh_replace_current_user" readonly="readonly"/>
+                        </div>
+                        <div class="sh_row">
+                            <label>Equipo actual</label>
+                            <input id="sh_replace_current_equipment" readonly="readonly"/>
+                        </div>
+                        <div class="sh_row">
+                            <label for="sh_replace_product">Nuevo producto (escriba para buscar)</label>
+                            <input id="sh_replace_product" list="sh_assign_products" placeholder="Escriba el nombre del producto..."/>
+                        </div>
+                        <div class="sh_row">
+                            <label for="sh_replace_serial">Nuevo serial (escriba para buscar)</label>
+                            <input id="sh_replace_serial" list="sh_replace_serials" placeholder="Escriba serial..."/>
+                            <datalist id="sh_replace_serials"/>
+                        </div>
+                        <div class="sh_row">
+                            <label for="sh_replace_note">Nota del cambio</label>
+                            <textarea id="sh_replace_note" rows="3" placeholder="Motivo del cambio (opcional)..."></textarea>
+                        </div>
+                        <div class="sh_modal_actions">
+                            <button type="button" class="sh_btn" id="sh_replace_cancel">Cancelar</button>
+                            <button type="button" class="sh_btn primary" id="sh_replace_confirm">Confirmar cambio</button>
+                        </div>
+                    </div>
+                </div>
+
+                <script>
+                    (function () {
+                        var form = document.getElementById('sh_action_form');
+                        var actionInput = document.getElementById('sh_action');
+                        var assignmentIdsInput = document.getElementById('sh_assignment_ids');
+                        var userIdInput = document.getElementById('sh_user_id');
+                        var employeeIdInput = document.getElementById('sh_employee_id');
+                        var lotIdInput = document.getElementById('sh_lot_id');
+                        var qtyInput = document.getElementById('sh_quantity');
+                        var noteInput = document.getElementById('sh_note');
+                        var returnAssignmentIdInput = document.getElementById('sh_return_assignment_id');
+                        var returnModeInput = document.getElementById('sh_return_mode');
+
+                        var assignModal = document.getElementById('sh_assign_modal');
+                        var returnModal = document.getElementById('sh_return_modal');
+                        var historyModal = document.getElementById('sh_history_modal');
+                        var deliveryHistoryModal = document.getElementById('sh_delivery_history_modal');
+                        var userDetailsModal = document.getElementById('sh_user_details_modal');
+                        var reassignmentHistoryModal = document.getElementById('sh_reassignment_history_modal');
+                        var pendingSignaturesModal = document.getElementById('sh_pending_signatures_modal');
+                        var openAssign = document.getElementById('sh_open_assign');
+                        var openReturn = document.getElementById('sh_open_return');
+                        var openHistory = document.getElementById('sh_open_history');
+                        var openDeliveryHistory = document.getElementById('sh_open_delivery_history');
+                        var openReassignmentHistory = document.getElementById('sh_open_reassignment_history');
+                        var openPendingSignatures = document.getElementById('sh_open_pending_signatures');
+                        var userDetailsButtons = document.querySelectorAll('.sh_user_details_btn');
+                        var userDetailsBody = document.getElementById('sh_user_details_body');
+                        var userDetailsClose = document.getElementById('sh_user_details_close');
+                        var assignCancel = document.getElementById('sh_assign_cancel');
+                        var assignConfirm = document.getElementById('sh_assign_confirm');
+                        var returnCancel = document.getElementById('sh_return_cancel');
+                        var returnConfirm = document.getElementById('sh_return_confirm');
+                        var historyClose = document.getElementById('sh_history_close');
+                        var deliveryHistoryClose = document.getElementById('sh_delivery_history_close');
+                        var reassignmentHistoryClose = document.getElementById('sh_reassignment_history_close');
+                        var pendingSignaturesClose = document.getElementById('sh_pending_signatures_close');
+                        var replaceModal = document.getElementById('sh_replace_modal');
+                        var replaceCancel = document.getElementById('sh_replace_cancel');
+                        var replaceConfirm = document.getElementById('sh_replace_confirm');
+                        var replaceButtons = document.querySelectorAll('.sh_replace_btn');
+
+                        var assignUser = document.getElementById('sh_assign_user');
+                        var assignProduct = document.getElementById('sh_assign_product');
+                        var assignSerial = document.getElementById('sh_assign_serial');
+                        var assignSerialsList = document.getElementById('sh_assign_serials');
+                        var assignNote = document.getElementById('sh_assign_note');
+                        var replaceCurrentUser = document.getElementById('sh_replace_current_user');
+                        var replaceCurrentEquipment = document.getElementById('sh_replace_current_equipment');
+                        var replaceProduct = document.getElementById('sh_replace_product');
+                        var replaceSerial = document.getElementById('sh_replace_serial');
+                        var replaceSerialsList = document.getElementById('sh_replace_serials');
+                        var replaceNote = document.getElementById('sh_replace_note');
+                        var replaceAssignmentId = '';
+                        var userFilter = document.getElementById('sh_user_filter');
+                        var historyUserFilter = document.getElementById('sh_history_user_filter');
+                        var deliveryUserFilter = document.getElementById('sh_delivery_user_filter');
+                        var reassignmentUserFilter = document.getElementById('sh_reassignment_user_filter');
+                        var pendingUserFilter = document.getElementById('sh_pending_user_filter');
+                        var returnUserFilter = document.getElementById('sh_return_user_filter');
+                        var assignedCards = document.querySelectorAll('.sh_user_card');
+                        var historyRows = document.querySelectorAll('.sh_history_row');
+                        var deliveryRows = document.querySelectorAll('.sh_delivery_row');
+                        var reassignmentRows = document.querySelectorAll('.sh_reassignment_row');
+                        var pendingRows = document.querySelectorAll('.sh_pending_row');
+                        var returnPickRows = document.querySelectorAll('.sh_return_pick_row');
+                        var allSerialRows = [];
+                        var allProductNames = [];
+                        var selectedReturnId = '';
+
+                        function normalize(txt) {
+                            return (txt || '').toLowerCase().trim();
+                        }
+
+                        function resolveSelectedProductName() {
+                            if (!assignProduct) return '';
+                            var val = normalize(assignProduct.value);
+                            if (!val) return '';
+                            for (var i = 0; i &lt; allProductNames.length; i++) {
+                                if (normalize(allProductNames[i]) === val) return allProductNames[i];
+                            }
+                            return '';
+                        }
+
+                        function resolveSelectedProductNameFromInput(productInput) {
+                            if (!productInput) return '';
+                            var val = normalize(productInput.value);
+                            if (!val) return '';
+                            for (var i = 0; i &lt; allProductNames.length; i++) {
+                                if (normalize(allProductNames[i]) === val) return allProductNames[i];
+                            }
+                            return '';
+                        }
+
+                        function refreshSerialDatalistByInputs(productInput, serialInput, datalistNode) {
+                            if (!datalistNode) return;
+                            var productName = resolveSelectedProductNameFromInput(productInput);
+                            var serialTerm = normalize(serialInput ? serialInput.value : '');
+                            datalistNode.innerHTML = '';
+                            allSerialRows.forEach(function (row) {
+                                if (!productName || normalize(row.productName) !== normalize(productName)) return;
+                                if (serialTerm &amp;&amp; normalize(row.serial).indexOf(serialTerm) === -1) return;
+                                var op = document.createElement('option');
+                                op.value = row.serial;
+                                datalistNode.appendChild(op);
+                            });
+                            return productName;
+                        }
+
+                        function refreshSerialDatalist() {
+                            refreshSerialDatalistByInputs(assignProduct, assignSerial, assignSerialsList);
+                        }
+
+                        function closeModal(modal) {
+                            if (modal) modal.style.display = 'none';
+                        }
+
+                        if (openAssign) {
+                            openAssign.addEventListener('click', function () {
+                                if (assignProduct) assignProduct.value = '';
+                                if (assignSerial) assignSerial.value = '';
+                                refreshSerialDatalist();
+                                if (assignModal) assignModal.style.display = 'flex';
+                            });
+                        }
+                        if (openReturn) {
+                            openReturn.addEventListener('click', function () {
+                                if (returnModal) returnModal.style.display = 'flex';
+                            });
+                        }
+                        if (openHistory) {
+                            openHistory.addEventListener('click', function () {
+                                if (historyModal) historyModal.style.display = 'flex';
+                            });
+                        }
+                        if (openDeliveryHistory) {
+                            openDeliveryHistory.addEventListener('click', function () {
+                                if (deliveryHistoryModal) deliveryHistoryModal.style.display = 'flex';
+                            });
+                        }
+                        if (openReassignmentHistory) {
+                            openReassignmentHistory.addEventListener('click', function () {
+                                if (reassignmentHistoryModal) reassignmentHistoryModal.style.display = 'flex';
+                            });
+                        }
+                        if (openPendingSignatures) {
+                            openPendingSignatures.addEventListener('click', function () {
+                                if (pendingSignaturesModal) pendingSignaturesModal.style.display = 'flex';
+                            });
+                        }
+                        if (assignCancel) assignCancel.addEventListener('click', function () { closeModal(assignModal); });
+                        if (returnCancel) returnCancel.addEventListener('click', function () { closeModal(returnModal); });
+                        if (historyClose) historyClose.addEventListener('click', function () { closeModal(historyModal); });
+                        if (deliveryHistoryClose) deliveryHistoryClose.addEventListener('click', function () { closeModal(deliveryHistoryModal); });
+                        if (reassignmentHistoryClose) reassignmentHistoryClose.addEventListener('click', function () { closeModal(reassignmentHistoryModal); });
+                        if (pendingSignaturesClose) pendingSignaturesClose.addEventListener('click', function () { closeModal(pendingSignaturesModal); });
+                        if (userDetailsClose) userDetailsClose.addEventListener('click', function () { closeModal(userDetailsModal); });
+                        if (replaceCancel) replaceCancel.addEventListener('click', function () { closeModal(replaceModal); });
+                        if (assignModal) assignModal.addEventListener('click', function (ev) { if (ev.target === assignModal) closeModal(assignModal); });
+                        if (returnModal) returnModal.addEventListener('click', function (ev) { if (ev.target === returnModal) closeModal(returnModal); });
+                        if (historyModal) historyModal.addEventListener('click', function (ev) { if (ev.target === historyModal) closeModal(historyModal); });
+                        if (deliveryHistoryModal) deliveryHistoryModal.addEventListener('click', function (ev) { if (ev.target === deliveryHistoryModal) closeModal(deliveryHistoryModal); });
+                        if (reassignmentHistoryModal) reassignmentHistoryModal.addEventListener('click', function (ev) { if (ev.target === reassignmentHistoryModal) closeModal(reassignmentHistoryModal); });
+                        if (pendingSignaturesModal) pendingSignaturesModal.addEventListener('click', function (ev) { if (ev.target === pendingSignaturesModal) closeModal(pendingSignaturesModal); });
+                        if (userDetailsModal) userDetailsModal.addEventListener('click', function (ev) { if (ev.target === userDetailsModal) closeModal(userDetailsModal); });
+                        if (replaceModal) replaceModal.addEventListener('click', function (ev) { if (ev.target === replaceModal) closeModal(replaceModal); });
+
+                        userDetailsButtons.forEach(function (btn) {
+                            btn.addEventListener('click', function () {
+                                var card = btn.closest('.sh_user_tile');
+                                var detail = card ? card.querySelector('.sh_user_detail_data') : null;
+                                if (userDetailsBody) {
+                                    userDetailsBody.innerHTML = detail ? detail.innerHTML : '<div class="sh_empty">Sin detalles.</div>';
+                                }
+                                if (userDetailsModal) userDetailsModal.style.display = 'flex';
+                            });
+                        });
+
+                        if (assignConfirm) {
+                            assignConfirm.addEventListener('click', function () {
+                                if (!assignUser || !assignUser.value) {
+                                    alert('Debe seleccionar un empleado.');
+                                    return;
+                                }
+                                var selectedProductName = resolveSelectedProductName();
+                                if (!selectedProductName) {
+                                    alert('Debe seleccionar un producto válido.');
+                                    return;
+                                }
+                                if (!assignSerial || !assignSerial.value) {
+                                    alert('Debe seleccionar un serial del producto elegido.');
+                                    return;
+                                }
+                                var selectedLot = '';
+                                allSerialRows.forEach(function (row) {
+                                    if (selectedLot) return;
+                                    if (normalize(row.productName) === normalize(selectedProductName) &amp;&amp; normalize(row.serial) === normalize(assignSerial.value)) {
+                                        selectedLot = row.lotId;
+                                    }
+                                });
+                                if (!selectedLot) {
+                                    alert('El serial no corresponde al producto seleccionado.');
+                                    return;
+                                }
+                                actionInput.value = 'assign';
+                                assignmentIdsInput.value = '';
+                                userIdInput.value = '';
+                                employeeIdInput.value = assignUser.value;
+                                lotIdInput.value = selectedLot;
+                                qtyInput.value = '1';
+                                noteInput.value = assignNote ? (assignNote.value || '') : '';
+                                form.submit();
+                            });
+                        }
+                        document.querySelectorAll('#sh_assign_products option').forEach(function (op) {
+                            if (op.value) allProductNames.push(op.value);
+                        });
+                        document.querySelectorAll('#sh_assign_lot_data option[data-product-id][data-serial][data-product-name]').forEach(function (op) {
+                            allSerialRows.push({
+                                lotId: op.value,
+                                serial: op.dataset.serial,
+                                productName: op.dataset.productName,
+                            });
+                        });
+                        if (assignProduct) {
+                            assignProduct.addEventListener('input', function () {
+                                if (assignSerial) assignSerial.value = '';
+                                refreshSerialDatalist();
+                            });
+                            assignProduct.addEventListener('change', function () {
+                                if (assignSerial) assignSerial.value = '';
+                                refreshSerialDatalist();
+                            });
+                        }
+                        if (assignSerial) {
+                            assignSerial.addEventListener('input', refreshSerialDatalist);
+                            assignSerial.addEventListener('focus', refreshSerialDatalist);
+                        }
+                        if (replaceProduct) {
+                            replaceProduct.addEventListener('input', function () {
+                                if (replaceSerial) replaceSerial.value = '';
+                                refreshSerialDatalistByInputs(replaceProduct, replaceSerial, replaceSerialsList);
+                            });
+                            replaceProduct.addEventListener('change', function () {
+                                if (replaceSerial) replaceSerial.value = '';
+                                refreshSerialDatalistByInputs(replaceProduct, replaceSerial, replaceSerialsList);
+                            });
+                        }
+                        if (replaceSerial) {
+                            replaceSerial.addEventListener('input', function () {
+                                refreshSerialDatalistByInputs(replaceProduct, replaceSerial, replaceSerialsList);
+                            });
+                            replaceSerial.addEventListener('focus', function () {
+                                refreshSerialDatalistByInputs(replaceProduct, replaceSerial, replaceSerialsList);
+                            });
+                        }
+                        function openReplaceFromButton(btn) {
+                            if (!btn) return;
+                            replaceAssignmentId = btn.dataset.assignmentId || '';
+                            if (replaceCurrentUser) replaceCurrentUser.value = btn.dataset.user || '';
+                            var currentEq = (btn.dataset.product || '') + ' | Serial: ' + (btn.dataset.serial || '');
+                            if (replaceCurrentEquipment) replaceCurrentEquipment.value = currentEq;
+                            if (replaceProduct) replaceProduct.value = '';
+                            if (replaceSerial) replaceSerial.value = '';
+                            if (replaceNote) replaceNote.value = '';
+                            refreshSerialDatalistByInputs(replaceProduct, replaceSerial, replaceSerialsList);
+                            if (replaceModal) replaceModal.style.display = 'flex';
+                        }
+
+                        replaceButtons.forEach(function (btn) {
+                            btn.__bound_inline__ = true;
+                            btn.addEventListener('click', function () { openReplaceFromButton(btn); });
+                        });
+                        document.addEventListener('click', function (ev) {
+                            var dynBtn = ev.target.closest('.sh_replace_btn');
+                            if (!dynBtn) return;
+                            if (dynBtn.__bound_inline__) return;
+                            ev.preventDefault();
+                            openReplaceFromButton(dynBtn);
+                        });
+
+                        if (userFilter) {
+                            userFilter.addEventListener('input', function () {
+                                var term = normalize(userFilter.value);
+                                assignedCards.forEach(function (card) {
+                                    var user = normalize(card.dataset.user || '');
+                                    card.style.display = (!term || user.indexOf(term) !== -1) ? '' : 'none';
+                                });
+                            });
+                        }
+                        if (historyUserFilter) {
+                            historyUserFilter.addEventListener('input', function () {
+                                var term = normalize(historyUserFilter.value);
+                                historyRows.forEach(function (row) {
+                                    var user = normalize(row.dataset.user || '');
+                                    row.style.display = (!term || user.indexOf(term) !== -1) ? '' : 'none';
+                                });
+                            });
+                        }
+                        if (deliveryUserFilter) {
+                            deliveryUserFilter.addEventListener('input', function () {
+                                var term = normalize(deliveryUserFilter.value);
+                                deliveryRows.forEach(function (row) {
+                                    var user = normalize(row.dataset.user || '');
+                                    row.style.display = (!term || user.indexOf(term) !== -1) ? '' : 'none';
+                                });
+                            });
+                        }
+                        if (reassignmentUserFilter) {
+                            reassignmentUserFilter.addEventListener('input', function () {
+                                var term = normalize(reassignmentUserFilter.value);
+                                reassignmentRows.forEach(function (row) {
+                                    var user = normalize(row.dataset.user || '');
+                                    row.style.display = (!term || user.indexOf(term) !== -1) ? '' : 'none';
+                                });
+                            });
+                        }
+                        if (returnUserFilter) {
+                            returnUserFilter.addEventListener('input', function () {
+                                var term = normalize(returnUserFilter.value);
+                                returnPickRows.forEach(function (row) {
+                                    var user = normalize(row.dataset.user || '');
+                                    row.style.display = (!term || user.indexOf(term) !== -1) ? '' : 'none';
+                                });
+                            });
+                        }
+                        if (pendingUserFilter) {
+                            pendingUserFilter.addEventListener('input', function () {
+                                var term = normalize(pendingUserFilter.value);
+                                pendingRows.forEach(function (row) {
+                                    var user = normalize(row.dataset.user || '');
+                                    row.style.display = (!term || user.indexOf(term) !== -1) ? '' : 'none';
+                                });
+                            });
+                        }
+
+                        if (returnConfirm) {
+                            returnConfirm.addEventListener('click', function () {
+                                var selected = document.querySelector('input[name="sh_return_pick"]:checked');
+                                if (!selected || !selected.value) {
+                                    alert('Seleccione una asignación activa para devolución.');
+                                    return;
+                                }
+                                selectedReturnId = selected.value;
+                                actionInput.value = 'return';
+                                assignmentIdsInput.value = '';
+                                userIdInput.value = '';
+                                employeeIdInput.value = '';
+                                lotIdInput.value = '';
+                                qtyInput.value = '';
+                                noteInput.value = '';
+                                returnAssignmentIdInput.value = selectedReturnId;
+                                returnModeInput.value = 'confirm';
+                                form.submit();
+                            });
+                        }
+                        if (replaceConfirm) {
+                            replaceConfirm.addEventListener('click', function () {
+                                if (!replaceAssignmentId) {
+                                    alert('No se encontró la asignación a reemplazar.');
+                                    return;
+                                }
+                                var selectedProductName = resolveSelectedProductNameFromInput(replaceProduct);
+                                if (!selectedProductName) {
+                                    alert('Debe seleccionar un producto válido.');
+                                    return;
+                                }
+                                if (!replaceSerial || !replaceSerial.value) {
+                                    alert('Debe seleccionar un serial del producto elegido.');
+                                    return;
+                                }
+                                var selectedLot = '';
+                                allSerialRows.forEach(function (row) {
+                                    if (selectedLot) return;
+                                    if (normalize(row.productName) === normalize(selectedProductName) &amp;&amp; normalize(row.serial) === normalize(replaceSerial.value)) {
+                                        selectedLot = row.lotId;
+                                    }
+                                });
+                                if (!selectedLot) {
+                                    alert('El serial no corresponde al producto seleccionado.');
+                                    return;
+                                }
+                                actionInput.value = 'replace';
+                                assignmentIdsInput.value = replaceAssignmentId;
+                                userIdInput.value = '';
+                                employeeIdInput.value = '';
+                                lotIdInput.value = selectedLot;
+                                qtyInput.value = '1';
+                                noteInput.value = replaceNote ? (replaceNote.value || '') : '';
+                                form.submit();
+                            });
+                        }
+                    })();
+                </script>
+            </body>
+        </html>
+    </template>
+
+    <record id="action_supplies_hub_dashboard" model="ir.actions.act_url">
+        <field name="name">Asignaciones Supplies</field>
+        <field name="url">/inventory_dashboard_simple/supplies_hub</field>
+        <field name="target">self</field>
+    </record>
+</odoo>

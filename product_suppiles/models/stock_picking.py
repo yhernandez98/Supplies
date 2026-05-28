@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError
+from odoo.tools.float_utils import float_compare
+from odoo.tools.misc import format_datetime
 import logging
+import re
 
 try:
     from lxml import etree
@@ -10,31 +13,179 @@ except ImportError:
 
 _logger = logging.getLogger(__name__)
 
+
+def _arch_to_etree(arch):
+    """Convierte arch de vista (etree, str o bytes) en elemento raíz lxml."""
+    if etree is None or arch is None:
+        return None
+    try:
+        if hasattr(arch, 'tag'):
+            return arch
+        if isinstance(arch, bytes):
+            arch_str = arch.decode('utf-8')
+        elif isinstance(arch, str):
+            arch_str = arch
+        else:
+            return None
+        if arch_str.strip().startswith('<?xml'):
+            arch_str = arch_str.split('?>', 1)[-1].strip()
+        return etree.fromstring(arch_str.encode('utf-8'))
+    except Exception:
+        _logger.exception("[product_suppiles] _arch_to_etree: error parseando arch")
+        return None
+
+
+def _is_truthy_invisible_xml(node):
+    inv = (node.get('invisible') or '').strip().lower()
+    return inv in ('1', 'true', '1.0')
+
+
+def _is_field_inside_subview_list_or_tree(node):
+    """True si el field está dentro de un <tree>/<list> (ej. columnas de movimientos), no en la cabecera."""
+    if node is None:
+        return False
+    return bool(node.xpath("ancestor::*[local-name()='tree' or local-name()='list']"))
+
+
+def _rewrite_scheduled_date_o_row_wrap(root):
+    """
+    Sustituye el div.o_row del estándar Stock por un contenedor con min-width estable.
+    Así la vista fusionada (Studio) también queda corregida aunque el xpath XML no coincida.
+    """
+    if etree is None:
+        return
+    for fld in list(root.xpath("//field[@name='scheduled_date']")):
+        if _is_field_inside_subview_list_or_tree(fld):
+            continue
+        if fld.xpath("ancestor::div[contains(@class,'o_supplies_scheduled_date_wrap')]"):
+            continue
+        o_row_div = None
+        node = fld.getparent()
+        while node is not None:
+            cls = node.get('class') or ''
+            if 'o_row' in cls:
+                o_row_div = node
+                break
+            node = node.getparent()
+        if o_row_div is None:
+            continue
+        parent = o_row_div.getparent()
+        if parent is None:
+            continue
+        idx = parent.index(o_row_div)
+        o_row_div.remove(fld)
+        parent.remove(o_row_div)
+        wrap = etree.Element('div')
+        wrap.set(
+            'class',
+            'o_supplies_scheduled_date_wrap d-flex flex-row flex-nowrap align-items-center w-100',
+        )
+        cls_f = (fld.get('class') or '').strip()
+        for part in ('o_supplies_scheduled_date_single_line', 'flex-grow-1', 'flex-shrink-0'):
+            parts = cls_f.split()
+            if part not in parts:
+                parts.append(part)
+                cls_f = ' '.join(parts)
+        fld.set('class', cls_f)
+        wrap.append(fld)
+        parent.insert(idx, wrap)
+
+
+def _normalize_picking_form_scheduled_date_arch(arch):
+    """
+    Vista fusionada (incl. Studio):
+    - Quita supplies_scheduled_date_display (legacy).
+    - En cabecera del form: elimina date_deadline y json_popover (replanificación Odoo), que duplican fechas
+      y el deadline suele verse en rojo con valor distinto a scheduled_date.
+    - No toca date_deadline dentro de subvistas list/tree (operaciones).
+    - Dedup de scheduled_date si Studio duplicó el campo.
+    """
+    root = _arch_to_etree(arch)
+    if root is None:
+        return arch
+    try:
+        for lbl in root.xpath("//label[@for='supplies_scheduled_date_display']"):
+            lbl.set('for', 'scheduled_date')
+
+        for node in list(root.xpath("//field[@name='supplies_scheduled_date_display']")):
+            p = node.getparent()
+            if p is not None:
+                p.remove(node)
+
+        for fname in ('date_deadline', 'json_popover'):
+            for node in list(root.xpath("//field[@name='%s']" % fname)):
+                if _is_field_inside_subview_list_or_tree(node):
+                    continue
+                p = node.getparent()
+                if p is not None:
+                    p.remove(node)
+
+        _rewrite_scheduled_date_o_row_wrap(root)
+
+        sched_nodes = list(root.xpath("//field[@name='scheduled_date']"))
+        if len(sched_nodes) > 1:
+            visible = [n for n in sched_nodes if not _is_truthy_invisible_xml(n)]
+            keep = visible[0] if visible else sched_nodes[0]
+            for n in sched_nodes:
+                if n is keep:
+                    continue
+                if n.get('required') and not keep.get('required'):
+                    keep.set('required', n.get('required'))
+                p = n.getparent()
+                if p is not None:
+                    p.remove(n)
+
+        # Clase para CSS: evita que la celda flex encoja el datetime hasta partir el texto en vertical.
+        for node in root.xpath("//field[@name='scheduled_date']"):
+            if _is_field_inside_subview_list_or_tree(node):
+                continue
+            cls = (node.get('class') or '').strip()
+            mark = 'o_supplies_scheduled_date_single_line'
+            parts = cls.split()
+            if mark not in parts:
+                parts.append(mark)
+                node.set('class', ' '.join(parts))
+    except Exception:
+        _logger.exception("[product_suppiles] _normalize_picking_form_scheduled_date_arch falló")
+        return arch
+    return root
+
+
 # XML de la pestaña "Productos principales" para inyectar en el form de picking (fallback si la herencia XML no aplica).
-PICKING_SUPPLIES_PAGE_XML = """<page name="supplies_main_only" string="Productos principales">
-  <group string="Una fila por producto principal con componentes, periféricos y complementos en columnas">
-    <field name="move_ids_main_only" nolabel="1">
-      <list create="0" delete="0" decoration-muted="supply_kind != 'parent'" editable="false">
-        <field name="product_id"/>
-        <field name="supply_parent_product_id" column_invisible="1"/>
+PICKING_SUPPLIES_PAGE_XML = """<page name="supplies_main_only" string="Productos principales" class="supplies-main-products-page">
+  <group string="Producto Principal" class="supplies-main-products-group">
+    <group col="2">
+      <button name="action_detailed_operations" type="object" string="Cambiar seriales" class="btn-secondary"/>
+    </group>
+    <field name="move_line_ids_main_only" nolabel="1">
+      <list create="0" delete="0" decoration-muted="supply_kind != 'parent'" editable="false" class="o_supplies_main_products_list">
+        <field name="product_display_clean" string="Producto"/>
         <field name="supply_kind" column_invisible="1"/>
-        <field name="principal_lot_serial" column_invisible="1"/>
-        <field name="principal_lot_id" string="Número de Serie" readonly="1" optional="show" invisible="supply_kind != 'parent' or not principal_lot_id" options="{'no_open': True, 'no_create': True}"/>
-        <button name="action_open_assign_serial" type="object" string="Asignar serial" icon="fa-edit" class="btn-primary btn-sm" invisible="supply_kind != 'parent'" title="Abrir operaciones detalladas para asignar el número de serie"/>
-        <button name="action_open_lot_wizard" type="object" string="✏️" invisible="supply_kind != 'parent' or not principal_lot_id or picking_id.state == 'done'" class="oe_link" title="Editar elementos asociados del lote"/>
-        <field name="product_components_count" string="Comp." readonly="1" optional="show" invisible="supply_kind != 'parent'"/>
-        <field name="product_peripherals_count" string="Perif." readonly="1" optional="show" invisible="supply_kind != 'parent'"/>
-        <field name="product_complements_count" string="Compl." readonly="1" optional="show" invisible="supply_kind != 'parent'"/>
-        <field name="product_uom_qty"/>
-        <field name="move_line_ids" column_invisible="1"/>
+        <field name="lot_id" string="Número de Serie" readonly="1" optional="show" invisible="supply_kind != 'parent' or not lot_id" options="{'no_create': True}"/>
+        <field name="associated_components" string="Componentes" readonly="1" optional="show" invisible="supply_kind != 'parent'" widget="text"/>
+        <field name="associated_peripherals" string="Periféricos" readonly="1" optional="show" invisible="supply_kind != 'parent'" widget="text"/>
+        <field name="associated_complements" string="Complementos" readonly="1" optional="show" invisible="supply_kind != 'parent'" widget="text"/>
+        <field name="associated_licenses" string="Licencias" readonly="1" optional="show" invisible="supply_kind != 'parent'" widget="text"/>
+        <button name="action_open_lot_wizard" type="object" string="Editar" invisible="supply_kind != 'parent' or not lot_id or picking_id.state == 'done'" class="btn-link" title="Editar elementos asociados del lote"/>
+        <field name="quantity" string="Demanda"/>
       </list>
     </field>
   </group>
 </page>"""
 
+PICKING_OBSERVACION_LI_PAGE_XML = """<page name="observacion_li" string="Observación L&amp;I">
+  <group col="1">
+    <div class="alert alert-info" role="alert">
+      <strong>Uso exclusivo de Logística e Inventario:</strong>
+      la información registrada en esta pestaña se usará como observación en el acta de recepción o devolución de activos.
+    </div>
+    <field name="observation_li" nolabel="1" placeholder="Escribe aquí la observación..." readonly="state in ['done', 'cancel']"/>
+  </group>
+</page>"""
+
 
 def _inject_picking_supplies_page(arch):
-    """Inyecta la pestaña 'Productos principales' en el form de stock.picking. Devuelve elemento etree (no string)."""
+    """Inyecta pestañas custom en el form de stock.picking. Devuelve elemento etree (no string)."""
     if etree is None:
         return arch
     try:
@@ -57,8 +208,25 @@ def _inject_picking_supplies_page(arch):
         if not notebooks:
             _logger.warning("[product_suppiles] stock.picking form: no se encontró <notebook>, no se inyecta pestaña")
             return arch
-        page_node = etree.fromstring(PICKING_SUPPLIES_PAGE_XML)
-        notebooks[0].append(page_node)
+        nb = notebooks[0]
+        existing = nb.xpath("./page[@name='supplies_main_only']")
+        if existing:
+            page_el = existing[0]
+            nb.remove(page_el)
+            nb.insert(0, page_el)
+        else:
+            page_node = etree.fromstring(PICKING_SUPPLIES_PAGE_XML)
+            nb.insert(0, page_node)
+
+        existing_obs = nb.xpath("./page[@name='observacion_li']")
+        if not existing_obs:
+            obs_node = etree.fromstring(PICKING_OBSERVACION_LI_PAGE_XML)
+            note_page = nb.xpath("./page[@name='note']")
+            if note_page:
+                note_idx = nb.index(note_page[0])
+                nb.insert(note_idx + 1, obs_node)
+            else:
+                nb.append(obs_node)
         # Importante: devolver el elemento, no string (ir.ui.view espera .tag)
         return root
     except Exception as e:
@@ -79,6 +247,248 @@ def _run_consolidation_loop(picking, max_iter=10):
 class StockPicking(models.Model):
     _inherit = "stock.picking"
 
+    observation_li = fields.Text(
+        string="Observación L&I",
+        tracking=True,
+        help="Observaciones internas para el proceso L&I del traslado.",
+    )
+
+    def _supplies_snapshot_picking_serials(self):
+        """Copia de seriales reservados antes de write que pueda desasignar líneas."""
+        snapshot = {}
+        for picking in self:
+            lines = picking.move_line_ids.filtered(
+                lambda ml: ml.lot_id and ml.quantity and ml.product_id.tracking == 'serial'
+            )
+            if not lines:
+                continue
+            snapshot[picking.id] = [{
+                'move_id': ml.move_id.id,
+                'product_id': ml.product_id.id,
+                'lot_id': ml.lot_id.id,
+                'quantity': ml.quantity,
+                'location_id': ml.location_id.id,
+                'location_dest_id': ml.location_dest_id.id,
+                'product_uom_id': ml.product_uom_id.id,
+            } for ml in lines]
+        return snapshot
+
+    def _supplies_restore_picking_serials(self, snapshot):
+        if not snapshot:
+            return
+        MoveLine = self.env['stock.move.line']
+        for picking in self:
+            items = snapshot.get(picking.id)
+            if not items:
+                continue
+            for item in items:
+                if picking.move_line_ids.filtered(
+                    lambda ml: ml.lot_id.id == item['lot_id'] and ml.quantity
+                ):
+                    continue
+                move = self.env['stock.move'].browse(item['move_id'])
+                if not move.exists():
+                    continue
+                MoveLine.create({
+                    'move_id': move.id,
+                    'picking_id': picking.id,
+                    'product_id': item['product_id'],
+                    'lot_id': item['lot_id'],
+                    'quantity': item['quantity'],
+                    'picked': True,
+                    'location_id': item['location_id'],
+                    'location_dest_id': item['location_dest_id'],
+                    'product_uom_id': item['product_uom_id'],
+                })
+
+    @staticmethod
+    def _route_stage_from_origin(origin):
+        """Etapa E# del wizard de rutas (Ruta-...-E3 o Ruta: ... W1 - E3)."""
+        if not origin:
+            return 0
+        text = (origin or '').strip()
+        match = re.search(r'-E(\d+)\s*$', text, re.IGNORECASE)
+        if match:
+            return int(match.group(1))
+        match = re.search(r'[\s-]E(\d+)\s*$', text, re.IGNORECASE)
+        return int(match.group(1)) if match else 0
+
+    @staticmethod
+    def _is_route_wizard_origin(origin):
+        if not origin:
+            return False
+        text = (origin or '').strip()
+        low = text.lower()
+        if not (low.startswith('ruta-') or low.startswith('ruta:')):
+            return False
+        return bool(re.search(r'[\s-]e\d+\s*$', text, re.IGNORECASE))
+
+    @staticmethod
+    def _route_wave_id_from_origin(origin):
+        if not origin:
+            return ''
+        match = re.search(r'W(\d+)', origin, re.IGNORECASE)
+        return match.group(1) if match else ''
+
+    def _route_origin_base(self):
+        self.ensure_one()
+        origin = (self.origin or '').strip()
+        if not self._is_route_wizard_origin(origin):
+            return ''
+        if origin.startswith('Ruta-') and '-E' in origin:
+            return origin.rsplit('-E', 1)[0]
+        wave = self._route_wave_id_from_origin(origin)
+        if wave:
+            return 'W%s' % wave
+        return origin
+
+    def _get_route_chain_pickings(self):
+        self.ensure_one()
+        origin = (self.origin or '').strip()
+        if not self._is_route_wizard_origin(origin):
+            return self.env['stock.picking']
+        wave = self._route_wave_id_from_origin(origin)
+        if wave and self.partner_id:
+            chain = self.search([
+                ('partner_id', '=', self.partner_id.id),
+                ('origin', 'ilike', 'W%s' % wave),
+            ])
+            return chain.filtered(lambda p: self._is_route_wizard_origin(p.origin))
+        base = self._route_origin_base()
+        if not base:
+            return self.env['stock.picking']
+        if base.startswith('W') and self.partner_id:
+            return self.search([
+                ('partner_id', '=', self.partner_id.id),
+                ('origin', 'ilike', base),
+            ]).filtered(lambda p: self._is_route_wizard_origin(p.origin))
+        return self.search([
+            ('origin', '=like', base + '-E%'),
+        ]) | self.search([
+            ('origin', 'ilike', base),
+            ('origin', 'ilike', '%E%'),
+        ])
+
+    def _get_parent_moves_for_route(self):
+        self.ensure_one()
+        return self.move_ids.filtered(
+            lambda m: not m.internal_parent_move_id
+            and (not getattr(m, 'supply_kind', False) or m.supply_kind == 'parent')
+        )
+
+    def _sync_route_chain_from_picking(self):
+        """Si se agregan productos después del wizard, replicarlos en etapas E2, E3… de la ruta."""
+        self.ensure_one()
+        if self.state in ('done', 'cancel'):
+            return
+
+        chain = self._get_route_chain_pickings().filtered(
+            lambda p: p.state not in ('done', 'cancel')
+        )
+        if len(chain) < 2:
+            return
+
+        stages = sorted(chain, key=lambda p: self._route_stage_from_origin(p.origin))
+        start_idx = next((i for i, p in enumerate(stages) if p.id == self.id), None)
+        if start_idx is None:
+            return
+
+        prev_moves = self._get_parent_moves_for_route()
+        Move = self.env['stock.move']
+
+        for picking in stages[start_idx + 1:]:
+            next_prev_moves = Move
+            for prev_move in prev_moves:
+                existing = picking.move_ids.filtered(
+                    lambda m: prev_move in m.move_orig_ids
+                    or (
+                        m.product_id == prev_move.product_id
+                        and not m.internal_parent_move_id
+                        and (not getattr(m, 'supply_kind', False) or m.supply_kind == 'parent')
+                    )
+                )
+                if existing:
+                    next_prev_moves |= existing
+                    continue
+
+                prev_desc = (
+                    getattr(prev_move, 'description_picking', None)
+                    or (prev_move.product_id.display_name if prev_move.product_id else '')
+                )
+                move_vals = {
+                    'description_picking': prev_desc,
+                    'product_id': prev_move.product_id.id,
+                    'product_uom': prev_move.product_uom.id,
+                    'product_uom_qty': prev_move.product_uom_qty,
+                    'picking_id': picking.id,
+                    'location_id': picking.location_id.id,
+                    'location_dest_id': picking.location_dest_id.id,
+                    'company_id': picking.company_id.id,
+                    'move_orig_ids': [(4, prev_move.id)],
+                }
+                if getattr(prev_move, 'supply_kind', False):
+                    move_vals['supply_kind'] = prev_move.supply_kind
+                new_move = Move.create(move_vals)
+                next_prev_moves |= new_move
+
+            if picking.state == 'draft' and picking.move_ids:
+                picking.action_confirm()
+            prev_moves = next_prev_moves.filtered(
+                lambda m: not getattr(m, 'supply_kind', False) or m.supply_kind == 'parent'
+            )
+
+    def _supplies_prepare_moves_for_validation(self):
+        """
+        Odoo 19 valida con move.quantity y move.picked.
+        Sincroniza líneas con serial para evitar backorder falso y que solo pase la línea 1.
+        """
+        for picking in self:
+            parents = picking.move_ids.filtered(
+                lambda m: not m.internal_parent_move_id
+                and (not getattr(m, 'supply_kind', False) or m.supply_kind == 'parent')
+            )
+            for move in parents:
+                lines = move.move_line_ids.filtered(lambda ml: ml.quantity > 0)
+                if not lines:
+                    continue
+                lines.write({'picked': True})
+                rounding = move.product_uom.rounding
+                if float_compare(move.quantity, move.product_uom_qty, precision_rounding=rounding) < 0:
+                    move.quantity = move.product_uom_qty
+                move.picked = True
+
+            for child in picking.move_ids.filtered('internal_parent_move_id'):
+                if child.internal_parent_move_id not in picking.move_ids:
+                    continue
+                clines = child.move_line_ids.filtered(lambda ml: ml.lot_id and ml.quantity > 0)
+                if not clines:
+                    continue
+                clines.write({'picked': True})
+                rounding = child.product_uom.rounding
+                if float_compare(child.quantity, child.product_uom_qty, precision_rounding=rounding) < 0:
+                    child.quantity = child.product_uom_qty
+                child.picked = True
+
+    def write(self, vals):
+        if 'observation_li' in vals:
+            locked = self.filtered(lambda p: p.state in ('done', 'cancel'))
+            if locked:
+                raise UserError(_("No se puede modificar la Observación L&I cuando la operación está en estado Hecho o Cancelado."))
+        preserve_serials = (
+            not self.env.context.get('skip_supplies_serial_preserve')
+            and ('move_ids' in vals or 'move_ids_without_package' in vals or 'picking_type_id' in vals)
+        )
+        serial_snapshot = self._supplies_snapshot_picking_serials() if preserve_serials else {}
+        sync_route_chain = 'move_ids' in vals or 'move_ids_without_package' in vals
+        res = super().write(vals)
+        if serial_snapshot:
+            self._supplies_restore_picking_serials(serial_snapshot)
+        if sync_route_chain and not self.env.context.get('skip_route_chain_sync'):
+            for picking in self:
+                if picking._route_origin_base():
+                    picking._sync_route_chain_from_picking()
+        return res
+
     # Campo computed para mostrar solo líneas principales
     move_ids_main_only = fields.One2many(
         'stock.move',
@@ -91,17 +501,24 @@ class StockPicking(models.Model):
     
     @api.depends('move_ids', 'move_ids.supply_kind', 'move_ids.internal_parent_move_id')
     def _compute_move_ids_main_only(self):
-        """Odoo 19: usa move_ids (move_ids_without_package no existe en vista estándar). Solo padres: supply_kind='parent' y sin internal_parent_move_id."""
+        """Mostrar movimientos principales sin perder líneas válidas por datos heredados."""
         for picking in self:
             try:
                 # Odoo 19: la vista usa move_ids; el modelo puede tener move_ids_without_package (stock) o no
                 moves = getattr(picking, 'move_ids_without_package', None) or picking.move_ids
-                picking.move_ids_main_only = moves.filtered(
+                main_moves = moves.filtered(
                     lambda m: (
-                        hasattr(m, 'supply_kind') and m.supply_kind == 'parent'
-                        and (not hasattr(m, 'internal_parent_move_id') or not m.internal_parent_move_id)
+                        (not hasattr(m, 'internal_parent_move_id') or not m.internal_parent_move_id)
+                        and (
+                            (hasattr(m, 'supply_kind') and m.supply_kind == 'parent')
+                            or (not hasattr(m, 'supply_kind') or not m.supply_kind)
+                        )
                     )
                 )
+                # Fallback: si por datos previos no hay "parent", mostrar top-level para no ocultar productos.
+                if not main_moves:
+                    main_moves = moves.filtered(lambda m: not getattr(m, 'internal_parent_move_id', False))
+                picking.move_ids_main_only = main_moves
             except Exception:
                 picking.move_ids_main_only = self.env['stock.move']
     
@@ -126,6 +543,47 @@ class StockPicking(models.Model):
                 )
             except Exception:
                 picking.move_line_ids_main_only = self.env['stock.move.line']
+
+    def action_debug_date_render(self):
+        self.ensure_one()
+        dt = self.scheduled_date or self.date_deadline
+        try:
+            formatted = (
+                format_datetime(
+                    self.env,
+                    dt,
+                    tz=self.env.user.tz or "UTC",
+                    dt_format="dd/MM/y HH:mm",
+                    lang_code=self.env.lang or None,
+                )
+                if dt
+                else "N/A"
+            )
+        except Exception:
+            formatted = str(dt) if dt else "N/A"
+        msg = _(
+            "scheduled_date: %(scheduled)s\n"
+            "date_deadline: %(deadline)s\n"
+            "TZ usuario: %(tz)s\n"
+            "Lang: %(lang)s\n"
+            "format_datetime: %(formatted)s"
+        ) % {
+            'scheduled': self.scheduled_date or 'N/A',
+            'deadline': self.date_deadline or 'N/A',
+            'tz': self.env.user.tz or 'UTC',
+            'lang': self.env.lang or 'N/A',
+            'formatted': formatted,
+        }
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Debug fecha programada'),
+                'message': msg,
+                'type': 'warning',
+                'sticky': True,
+            },
+        }
     
 
     @api.model
@@ -140,6 +598,8 @@ class StockPicking(models.Model):
         if isinstance(result, tuple) and len(result) >= 2:
             arch, view = result[0], result[1]
             if view_type == 'form':
+                # Cabecera: una sola fecha útil (scheduled_date); quitar deadline/popover duplicados del arch fusionado.
+                arch = _normalize_picking_form_scheduled_date_arch(arch)
                 arch = _inject_picking_supplies_page(arch)
             return (arch, view)
         # Si devuelve otra cosa (ej. dict), no modificar
@@ -198,6 +658,9 @@ class StockPicking(models.Model):
                     removed = self.env["stock.move.line"]._consolidate_duplicate_move_lines_for_picking(picking)
                     if removed == 0:
                         break
+        for picking in self:
+            picking._sync_route_chain_from_picking()
+        self._supplies_prepare_moves_for_validation()
         # Validar el picking
         res = super().button_validate()
         self._log_supplies_purchase_history()

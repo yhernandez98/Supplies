@@ -12,11 +12,12 @@
                         </group>
                     </group>
                     <field name="allowed_lot_ids" invisible="1"/>
+                    <field name="inactivate_flow_active" invisible="1"/>
                     <group string="Datos de búsqueda" invisible="search_mode != 'inventory'">
                         <field name="partner_id" options="{'no_create': True}" placeholder="Cliente (empresa)"/>
                         <field name="inventory_plate" placeholder="Digite la placa (ej. I0021316)"/>
                         <field name="lot_id" options="{'no_create': True, 'no_open': True}" readonly="1"
-                               placeholder="Equipo encontrado por placa"/>
+                               force_save="1" placeholder="Equipo encontrado por placa"/>
                     </group>
                     <group string="Datos de búsqueda" invisible="search_mode != 'user'">
                         <field name="partner_id" options="{'no_create': True}" placeholder="Cliente (empresa)"/>
@@ -25,14 +26,23 @@
                     <group string="Al registrar (ticket y tarea)" colspan="2">
                         <field name="unlink_user_from_equipment"/>
                         <field name="client_requests_license_removal"/>
+                        <field name="inactivate_user" invisible="search_mode != 'user'"/>
                     </group>
                     <group string="Resumen según selección" colspan="2">
                         <field name="relation_info_html" nolabel="1" colspan="2" readonly="1"/>
                     </group>
+                    <group string="Diagnóstico licencias (debug)" colspan="2"
+                           invisible="search_mode != 'user' or not user_license_debug_html">
+                        <field name="user_license_debug_html" nolabel="1" colspan="2" readonly="1"/>
+                    </group>
                 </sheet>
                 <footer>
+                    <button name="action_debug_user_license_sources" type="object"
+                            string="Debug licencias" class="btn-secondary"
+                            invisible="search_mode != 'user'"
+                            title="Muestra contadores ORM y SQL: por qué el resumen marca 0 licencias y qué contact_id usa la asignación M365."/>
                     <button name="action_register_followup" type="object" string="Registrar retiro" class="btn-primary"
-                            title="Crea ticket y tarea. Por defecto quita el usuario del equipo; las licencias solo se retiran si el cliente lo solicita (según tipo de contratación). Advertencia si hay permanencia de renting."/>
+                            title="Crea un ticket en etapa Nuevo por cada acción marcada (devolución de equipo y/o retiro de licencias). Si retira licencias por placa, primero elige cuáles cancelar."/>
                     <button string="Cerrar" special="cancel" class="btn-secondary"/>
                 </footer>
             </form>
@@ -59,11 +69,12 @@
                         </group>
                     </group>
                     <field name="allowed_lot_ids" invisible="1"/>
+                    <field name="inactivate_flow_active" invisible="1"/>
                     <group string="Datos de búsqueda" invisible="search_mode != 'inventory'">
                         <field name="partner_id" options="{'no_create': True}" placeholder="Cliente (empresa)"/>
                         <field name="inventory_plate" placeholder="Digite la placa (ej. I0021316)"/>
                         <field name="lot_id" options="{'no_create': True, 'no_open': True}" readonly="1"
-                               placeholder="Equipo encontrado por placa"/>
+                               force_save="1" placeholder="Equipo encontrado por placa"/>
                     </group>
                     <group string="Datos de búsqueda" invisible="search_mode != 'user'">
                         <field name="partner_id" options="{'no_create': True}" placeholder="Cliente (empresa)"/>

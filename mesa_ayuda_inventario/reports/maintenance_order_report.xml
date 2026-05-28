@@ -1,6 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
+        <!-- Formato A4 «Supplies»: márgenes y DPI alineados con report.paperformat del cliente -->
+        <record id="paperformat_supplies_maintenance_order" model="report.paperformat">
+            <field name="name">Supplies (Orden visita / mesa)</field>
+            <field name="format">A4</field>
+            <field name="orientation">Portrait</field>
+            <field name="margin_top">40</field>
+            <field name="margin_bottom">12</field>
+            <field name="margin_left">7</field>
+            <field name="margin_right">7</field>
+            <field name="header_line" eval="False"/>
+            <field name="header_spacing">22</field>
+            <field name="dpi">90</field>
+            <field name="disable_shrinking" eval="False"/>
+        </record>
+
         <!-- Reporte PDF de Orden de Mantenimiento Completa -->
         <record id="action_report_maintenance_order" model="ir.actions.report">
             <field name="name">Reporte de Orden de Mantenimiento</field>
@@ -11,223 +26,283 @@
             <field name="print_report_name">'Reporte de Orden - %s' % (object.name or 'Sin Referencia')</field>
             <field name="binding_model_id" ref="mesa_ayuda_inventario.model_maintenance_order"/>
             <field name="binding_type">report</field>
+            <field name="paperformat_id" ref="mesa_ayuda_inventario.paperformat_supplies_maintenance_order"/>
         </record>
 
-        <!-- Plantilla QWeb del Reporte -->
+        <!-- Plantilla QWeb: estilo Orden de Servicio (papel) + bloques ya existentes -->
         <template id="report_maintenance_order">
             <t t-call="web.html_container">
                 <t t-foreach="docs" t-as="order">
                     <t t-call="web.external_layout">
-                        <div class="page" style="padding: 30px; font-family: 'Arial', sans-serif; color: #2c3e50;">
-                            <!-- Encabezado -->
-                            <div style="text-align: center; margin-bottom: 30px; border-bottom: 3px solid #4a90e2; padding-bottom: 20px;">
-                                <h1 style="color: #4a90e2; margin: 0; font-size: 28px; font-weight: bold;">
-                                    REPORTE DE ORDEN DE MANTENIMIENTO
-                                </h1>
-                                <p style="color: #6c757d; margin: 5px 0 0 0; font-size: 14px;">
-                                    <t t-esc="order.name or 'Sin Referencia'"/>
-                                </p>
+                        <t t-set="partner" t-value="order.partner_id"/>
+                        <t t-set="ticket" t-value="order.ticket_id"/>
+                        <t t-set="comp" t-value="order.env.company"/>
+                        <div class="page" style="padding: 8px 4px 12px; font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; font-size: 10px;">
+                            <style>
+                                .mesa-os-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+                                .mesa-os-table td, .mesa-os-table th {
+                                    border: 1px solid #0d2544; padding: 5px 6px; vertical-align: top;
+                                }
+                                .mesa-os-label { font-weight: 700; background: #e8eef5; color: #0d2544; width: 18%; font-size: 9px; }
+                                .mesa-os-h1 { font-size: 17px; font-weight: 700; color: #0d2544; margin: 0 0 10px 0; letter-spacing: 0.02em; }
+                                .mesa-os-muted { color: #555; font-size: 9px; }
+                                .mesa-os-block-title { font-size: 11px; font-weight: 700; color: #0d2544; margin: 12px 0 6px; border-bottom: 1px solid #0d6efd; padding-bottom: 3px; }
+                            </style>
+
+                            <!-- Cabecera tipo Orden de Servicio -->
+                            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px;">
+                                <div>
+                                    <div class="mesa-os-h1">Orden de Servicio</div>
+                                    <div class="mesa-os-muted">Documento equivalente al formato físico de visita en sitio</div>
+                                </div>
+                                <div style="text-align: right; border: 2px solid #c0392b; padding: 6px 14px; border-radius: 4px;">
+                                    <span style="font-size: 10px; color: #555;">No.</span><br/>
+                                    <span style="font-size: 18px; font-weight: 800; color: #c0392b;"><t t-esc="order.name or '—'"/></span>
+                                </div>
                             </div>
 
-                            <!-- Información General de la Orden -->
-                            <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 25px; border-left: 5px solid #4a90e2;">
-                                <h2 style="color: #2c3e50; margin-top: 0; margin-bottom: 15px; font-size: 18px; border-bottom: 2px solid #4a90e2; padding-bottom: 8px;">
-                                    📋 INFORMACIÓN GENERAL
-                                </h2>
+                            <!-- Rejilla datos generales (fecha, tipo servicio, horarios programados) -->
+                            <table class="mesa-os-table">
+                                <tr>
+                                    <td class="mesa-os-label">Fecha</td>
+                                    <td><span t-field="order.scheduled_date" t-options="{'widget': 'date'}"/></td>
+                                    <td class="mesa-os-label">Tipo contrato</td>
+                                    <td>—</td>
+                                    <td class="mesa-os-label">Tipo servicio</td>
+                                    <td><span t-field="order.activity_type"/></td>
+                                </tr>
+                                <tr>
+                                    <td class="mesa-os-label">Hora inicio (prog.)</td>
+                                    <td><span t-if="order.scheduled_date" t-field="order.scheduled_date" t-options="{'widget': 'datetime'}"/><t t-else="">—</t></td>
+                                    <td class="mesa-os-label">Hora fin (prog.)</td>
+                                    <td><span t-if="order.deadline_date" t-field="order.deadline_date" t-options="{'widget': 'datetime'}"/><t t-else="">—</t></td>
+                                    <td class="mesa-os-label">Factura N° / Valor</td>
+                                    <td>— / —</td>
+                                </tr>
+                            </table>
+
+                            <!-- Cliente / sitio / contacto -->
+                            <table class="mesa-os-table">
+                                <tr>
+                                    <td class="mesa-os-label">Cliente</td>
+                                    <td colspan="3"><strong t-esc="partner.display_name if partner else '—'"/></td>
+                                    <td class="mesa-os-label">NIT</td>
+                                    <td><t t-esc="partner.vat if partner else '—'"/></td>
+                                </tr>
+                                <tr>
+                                    <td class="mesa-os-label">Sede</td>
+                                    <td><t t-esc="ticket.location_site if ticket and ticket.location_site else '—'"/></td>
+                                    <td class="mesa-os-label">Área</td>
+                                    <td>—</td>
+                                    <td class="mesa-os-label">Usuario (ticket)</td>
+                                    <td><t t-esc="ticket.partner_id.display_name if ticket and ticket.partner_id else (partner.display_name if partner else '—')"/></td>
+                                </tr>
+                                <tr>
+                                    <td class="mesa-os-label">Dirección</td>
+                                    <td colspan="3">
+                                        <t t-if="partner">
+                                            <t t-esc="partner.street or ''"/> <t t-esc="partner.street2 or ''"/>
+                                            <t t-if="partner.city"> — <t t-esc="partner.city"/></t>
+                                            <t t-if="partner.state_id">, <t t-esc="partner.state_id.name"/></t>
+                                        </t>
+                                        <t t-else="">—</t>
+                                    </td>
+                                    <td class="mesa-os-label">Teléfono</td>
+                                    <td>
+                                        <t t-if="partner"><t t-esc="partner.phone or partner.mobile or '—'"/></t>
+                                        <t t-else="">—</t>
+                                    </td>
+                                </tr>
+                                <tr t-if="order.technician_ids">
+                                    <td class="mesa-os-label">Técnicos</td>
+                                    <td colspan="5">
+                                        <t t-foreach="order.technician_ids" t-as="tech">
+                                            <t t-esc="tech.display_name"/><t t-if="tech_index &lt; len(order.technician_ids) - 1">, </t>
+                                        </t>
+                                    </td>
+                                </tr>
+                                <tr t-if="ticket">
+                                    <td class="mesa-os-label">Ticket</td>
+                                    <td colspan="5"><t t-esc="ticket.display_name"/></td>
+                                </tr>
+                            </table>
+
+                            <!-- Texto introductorio (mismo espíritu que el papel) -->
+                            <p style="margin: 10px 0; text-align: justify; line-height: 1.45; font-size: 9.5px;">
+                                La presente acta hace constancia de la entrega y/o intervención sobre el(los) activo(s) indicado(s),
+                                el cual queda bajo la responsabilidad del cliente respecto del cuidado y conservación del equipo y sus elementos;
+                                el detalle técnico del trabajo realizado se describe más abajo. Las especificaciones del activo principal
+                                se relacionan según el inventario serializado registrado en el sistema.
+                            </p>
+
+                            <!-- Por cada equipo (mantenimiento en la orden) -->
+                            <t t-if="order.maintenance_ids">
+                                <t t-foreach="order.maintenance_ids" t-as="mline">
+                                    <t t-set="lot" t-value="mline.lot_id"/>
+                                    <div style="page-break-inside: avoid; margin-bottom: 14px;">
+                                        <div class="mesa-os-block-title">Especificaciones del activo — <t t-esc="lot.display_name if lot else mline.display_name"/></div>
+                                        <table class="mesa-os-table">
+                                            <tr>
+                                                <td class="mesa-os-label">Producto</td>
+                                                <td colspan="3"><t t-esc="mline.product_id.display_name if mline.product_id else '—'"/></td>
+                                                <td class="mesa-os-label">Tipo trabajo</td>
+                                                <td><span t-field="mline.maintenance_type"/></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="mesa-os-label">Serial</td>
+                                                <td><t t-esc="lot.name if lot else '—'"/></td>
+                                                <td class="mesa-os-label">Modelo</td>
+                                                <td><t t-esc="lot.model_name if lot and lot.model_name else '—'"/></td>
+                                                <td class="mesa-os-label">Placa inv.</td>
+                                                <td><t t-esc="lot.inventory_plate if lot else '—'"/></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="mesa-os-label">Placa seguridad</td>
+                                                <td><t t-esc="lot.security_plate if lot and lot.security_plate else '—'"/></td>
+                                                <td class="mesa-os-label">Cód. facturación</td>
+                                                <td><t t-esc="lot.billing_code if lot and lot.billing_code else '—'"/></td>
+                                                <td class="mesa-os-label">Placa servicio</td>
+                                                <td>—</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="mesa-os-label">RAM / CPU / Disco</td>
+                                                <td colspan="5">—</td>
+                                            </tr>
+                                        </table>
+                                        <table class="mesa-os-table" style="margin-top: 4px;">
+                                            <tr>
+                                                <td class="mesa-os-label" style="width: 22%;">Daño / motivo (tipo)</td>
+                                                <td><span t-field="mline.maintenance_type"/></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="mesa-os-label">Descripción del trabajo</td>
+                                                <td style="min-height: 48px;">
+                                                    <div t-field="mline.description" t-options="{'widget': 'html'}" style="font-size: 9.5px; line-height: 1.4;"/>
+                                                </td>
+                                            </tr>
+                                            <tr t-if="mline.observations">
+                                                <td class="mesa-os-label">Observaciones</td>
+                                                <td>
+                                                    <div t-field="mline.observations" t-options="{'widget': 'html'}" style="font-size: 9.5px; line-height: 1.4;"/>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </t>
+                            </t>
+                            <t t-else="">
+                                <p class="mesa-os-muted" style="margin-bottom: 12px;">Sin líneas de equipo vinculadas a esta orden en el momento del reporte.</p>
+                            </t>
+
+                            <!-- Propósito / descripción general de la orden (texto plano) -->
+                            <t t-if="order.visit_purpose">
+                                <div class="mesa-os-block-title">Propósito de la visita</div>
+                                <p style="margin: 0 0 10px; white-space: pre-wrap;"><t t-esc="order.visit_purpose"/></p>
+                            </t>
+                            <t t-if="order.description">
+                                <div class="mesa-os-block-title">Descripción general de la orden</div>
+                                <p style="margin: 0 0 10px; white-space: pre-wrap;"><t t-esc="order.description"/></p>
+                            </t>
+
+                            <!-- Informe HTML guardado en la orden (acta enriquecido) -->
+                            <div t-if="order.visit_documentation_html" style="margin-bottom: 14px; page-break-inside: avoid;">
+                                <div class="mesa-os-block-title">Documentación de visita (informe guardado)</div>
+                                <div style="border: 1px solid #b6cff7; padding: 8px; background: #fafcff;">
+                                    <div t-field="order.visit_documentation_html" t-options="{'widget': 'html'}" style="font-size: 9px; line-height: 1.35;"/>
+                                </div>
+                            </div>
+
+                            <!-- Resumen de cierre (sin cambiar lógica previa) -->
+                            <div t-if="order.mesa_pdf_summary_effective" style="margin-bottom: 18px; border: 1px solid #b6cff7; border-radius: 6px; overflow: hidden; background: #ffffff; page-break-inside: avoid;">
+                                <div style="background: #0d6efd; color: #ffffff; padding: 8px 12px; font-size: 11px; font-weight: 700;">
+                                    Resumen de cierre (mismo texto que en la descripción del ticket)
+                                </div>
+                                <div style="padding: 10px 12px 12px; font-size: 10px; color: #212529; line-height: 1.45;">
+                                    <div t-field="order.mesa_pdf_summary_effective" t-options="{'widget': 'html'}"/>
+                                </div>
+                            </div>
+
+                            <!-- Aviso legal breve -->
+                            <p style="font-size: 8.5px; text-align: justify; line-height: 1.4; margin: 10px 0 14px; color: #333;">
+                                Para cualquier tipo de mantenimiento o reparación debe acudir al personal autorizado de
+                                <strong t-esc="comp.name if comp else 'Supplies de Colombia'"/>.
+                                Al firmar, el receptor acepta las políticas de uso y conservación del activo y la constancia del trabajo descrito.
+                            </p>
+
+                            <!-- Firmas: cliente + técnicos -->
+                            <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 16px; border-left: 4px solid #6c757d; page-break-inside: avoid;">
+                                <h2 style="color: #0d2544; margin: 0 0 10px; font-size: 13px; font-weight: 700;">Firmas</h2>
                                 <table style="width: 100%; border-collapse: collapse;">
-                                    <tr t-if="order.partner_id">
-                                        <td style="width: 35%; padding: 8px; font-weight: bold; color: #495057;">Cliente:</td>
-                                        <td style="padding: 8px; color: #212529; font-size: 16px;"><strong><t t-esc="order.partner_id.display_name"/></strong></td>
-                                    </tr>
-                                    <tr t-if="order.scheduled_date">
-                                        <td style="padding: 8px; font-weight: bold; color: #495057;">Fecha Programada:</td>
-                                        <td style="padding: 8px; color: #212529;"><t t-esc="order.scheduled_date"/></td>
-                                    </tr>
-                                    <tr t-if="order.technician_ids">
-                                        <td style="padding: 8px; font-weight: bold; color: #495057;">Técnicos Asignados:</td>
-                                        <td style="padding: 8px; color: #212529;">
-                                            <t t-foreach="order.technician_ids" t-as="tech">
-                                                <t t-esc="tech.display_name"/><t t-if="tech_index &lt; len(order.technician_ids) - 1">, </t>
+                                    <tr>
+                                        <td style="width: 50%; vertical-align: top; padding: 8px;">
+                                            <h3 style="margin: 0 0 6px; font-size: 11px; color: #495057;">Recibe (cliente)</h3>
+                                            <div style="min-height: 72px; border: 1px dashed #adb5bd; padding: 6px; background: white; text-align: center;">
+                                                <t t-if="order.customer_signature">
+                                                    <img t-att-src="image_data_uri(order.customer_signature)" style="max-width: 100%; max-height: 72px; object-fit: contain;"/>
+                                                </t>
+                                                <t t-else="">
+                                                    <span style="color: #999;">Sin firma registrada</span>
+                                                </t>
+                                            </div>
+                                            <p style="margin: 6px 0 0; font-size: 10px;">
+                                                <strong>Nombre:</strong>
+                                                <t t-esc="order.customer_signed_by.display_name if order.customer_signed_by else '—'"/>
+                                            </p>
+                                            <p style="margin: 2px 0; font-size: 10px;">
+                                                <strong>Identificación (NIT/CC):</strong>
+                                                <t t-esc="order.customer_signed_by.vat if order.customer_signed_by and order.customer_signed_by.vat else '—'"/>
+                                            </p>
+                                            <p t-if="order.customer_signed_date" style="margin: 2px 0; font-size: 9px; color: #666;">
+                                                <t t-esc="order.customer_signed_date"/>
+                                            </p>
+                                        </td>
+                                        <td style="width: 50%; vertical-align: top; padding: 8px;">
+                                            <h3 style="margin: 0 0 6px; font-size: 11px; color: #495057;">Técnicos</h3>
+                                            <t t-foreach="order.technician_signature_ids" t-as="sig">
+                                                <div style="margin-bottom: 10px; border-bottom: 1px solid #dee2e6; padding-bottom: 6px;">
+                                                    <div style="font-size: 10px; font-weight: 600;"><t t-esc="sig.technician_id.display_name"/></div>
+                                                    <div style="min-height: 56px; border: 1px dashed #ced4da; margin-top: 4px; text-align: center; background: #fff;">
+                                                        <t t-if="sig.signature">
+                                                            <img t-att-src="image_data_uri(sig.signature)" style="max-width: 100%; max-height: 56px; object-fit: contain;"/>
+                                                        </t>
+                                                        <t t-else="">
+                                                            <span style="color: #aaa; font-size: 9px;">Sin firma</span>
+                                                        </t>
+                                                    </div>
+                                                    <div t-if="sig.signature_date" style="font-size: 8px; color: #666; margin-top: 2px;">
+                                                        <t t-esc="sig.signature_date"/>
+                                                    </div>
+                                                </div>
+                                            </t>
+                                            <t t-if="not order.technician_signature_ids">
+                                                <span class="mesa-os-muted">Sin registros de firma por técnico.</span>
                                             </t>
                                         </td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 8px; font-weight: bold; color: #495057;">Estado:</td>
-                                        <td style="padding: 8px; color: #212529;">
-                                            <span t-if="order.state == 'draft'" style="background: #ffc107; color: #000; padding: 4px 8px; border-radius: 4px; font-weight: bold;">Borrador</span>
-                                            <span t-if="order.state == 'scheduled'" style="background: #17a2b8; color: #fff; padding: 4px 8px; border-radius: 4px; font-weight: bold;">Programada</span>
-                                            <span t-if="order.state == 'in_progress'" style="background: #007bff; color: #fff; padding: 4px 8px; border-radius: 4px; font-weight: bold;">En Progreso</span>
-                                            <span t-if="order.state == 'completed'" style="background: #28a745; color: #fff; padding: 4px 8px; border-radius: 4px; font-weight: bold;">Completada</span>
-                                            <span t-if="order.state == 'cancelled'" style="background: #dc3545; color: #fff; padding: 4px 8px; border-radius: 4px; font-weight: bold;">Cancelada</span>
-                                        </td>
-                                    </tr>
-                                    <tr t-if="order.description">
-                                        <td style="padding: 8px; font-weight: bold; color: #495057;">Descripción:</td>
-                                        <td style="padding: 8px; color: #212529;"><t t-esc="order.description"/></td>
                                     </tr>
                                 </table>
                             </div>
 
-                            <!-- Equipos Mantenidos -->
-                            <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 25px; border-left: 5px solid #28a745;">
-                                <h2 style="color: #2c3e50; margin-top: 0; margin-bottom: 15px; font-size: 18px; border-bottom: 2px solid #28a745; padding-bottom: 8px;">
-                                    🔧 EQUIPOS MANTENIDOS
-                                </h2>
-                                
-                                <t t-foreach="order.maintenance_ids" t-as="maint" t-index="maint_index">
-                                    <div style="background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
-                                        <!-- Información del Equipo -->
-                                        <h3 style="color: #4a90e2; margin-top: 0; margin-bottom: 15px; font-size: 16px; border-bottom: 1px solid #4a90e2; padding-bottom: 5px;">
-                                            Equipo <t t-esc="maint_index + 1"/> de <t t-esc="len(order.maintenance_ids)"/>
-                                        </h3>
-                                        
-                                        <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
-                                            <tr t-if="maint.lot_id">
-                                                <td style="width: 30%; padding: 6px; font-weight: bold; color: #495057;">Número de Serie:</td>
-                                                <td style="padding: 6px; color: #212529;"><strong><t t-esc="maint.lot_id.name"/></strong></td>
-                                            </tr>
-                                            <tr t-if="maint.inventory_plate">
-                                                <td style="padding: 6px; font-weight: bold; color: #495057;">Placa de Inventario:</td>
-                                                <td style="padding: 6px; color: #212529;"><strong><t t-esc="maint.inventory_plate"/></strong></td>
-                                            </tr>
-                                            <tr t-if="maint.product_id">
-                                                <td style="padding: 6px; font-weight: bold; color: #495057;">Producto:</td>
-                                                <td style="padding: 6px; color: #212529;"><t t-esc="maint.product_id.display_name or 'N/A'"/></td>
-                                            </tr>
-                                            <tr>
-                                                <td style="padding: 6px; font-weight: bold; color: #495057;">Tipo de Servicio:</td>
-                                                <td style="padding: 6px; color: #212529;">
-                                                    <t t-if="maint.maintenance_type == 'preventive'">Mantenimiento Preventivo</t>
-                                                    <t t-if="maint.maintenance_type == 'corrective'">Mantenimiento Correctivo</t>
-                                                    <t t-if="maint.maintenance_type == 'remote_support'">Soporte Técnico Remoto</t>
-                                                    <t t-if="maint.maintenance_type == 'onsite_support'">Soporte Técnico en Sitio</t>
-                                                    <t t-if="maint.maintenance_type == 'diagnosis'">Diagnóstico y Evaluación</t>
-                                                    <t t-if="maint.maintenance_type == 'installation'">Instalación y Configuración</t>
-                                                    <t t-if="maint.maintenance_type == 'server_implementation'">Implementación de Servidores</t>
-                                                    <t t-if="maint.maintenance_type == 'server_migration'">Migración de Servidores</t>
-                                                    <t t-if="maint.maintenance_type == 'backup_recovery'">Backup y Recuperación</t>
-                                                    <t t-if="maint.maintenance_type == 'firewall_vpn'">Configuración de Firewall/VPN</t>
-                                                    <t t-if="maint.maintenance_type == 'licensing_m365'">Gestión de Licenciamiento M365</t>
-                                                    <t t-if="maint.maintenance_type == 'admin_m365'">Administración de M365 / SharePoint</t>
-                                                    <t t-if="maint.maintenance_type == 'upgrade'">Actualización / Mejora</t>
-                                                    <t t-if="maint.maintenance_type == 'other'">Otro</t>
-                                                </td>
-                                            </tr>
-                                            <tr t-if="maint.technician_ids">
-                                                <td style="padding: 6px; font-weight: bold; color: #495057;">Técnicos:</td>
-                                                <td style="padding: 6px; color: #212529;">
-                                                    <t t-foreach="maint.technician_ids" t-as="tech">
-                                                        <t t-esc="tech.display_name"/><t t-if="tech_index &lt; len(maint.technician_ids) - 1">, </t>
-                                                    </t>
-                                                </td>
-                                            </tr>
-                                            <tr t-if="maint.maintenance_date">
-                                                <td style="padding: 6px; font-weight: bold; color: #495057;">Fecha:</td>
-                                                <td style="padding: 6px; color: #212529;"><t t-esc="maint.maintenance_date"/></td>
-                                            </tr>
-                                        </table>
-                                        
-                                        <!-- Licencias Asignadas al Equipo -->
-                                        <t t-set="equipment_licenses" t-value="maint.lot_id._get_assigned_licenses() if maint.lot_id else []"/>
-                                        <div t-if="equipment_licenses and len(equipment_licenses) > 0" style="margin-top: 15px; padding: 15px; background: #fff3e0; border-radius: 5px; border-left: 3px solid #ff9800;">
-                                            <h4 style="color: #495057; font-size: 14px; margin-bottom: 10px;">📜 Licencias Asignadas al Equipo</h4>
-                                            <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-                                                <thead>
-                                                    <tr style="background-color: #ff9800; color: white;">
-                                                        <th style="padding: 6px; text-align: left; border: 1px solid #f57c00;">Licencia</th>
-                                                        <th style="padding: 6px; text-align: left; border: 1px solid #f57c00;">Producto/Servicio</th>
-                                                        <th style="padding: 6px; text-align: left; border: 1px solid #f57c00;">Cliente</th>
-                                                        <th style="padding: 6px; text-align: left; border: 1px solid #f57c00;">Fecha Asignación</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <t t-foreach="equipment_licenses" t-as="license">
-                                                        <tr>
-                                                            <td style="padding: 5px; border: 1px solid #ffe0b2;"><t t-esc="license.license_id.name or 'N/A'"/></td>
-                                                            <td style="padding: 5px; border: 1px solid #ffe0b2;"><t t-esc="(license.license_id and license.license_id.product_id and license.license_id.product_id.display_name) or 'N/A'"/></td>
-                                                            <td style="padding: 5px; border: 1px solid #ffe0b2;"><t t-esc="license.partner_id.display_name or 'N/A'"/></td>
-                                                            <td style="padding: 5px; border: 1px solid #ffe0b2;">
-                                                                <t t-if="license.assignment_date"><t t-esc="license.assignment_date"/></t>
-                                                                <t t-else="">N/A</t>
-                                                            </td>
-                                                        </tr>
-                                                    </t>
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                        
-                                        <!-- Descripción del Trabajo -->
-                                        <div t-if="maint.description" style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
-                                            <strong style="color: #495057;">Descripción del Trabajo:</strong>
-                                            <div style="margin-top: 8px; color: #212529;">
-                                                <t t-esc="maint.description"/>
-                                            </div>
-                                        </div>
-                                        
-                                        <!-- Observaciones -->
-                                        <div t-if="maint.observations" style="margin-top: 15px; padding: 10px; background: #fff3cd; border-radius: 5px;">
-                                            <strong style="color: #856404;">Observaciones:</strong>
-                                            <div style="margin-top: 8px; color: #212529;">
-                                                <t t-esc="maint.observations"/>
-                                            </div>
-                                        </div>
-                                        
-                                        <!-- Firma del Técnico Principal de este Mantenimiento -->
-                                        <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 5px; border-top: 2px solid #4a90e2;">
-                                            <h4 style="color: #495057; font-size: 14px; margin-bottom: 10px; text-align: center;">
-                                                Firma del Técnico Principal
-                                            </h4>
-                                            <div style="display: flex; gap: 20px; justify-content: space-around; align-items: flex-start;">
-                                                <div style="flex: 1; text-align: center;">
-                                                    <div style="min-height: 100px; border: 2px dashed #4a90e2; border-radius: 5px; padding: 10px; background: white; display: flex; align-items: center; justify-content: center;">
-                                                        <t t-if="maint.technician_signature">
-                                                            <img t-att-src="image_data_uri(maint.technician_signature)" style="max-width: 100%; max-height: 100px; object-fit: contain;"/>
-                                                        </t>
-                                                        <t t-else="">
-                                                            <span style="color: #999;">No firmado</span>
-                                                        </t>
-                                                    </div>
-                                                    <p t-if="maint.technician_id" style="margin-top: 10px; font-size: 12px; color: #495057;">
-                                                        <strong><t t-esc="maint.technician_id.display_name"/></strong>
-                                                        <t t-if="maint.technician_signed_date">
-                                                            <br/><span style="font-size: 11px; color: #6c757d;"><t t-esc="maint.technician_signed_date"/></span>
-                                                        </t>
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </t>
-                            </div>
-
-                            <!-- Firmas -->
-                            <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 25px; border-left: 5px solid #6c757d;">
-                                <h2 style="color: #2c3e50; margin-top: 0; margin-bottom: 15px; font-size: 18px; border-bottom: 2px solid #6c757d; padding-bottom: 8px;">
-                                    ✍️ FIRMAS
-                                </h2>
-                                <div style="display: flex; gap: 30px; justify-content: space-around;">
-                                    <div style="flex: 1; text-align: center;">
-                                        <h3 style="color: #495057; font-size: 14px; margin-bottom: 10px;">Firma del Cliente</h3>
-                                        <div style="min-height: 80px; border: 2px dashed #dee2e6; border-radius: 5px; padding: 10px; background: white;">
-                                            <t t-if="order.customer_signature">
-                                                <img t-att-src="image_data_uri(order.customer_signature)" style="max-width: 100%; max-height: 80px; object-fit: contain;"/>
+                            <!-- Pie: empresa + trazabilidad sistema -->
+                            <div style="margin-top: 12px; padding-top: 10px; border-top: 2px solid #dee2e6; font-size: 9px; color: #444;">
+                                <table style="width: 100%; border-collapse: collapse;">
+                                    <tr>
+                                        <td style="vertical-align: top; width: 58%;">
+                                            <strong t-esc="comp.name if comp else ''"/><br/>
+                                            <t t-if="comp and comp.partner_id">
+                                                <t t-esc="comp.partner_id.street or ''"/> <t t-esc="comp.partner_id.street2 or ''"/><br/>
+                                                <t t-if="comp.partner_id.city"><t t-esc="comp.partner_id.city"/></t>
+                                                <t t-if="comp.partner_id.phone"> — Tel. <t t-esc="comp.partner_id.phone"/></t>
+                                                <t t-if="comp.partner_id.website"><br/><t t-esc="comp.partner_id.website"/></t>
                                             </t>
-                                            <t t-else="">
-                                                <span style="color: #999;">No firmado</span>
-                                            </t>
-                                        </div>
-                                        <p t-if="order.customer_signed_by" style="margin-top: 10px; font-size: 12px; color: #6c757d;">
-                                            <strong><t t-esc="order.customer_signed_by.display_name"/></strong>
-                                            <t t-if="order.customer_signed_date"><br/><t t-esc="order.customer_signed_date"/></t>
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Pie de página -->
-                            <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #dee2e6; text-align: center; color: #6c757d; font-size: 12px;">
-                                <p>Este documento fue generado mediante el sistema de Mesa de Ayuda - Inventario</p>
-                                <p>Total de equipos mantenidos: <strong><t t-esc="len(order.maintenance_ids)"/></strong></p>
+                                        </td>
+                                        <td style="vertical-align: top; text-align: right; font-size: 8.5px; color: #6c757d;">
+                                            Generado desde Mesa de Ayuda - Inventario
+                                        </td>
+                                    </tr>
+                                </table>
+                                <p style="text-align: center; margin: 8px 0 0; font-size: 8.5px; color: #6c757d;">
+                                    Documento generado electrónicamente; conserve el PDF junto con el acta digital del ticket.
+                                </p>
                             </div>
                         </div>
                     </t>
@@ -236,4 +311,3 @@
         </template>
     </data>
 </odoo>
-

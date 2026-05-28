@@ -108,6 +108,31 @@ def post_init_hook(env):
     except Exception as e:
         _logger.error('❌ Error al recalcular has_excluded_supply_elements: %s', str(e), exc_info=True)
 
+    # Recalcular ubicación/contacto mostrados (jerarquía KANGU/Existencias → cliente)
+    try:
+        StockLot = env['stock.lot']
+        if 'display_contact_id' in StockLot._fields and hasattr(StockLot, '_compute_display_location_contact'):
+            todo = StockLot.search([('invdash_pending_info', '=', True)])
+            if todo:
+                todo._compute_display_location_contact()
+                env.cr.commit()
+                _logger.info(
+                    '✅ display_contact_id actualizado para %s lotes pendientes de información',
+                    len(todo),
+                )
+    except Exception as e:
+        _logger.warning('Recálculo display_contact_id post-upgrade: %s', str(e), exc_info=True)
+
+    try:
+        Pick = env['stock.picking']
+        if 'invdash_delivery_billing_pending' in Pick._fields and hasattr(
+            Pick, '_recompute_all_delivery_billing_pending'
+        ):
+            n = Pick._recompute_all_delivery_billing_pending()
+            _logger.info('✅ Facturación ruta entrega: %s albarán(es) pendientes recalculados', n)
+    except Exception as e:
+        _logger.warning('Recálculo facturación ruta entrega: %s', str(e), exc_info=True)
+
     # Marcar préstamos lab. ya devueltos (histórico antes del flag component_lab_loan_completed)
     try:
         Pick = env['stock.picking']

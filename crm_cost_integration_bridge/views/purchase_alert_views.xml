@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data>
+    <record id="view_purchase_alert_form_integration_bridge" model="ir.ui.view">
+        <field name="name">purchase.alert.form.integration.bridge</field>
+        <field name="model">purchase.alert</field>
+        <field name="inherit_id" ref="crm_sales_supplies.view_purchase_alert_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header/button[@name='action_send_to_multiple_vendors']" position="before">
+                <button name="action_open_or_create_integration_case"
+                        type="object"
+                        string="Caso integración"
+                        class="btn-secondary"
+                        groups="sales_team.group_sale_salesman"
+                        title="Abrir u obtener el caso CRM–Calculadora vinculado a esta alerta"/>
+            </xpath>
+        </field>
+    </record>
+</data>

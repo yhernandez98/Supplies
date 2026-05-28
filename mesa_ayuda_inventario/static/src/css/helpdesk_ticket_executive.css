@@ -1,0 +1,1069 @@
+/* Mesa — Helpdesk ticket: UI backend; tema verde pastel + tarjetas (inspiración product_suppiles). */
+
+:root {
+    --mesa-exec-navy: #4a5f6d;
+    --mesa-exec-slate: #6a7f8c;
+    --mesa-exec-accent: #8ecae6;
+    --mesa-exec-accent-strong: #7ab8d4;
+    --mesa-exec-accent-soft: #f0f9fc;
+    --mesa-exec-line: rgba(120, 145, 160, 0.18);
+    --mesa-exec-shadow: 0 4px 20px rgba(120, 145, 160, 0.1);
+    --mesa-exec-radius: 16px;
+    --mesa-exec-hero-top: #faf5ff;
+    --mesa-exec-hero-mid: #f0fbff;
+    --mesa-exec-card: #fffcfa;
+    --mesa-exec-glow: 0 12px 40px rgba(190, 220, 235, 0.35);
+    /* Nombres históricos --mesa-pastel-blue-*: ahora verde pastel (vista ticket) */
+    --mesa-pastel-blue-50: #ecf8f1;
+    --mesa-pastel-blue-100: #d8f0e3;
+    --mesa-pastel-blue-200: #b8e5cc;
+    --mesa-pastel-blue-300: #8fd4ae;
+    --mesa-pastel-blue-400: #5cbb8a;
+    --mesa-pastel-blue-500: #3da572;
+    --mesa-pastel-blue-600: #2d7d57;
+    --mesa-pastel-sombra: rgba(61, 165, 114, 0.18);
+    --mesa-pastel-reflejo: rgba(255, 255, 255, 0.55);
+    --mesa-pastel-card-border: rgba(61, 165, 114, 0.14);
+}
+
+/* ----- Formulario ticket (clase en <form>) ----- */
+form.o_form_view.mesa_helpdesk_ticket_executive,
+.mesa_helpdesk_ticket_executive.o_form_view {
+    font-feature-settings: "kern" 1, "liga" 1;
+    background: linear-gradient(180deg, var(--mesa-pastel-blue-50) 0%, #dff0e6 100%);
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet_bg,
+.mesa_helpdesk_ticket_executive .o_form_sheet_bg {
+    position: relative;
+    overflow: hidden;
+    border-radius: 14px;
+    box-shadow: 0 2px 20px rgba(0, 0, 0, 0.05), 0 0 0 1px var(--mesa-pastel-card-border);
+    border: 1px solid var(--mesa-pastel-card-border);
+    /* Tarjeta principal: blanco con leve tinte verde */
+    background: linear-gradient(180deg, #ffffff 0%, #f6fcf8 100%);
+}
+
+/* Lavado muy suave pastel en la parte superior (sin “hero” morado) */
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet_bg::before,
+.mesa_helpdesk_ticket_executive .o_form_sheet_bg::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: min(200px, 26vh);
+    background: linear-gradient(
+        125deg,
+        var(--mesa-pastel-blue-50) 0%,
+        rgba(255, 255, 255, 0.65) 45%,
+        rgba(255, 255, 255, 0) 88%
+    );
+    pointer-events: none;
+    z-index: 0;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet_bg::after,
+.mesa_helpdesk_ticket_executive .o_form_sheet_bg::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(
+        180deg,
+        var(--mesa-pastel-blue-300) 0%,
+        var(--mesa-pastel-blue-400) 50%,
+        var(--mesa-pastel-blue-200) 100%
+    );
+    border-radius: 14px 0 0 14px;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.75;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet_bg .o_form_renderer,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet_bg .o_form_sheet,
+.mesa_helpdesk_ticket_executive .o_form_sheet_bg .o_form_renderer,
+.mesa_helpdesk_ticket_executive .o_form_sheet_bg .o_form_sheet {
+    position: relative;
+    z-index: 1;
+}
+
+/* Zona interior: mismo pastel que stock_lot_form_pastel (hoja detrás de bloques blancos) */
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet_bg .o_form_sheet,
+.mesa_helpdesk_ticket_executive .o_form_sheet_bg .o_form_sheet {
+    background: var(--mesa-pastel-blue-50) !important;
+    padding: 1rem 1.25rem 1.25rem !important;
+}
+
+/* Título del ticket: más jerarquía visual */
+form.o_form_view.mesa_helpdesk_ticket_executive .oe_title,
+.mesa_helpdesk_ticket_executive .oe_title {
+    margin-bottom: 0.35rem !important;
+    padding: 0.15rem 0 0.5rem;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .oe_title h1,
+.mesa_helpdesk_ticket_executive .oe_title h1,
+form.o_form_view.mesa_helpdesk_ticket_executive .oe_title .o_field_widget input,
+.mesa_helpdesk_ticket_executive .oe_title .o_field_widget input {
+    font-size: 1.65rem !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.035em !important;
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
+    line-height: 1.15 !important;
+    border: none !important;
+    background: transparent !important;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .oe_title .o_field_widget,
+.mesa_helpdesk_ticket_executive .oe_title .o_field_widget {
+    box-shadow: none !important;
+}
+
+/* Grupos de campos: tarjetas blancas tipo product_suppiles (.o_group en stock_lot_form_pastel) */
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet .o_inner_group,
+.mesa_helpdesk_ticket_executive .o_form_sheet .o_inner_group {
+    background: #fff !important;
+    border: 1px solid var(--mesa-pastel-card-border) !important;
+    border-radius: 12px !important;
+    padding: 1rem 1.25rem !important;
+    margin-bottom: 1rem !important;
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.04) !important;
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet .o_inner_group:hover,
+.mesa_helpdesk_ticket_executive .o_form_sheet .o_inner_group:hover {
+    border-color: rgba(61, 165, 114, 0.28) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Una sola “cápsula” blanca: dos columnas bajo un <group> (excluye contenido dentro del notebook) */
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet .o_group:has(> .o_inner_group + .o_inner_group):not(:is(.o_notebook *)),
+.mesa_helpdesk_ticket_executive .o_form_sheet .o_group:has(> .o_inner_group + .o_inner_group):not(:is(.o_notebook *)) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 1.25rem 1.75rem;
+    background: #fff !important;
+    border: 1px solid var(--mesa-pastel-card-border) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.04) !important;
+    padding: 1rem 1.25rem !important;
+    margin-bottom: 1rem !important;
+    border-left: 4px solid var(--mesa-pastel-blue-300) !important;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet .o_group:has(> .o_inner_group + .o_inner_group):not(:is(.o_notebook *)) > .o_inner_group,
+.mesa_helpdesk_ticket_executive .o_form_sheet .o_group:has(> .o_inner_group + .o_inner_group):not(:is(.o_notebook *)) > .o_inner_group {
+    flex: 1 1 260px;
+    min-width: 0;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet .o_group:has(> .o_inner_group + .o_inner_group):not(:is(.o_notebook *)) > .o_inner_group:hover,
+.mesa_helpdesk_ticket_executive .o_form_sheet .o_group:has(> .o_inner_group + .o_inner_group):not(:is(.o_notebook *)) > .o_inner_group:hover {
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/*
+ * Relleno del grid: grupos vacíos SOLO fuera del notebook.
+ * Exclusión: :not(:is(.o_notebook .o_inner_group)) = no colapsar nada dentro de pestañas.
+ * Vacío = sin .o_field_widget, sin <button>, sin .alert (no usar solo .o_wrap_field en Odoo 19).
+ */
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet .o_inner_group:not(:is(.o_notebook .o_inner_group)):not(:has(.o_field_widget)):not(:has(button)):not(:has(.alert)),
+.mesa_helpdesk_ticket_executive .o_form_sheet .o_inner_group:not(:is(.o_notebook .o_inner_group)):not(:has(.o_field_widget)):not(:has(button)):not(:has(.alert)) {
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    min-height: 0 !important;
+    max-height: 0 !important;
+    overflow: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+/* Etiquetas: negro en toda la hoja (incl. filas tipo tabla / SLA / solo lectura) */
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet .o_wrap_label label,
+.mesa_helpdesk_ticket_executive .o_form_sheet .o_wrap_label label,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet .o_cell .o_form_label,
+.mesa_helpdesk_ticket_executive .o_form_sheet .o_cell .o_form_label,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet .o_wrap_label .o_form_label,
+.mesa_helpdesk_ticket_executive .o_form_sheet .o_wrap_label .o_form_label,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet .o_td_label,
+.mesa_helpdesk_ticket_executive .o_form_sheet .o_td_label,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet .o_td_label .o_form_label,
+.mesa_helpdesk_ticket_executive .o_form_sheet .o_td_label .o_form_label,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet .o_td_label label,
+.mesa_helpdesk_ticket_executive .o_form_sheet .o_td_label label,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet .o_field_label,
+.mesa_helpdesk_ticket_executive .o_form_sheet .o_field_label,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet span.o_form_label,
+.mesa_helpdesk_ticket_executive .o_form_sheet span.o_form_label {
+    font-weight: 700 !important;
+    font-size: 0.8125rem !important;
+    letter-spacing: 0.01em !important;
+    text-transform: none !important;
+    color: #000000 !important;
+    opacity: 1 !important;
+    -webkit-text-fill-color: #000000 !important;
+}
+
+/* Texto de valor y enlaces many2one: negro puro, sin subrayado (.o_form_uri en Odoo) */
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet .o_inner_group .o_field_widget,
+.mesa_helpdesk_ticket_executive .o_form_sheet .o_inner_group .o_field_widget,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet .o_td_value .o_field_widget,
+.mesa_helpdesk_ticket_executive .o_form_sheet .o_td_value .o_field_widget {
+    color: #000000 !important;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet .o_inner_group .o_field_widget a,
+.mesa_helpdesk_ticket_executive .o_form_sheet .o_inner_group .o_field_widget a,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet .o_td_value .o_field_widget a,
+.mesa_helpdesk_ticket_executive .o_form_sheet .o_td_value .o_field_widget a,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet .o_inner_group .o_field_widget a.o_form_uri,
+.mesa_helpdesk_ticket_executive .o_form_sheet .o_inner_group .o_field_widget a.o_form_uri,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet .o_td_value .o_field_widget a.o_form_uri,
+.mesa_helpdesk_ticket_executive .o_form_sheet .o_td_value .o_field_widget a.o_form_uri,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet .o_inner_group .o_form_uri,
+.mesa_helpdesk_ticket_executive .o_form_sheet .o_inner_group .o_form_uri,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet .o_td_value .o_form_uri,
+.mesa_helpdesk_ticket_executive .o_form_sheet .o_td_value .o_form_uri {
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
+    text-decoration: none !important;
+    text-underline-offset: unset !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet .o_inner_group .o_field_widget a:hover,
+.mesa_helpdesk_ticket_executive .o_form_sheet .o_inner_group .o_field_widget a:hover,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet .o_td_value .o_field_widget a:hover,
+.mesa_helpdesk_ticket_executive .o_form_sheet .o_td_value .o_field_widget a:hover,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet .o_inner_group .o_form_uri:hover,
+.mesa_helpdesk_ticket_executive .o_form_sheet .o_inner_group .o_form_uri:hover,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet .o_td_value .o_form_uri:hover,
+.mesa_helpdesk_ticket_executive .o_form_sheet .o_td_value .o_form_uri:hover {
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
+    text-decoration: none !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet .o_inner_group .o_field_widget input:not([type="checkbox"]):not([type="radio"]),
+.mesa_helpdesk_ticket_executive .o_form_sheet .o_inner_group .o_field_widget input:not([type="checkbox"]):not([type="radio"]),
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet .o_inner_group .o_field_widget .o_input,
+.mesa_helpdesk_ticket_executive .o_form_sheet .o_inner_group .o_field_widget .o_input {
+    border-radius: 8px !important;
+    border: 1px solid #e2e8f0 !important;
+    background: #f8fafc !important;
+    color: #000000 !important;
+    caret-color: #000000 !important;
+    padding: 0.4rem 0.6rem !important;
+    transition: border-color 0.2s, box-shadow 0.2s !important;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet .o_inner_group .o_field_widget input::placeholder,
+.mesa_helpdesk_ticket_executive .o_form_sheet .o_inner_group .o_field_widget input::placeholder {
+    color: #94a3b8 !important;
+    opacity: 1 !important;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet .o_inner_group .o_field_widget input:focus,
+.mesa_helpdesk_ticket_executive .o_form_sheet .o_inner_group .o_field_widget input:focus,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet .o_inner_group .o_field_widget .o_input:focus-within,
+.mesa_helpdesk_ticket_executive .o_form_sheet .o_inner_group .o_field_widget .o_input:focus-within {
+    border-color: var(--mesa-pastel-blue-400) !important;
+    box-shadow: 0 0 0 2px var(--mesa-pastel-sombra) !important;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet .o_inner_group .o_field_widget .o_field_selector,
+.mesa_helpdesk_ticket_executive .o_form_sheet .o_inner_group .o_field_widget .o_field_selector,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet .o_inner_group select,
+.mesa_helpdesk_ticket_executive .o_form_sheet .o_inner_group select {
+    border-radius: 8px !important;
+    border: 1px solid #e2e8f0 !important;
+    background: #f8fafc !important;
+}
+
+/* Botones en la hoja (p. ej. Escalar): mismo espíritu que stock_lot_form_pastel */
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet .o_inner_group .btn-secondary,
+.mesa_helpdesk_ticket_executive .o_form_sheet .o_inner_group .btn-secondary {
+    background: linear-gradient(
+        180deg,
+        var(--mesa-pastel-blue-100) 0%,
+        var(--mesa-pastel-blue-200) 50%,
+        var(--mesa-pastel-blue-300) 100%
+    ) !important;
+    color: var(--mesa-pastel-blue-600) !important;
+    border: 1px solid var(--mesa-pastel-blue-400) !important;
+    border-radius: 8px !important;
+    box-shadow: 0 1px 3px var(--mesa-pastel-sombra), inset 0 1px 0 var(--mesa-pastel-reflejo) !important;
+    font-weight: 600;
+    transition: box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet .o_inner_group .btn-secondary:hover,
+.mesa_helpdesk_ticket_executive .o_form_sheet .o_inner_group .btn-secondary:hover {
+    background: linear-gradient(
+        180deg,
+        var(--mesa-pastel-blue-200) 0%,
+        var(--mesa-pastel-blue-300) 50%,
+        var(--mesa-pastel-blue-400) 100%
+    ) !important;
+    color: #1e5a40 !important;
+    box-shadow: 0 2px 8px var(--mesa-pastel-sombra), inset 0 2px 12px var(--mesa-pastel-reflejo) !important;
+    transform: translateY(-1px);
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet .o_field_widget:not(.o_field_boolean) .o_input,
+.mesa_helpdesk_ticket_executive .o_form_sheet .o_field_widget:not(.o_field_boolean) .o_input,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet .o_field_widget .o_input_dropdown,
+.mesa_helpdesk_ticket_executive .o_form_sheet .o_field_widget .o_input_dropdown {
+    border-radius: 8px !important;
+}
+
+/* Stat buttons / caja de botones */
+form.o_form_view.mesa_helpdesk_ticket_executive .oe_button_box .oe_stat_button,
+.mesa_helpdesk_ticket_executive .oe_button_box .oe_stat_button {
+    border-radius: 10px !important;
+    border: 1px solid var(--mesa-pastel-card-border) !important;
+    margin: 2px 4px 2px 0 !important;
+    background: linear-gradient(180deg, #fff 0%, var(--mesa-pastel-blue-50) 100%) !important;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .oe_button_box .oe_stat_button:hover,
+.mesa_helpdesk_ticket_executive .oe_button_box .oe_stat_button:hover {
+    border-color: var(--mesa-pastel-blue-300) !important;
+    box-shadow: 0 2px 12px var(--mesa-pastel-sombra);
+}
+
+/* Dentro del notebook: quitar tarjeta y anular colapso de “grupos vacíos” (siempre) */
+html body form.o_form_view.mesa_helpdesk_ticket_executive .o_form_sheet .o_notebook .o_inner_group,
+html body .mesa_helpdesk_ticket_executive.o_form_view .o_form_sheet .o_notebook .o_inner_group {
+    max-height: none !important;
+    min-height: unset !important;
+    overflow: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    margin: unset !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .o_wrap_label label,
+.mesa_helpdesk_ticket_executive .o_notebook .o_wrap_label label,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .o_cell .o_form_label,
+.mesa_helpdesk_ticket_executive .o_notebook .o_cell .o_form_label,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .o_wrap_label .o_form_label,
+.mesa_helpdesk_ticket_executive .o_notebook .o_wrap_label .o_form_label,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .o_td_label,
+.mesa_helpdesk_ticket_executive .o_notebook .o_td_label,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .o_td_label .o_form_label,
+.mesa_helpdesk_ticket_executive .o_notebook .o_td_label .o_form_label,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .o_td_label label,
+.mesa_helpdesk_ticket_executive .o_notebook .o_td_label label,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook span.o_form_label,
+.mesa_helpdesk_ticket_executive .o_notebook span.o_form_label {
+    font-weight: 700 !important;
+    font-size: inherit !important;
+    letter-spacing: normal !important;
+    text-transform: none !important;
+    color: #000000 !important;
+    opacity: 1 !important;
+    -webkit-text-fill-color: #000000 !important;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .o_inner_group .o_field_widget,
+.mesa_helpdesk_ticket_executive .o_notebook .o_inner_group .o_field_widget,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .o_td_value .o_field_widget,
+.mesa_helpdesk_ticket_executive .o_notebook .o_td_value .o_field_widget {
+    color: #000000 !important;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .o_inner_group .o_field_widget a,
+.mesa_helpdesk_ticket_executive .o_notebook .o_inner_group .o_field_widget a,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .o_td_value .o_field_widget a,
+.mesa_helpdesk_ticket_executive .o_notebook .o_td_value .o_field_widget a,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .o_inner_group .o_field_widget a.o_form_uri,
+.mesa_helpdesk_ticket_executive .o_notebook .o_inner_group .o_field_widget a.o_form_uri,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .o_td_value .o_field_widget a.o_form_uri,
+.mesa_helpdesk_ticket_executive .o_notebook .o_td_value .o_field_widget a.o_form_uri,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .o_inner_group .o_form_uri,
+.mesa_helpdesk_ticket_executive .o_notebook .o_inner_group .o_form_uri,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .o_td_value .o_form_uri,
+.mesa_helpdesk_ticket_executive .o_notebook .o_td_value .o_form_uri {
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
+    text-decoration: none !important;
+    text-underline-offset: unset !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .o_inner_group .o_field_widget a:hover,
+.mesa_helpdesk_ticket_executive .o_notebook .o_inner_group .o_field_widget a:hover,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .o_td_value .o_field_widget a:hover,
+.mesa_helpdesk_ticket_executive .o_notebook .o_td_value .o_field_widget a:hover,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .o_inner_group .o_form_uri:hover,
+.mesa_helpdesk_ticket_executive .o_notebook .o_inner_group .o_form_uri:hover,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .o_td_value .o_form_uri:hover,
+.mesa_helpdesk_ticket_executive .o_notebook .o_td_value .o_form_uri:hover {
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
+    text-decoration: none !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_form_statusbar,
+.mesa_helpdesk_ticket_executive .o_form_statusbar {
+    position: relative;
+    z-index: 1;
+    border-radius: 10px;
+    border: 1px solid var(--mesa-pastel-card-border);
+    background: #fff;
+    margin-bottom: 8px;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.04);
+}
+
+/* Notebook: pestañas más limpias */
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .nav.nav-tabs .nav-link,
+.mesa_helpdesk_ticket_executive .o_notebook .nav.nav-tabs .nav-link {
+    border: none;
+    border-radius: 10px 10px 0 0;
+    margin-right: 4px;
+    padding: 0.55rem 1rem;
+    color: #475569;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .nav.nav-tabs .nav-link.active,
+.mesa_helpdesk_ticket_executive .o_notebook .nav.nav-tabs .nav-link.active {
+    background: linear-gradient(180deg, #fff 0%, var(--mesa-pastel-blue-50) 100%);
+    color: var(--mesa-pastel-blue-600);
+    box-shadow: 0 -2px 0 var(--mesa-pastel-blue-400) inset;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .tab-content,
+.mesa_helpdesk_ticket_executive .o_notebook .tab-content {
+    border: 1px solid var(--mesa-pastel-card-border);
+    border-top: none;
+    border-radius: 0 0 12px 12px;
+    background: #fff;
+    padding: 18px 18px 20px;
+}
+
+/* Cronómetro (lectura) junto al responsable */
+form.o_form_view.mesa_helpdesk_ticket_executive .mesa_ticket_timer_readout,
+.mesa_helpdesk_ticket_executive .mesa_ticket_timer_readout {
+    display: inline-block;
+    padding: 0.35rem 0.75rem !important;
+    border-radius: 999px !important;
+    background: linear-gradient(135deg, var(--mesa-pastel-blue-50) 0%, #fff 100%) !important;
+    border: 1px solid var(--mesa-pastel-card-border) !important;
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
+    font-size: 0.9rem !important;
+}
+
+/* Alerta encuesta */
+form.o_form_view.mesa_helpdesk_ticket_executive .mesa_ticket_exec_alert,
+.mesa_helpdesk_ticket_executive .mesa_ticket_exec_alert {
+    border-radius: 12px !important;
+    border: 1px solid var(--mesa-pastel-card-border) !important;
+    background: linear-gradient(135deg, #fff 0%, var(--mesa-pastel-blue-50) 100%) !important;
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
+    box-shadow: 0 2px 14px var(--mesa-pastel-sombra);
+}
+
+/* Barra botones acta (grupo col=3): verde pastel alineado al ticket */
+form.o_form_view.mesa_helpdesk_ticket_executive group.mesa_acta_toolbar,
+.mesa_helpdesk_ticket_executive group.mesa_acta_toolbar {
+    margin-bottom: 14px !important;
+    padding: 12px 14px !important;
+    background: linear-gradient(135deg, var(--mesa-pastel-blue-50) 0%, #e8f5ee 100%);
+    border: 1px solid var(--mesa-pastel-card-border);
+    border-radius: 12px;
+    width: 100%;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive group.mesa_acta_toolbar .btn,
+.mesa_helpdesk_ticket_executive group.mesa_acta_toolbar .btn {
+    border-radius: 10px !important;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+    box-shadow: 0 1px 3px var(--mesa-pastel-sombra);
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive group.mesa_acta_toolbar .btn-secondary,
+.mesa_helpdesk_ticket_executive group.mesa_acta_toolbar .btn-secondary {
+    background: #fff !important;
+    border-color: var(--mesa-pastel-blue-200) !important;
+    color: #000000 !important;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive group.mesa_acta_toolbar .btn-secondary:hover,
+.mesa_helpdesk_ticket_executive group.mesa_acta_toolbar .btn-secondary:hover {
+    border-color: var(--mesa-pastel-blue-400) !important;
+    color: #000000 !important;
+    background: var(--mesa-pastel-blue-50) !important;
+}
+
+/* Listas en pestañas «Realizado» / «Tickets Hijos»: cabeceras y filas en verde pastel */
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .mesa_followup_embed_list .o_list_table thead th,
+.mesa_helpdesk_ticket_executive .o_notebook .mesa_followup_embed_list .o_list_table thead th,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .o_list_view .o_list_table thead th,
+.mesa_helpdesk_ticket_executive .o_notebook .o_list_view .o_list_table thead th,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .o_list_renderer .o_list_table thead th,
+.mesa_helpdesk_ticket_executive .o_notebook .o_list_renderer .o_list_table thead th {
+    background: linear-gradient(180deg, var(--mesa-pastel-blue-50) 0%, var(--mesa-pastel-blue-100) 100%) !important;
+    color: var(--mesa-pastel-blue-600) !important;
+    font-weight: 700 !important;
+    font-size: 0.78rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.04em !important;
+    border-color: rgba(61, 165, 114, 0.12) !important;
+    box-shadow: 0 1px 0 0 rgba(61, 165, 114, 0.08) !important;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .mesa_followup_embed_list .o_list_table thead th:first-child,
+.mesa_helpdesk_ticket_executive .o_notebook .mesa_followup_embed_list .o_list_table thead th:first-child,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .o_list_view .o_list_table thead th:first-child,
+.mesa_helpdesk_ticket_executive .o_notebook .o_list_view .o_list_table thead th:first-child {
+    box-shadow: 1px 0 0 0 rgba(61, 165, 114, 0.06), 0 1px 0 0 rgba(61, 165, 114, 0.08) !important;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .mesa_followup_embed_list .o_list_table tbody td,
+.mesa_helpdesk_ticket_executive .o_notebook .mesa_followup_embed_list .o_list_table tbody td,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .o_list_view .o_list_table tbody td,
+.mesa_helpdesk_ticket_executive .o_notebook .o_list_view .o_list_table tbody td {
+    border-color: rgba(61, 165, 114, 0.1) !important;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .mesa_followup_embed_list .o_list_table tbody tr:nth-child(even),
+.mesa_helpdesk_ticket_executive .o_notebook .mesa_followup_embed_list .o_list_table tbody tr:nth-child(even),
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .o_list_view .o_list_table tbody tr:nth-child(even),
+.mesa_helpdesk_ticket_executive .o_notebook .o_list_view .o_list_table tbody tr:nth-child(even) {
+    background-color: var(--mesa-pastel-blue-50) !important;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .mesa_followup_embed_list .o_list_table tbody tr:hover,
+.mesa_helpdesk_ticket_executive .o_notebook .mesa_followup_embed_list .o_list_table tbody tr:hover,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .o_list_view .o_list_table tbody tr:hover,
+.mesa_helpdesk_ticket_executive .o_notebook .o_list_view .o_list_table tbody tr:hover {
+    background-color: rgba(184, 229, 204, 0.45) !important;
+}
+
+/* Agrupación / pie de lista en notebook (p. ej. fila «Realizado») */
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .o_list_table .o_group_header,
+.mesa_helpdesk_ticket_executive .o_notebook .o_list_table .o_group_header,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .o_list_table .o_list_group_name,
+.mesa_helpdesk_ticket_executive .o_notebook .o_list_table .o_list_group_name {
+    background: linear-gradient(90deg, var(--mesa-pastel-blue-100) 0%, var(--mesa-pastel-blue-50) 100%) !important;
+    color: var(--mesa-pastel-blue-600) !important;
+    font-weight: 700 !important;
+    border-color: rgba(61, 165, 114, 0.15) !important;
+}
+
+/* Contenedor lista embebida: sin overflow:hidden (evita cabecera cortada con border-radius) */
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .o_list_view,
+.mesa_helpdesk_ticket_executive .o_notebook .o_list_view,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .o_list_renderer,
+.mesa_helpdesk_ticket_executive .o_notebook .o_list_renderer,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .o_field_one2many .o_list_renderer,
+.mesa_helpdesk_ticket_executive .o_notebook .o_field_one2many .o_list_renderer {
+    overflow: visible !important;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .o_list_view,
+.mesa_helpdesk_ticket_executive .o_notebook .o_list_view {
+    border-radius: 10px !important;
+    border: 1px solid var(--mesa-pastel-card-border) !important;
+    box-shadow: 0 1px 8px rgba(61, 165, 114, 0.08) !important;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .o_list_table_wrapper,
+.mesa_helpdesk_ticket_executive .o_notebook .o_list_table_wrapper {
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+}
+
+/* Tablas HTML genéricas en pestaña Realizado (sin clase mesa-vt-*) */
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .mesa_visit_acta_tab .o_field_html table,
+.mesa_helpdesk_ticket_executive .o_notebook .mesa_visit_acta_tab .o_field_html table {
+    border-collapse: collapse;
+    width: 100%;
+    border: 1px solid var(--mesa-pastel-card-border);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 1px 8px rgba(61, 165, 114, 0.08);
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .mesa_visit_acta_tab .o_field_html table thead th,
+.mesa_helpdesk_ticket_executive .o_notebook .mesa_visit_acta_tab .o_field_html table thead th {
+    background: linear-gradient(180deg, var(--mesa-pastel-blue-50) 0%, var(--mesa-pastel-blue-100) 100%) !important;
+    color: var(--mesa-pastel-blue-600) !important;
+    font-weight: 700 !important;
+    font-size: 0.75rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.04em !important;
+    padding: 0.55rem 0.75rem !important;
+    border-bottom: 1px solid rgba(61, 165, 114, 0.15) !important;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .mesa_visit_acta_tab .o_field_html table thead tr,
+.mesa_helpdesk_ticket_executive .o_notebook .mesa_visit_acta_tab .o_field_html table thead tr {
+    background: linear-gradient(180deg, var(--mesa-pastel-blue-50) 0%, var(--mesa-pastel-blue-100) 100%) !important;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .mesa_visit_acta_tab .o_field_html table tbody td,
+.mesa_helpdesk_ticket_executive .o_notebook .mesa_visit_acta_tab .o_field_html table tbody td {
+    padding: 0.5rem 0.75rem !important;
+    border-bottom: 1px solid rgba(61, 165, 114, 0.1) !important;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .mesa_visit_acta_tab .o_field_html table tbody tr:nth-child(even),
+.mesa_helpdesk_ticket_executive .o_notebook .mesa_visit_acta_tab .o_field_html table tbody tr:nth-child(even) {
+    background-color: var(--mesa-pastel-blue-50) !important;
+}
+
+/* Botones del acta (Cambio equipo / componente / mantenimiento) */
+form.o_form_view.mesa_helpdesk_ticket_executive .mesa-acta-realizado-flags,
+.mesa_helpdesk_ticket_executive .mesa-acta-realizado-flags,
+.o_field_html .mesa-acta-realizado-flags {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .mesa-acta-flag-btn,
+.mesa_helpdesk_ticket_executive .mesa-acta-flag-btn,
+.o_field_html .mesa-acta-flag-btn {
+    outline: none;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .mesa-acta-flag-btn:focus-visible,
+.mesa_helpdesk_ticket_executive .mesa-acta-flag-btn:focus-visible {
+    box-shadow: 0 0 0 2px rgba(61, 165, 114, 0.45);
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .mesa-acta-flag-btn--active,
+.mesa_helpdesk_ticket_executive .mesa-acta-flag-btn--active {
+    border-color: var(--mesa-pastel-blue-500) !important;
+    background: var(--mesa-pastel-blue-100) !important;
+    color: var(--mesa-pastel-blue-600) !important;
+    font-weight: 700 !important;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .mesa_visit_acta_tab .o_field_html table[data-mesa-acta-equipment] + div > div:first-child,
+.mesa_helpdesk_ticket_executive .o_notebook .mesa_visit_acta_tab .o_field_html table[data-mesa-acta-equipment] + div > div:first-child,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .mesa_visit_acta_tab .o_field_html [data-mesa-acta-participant-partner-id] table + div > div:first-child,
+.mesa_helpdesk_ticket_executive .o_notebook .mesa_visit_acta_tab .o_field_html [data-mesa-acta-participant-partner-id] table + div > div:first-child,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_notebook .mesa_visit_acta_tab .o_field_html [data-mesa-acta-participant-user-id] table + div > div:first-child,
+.mesa_helpdesk_ticket_executive .o_notebook .mesa_visit_acta_tab .o_field_html [data-mesa-acta-participant-user-id] table + div > div:first-child {
+    background: linear-gradient(180deg, var(--mesa-pastel-blue-50) 0%, var(--mesa-pastel-blue-100) 100%) !important;
+    color: var(--mesa-pastel-blue-600) !important;
+    text-align: center !important;
+    font-weight: 700 !important;
+    border-bottom: 1px solid rgba(61, 165, 114, 0.2) !important;
+}
+
+/* ----- Bloque HTML «Información visita» (descripción ticket) ----- */
+.o_field_html .mesa-vt-hero,
+.o_field_widget[data-field-type="html"] .mesa-vt-hero,
+.field_html .mesa-vt-hero {
+    margin-bottom: 1.25rem;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid var(--mesa-pastel-card-border);
+    box-shadow: 0 4px 18px var(--mesa-pastel-sombra);
+    background: linear-gradient(180deg, var(--mesa-pastel-blue-50) 0%, var(--mesa-pastel-blue-100) 100%);
+    color: #000000;
+}
+
+.o_field_html .mesa-vt-hero__inner,
+.field_html .mesa-vt-hero__inner {
+    padding: 1.25rem 1.35rem 1.35rem;
+}
+
+.o_field_html .mesa-vt-hero__badge,
+.field_html .mesa-vt-hero__badge {
+    display: inline-block;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--mesa-pastel-blue-600);
+    margin-bottom: 0.35rem;
+}
+
+.o_field_html .mesa-vt-hero__title,
+.field_html .mesa-vt-hero__title {
+    margin: 0 0 1rem;
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #000000;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.o_field_html .mesa-vt-hero__title-icon,
+.field_html .mesa-vt-hero__title-icon {
+    font-size: 1.25rem;
+    opacity: 0.95;
+}
+
+.o_field_html .mesa-vt-hero__grid,
+.field_html .mesa-vt-hero__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.65rem 1.25rem;
+}
+
+.o_field_html .mesa-vt-hero__item,
+.field_html .mesa-vt-hero__item {
+    background: #ffffff;
+    border: 1px solid var(--mesa-pastel-card-border);
+    border-radius: 10px;
+    padding: 0.55rem 0.75rem;
+    font-size: 0.88rem;
+    line-height: 1.45;
+}
+
+.o_field_html .mesa-vt-hero__item-label,
+.field_html .mesa-vt-hero__item-label {
+    display: block;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--mesa-pastel-blue-600);
+    margin-bottom: 0.2rem;
+}
+
+.o_field_html .mesa-vt-hero__item-value,
+.field_html .mesa-vt-hero__item-value {
+    color: #000000;
+    font-weight: 600;
+}
+
+/* Tabla equipos (HTML acta / descripción): verde pastel coherente con el ticket */
+.o_field_html .mesa-vt-equipment-section,
+.field_html .mesa-vt-equipment-section {
+    margin-top: 1.25rem;
+    margin-bottom: 1rem;
+    border-radius: 14px;
+    border: 1px solid var(--mesa-pastel-card-border);
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 2px 12px rgba(61, 165, 114, 0.1);
+}
+
+.o_field_html .mesa-vt-equipment-section h3,
+.field_html .mesa-vt-equipment-section h3 {
+    margin: 0;
+    padding: 0.85rem 1rem;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--mesa-pastel-blue-600);
+    background: linear-gradient(90deg, var(--mesa-pastel-blue-50) 0%, var(--mesa-pastel-blue-100) 100%);
+    border-bottom: 1px solid var(--mesa-pastel-card-border);
+}
+
+.o_field_html .mesa-vt-equipment-section table,
+.field_html .mesa-vt-equipment-section table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.o_field_html .mesa-vt-equipment-section th,
+.o_field_html .mesa-vt-equipment-section td,
+.field_html .mesa-vt-equipment-section th,
+.field_html .mesa-vt-equipment-section td {
+    padding: 0.65rem 0.85rem;
+    border-bottom: 1px solid rgba(61, 165, 114, 0.12);
+    text-align: left;
+}
+
+.o_field_html .mesa-vt-equipment-section thead th,
+.field_html .mesa-vt-equipment-section thead th {
+    background: linear-gradient(180deg, var(--mesa-pastel-blue-50) 0%, var(--mesa-pastel-blue-100) 100%);
+    font-weight: 700;
+    color: var(--mesa-pastel-blue-600);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.o_field_html .mesa-vt-equipment-section tbody tr:nth-child(even),
+.field_html .mesa-vt-equipment-section tbody tr:nth-child(even) {
+    background-color: var(--mesa-pastel-blue-50);
+}
+
+.o_field_html .mesa-vt-order-desc,
+.field_html .mesa-vt-order-desc {
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    border: 1px solid var(--mesa-pastel-card-border);
+    background: var(--mesa-pastel-blue-50);
+}
+
+/* ----- Wizards acta / escalar ----- */
+form.o_form_view.mesa_acta_wizard,
+.mesa_acta_wizard.o_form_view {
+    max-width: 920px;
+}
+
+form.o_form_view.mesa_acta_wizard .o_form_sheet,
+.mesa_acta_wizard .o_form_sheet {
+    border-radius: var(--mesa-exec-radius);
+    border: 1px solid var(--mesa-exec-line);
+    box-shadow: var(--mesa-exec-shadow);
+    padding-top: 1.25rem !important;
+}
+
+.mesa_acta_wizard_header {
+    margin-bottom: 1rem;
+    padding: 1rem 1.15rem;
+    border-radius: 12px;
+    background: linear-gradient(180deg, var(--mesa-pastel-blue-50) 0%, var(--mesa-pastel-blue-100) 100%);
+    color: #000000;
+    border: 1px solid var(--mesa-pastel-card-border);
+    box-shadow: 0 4px 14px var(--mesa-pastel-sombra);
+}
+
+.mesa_acta_wizard_header__title {
+    margin: 0 0 0.35rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #000000;
+}
+
+.mesa_acta_wizard_header__hint {
+    margin: 0;
+    font-size: 0.82rem;
+    line-height: 1.45;
+    color: #334155;
+    max-width: 52rem;
+}
+
+form.o_form_view.mesa_acta_wizard .btn-primary,
+.mesa_acta_wizard .btn-primary {
+    background-color: var(--mesa-pastel-blue-500) !important;
+    border-color: var(--mesa-pastel-blue-600) !important;
+    color: #ffffff !important;
+}
+
+form.o_form_view.mesa_acta_wizard .btn-primary:hover,
+.mesa_acta_wizard .btn-primary:hover {
+    background-color: var(--mesa-pastel-blue-600) !important;
+    border-color: #256b47 !important;
+}
+
+.mesa_acta_wizard_filter {
+    margin-bottom: 1rem;
+}
+
+.mesa_acta_wizard_filter .o_field_widget input {
+    border-radius: 10px !important;
+}
+
+/* Lista de checkboxes: tarjetas */
+.mesa_acta_pick_list .o_field_widget,
+.mesa_acta_pick_list [name="selected_lot_ids"],
+.mesa_acta_pick_list [name="selected_contact_ids"] {
+    width: 100%;
+}
+
+.mesa_acta_pick_list .o_field_widget > div,
+.mesa_acta_pick_list [name="selected_lot_ids"] > div,
+.mesa_acta_pick_list [name="selected_contact_ids"] > div {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: min(420px, 55vh);
+    overflow-y: auto;
+    padding: 4px 2px 8px;
+}
+
+.mesa_acta_pick_list .o_field_widget .form-check,
+.mesa_acta_pick_list .form-check,
+.mesa_acta_pick_list label.form-check {
+    display: flex !important;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 0.65rem;
+    margin: 0 !important;
+    padding: 12px 14px !important;
+    border-radius: 12px;
+    border: 1px solid var(--mesa-pastel-card-border);
+    background: linear-gradient(180deg, #fff 0%, var(--mesa-pastel-blue-50) 100%);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.mesa_acta_pick_list .o_field_widget .form-check:hover,
+.mesa_acta_pick_list .form-check:hover {
+    border-color: var(--mesa-pastel-blue-400);
+    box-shadow: 0 2px 12px var(--mesa-pastel-sombra);
+}
+
+.mesa_acta_pick_list .o_field_widget .form-check-input,
+.mesa_acta_pick_list .form-check-input {
+    flex: 0 0 auto;
+    width: 1.1rem;
+    height: 1.1rem;
+    margin: 0.2rem 0 0 0 !important;
+    float: none;
+    position: relative;
+}
+
+.mesa_acta_pick_list .o_field_widget .form-check-label,
+.mesa_acta_pick_list .form-check-label {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding-left: 0 !important;
+    font-size: 0.9rem;
+    color: #000000;
+    line-height: 1.35;
+}
+
+/* Escalar: tarjeta motivo */
+.mesa_escalate_reason_group {
+    background: #f8fafc;
+    border: 1px solid var(--mesa-exec-line);
+    border-radius: 12px;
+    padding: 10px 12px;
+}
+
+/* ----- Lista tickets (acción Mesa) ----- */
+.o_list_view.mesa_helpdesk_ticket_list .o_list_table thead th {
+    font-weight: 600;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #475569;
+    background: #f8fafc;
+}
+
+.o_list_view.mesa_helpdesk_ticket_list .o_list_table tbody tr:hover td {
+    background-color: #f1f5f9 !important;
+}
+
+/* ----- Ficha equipo en descripción (tickets panel / retiro / solicitud acta) ----- */
+form.o_form_view.mesa_helpdesk_ticket_executive .o_field_html .mesa-ticket-detail,
+.mesa_helpdesk_ticket_executive .o_field_html .mesa-ticket-detail,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_field_html .mesa-acta-lot-detail,
+.mesa_helpdesk_ticket_executive .o_field_html .mesa-acta-lot-detail {
+    color: #000000;
+    font-size: 0.9rem;
+    line-height: 1.45;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_field_html .mesa-ticket-detail__title,
+.mesa_helpdesk_ticket_executive .o_field_html .mesa-ticket-detail__title {
+    margin: 18px 0 6px !important;
+    font-size: 0.95rem !important;
+    font-weight: 700 !important;
+    color: #000000 !important;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_field_html .mesa-ticket-detail__bar,
+.mesa_helpdesk_ticket_executive .o_field_html .mesa-ticket-detail__bar {
+    height: 6px;
+    background-color: var(--mesa-pastel-blue-500) !important;
+    margin: 0 0 10px;
+    border-radius: 2px;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_field_html .mesa-ticket-detail__kv th,
+.mesa_helpdesk_ticket_executive .o_field_html .mesa-ticket-detail__kv th,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_field_html .mesa-acta-lot-detail table.mesa-ticket-detail__kv th {
+    background-color: var(--mesa-pastel-blue-100) !important;
+    color: #0d2544 !important;
+    font-weight: 700 !important;
+    text-align: left !important;
+    border: 1px solid var(--mesa-pastel-blue-200) !important;
+    padding: 8px 10px !important;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_field_html .mesa-ticket-detail__kv td,
+.mesa_helpdesk_ticket_executive .o_field_html .mesa-ticket-detail__kv td,
+form.o_form_view.mesa_helpdesk_ticket_executive .o_field_html .mesa-acta-lot-detail table.mesa-ticket-detail__kv td {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    font-weight: 400 !important;
+    border: 1px solid #cbd5e1 !important;
+    padding: 8px 10px !important;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_field_html .mesa-ticket-detail__data thead th,
+.mesa_helpdesk_ticket_executive .o_field_html .mesa-ticket-detail__data thead th {
+    background-color: var(--mesa-pastel-blue-600) !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    border: 1px solid var(--mesa-pastel-blue-600) !important;
+    padding: 8px 10px !important;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_field_html .mesa-ticket-detail__data tbody td,
+.mesa_helpdesk_ticket_executive .o_field_html .mesa-ticket-detail__data tbody td {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border: 1px solid #cbd5e1 !important;
+    padding: 10px 12px !important;
+    font-size: 13px !important;
+    line-height: 1.35 !important;
+    vertical-align: top !important;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_field_html .mesa-ticket-detail__data,
+.mesa_helpdesk_ticket_executive .o_field_html .mesa-ticket-detail__data {
+    table-layout: fixed !important;
+    width: 100% !important;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_field_html .mesa-ticket-detail__title,
+.mesa_helpdesk_ticket_executive .o_field_html .mesa-ticket-detail__title {
+    margin: 20px 0 8px !important;
+    font-weight: 700 !important;
+    font-size: 0.95rem !important;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_field_html[name="description"] p,
+.mesa_helpdesk_ticket_executive .o_field_html[name="description"] p {
+    margin: 0 0 6px !important;
+    line-height: 1.45 !important;
+}
+
+form.o_form_view.mesa_helpdesk_ticket_executive .o_field_html .o_retiro_relation_info .mesa-ticket-detail__kv th,
+.mesa_helpdesk_ticket_executive .o_field_html .o_retiro_relation_info .mesa-ticket-detail__kv th {
+    background-color: var(--mesa-pastel-blue-100) !important;
+    color: #000000 !important;
+    font-weight: 700 !important;
+}

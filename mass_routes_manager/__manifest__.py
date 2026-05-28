@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-# Copyright 2026 Supplies De Colombia SAS
-# License LGPL-3.0 or later (https://www.gnu.org/licenses/lgpl-3.0.html).
-
 {
     'name': 'Gestión Masiva de Rutas',
     'version': '19.0.1.0.0',
@@ -26,7 +22,7 @@
         2. Selecciona los productos deseados (o ninguno para aplicar a todos)
         3. Click en "Acción" → Elegir opción de rutas
     """,
-    'author': 'Supplies De Colombia SAS',
+    'author': 'Ricardo',
     'depends': ['stock'],
     'data': [
         'views/product_template_views.xml',

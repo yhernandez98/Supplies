@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="view_mesa_ayuda_service_panel_form" model="ir.ui.view">
+            <field name="name">mesa.ayuda.service.panel.form</field>
+            <field name="model">mesa.ayuda.service.panel</field>
+            <field name="arch" type="xml">
+                <form string="Operaciones de campo" create="false" edit="false" delete="false" class="mesa_sp_form">
+                    <field name="display_name" invisible="1"/>
+                    <field name="user_id" invisible="1"/>
+                    <sheet class="mesa_sp_shell">
+                        <div class="mesa_sp_hero">
+                            <div class="mesa_sp_hero_inner">
+                                <div class="mesa_sp_kicker">Mesa de ayuda · Supplies</div>
+                                <h1 class="mesa_sp_title">Operaciones de campo</h1>
+                                <p class="mesa_sp_subtitle">
+                                    <strong>Calendario de visitas</strong> y <strong>acciones rápidas</strong> sobre el equipo;
+                                    indicadores del mes más abajo.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="mesa_sp_surface">
+                            <div class="mesa_sp_section_label">Accesos principales</div>
+                            <div class="mesa_sp_hub_row">
+                                <button name="action_open_visit_calendar" type="object"
+                                        string="Calendario de visitas"
+                                        class="btn mesa_sp_hub_tile"
+                                        icon="fa-calendar"/>
+                            </div>
+
+                            <div class="mesa_sp_section_label">Acciones rápidas</div>
+                            <div class="mesa_sp_action_tray">
+                                <div class="mesa_sp_actions">
+                                    <!-- Orden alfabético por etiqueta -->
+                                    <button name="action_panel_cambio_equipo" type="object" string="Cambio de equipo"
+                                            class="btn mesa_sp_btn_ghost" icon="fa-exchange"/>
+                                    <button name="action_panel_crear_reparacion" type="object" string="Crear reparación"
+                                            class="btn mesa_sp_btn_primary" icon="fa-wrench"/>
+                                    <button name="action_panel_crear_ticket" type="object" string="Crear ticket"
+                                            class="btn mesa_sp_btn_ghost" icon="fa-ticket"/>
+                                    <button name="action_panel_retiro_usuario_equipo" type="object"
+                                            string="Retiro de usuario / equipo"
+                                            class="btn mesa_sp_btn_ghost" icon="fa-user-times"/>
+                                    <button name="action_panel_solicitar_elemento" type="object" string="Solicitar elemento"
+                                            class="btn mesa_sp_btn_ghost" icon="fa-shopping-cart"/>
+                                </div>
+                            </div>
+
+                            <div class="mesa_sp_section_label">Indicadores</div>
+                            <div class="mesa_sp_kpi_grid">
+                                <div class="mesa_sp_kpi_card">
+                                    <span class="mesa_sp_kpi_label">Órdenes activas</span>
+                                    <field name="kpi_orders_open" nolabel="1" readonly="1"/>
+                                </div>
+                                <div class="mesa_sp_kpi_card">
+                                    <span class="mesa_sp_kpi_label">Órdenes completadas (mes)</span>
+                                    <field name="kpi_orders_done_month" nolabel="1" readonly="1"/>
+                                </div>
+                                <div class="mesa_sp_kpi_card">
+                                    <span class="mesa_sp_kpi_label">Mantenimientos en curso</span>
+                                    <field name="kpi_lot_open" nolabel="1" readonly="1"/>
+                                </div>
+                                <div class="mesa_sp_kpi_card">
+                                    <span class="mesa_sp_kpi_label">Mantenimientos completados (mes)</span>
+                                    <field name="kpi_lot_done_month" nolabel="1" readonly="1"/>
+                                </div>
+                            </div>
+
+                            <div class="mesa_sp_footer_note">
+                                La tarjeta superior abre el calendario de visitas. «Retiro de usuario / equipo» abre el registro de retiro directamente.
+                                Las demás acciones rápidas muestran un aviso hasta definir cada flujo.
+                                Los indicadores resumen actividad de órdenes y mantenimientos (no son accesos de menú).
+                            </div>
+                        </div>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="action_mesa_ayuda_service_panel_server" model="ir.actions.server">
+            <field name="name">Abrir panel operaciones de campo</field>
+            <field name="model_id" ref="base.model_res_users"/>
+            <field name="state">code</field>
+            <field name="code"><![CDATA[
+action = env['mesa.ayuda.service.panel'].action_open_panel()
+]]></field>
+        </record>
+    </data>
+</odoo>

@@ -137,7 +137,8 @@ class CalculadoraCostosLine(models.Model):
         "product_qty",
         "price_unit",
         "monto_garantia",
-        "calculadora_id.trm",
+        "calculadora_id.applied_currency_rate",
+        "calculadora_id.rate_date",
     )
     def _compute_bases_cop(self):
         for line in self:
@@ -146,16 +147,10 @@ class CalculadoraCostosLine(models.Model):
                 line.garantia_base_cop = 0.0
                 line.subtotal_base_cop = 0.0
                 continue
-            trm = line.calculadora_id.trm or 4000.0
-            if trm <= 0:
-                trm = 4000.0
             amt = line.amount_equipment()
-            if line.moneda_equipo == "USD":
-                line.equipo_base_cop = amt * trm
-                line.garantia_base_cop = (line.monto_garantia or 0.0) * trm
-            else:
-                line.equipo_base_cop = amt
-                line.garantia_base_cop = line.monto_garantia or 0.0
+            source_currency = line.line_currency_id
+            line.equipo_base_cop = line.calculadora_id._convert_to_company_currency(amt, source_currency)
+            line.garantia_base_cop = line.calculadora_id._convert_to_company_currency(line.monto_garantia or 0.0, source_currency)
             line.subtotal_base_cop = line.equipo_base_cop + line.garantia_base_cop
 
     def _product_price_currency(self, product):
@@ -213,3 +208,15 @@ class CalculadoraCostosLine(models.Model):
         for line in self:
             if line.product_qty <= 0:
                 raise ValidationError(_("La cantidad debe ser mayor que cero."))
+
+    @api.constrains("moneda_equipo", "calculadora_id")
+    def _check_supported_currency(self):
+        for line in self:
+            if line.moneda_equipo not in ("USD", "COP"):
+                raise ValidationError(_("Las líneas solo admiten moneda COP o USD."))
+            if not line.calculadora_id.currency_id:
+                raise ValidationError(_("Defina primero la moneda de la cotización antes de capturar líneas."))
+            if line.moneda_equipo == "USD" and not line.calculadora_id.applied_currency_rate:
+                raise ValidationError(
+                    _("No hay una tasa de conversión disponible para líneas en USD en la fecha seleccionada.")
+                )

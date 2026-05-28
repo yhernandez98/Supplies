@@ -5,6 +5,9 @@
             width: 100%;
             box-sizing: border-box;
         }
+        .o_acta_header_repeat {
+            display: block;
+        }
     </style>
     <t t-call="web.html_container">
         <t t-if="not docs and doc" t-set="docs" t-value="doc"/>
@@ -12,50 +15,16 @@
             <t t-set="_orig" t-value="(picking.origin or '')"/>
             <t t-set="_is_devolucion" t-value="'SUPP_DEVOLUCION' in _orig.upper() or 'devoluc' in (picking.picking_type_id.name or '').lower()"/>
             <t t-if="_is_devolucion">
-                <div class="article o_report_layout_standard" t-att-data-oe-model="picking._name" t-att-data-oe-id="picking.id" t-att-data-oe-lang="env.lang">
-                    <div class="o_stock_delivery_sheet" style="font-family:Helvetica, Arial, sans-serif; font-size:9px;">
+                <t t-set="o" t-value="picking"/>
+                <t t-call="custom.layout_acta_devolucion">
+                    <div class="page o_report_layout_standard" t-att-data-oe-model="picking._name" t-att-data-oe-id="picking.id" t-att-data-oe-lang="env.lang">
+                        <div class="o_stock_delivery_sheet" style="font-family:Helvetica, Arial, sans-serif; font-size:9px;">
 
                         <!-- ========== ACTA DE DEVOLUCIÓN ========== -->
-                        <div style="border:1px solid #000; border-radius:14px; padding:0; margin-top:12px; overflow:hidden;">
-                            <table style="width:100%; border-collapse:collapse; table-layout:fixed;">
-                                <colgroup>
-                                    <col style="width:18%;"/>
-                                    <col style="width:31%;"/>
-                                    <col style="width:31%;"/>
-                                    <col style="width:20%;"/>
-                                </colgroup>
-                                <tr style="min-height:40px;">
-                                    <td rowspan="3" style="border-right:1px solid #000; text-align:center; vertical-align:middle; padding:4px;">
-                                        <img t-att-src="image_data_uri(picking.company_id.logo)" style="max-width:80px; max-height:70px;"/>
-                                    </td>
-                                    <td colspan="3" style="text-align:center; vertical-align:middle; padding:8px 6px;">
-                                        <span style="font-weight:bold; text-transform:uppercase; font-size:13px; letter-spacing:0.5px;">
-                                            ACTA DE DEVOLUCIÓN
-                                        </span>
-                                    </td>
-                                </tr>
-                                <tr style="height:22px;">
-                                    <td colspan="2" style="border-top:1px solid #000; border-right:1px solid #000; text-align:center; vertical-align:middle; font-size:10px;">
-                                        F-GLG-ADEV-001
-                                    </td>
-                                    <td rowspan="2" style="border-top:1px solid #000; text-align:center; vertical-align:middle; font-size:9px;">
-                                        Página 1 de 1
-                                    </td>
-                                </tr>
-                                <tr style="height:20px;">
-                                    <td style="border-top:1px solid #000; border-right:1px solid #000; font-size:8px; padding:3px 5px; text-align:center; vertical-align:middle;">
-                                        Versión: 01
-                                    </td>
-                                    <td style="border-top:1px solid #000; font-size:8px; padding:3px 5px; text-align:center; vertical-align:middle;">
-                                        Fecha de Creación: Julio 2023
-                                    </td>
-                                </tr>
-                            </table>
-                        </div>
 
-                        <table style="width:100%; border-collapse:collapse; font-size:9px; margin-top:8px;">
+                        <table style="width:100%; border-collapse:separate; border-spacing:0; border:0 !important; font-size:9px; margin-top:8px;">
                             <tr>
-                                <td style="width:65%; border:none; padding:4px 2px 4px 0; text-align:left; vertical-align:middle;">
+                                <td style="width:65%; border:0 !important; border-left:0 !important; border-right:0 !important; border-top:0 !important; border-bottom:0 !important; padding:4px 2px 4px 0; text-align:left; vertical-align:middle;">
                                     <t t-set="_cmp_d" t-value="picking.company_id.partner_id"/>
                                     <t t-set="_dcity" t-value="((_cmp_d.city or picking.company_id.city or '') if _cmp_d else (picking.company_id.city or '')).strip()"/>
                                     <t t-set="_dstate" t-value="((_cmp_d.state_id.name or '').strip() if _cmp_d and _cmp_d.state_id else '')"/>
@@ -73,7 +42,7 @@
                                     <span> </span>
                                     <span t-esc="picking.acta_devolucion_fecha_larga()"/>
                                 </td>
-                                <td style="width:35%; border:none; padding:4px 0; text-align:right; vertical-align:middle; font-weight:bold;">
+                                <td style="width:35%; border:0 !important; border-left:0 !important; border-right:0 !important; border-top:0 !important; border-bottom:0 !important; padding:4px 0; text-align:right; vertical-align:middle; font-weight:bold;">
                                     Acta No: <span t-esc="picking.name or ''"/>
                                 </td>
                             </tr>
@@ -81,10 +50,10 @@
 
                         <div style="height:4px;"/>
 
-                        <table style="width:100%; border-collapse:collapse; font-size:9px;">
+                        <table style="width:100%; border-collapse:separate; border-spacing:0; border:0 !important; font-size:9px;">
                             <tr>
-                                <td style="width:22%; border:none; padding:4px 8px 4px 0; font-weight:bold; text-align:left; vertical-align:top;">CLIENTE:</td>
-                                <td style="border:none; padding:4px 0; text-align:left; vertical-align:top;">
+                                <td style="width:22%; border:0 !important; border-left:0 !important; border-right:0 !important; border-top:0 !important; border-bottom:0 !important; padding:4px 8px 4px 0; font-weight:bold; text-align:left; vertical-align:top;">CLIENTE:</td>
+                                <td style="border:0 !important; border-left:0 !important; border-right:0 !important; border-top:0 !important; border-bottom:0 !important; padding:4px 0; text-align:left; vertical-align:top;">
                                     <span t-esc="(picking.partner_id.name if picking.partner_id else '')"/>
                                 </td>
                             </tr>
@@ -175,12 +144,29 @@
                         <table style="width:100%; border-collapse:collapse; font-size:9px; margin-top:8px;">
                             <tr>
                                 <td style="background-color:#0068b3; color:#fff; text-align:center; font-weight:bold; border:1px solid #000; padding:3px;">
-                                    OBSERVACIONES
+                                    DETALLES
                                 </td>
                             </tr>
                             <tr>
                                 <td style="border:1px solid #000; border-top:none; padding:6px; min-height:40px; text-align:left; white-space:pre-wrap;">
-                                    <span t-esc="picking.acta_devolucion_observaciones_impresion()"/>
+                                    <div style="text-align:left; white-space:pre-wrap; margin:0;">
+                                        <span t-esc="picking.acta_devolucion_observaciones_impresion()"/>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <table style="width:100%; border-collapse:collapse; font-size:9px; margin-top:8px;">
+                            <tr>
+                                <td style="background-color:#0068b3; color:#fff; text-align:center; font-weight:bold; border:1px solid #000; padding:3px;">
+                                    OBSERVACIONES
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="border:1px solid #000; border-top:none; padding:6px; min-height:36px; text-align:left; vertical-align:top; white-space:normal;">
+                                    <div style="text-align:left; white-space:normal; margin:0; padding:0;">
+                                        <span t-esc="(picking.observation_li or '').strip()"/>
+                                    </div>
                                 </td>
                             </tr>
                         </table>
@@ -200,15 +186,16 @@
                                 </div>
                             </div>
                         </div>
+                        </div>
                     </div>
-                </div>
+                </t>
             </t>
             <t t-elif="picking.picking_type_id.code == 'incoming'">
                 <div class="article o_report_layout_standard" t-att-data-oe-model="picking._name" t-att-data-oe-id="picking.id" t-att-data-oe-lang="env.lang">
                     <div class="o_stock_delivery_sheet" style="font-family:Helvetica, Arial, sans-serif; font-size:9px;">
 
                         <!-- ========== ACTA DE RECEPCIÓN ========== -->
-                        <div style="border:1px solid #000; border-radius:14px; padding:0; margin-top:12px; overflow:hidden;">
+                        <div class="o_acta_header_repeat" style="border:1px solid #000; border-radius:14px; padding:0; margin-top:12px; overflow:hidden;">
                             <table style="width:100%; border-collapse:collapse; table-layout:fixed;">
                                 <colgroup>
                                     <col style="width:18%;"/>
@@ -245,15 +232,15 @@
                             </table>
                         </div>
 
-                        <table style="width:100%; border-collapse:collapse; font-size:9px; margin-top:8px;">
+                        <table style="width:100%; border-collapse:separate; border-spacing:0; border:0 !important; font-size:9px; margin-top:8px;">
                             <tr>
-                                <td style="width:70%; border:none; padding:4px 2px 4px 0; text-align:left; vertical-align:middle;">
+                                <td style="width:70%; border:0 !important; border-left:0 !important; border-right:0 !important; border-top:0 !important; border-bottom:0 !important; padding:4px 2px 4px 0; text-align:left; vertical-align:middle;">
                                     <t t-set="_eff_dt" t-value="(picking.date_done or picking.date or picking.scheduled_date)"/>
                                     <t t-set="_eff_wdname" t-value="['lunes','martes','miércoles','jueves','viernes','sábado','domingo'][(_eff_dt.weekday() if _eff_dt else 0)]"/>
                                     <t t-set="_eff_mname" t-value="['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'][(_eff_dt.month-1 if _eff_dt else 0)]"/>
                                     <span t-esc="'Bogotá D.C. ' + _eff_wdname + ', ' + str(_eff_dt.day) + ' de ' + _eff_mname + ' de ' + str(_eff_dt.year)"/>
                                 </td>
-                                <td style="width:30%; border:none; padding:4px 0; text-align:right; vertical-align:middle; font-weight:bold;">
+                                <td style="width:30%; border:0 !important; border-left:0 !important; border-right:0 !important; border-top:0 !important; border-bottom:0 !important; padding:4px 0; text-align:right; vertical-align:middle; font-weight:bold;">
                                     Acta No: <span t-esc="picking.name or ''"/>
                                 </td>
                             </tr>
@@ -319,7 +306,7 @@
                             </t>
                             <tr>
                                 <td colspan="5" style="background-color:#0068b3; color:#fff; text-align:center; font-weight:bold; border:1px solid #000; padding:3px;">
-                                    OBSERVACIONES
+                                    DETALLES
                                 </td>
                             </tr>
                             <tr>
@@ -332,139 +319,105 @@
                 </div>
             </t>
             <t t-else="">
-                <div class="article o_report_layout_standard" t-att-data-oe-model="picking._name" t-att-data-oe-id="picking.id" t-att-data-oe-lang="env.lang">
-                    <div class="o_stock_delivery_sheet" style="font-family:Helvetica, Arial, sans-serif; font-size:9px;">
+                <t t-set="o" t-value="picking"/>
+                <t t-call="custom.layout_acta_entrega">
+                    <div class="page o_report_layout_standard" t-att-data-oe-model="picking._name" t-att-data-oe-id="picking.id" t-att-data-oe-lang="env.lang">
+                        <div class="o_stock_delivery_sheet" style="font-family:Helvetica, Arial, sans-serif; font-size:9px;">
 
-                        <!-- ========== ORDEN DE ENTREGA ========== -->
-                        <div style="border:1px solid #000; border-radius:14px; padding:0; margin-top:12px; overflow:hidden;">
-                            <table style="width:100%; border-collapse:collapse; table-layout:fixed;">
-                                <colgroup>
-                                    <col style="width:18%;"/>
-                                    <col style="width:31%;"/>
-                                    <col style="width:31%;"/>
-                                    <col style="width:20%;"/>
-                                </colgroup>
-                                <tr style="min-height:40px;">
-                                    <td rowspan="3" style="border-right:1px solid #000; text-align:center; vertical-align:middle; padding:4px;">
-                                        <img t-att-src="image_data_uri(picking.company_id.logo)" style="max-width:80px; max-height:70px;"/>
-                                    </td>
-                                    <td colspan="3" style="text-align:center; vertical-align:middle; padding:8px 6px;">
-                                        <span style="font-weight:bold; text-transform:uppercase; font-size:13px; letter-spacing:0.5px;">
-                                            ORDEN DE ENTREGA
-                                        </span>
-                                    </td>
-                                </tr>
-                                <tr style="height:22px;">
-                                    <td colspan="2" style="border-top:1px solid #000; border-right:1px solid #000; text-align:center; vertical-align:middle; font-size:10px;">
-                                        F-GLG-ORDE-001
-                                    </td>
-                                    <td rowspan="2" style="border-top:1px solid #000; text-align:center; vertical-align:middle; font-size:9px;">
-                                        Página 1 de 1
-                                    </td>
-                                </tr>
-                                <tr style="height:20px;">
-                                    <td style="border-top:1px solid #000; border-right:1px solid #000; font-size:8px; padding:3px 5px; text-align:center; vertical-align:middle;">
-                                        Versión: 01
-                                    </td>
-                                    <td style="border-top:1px solid #000; font-size:8px; padding:3px 5px; text-align:center; vertical-align:middle;">
-                                        Fecha de Creación: Julio 2023
-                                    </td>
-                                </tr>
-                            </table>
-                        </div>
-
-                        <div style="height:8px;"/>
-
-                        <table style="width:100%; border-collapse:collapse; font-size:9px;">
+                        <!-- ========== ACTA DE ENTREGA ========== -->
+                        <table style="width:100%; border-collapse:separate; border-spacing:0; border:0 !important; font-size:9px; margin-top:8px;">
                             <tr>
-                                <td colspan="4" style="background-color:#0068b3; color:#fff; text-align:center; font-weight:bold; border:1px solid #000; padding:2px;">
-                                    DATOS DE LA ORDEN
+                                <td style="width:65%; border:0 !important; border-left:0 !important; border-right:0 !important; border-top:0 !important; border-bottom:0 !important; padding:4px 2px 4px 0; text-align:left; vertical-align:middle;">
+                                    <t t-set="_cmp_e" t-value="picking.company_id.partner_id"/>
+                                    <t t-set="_ecity" t-value="((_cmp_e.city or picking.company_id.city or '') if _cmp_e else (picking.company_id.city or '')).strip()"/>
+                                    <t t-set="_estate" t-value="((_cmp_e.state_id.name or '').strip() if _cmp_e and _cmp_e.state_id else '')"/>
+                                    <t t-set="_e_skip_state" t-value="_ecity and _estate and ('d.c' in _ecity.lower() or 'distrito capital' in _ecity.lower()) and _estate.lower().replace('á','a') in ('bogota', 'bogotá')"/>
+                                    <t t-set="_e_use_state_only" t-value="_ecity and _estate and _ecity.lower().replace('á','a') in ('bogota', 'bogotá') and ('d.c' in _estate.lower() or 'distrito' in _estate.lower())"/>
+                                    <t t-if="_e_use_state_only">
+                                        <span t-esc="_estate"/>
+                                    </t>
+                                    <t t-else="">
+                                        <span t-esc="_ecity"/>
+                                        <t t-if="_estate and not _e_skip_state">
+                                            <span t-esc="' ' + _estate"/>
+                                        </t>
+                                    </t>
+                                    <span> </span>
+                                    <span t-esc="picking.acta_devolucion_fecha_larga()"/>
                                 </td>
-                            </tr>
-                            <tr>
-                                <td style="width:20%; border-left:1px solid #000; border-bottom:1px solid #000; padding:2px; font-weight:bold; text-align:center; vertical-align:middle;">
-                                    FECHA ENTREGA:
-                                </td>
-                                <td style="width:30%; border-bottom:1px solid #000; padding:2px; text-align:center; vertical-align:middle;">
-                                    <span t-esc="(picking.scheduled_date or picking.date_done or '')"/>
-                                </td>
-                                <td style="width:20%; border-bottom:1px solid #000; padding:2px; font-weight:bold; text-align:center; vertical-align:middle;">
-                                    ORDEN NÚMERO:
-                                </td>
-                                <td style="width:30%; border-right:1px solid #000; border-bottom:1px solid #000; padding:2px; text-align:center; vertical-align:middle;">
-                                    <span t-esc="picking.name or ''"/>
+                                <td style="width:35%; border:0 !important; border-left:0 !important; border-right:0 !important; border-top:0 !important; border-bottom:0 !important; padding:4px 0; text-align:right; vertical-align:middle; font-weight:bold;">
+                                    Acta No: <span t-esc="picking.name or ''"/>
                                 </td>
                             </tr>
                         </table>
 
-                        <div style="height:6px;"/>
+                        <div style="height:4px;"/>
 
-                        <table style="width:100%; border-collapse:collapse; font-size:9px;">
+                        <table style="width:100%; border-collapse:separate; border-spacing:0; border:0 !important; font-size:9px;">
                             <tr>
-                                <td colspan="4" style="background-color:#0068b3; color:#fff; text-align:center; font-weight:bold; border:1px solid #000; padding:2px;">
-                                    DATOS DEL CLIENTE
+                                <td style="width:22%; border:0 !important; border-left:0 !important; border-right:0 !important; border-top:0 !important; border-bottom:0 !important; padding:4px 8px 4px 0; font-weight:bold; text-align:left; vertical-align:top;">CLIENTE:</td>
+                                <td style="border:0 !important; border-left:0 !important; border-right:0 !important; border-top:0 !important; border-bottom:0 !important; padding:4px 0; text-align:left; vertical-align:top;">
+                                    <span t-esc="(picking.partner_id.name if picking.partner_id else '')"/>
                                 </td>
                             </tr>
                             <tr>
-                                <td style="width:20%; border-left:1px solid #000; border-bottom:1px solid #000; padding:2px; font-weight:bold; text-align:center; vertical-align:middle;">
-                                    NOMBRE CLIENTE
-                                </td>
-                                <td style="width:30%; border-bottom:1px solid #000; padding:2px; text-align:center; vertical-align:middle;">
-                                    <span t-esc="(picking.partner_id.name if picking and picking.partner_id else '')"/>
-                                </td>
-                                <td style="width:20%; border-bottom:1px solid #000; padding:2px; font-weight:bold; text-align:center; vertical-align:middle;">
-                                    NIT
-                                </td>
-                                <td style="width:30%; border-right:1px solid #000; border-bottom:1px solid #000; padding:2px; text-align:center; vertical-align:middle;">
-                                    <span t-esc="((picking.partner_id.dian_nit_number or picking.partner_id.vat) if picking and picking.partner_id else '')"/>
+                                <td style="border:none; padding:4px 8px 4px 0; font-weight:bold; text-align:left; vertical-align:top;">NIT:</td>
+                                <td style="border:none; padding:4px 0; text-align:left; vertical-align:top;">
+                                    <span t-esc="((picking.partner_id.dian_nit_number or picking.partner_id.vat) if picking.partner_id else '')"/>
                                 </td>
                             </tr>
                             <tr>
-                                <td style="border-left:1px solid #000; border-bottom:1px solid #000; padding:2px; font-weight:bold; text-align:center; vertical-align:middle;">
-                                    CIUDAD
-                                </td>
-                                <td style="border-bottom:1px solid #000; padding:2px; text-align:center; vertical-align:middle;">
-                                    <span t-esc="(picking.partner_id.city if picking and picking.partner_id else '')"/>
-                                </td>
-                                <td style="border-bottom:1px solid #000; padding:2px; font-weight:bold; text-align:center; vertical-align:middle;">
-                                    TELÉFONO
-                                </td>
-                                <td style="border-right:1px solid #000; border-bottom:1px solid #000; padding:2px; text-align:center; vertical-align:middle;">
-                                    <span t-esc="((picking.partner_id.phone or picking.partner_id.mobile) if picking and picking.partner_id else '')"/>
+                                <td style="border:none; padding:4px 8px 4px 0; font-weight:bold; text-align:left; vertical-align:top;">DIRECCION:</td>
+                                <td style="border:none; padding:4px 0; text-align:left; vertical-align:top;">
+                                    <span t-esc="(picking.partner_id and ((picking.partner_id.street or '') + (' ' + picking.partner_id.street2 if picking.partner_id.street2 else '')).strip()) or ''"/>
                                 </td>
                             </tr>
                             <tr>
-                                <td style="border-left:1px solid #000; border-bottom:1px solid #000; padding:2px; font-weight:bold; text-align:center; vertical-align:middle;">
-                                    DIRECCIÓN
+                                <td style="border:none; padding:4px 8px 4px 0; font-weight:bold; text-align:left; vertical-align:top;">TEL:</td>
+                                <td style="border:none; padding:4px 0; text-align:left; vertical-align:top;">
+                                    <span t-esc="((picking.partner_id.phone or picking.partner_id.mobile) if picking.partner_id else '')"/>
                                 </td>
-                                <td colspan="3" style="border-right:1px solid #000; border-bottom:1px solid #000; padding:2px; text-align:center; vertical-align:middle;">
-                                    <span t-esc="(picking.partner_id.contact_address if picking and picking.partner_id else '')"/>
+                            </tr>
+                            <tr>
+                                <td style="border:none; padding:4px 8px 4px 0; font-weight:bold; text-align:left; vertical-align:top;">CIUDAD:</td>
+                                <td style="border:none; padding:4px 0; text-align:left; vertical-align:top;">
+                                    <span t-esc="(picking.partner_id.city if picking.partner_id else '')"/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="border:none; padding:4px 8px 4px 0; font-weight:bold; text-align:left; vertical-align:top;">MOTIVO DE ENTREGA:</td>
+                                <td style="border:none; padding:4px 0; text-align:left; vertical-align:top;">
+                                    <span>ENTREGA</span>
                                 </td>
                             </tr>
                         </table>
 
-                        <div style="margin-top:8px; font-size:9px; text-align:justify;">
-                            <p>Estimado (s) señor (es):</p>
-                            <p>
-                                En virtud del presente documento, Supplies de Colombia SAS realiza la entrega de los productos descritos
-                                a continuación, en perfecto estado de funcionamiento y conservación, con las siguientes características:
+                        <div style="margin-top:10px; font-size:9px; text-align:justify;">
+                            <p style="margin:0 0 6px 0; font-weight:bold;">Estimado cliente:</p>
+                            <p style="margin:0;">
+                                La presente acta hace constancia de la entrega del siguiente activo (s) fijo (s), el cual queda
+                                bajo su total responsabilidad, además del cuidado de toda parte de este; todos los elementos
+                                deberán ser conservados en excelentes condiciones. Este activo (s) tiene las siguientes
+                                especificaciones:
                             </p>
                         </div>
 
-                        <table style="width:100%; border-collapse:collapse; table-layout:fixed; font-size:9px; margin-top:6px;">
+                        <table style="width:100%; border-collapse:collapse; table-layout:fixed; font-size:9px; margin-top:8px;">
                             <colgroup>
                                 <col style="width:16%;"/>
-                                <col style="width:28%;"/>
-                                <col style="width:18%;"/>
-                                <col style="width:22%;"/>
                                 <col style="width:16%;"/>
+                                <col style="width:16%;"/>
+                                <col style="width:18%;"/>
+                                <col style="width:17%;"/>
+                                <col style="width:17%;"/>
                             </colgroup>
                             <tr style="background-color:#0068b3; color:#fff; font-weight:bold;">
-                                <td style="border:none; padding:5px 3px; text-align:center; vertical-align:middle;">CLASE</td>
+                                <td style="border:none; padding:5px 3px; text-align:center; vertical-align:middle;">CLASE DE ACTIVO</td>
                                 <td style="border:none; padding:5px 3px; text-align:center; vertical-align:middle;">MARCA</td>
                                 <td style="border:none; padding:5px 3px; text-align:center; vertical-align:middle;">MODELO</td>
                                 <td style="border:none; padding:5px 3px; text-align:center; vertical-align:middle;">SERIAL</td>
-                                <td style="border:none; padding:5px 3px; text-align:center; vertical-align:middle;">PLACA</td>
+                                <td style="border:none; padding:5px 3px; text-align:center; vertical-align:middle;">PLACA<br/>INVENTARIO</td>
+                                <td style="border:none; padding:5px 3px; text-align:center; vertical-align:middle;">PLACA<br/>SEGURIDAD</td>
                             </tr>
                             <t t-foreach="sorted(picking.move_line_ids or [], key=lambda l: (l.product_id.display_name or '', l.lot_id.name or ''))" t-as="line">
                                 <tr>
@@ -483,22 +436,128 @@
                                     <td style="border:1px solid #000; border-left:none; border-top:1px solid #000; padding:3px 2px; text-align:center; vertical-align:middle; word-wrap:break-word;">
                                         <span t-esc="(line.lot_id.inventory_plate or '')"/>
                                     </td>
+                                    <td style="border:1px solid #000; border-left:none; border-top:1px solid #000; padding:3px 2px; text-align:center; vertical-align:middle; word-wrap:break-word;">
+                                        <span t-esc="(line.lot_id.security_plate or '')"/>
+                                    </td>
                                 </tr>
                             </t>
                         </table>
 
+                        <t t-set="_main_lines_delivery" t-value="sorted((picking.move_line_ids or []).filtered_domain([('supply_kind', '=', 'parent')]), key=lambda l: (l.product_id.display_name or '', l.lot_id.name or ''))"/>
                         <table style="width:100%; border-collapse:collapse; font-size:9px; margin-top:8px;">
                             <tr>
                                 <td style="background-color:#0068b3; color:#fff; text-align:center; font-weight:bold; border:1px solid #000; padding:2px;">
+                                    DETALLES
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="border-left:1px solid #000; border-right:1px solid #000; border-bottom:1px solid #000; padding:6px; min-height:40px; text-align:left; white-space:normal;">
+                                    <t t-if="picking.note">
+                                        <div style="margin-bottom:6px;">
+                                            <strong>Nota:</strong>
+                                            <span t-esc="picking.note"/>
+                                        </div>
+                                    </t>
+                                    <t t-if="_main_lines_delivery">
+                                        <div style="font-weight:bold; margin:2px 0 6px 0;">
+                                            DETALLES:
+                                        </div>
+                                        <t t-foreach="_main_lines_delivery" t-as="ml">
+                                            <div style="margin:0 0 6px 0; padding:4px 6px; border:1px solid #d0d0d0;">
+                                                <t t-set="_ml_lot" t-value="ml.lot_id"/>
+                                                <t t-set="_ml_user_name" t-value="(_ml_lot and _ml_lot.related_partner_id and _ml_lot.related_partner_id.name) or ''"/>
+                                                <t t-set="_ml_user_lics" t-value="(_ml_lot and _ml_lot.license_user_ids.filtered_domain([('state', '=', 'assigned')])) or env['license.equipment'].browse([])"/>
+                                                <t t-set="_ml_eq_lics" t-value="(_ml_lot and _ml_lot.license_equipment_ids.filtered_domain([('state', '=', 'assigned')])) or env['license.equipment'].browse([])"/>
+                                                <t t-set="_ml_costo_acta" t-value="_ml_lot.id and _ml_lot.get_acta_entrega_subscription_service_price_safe() or ''"/>
+                                                <t t-set="_ml_costo_acta_show" t-value="(_ml_costo_acta[:-3] if _ml_costo_acta.endswith(',00') else (_ml_costo_acta[:-3] if _ml_costo_acta.endswith('.00') else _ml_costo_acta)) if _ml_costo_acta else ''"/>
+                                                <div style="font-weight:bold;">
+                                                    <span t-esc="(ml.product_id and ml.product_id.name) or ''"/>
+                                                    <t t-if="ml.product_id and ml.product_id.product_tmpl_id and ml.product_id.product_tmpl_id.model_name and (ml.product_id.product_tmpl_id.model_name not in ((ml.product_id.name or '').upper()))">
+                                                        <span> </span><span t-esc="ml.product_id.product_tmpl_id.model_name"/>
+                                                    </t>
+                                                    <t t-if="ml.lot_id and ml.lot_id.name">
+                                                        <span>, Serial: </span><span t-esc="ml.lot_id.name"/>
+                                                    </t>
+                                                </div>
+                                                <t t-if="_ml_user_name">
+                                                    <div>
+                                                        <strong>Usuario:</strong>
+                                                        <span t-esc="_ml_user_name"/>
+                                                    </div>
+                                                </t>
+                                                <t t-if="_ml_costo_acta">
+                                                    <div>
+                                                        <strong>Costo:</strong>
+                                                        <span t-esc="_ml_costo_acta_show"/>
+                                                    </div>
+                                                </t>
+                                                <t t-if="_ml_lot and _ml_lot.subscription_service_product_id">
+                                                    <div>
+                                                        <strong>Servicio:</strong>
+                                                        <span t-esc="_ml_lot.subscription_service_product_id.display_name"/>
+                                                    </div>
+                                                </t>
+                                                <t t-if="_ml_lot and _ml_lot.active_subscription_id">
+                                                    <div>
+                                                        <strong>Suscripción:</strong>
+                                                        <span t-esc="_ml_lot.active_subscription_id.display_name"/>
+                                                    </div>
+                                                </t>
+                                                <t t-set="_ml_plazo_acta" t-value="_ml_lot.get_acta_reining_plazo_label() if _ml_lot else ''"/>
+                                                <t t-if="_ml_plazo_acta">
+                                                    <div>
+                                                        <strong>Plazo renting:</strong>
+                                                        <span t-esc="_ml_plazo_acta"/>
+                                                    </div>
+                                                </t>
+                                                <t t-if="ml.associated_components">
+                                                    <div><strong>Componentes:</strong> <span t-esc="ml.associated_components"/></div>
+                                                </t>
+                                                <t t-if="ml.associated_complements">
+                                                    <div><strong>Complementos:</strong> <span t-esc="ml.associated_complements"/></div>
+                                                </t>
+                                                <t t-if="ml.associated_peripherals">
+                                                    <div><strong>Periféricos:</strong> <span t-esc="ml.associated_peripherals"/></div>
+                                                </t>
+                                                <t t-if="_ml_eq_lics">
+                                                    <div>
+                                                        <strong>Licencias por equipo:</strong>
+                                                        <span t-esc="', '.join(_ml_eq_lics.mapped('service_product_id.display_name'))"/>
+                                                    </div>
+                                                </t>
+                                                <t t-if="_ml_user_lics">
+                                                    <div>
+                                                        <strong>Licencias por usuario:</strong>
+                                                        <span t-esc="', '.join(_ml_user_lics.mapped('service_product_id.display_name'))"/>
+                                                    </div>
+                                                </t>
+                                            </div>
+                                        </t>
+                                    </t>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <table style="width:100%; border-collapse:collapse; font-size:9px; margin-top:8px;">
+                            <tr>
+                                <td style="background-color:#0068b3; color:#fff; text-align:center; font-weight:bold; border:1px solid #000; padding:3px;">
                                     OBSERVACIONES
                                 </td>
                             </tr>
                             <tr>
-                                <td style="border-left:1px solid #000; border-right:1px solid #000; border-bottom:1px solid #000; padding:4px; min-height:40px;">
-                                    <span t-esc="picking.note or ''"/>
+                                <td style="border:1px solid #000; border-top:none; padding:6px; min-height:36px; text-align:left; vertical-align:top; white-space:normal;">
+                                    <div style="text-align:left; white-space:normal; margin:0; padding:0;">
+                                        <span t-esc="(picking.observation_li or '').strip()"/>
+                                    </div>
                                 </td>
                             </tr>
                         </table>
+
+                        <div style="margin-top:8px; font-size:9px; text-align:justify;">
+                            Para cualquier tipo de mantenimiento o reparación se debe acudir directamente al personal de Supplies de Colombia S.A.S.
+                            Al firmar acepta, las condiciones establecidas en el contrato y se compromete al cuidado del (los) activo (s)
+                            anteriormente mencionado (s).
+                        </div>
 
                         <div style="margin-top:30px; font-size:9px;">
                             <p>Atentamente,</p>
@@ -515,8 +574,9 @@
                                 </div>
                             </div>
                         </div>
-                </div>
-            </div>
+                        </div>
+                    </div>
+                </t>
             </t>
         </t>
     </t>

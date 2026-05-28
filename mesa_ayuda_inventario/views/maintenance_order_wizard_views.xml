@@ -12,7 +12,11 @@
                         <group>
                             <group>
                                 <field name="partner_id" options="{'no_create': True}" required="1"/>
-                                <field name="technician_ids" widget="many2many_tags" options="{'no_create': True}" required="1"/>
+                                <field name="technician_ids" widget="many2many_tags"
+                                       options="{'no_create': True}"
+                                       domain="[('share', '=', False)]"
+                                       placeholder="Seleccione técnicos"
+                                       required="1"/>
                                 <field name="scheduled_date" required="1"/>
                                 <field name="deadline_date"/>
                             </group>

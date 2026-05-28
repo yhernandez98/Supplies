@@ -8,15 +8,12 @@
             <field name="arch" type="xml">
                 <list string="Órdenes de Servicio">
                     <field name="name" string="Número de Orden"/>
-                    <field name="activity_type" widget="badge" 
-                           decoration-info="activity_type == 'visit'"
-                           decoration-success="activity_type == 'maintenance'"
-                           decoration-warning="activity_type == 'inspection'"
-                           decoration-danger="activity_type == 'repair'"
-                           decoration-muted="activity_type == 'installation'"
-                           string="Tipo"/>
                     <field name="partner_id" string="Cliente"/>
-                    <field name="technician_ids" widget="many2many_tags" options="{'no_create': True}" string="Técnicos"/>
+                    <field name="technician_ids" widget="many2many_tags"
+                           options="{'no_create': True}"
+                           domain="[('share', '=', False)]"
+                           placeholder="Seleccione técnicos"
+                           string="Técnicos"/>
                     <field name="scheduled_date" string="Fecha Programada" widget="date"/>
                     <field name="state" widget="badge" 
                            decoration-success="state == 'completed'" 
@@ -25,8 +22,6 @@
                            decoration-muted="state == 'cancelled'"
                            decoration-danger="state == 'draft'"
                            string="Estado"/>
-                    <field name="maintenance_count" string="Total" optional="hide"/>
-                    <field name="completed_maintenance_count" string="Completados" optional="hide"/>
                 </list>
             </field>
         </record>
@@ -36,26 +31,20 @@
             <field name="name">maintenance.order.form</field>
             <field name="model">maintenance.order</field>
             <field name="arch" type="xml">
-                <form string="Orden de Mantenimiento">
+                <form string="Visita Técnica">
                     <header>
                         <button name="action_confirm" string="Programar" type="object" class="oe_highlight" invisible="state != 'draft'"/>
                         <button name="action_start" string="Iniciar" type="object" class="oe_highlight" invisible="state != 'scheduled'"/>
                         <button name="action_complete" string="Completar" type="object" class="oe_highlight" invisible="state != 'in_progress'"/>
                         <button name="action_cancel" string="Cancelar" type="object" invisible="state in ('completed', 'cancelled')"/>
-                        <button name="action_add_equipment" string="Agregar Equipos" type="object" class="btn-secondary" invisible="state in ('completed', 'cancelled')"/>
                         <button name="action_generate_pdf_report" string="Generar Reporte" type="object" class="btn-primary" icon="fa-file-pdf" invisible="state != 'completed' or not maintenance_ids"/>
                         <field name="state" widget="statusbar" statusbar_visible="draft,scheduled,in_progress,completed"/>
                     </header>
                     <sheet>
-                        <!-- Campo oculto para evaluar condiciones -->
+                        <!-- Campos ocultos para condiciones y datos relacionados -->
                         <field name="is_signed" invisible="1"/>
+                        <field name="maintenance_ids" invisible="1"/>
                         <div class="oe_button_box" name="button_box">
-                            <button name="action_view_maintenances" type="object" class="oe_stat_button" icon="fa-wrench">
-                                <field name="maintenance_count" widget="statinfo" string="Mantenimientos"/>
-                            </button>
-                            <button name="action_view_maintenances" type="object" class="oe_stat_button" icon="fa-check-circle" invisible="completed_maintenance_count == 0">
-                                <field name="completed_maintenance_count" widget="statinfo" string="Completados"/>
-                            </button>
                             <button name="action_view_ticket" type="object" class="oe_stat_button" icon="fa-ticket" invisible="not ticket_id">
                                 <field name="ticket_id" widget="statinfo" string="Ticket"/>
                             </button>
@@ -63,99 +52,26 @@
                         <group>
                             <group>
                                 <field name="name"/>
-                                <field name="activity_type" widget="radio" options="{'horizontal': true}"/>
+                                <field name="activity_type" invisible="1"/>
                                 <field name="partner_id" options="{'no_create': True}"/>
-                                <field name="technician_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                                <field name="technician_ids" widget="many2many_tags"
+                                       options="{'no_create': True}"
+                                       domain="[('share', '=', False)]"
+                                       placeholder="Seleccione uno o más técnicos"/>
                                 <field name="ticket_id" options="{'no_create': True, 'no_open': True}" readonly="1"/>
                             </group>
                             <group>
                                 <field name="scheduled_date"/>
                                 <field name="deadline_date"/>
-                                <field name="maintenance_count" readonly="1"/>
-                                <field name="completed_maintenance_count" readonly="1"/>
                                 <button name="action_view_calendar" string="Ver en Calendario" type="object" 
                                         class="btn-secondary" icon="fa-calendar" 
                                         invisible="not calendar_event_ids or state in ('cancelled', 'completed')"/>
                             </group>
                         </group>
-                        <group invisible="activity_type != 'visit'">
+                        <group>
                             <field name="visit_purpose" placeholder="Descripción del objetivo de la visita..."/>
                         </group>
                         <notebook>
-                            <page string="Mantenimientos" name="maintenances">
-                                <field name="maintenance_ids" nolabel="1" context="{'default_maintenance_order_id': id}">
-                                    <list>
-                                        <field name="lot_id"/>
-                                        <field name="inventory_plate" string="Placa Inventario" optional="hide"/>
-                                        <field name="product_id"/>
-                                        <field name="maintenance_type"/>
-                                        <field name="maintenance_date"/>
-                                        <field name="status" widget="badge" decoration-success="status == 'completed'" decoration-info="status == 'in_progress'" decoration-warning="status == 'scheduled'"/>
-                                        <field name="technician_id"/>
-                                    </list>
-                                    <form>
-                                        <header>
-                                            <button name="action_convert_to_repair" string="🔧 Crear Reparación" type="object" class="btn-primary" icon="fa-wrench" invisible="repair_order_id"/>
-                                            <button name="action_view_repair_order" string="Ver Reparación" type="object" class="btn-secondary" invisible="not repair_order_id"/>
-                                            <button name="action_equipment_change" string="🔄 Cambio de Equipo" type="object" class="btn-secondary" icon="fa-exchange"/>
-                                            <button name="action_request_element" string="📦 Solicitar Elemento" type="object" class="btn-secondary" icon="fa-shopping-cart"/>
-                                        </header>
-                                        <sheet>
-                                            <group>
-                                                <group>
-                                                    <field name="lot_id" required="1"/>
-                                                    <field name="inventory_plate" readonly="1"/>
-                                                    <field name="maintenance_type" required="1"/>
-                                                    <field name="maintenance_date" required="1"/>
-                                                </group>
-                                                <group>
-                                                    <field name="technician_id"/>
-                                                    <field name="status"/>
-                                                    <field name="repair_order_id" invisible="1"/>
-                                                </group>
-                                            </group>
-                                            <group>
-                                                <field name="technician_ids" widget="many2many_tags" string="Todos los Técnicos Asignados"/>
-                                            </group>
-                                            <notebook>
-                                                <page string="📝 Descripción del Trabajo" name="description">
-                                                    <div class="alert alert-info" role="alert" style="margin-bottom: 10px; padding: 10px; background-color: #d1ecf1; border: 1px solid #0c5460; border-radius: 4px; font-size: 12px;">
-                                                        <strong>💡 Editor enriquecido:</strong> Puedes usar formato de texto, agregar imágenes y crear un documento detallado.
-                                                    </div>
-                                                    <field name="description" widget="html" nolabel="1" 
-                                                           options="{'toolbar': 'full', 'resizable': true, 'height': 350}"/>
-                                                </page>
-                                                <page string="🔧 Cambios de Componentes" name="components">
-                                                    <field name="component_change_ids" nolabel="1">
-                                                        <list>
-                                                            <field name="change_date"/>
-                                                            <field name="product_id"/>
-                                                            <field name="old_component_lot_id"/>
-                                                            <field name="new_component_lot_id"/>
-                                                            <field name="reason"/>
-                                                        </list>
-                                                        <form>
-                                                            <group>
-                                                                <group>
-                                                                    <field name="change_date"/>
-                                                                    <field name="product_id" required="1"/>
-                                                                </group>
-                                                                <group>
-                                                                    <field name="old_component_lot_id"/>
-                                                                    <field name="new_component_lot_id"/>
-                                                                </group>
-                                                            </group>
-                                                            <group>
-                                                                <field name="reason" placeholder="Motivo del cambio..."/>
-                                                            </group>
-                                                        </form>
-                                                    </field>
-                                                </page>
-                                            </notebook>
-                                        </sheet>
-                                    </form>
-                                </field>
-                            </page>
                             <page string="Descripción" name="description">
                                 <field name="description" nolabel="1" placeholder="Descripción general de la orden de mantenimiento..."/>
                             </page>
@@ -244,12 +160,9 @@
                 <kanban default_group_by="state" class="o_kanban_mobile maintenance_order_kanban">
                     <field name="name"/>
                     <field name="partner_id"/>
-                    <field name="activity_type"/>
                     <field name="technician_ids"/>
                     <field name="scheduled_date"/>
                     <field name="state"/>
-                    <field name="maintenance_count"/>
-                    <field name="completed_maintenance_count"/>
                     <field name="ticket_id"/>
                     <templates>
                         <t t-name="card">
@@ -263,22 +176,8 @@
                                             <field name="state" widget="badge"/>
                                         </span>
                                     </div>
-                                    <div class="maintenance_activity_type" t-attf-class="maintenance_activity_type maintenance_activity_type_#{record.activity_type.raw_value}">
-                                        <t t-if="record.activity_type.raw_value == 'visit'">
-                                            <i class="fa fa-calendar-check-o"/> Visita
-                                        </t>
-                                        <t t-if="record.activity_type.raw_value == 'maintenance'">
-                                            <i class="fa fa-wrench"/> Mantenimiento
-                                        </t>
-                                        <t t-if="record.activity_type.raw_value == 'inspection'">
-                                            <i class="fa fa-search"/> Inspección
-                                        </t>
-                                        <t t-if="record.activity_type.raw_value == 'repair'">
-                                            <i class="fa fa-tools"/> Reparación
-                                        </t>
-                                        <t t-if="record.activity_type.raw_value == 'installation'">
-                                            <i class="fa fa-cog"/> Instalación
-                                        </t>
+                                    <div class="maintenance_activity_type maintenance_activity_type_visit">
+                                        <i class="fa fa-calendar-check-o"/> Visita y Mantenimiento
                                     </div>
                                 </div>
                                 
@@ -298,7 +197,10 @@
                                         <i class="fa fa-users"/> Técnicos
                                     </div>
                                     <div class="maintenance_section_value">
-                                        <field name="technician_ids" widget="many2many_tags" options="{'color_field': 'color', 'no_create': True}"/>
+                                        <field name="technician_ids" widget="many2many_tags"
+                                               options="{'color_field': 'color', 'no_create': True}"
+                                               domain="[('share', '=', False)]"
+                                               placeholder="Seleccione técnicos"/>
                                     </div>
                                 </div>
                                 
@@ -309,23 +211,6 @@
                                     </div>
                                     <div class="maintenance_section_value">
                                         <field name="scheduled_date"/>
-                                    </div>
-                                </div>
-                                
-                                <!-- Progreso de Mantenimientos -->
-                                <div class="maintenance_card_section maintenance_progress_section">
-                                    <div class="maintenance_progress_header">
-                                        <span class="maintenance_section_label">
-                                            <i class="fa fa-tasks"/> Mantenimientos
-                                        </span>
-                                        <span class="maintenance_progress_text">
-                                            <field name="completed_maintenance_count"/> / <field name="maintenance_count"/>
-                                        </span>
-                                    </div>
-                                    <div class="maintenance_progress_bar_container">
-                                        <t t-set="progress_percent" t-value="record.maintenance_count.raw_value > 0 ? (record.completed_maintenance_count.raw_value / record.maintenance_count.raw_value * 100) : 0"/>
-                                        <div class="maintenance_progress_bar" t-attf-style="width: #{progress_percent}%">
-                                        </div>
                                     </div>
                                 </div>
                                 
@@ -351,18 +236,13 @@
             <field name="model">maintenance.order</field>
             <field name="type">search</field>
             <field name="arch" type="xml">
-                <search string="Ordenes de Mantenimiento">
+                <search string="Visitas técnicas">
                     <field name="name"/>
                     <field name="partner_id"/>
-                    <field name="activity_type"/>
                     <field name="technician_ids"/>
                     <field name="scheduled_date"/>
                     <separator/>
-                    <filter string="Mantenimientos" name="maintenance" domain="[('activity_type', '=', 'maintenance')]"/>
-                    <filter string="Visitas Programadas" name="visit" domain="[('activity_type', '=', 'visit')]"/>
-                    <filter string="Inspecciones" name="inspection" domain="[('activity_type', '=', 'inspection')]"/>
-                    <filter string="Reparaciones" name="repair" domain="[('activity_type', '=', 'repair')]"/>
-                    <filter string="Instalaciones" name="installation" domain="[('activity_type', '=', 'installation')]"/>
+                    <filter string="Mis visitas (soy técnico)" name="my_technician_visits" domain="[('technician_ids', 'in', [uid])]"/>
                     <separator/>
                     <filter string="Borrador" name="draft" domain="[('state', '=', 'draft')]"/>
                     <filter string="Programada" name="scheduled" domain="[('state', '=', 'scheduled')]"/>
@@ -375,20 +255,49 @@
 
         <!-- Acción para Ordenes de Mantenimiento -->
         <record id="action_maintenance_order" model="ir.actions.act_window">
-            <field name="name">Órdenes de Servicio</field>
+            <field name="name">Órdenes de servicio</field>
             <field name="res_model">maintenance.order</field>
             <field name="view_mode">kanban,list,form</field>
             <field name="search_view_id" ref="view_maintenance_order_search"/>
-            <field name="context">{'search_default_group_state': 1, 'default_activity_type': 'maintenance'}</field>
+            <field name="context">{'search_default_group_state': 1, 'default_activity_type': 'visit'}</field>
             <field name="domain">[]</field>
             <field name="help" type="html">
                 <p class="o_view_nocontent_smiling_face">
                     Crear nueva orden de servicio
                 </p>
                 <p>
-                    Las órdenes de servicio permiten programar mantenimientos, visitas, inspecciones y otras actividades
-                    para un mismo cliente y técnico. Los tickets se crean automáticamente.
+                    Agrupa varios equipos en una misma visita (cliente, fecha, técnicos).
+                    Los equipos por número de serie se gestionan desde los flujos de mantenimiento o ticket asociado.
                 </p>
+            </field>
+        </record>
+
+        <!-- Lista/búsqueda solo panel técnico: sin columna técnicos ni filtro removible (el dominio fija al usuario) -->
+        <record id="view_maintenance_order_list_technician_assigned" model="ir.ui.view">
+            <field name="name">maintenance.order.list.technician.assigned</field>
+            <field name="model">maintenance.order</field>
+            <field name="inherit_id" ref="mesa_ayuda_inventario.view_maintenance_order_list"/>
+            <field name="mode">primary</field>
+            <field name="arch" type="xml">
+                <xpath expr="//list" position="attributes">
+                    <attribute name="js_class">mesa_technician_visit_list</attribute>
+                    <attribute name="action">action_view_ticket</attribute>
+                    <attribute name="type">object</attribute>
+                </xpath>
+                <xpath expr="//field[@name='technician_ids']" position="replace"/>
+            </field>
+        </record>
+
+        <!-- Búsqueda mínima (sin filtros; lista sin panel de control vía js_class). inherit_id=False limpia BD si antes era herencia. -->
+        <record id="view_maintenance_order_search_technician_assigned" model="ir.ui.view">
+            <field name="name">maintenance.order.search.technician.assigned</field>
+            <field name="model">maintenance.order</field>
+            <field name="inherit_id" eval="False"/>
+            <field name="type">search</field>
+            <field name="arch" type="xml">
+                <search string="Visitas asignadas">
+                    <field name="name" invisible="1"/>
+                </search>
             </field>
         </record>
     </data>

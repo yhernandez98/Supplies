@@ -31,9 +31,8 @@ class MaintenanceOrderWizard(models.TransientModel):
         'wizard_id',
         'user_id',
         string='Técnicos Asignados',
-        default=lambda self: [(6, 0, [self.env.user.id])] if self.env.user else False,
         required=True,
-        help='Técnicos responsables de realizar el mantenimiento'
+        help='Seleccione los técnicos responsables (no se preasigna el usuario actual).'
     )
     
     scheduled_date = fields.Datetime(

@@ -13,7 +13,7 @@
     'website': 'https://www.supplies.com',
     'license': 'LGPL-3',
     'category': 'Inventory/Inventory',
-    'version': '19.0.0.0.2',
+    'version': '19.0.0.0.40',
     'installable': True,
     'depends': [
         'purchase',
@@ -27,6 +27,7 @@
     ],
     'data': [
         'security/ir.model.access.csv',
+        'data/actions.xml',
         'views/asset_category_views.xml',
         'views/product_views.xml',
         'views/purchase_views.xml',

@@ -6,17 +6,18 @@
             <field name="name">maintenance.order.calendar</field>
             <field name="model">maintenance.order</field>
             <field name="arch" type="xml">
-                <calendar string="Visitas y Mantenimientos Programados" 
+                <calendar string="Visitas técnicas programadas" 
                          date_start="scheduled_date"
                          date_stop="deadline_date"
-                         color="activity_type"
+                         color="state"
+                         create_name_field="calendar_label"
                          event_open_popup="true"
                          quick_create="false"
                          mode="month">
-                    <field name="name"/>
+                    <field name="name" invisible="1"/>
+                    <field name="calendar_label"/>
+                    <field name="technician_ids" filters="1" avatar_field="image_128"/>
                     <field name="partner_id"/>
-                    <field name="activity_type"/>
-                    <field name="technician_ids"/>
                     <field name="state"/>
                 </calendar>
             </field>
@@ -28,6 +29,7 @@
             <field name="res_model">maintenance.order</field>
             <field name="view_mode">calendar,list,form</field>
             <field name="view_id" ref="view_maintenance_order_calendar"/>
+            <field name="search_view_id" ref="mesa_ayuda_inventario.view_maintenance_order_search"/>
             <field name="domain">[('state', 'not in', ('cancelled', 'completed'))]</field>
             <field name="context">{
                 'search_default_scheduled': 1,

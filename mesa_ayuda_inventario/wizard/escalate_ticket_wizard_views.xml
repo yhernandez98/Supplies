@@ -5,15 +5,23 @@
             <field name="name">helpdesk.ticket.escalate.wizard.form</field>
             <field name="model">helpdesk.ticket.escalate.wizard</field>
             <field name="arch" type="xml">
-                <form string="Escalar ticket">
-                    <group>
-                        <field name="ticket_id"/>
-                        <field name="team_id" options="{'no_create': True}" placeholder="Ej. Nivel 2"/>
-                        <field name="user_id" options="{'no_create': True}"/>
-                    </group>
-                    <group string="Motivo de escalación">
-                        <field name="escalation_reason" placeholder="Ej. Requiere especialista, cliente solicitó Nivel 2, tema técnico complejo..." nolabel="1" colspan="2"/>
-                    </group>
+                <form string="Escalar ticket" class="mesa_acta_wizard mesa_escalate_wizard">
+                    <sheet>
+                        <div class="mesa_acta_wizard_header">
+                            <p class="mesa_acta_wizard_header__title">Escalar a otro equipo o responsable</p>
+                            <p class="mesa_acta_wizard_header__hint">
+                                Elija el equipo de soporte y la persona asignada; registre un breve motivo para la trazabilidad.
+                            </p>
+                        </div>
+                        <group>
+                            <field name="ticket_id"/>
+                            <field name="team_id" options="{'no_create': True}" placeholder="Ej. Nivel 2"/>
+                            <field name="user_id" options="{'no_create': True}"/>
+                        </group>
+                        <group string="Motivo de escalación" class="mesa_escalate_reason_group">
+                            <field name="escalation_reason" placeholder="Ej. Requiere especialista, cliente solicitó Nivel 2, tema técnico complejo..." nolabel="1" colspan="2"/>
+                        </group>
+                    </sheet>
                     <footer>
                         <button name="action_escalate" string="Escalar" type="object" class="btn-primary"/>
                         <button string="Cancelar" class="btn-secondary" special="cancel"/>

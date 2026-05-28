@@ -1,7 +1,13 @@
 # -*- coding: utf-8 -*-
 
+import html as html_stdlib
+
+from markupsafe import Markup, escape
+
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError
+from odoo.tools import mail as mail_tools
+from odoo.tools import html2plaintext
 from datetime import datetime, timedelta
 import logging
 import base64
@@ -9,6 +15,56 @@ import re
 import traceback
 
 _logger = logging.getLogger(__name__)
+
+
+def _mesa_acta_table_html_is_equipment_block(table_html):
+    """Excluye tablas del acta de contactos (Nombre/Correo) que también tienen 3 columnas."""
+    if not table_html:
+        return False
+    low = re.sub(r'\s+', ' ', table_html).lower()
+    if 'data-mesa-acta-participant-partner-id' in low or 'data-mesa-acta-participant-user-id' in low:
+        return False
+    if 'data-mesa-acta-equipment="1"' in low or "data-mesa-acta-equipment='1'" in low:
+        return True
+    thead = ''
+    m = re.search(r'<thead\b[^>]*>([\s\S]*?)</thead>', table_html, re.I)
+    if m:
+        thead = re.sub(r'\s+', ' ', m.group(1)).lower()
+    if 'nombre' in thead and ('correo' in thead or 'mail' in thead):
+        return False
+    if 'serie' in thead and 'placa' in thead:
+        return True
+    return False
+
+
+def _mesa_html_slice_balanced_div(html, open_idx):
+    """Devuelve el fragmento ``<div>...</div>`` balanceado desde ``open_idx`` (índice del ``<`` inicial)."""
+    n = len(html)
+    if open_idx < 0 or open_idx >= n:
+        return ''
+    if html[open_idx : open_idx + 4].lower() != '<div':
+        return ''
+    i = open_idx
+    depth = 0
+    while i < n:
+        if html[i] != '<':
+            i += 1
+            continue
+        if re.match(r'<div\b', html[i:], re.I):
+            depth += 1
+            gt = html.find('>', i)
+            if gt == -1:
+                return ''
+            i = gt + 1
+            continue
+        if html[i : i + 6].lower() == '</div>':
+            depth -= 1
+            i += 6
+            if depth == 0:
+                return html[open_idx:i]
+            continue
+        i += 1
+    return ''
 
 
 class MaintenanceOrder(models.Model):
@@ -43,9 +99,8 @@ class MaintenanceOrder(models.Model):
         'order_id',
         'user_id',
         string='Técnicos Asignados',
-        default=lambda self: [(6, 0, [self.env.user.id])] if self.env.user else False,
         tracking=True,
-        help='Técnicos responsables de realizar el mantenimiento'
+        help='Técnicos responsables de realizar el mantenimiento (selección manual; no se preasigna el usuario actual).'
     )
     
     scheduled_date = fields.Datetime(
@@ -100,18 +155,6 @@ class MaintenanceOrder(models.Model):
             for maintenance in order.maintenance_ids:
                 all_changes |= maintenance.component_change_ids
             order.all_component_change_ids = all_changes
-    
-    maintenance_count = fields.Integer(
-        string='Cantidad de Mantenimientos',
-        compute='_compute_maintenance_count',
-        store=True
-    )
-    
-    completed_maintenance_count = fields.Integer(
-        string='Mantenimientos Completados',
-        compute='_compute_maintenance_count',
-        store=True
-    )
     
     description = fields.Text(
         string='Descripción',
@@ -189,22 +232,36 @@ class MaintenanceOrder(models.Model):
     
     activity_type = fields.Selection(
         [
-            ('maintenance', 'Mantenimiento'),
-            ('visit', 'Visita Programada'),
-            ('inspection', 'Inspección'),
-            ('repair', 'Reparación'),
-            ('installation', 'Instalación'),
+            ('visit', 'Visita y Mantenimiento'),
         ],
         string='Tipo de Actividad',
-        default='maintenance',
+        default='visit',
         required=True,
         tracking=True,
-        help='Tipo de actividad técnica a realizar'
+        help='Todas las órdenes de este flujo son visita con mantenimiento en sitio.',
     )
     
     visit_purpose = fields.Text(
-        string='Propósito de la Visita',
-        help='Descripción del objetivo de la visita (visible solo para visitas)'
+        string='Propósito de la visita',
+        help='Objetivo de la visita en sitio.',
+    )
+
+    visit_documentation_html = fields.Html(
+        string='Informe de visita (último guardado)',
+        sanitize=False,
+        help='Contenido guardado desde el asistente de documentación; se muestra de nuevo al reabrir la misma visita.',
+    )
+
+    mesa_visit_pdf_summary_html = fields.Html(
+        string='Resumen cierre (PDF)',
+        copy=False,
+        help='Copia del resumen inyectado en el ticket al completar la visita; se usa en el informe PDF.',
+    )
+
+    mesa_pdf_summary_effective = fields.Html(
+        string='Resumen PDF (efectivo)',
+        compute='_compute_mesa_pdf_summary_effective',
+        help='Resumen guardado en la orden o, si falta, extraído del bloque de cierre en la descripción del ticket.',
     )
     
     calendar_event_ids = fields.Many2many(
@@ -217,40 +274,54 @@ class MaintenanceOrder(models.Model):
         help='Eventos de calendario asociados a esta orden'
     )
     
-    is_visit = fields.Boolean(
-        string='Es Visita',
-        compute='_compute_is_visit',
+    calendar_label = fields.Char(
+        string='Texto en calendario',
+        compute='_compute_calendar_label',
         store=True,
-        help='Indica si es una visita programada'
     )
     
-    @api.depends('activity_type')
-    def _compute_is_visit(self):
-        """Calcular si es una visita programada."""
-        for record in self:
-            record.is_visit = record.activity_type == 'visit'
-    
-    @api.depends('maintenance_ids', 'maintenance_ids.status')
-    def _compute_maintenance_count(self):
-        """Calcular cantidad total y completada de mantenimientos."""
+    @api.depends('mesa_visit_pdf_summary_html', 'ticket_id', 'ticket_id.description')
+    def _compute_mesa_pdf_summary_effective(self):
+        start_marker = '<!--MESA_ACTA_CIERRE_START-->'
+        end_marker = '<!--MESA_ACTA_CIERRE_END-->'
         for order in self:
-            order.maintenance_count = len(order.maintenance_ids)
-            order.completed_maintenance_count = len(
-                order.maintenance_ids.filtered(lambda m: m.status == 'completed')
-            )
+            if order.mesa_visit_pdf_summary_html:
+                order.mesa_pdf_summary_effective = order.mesa_visit_pdf_summary_html
+                continue
+            ticket = order.ticket_id
+            if not ticket:
+                order.mesa_pdf_summary_effective = False
+                continue
+            desc = ticket.description or ''
+            if isinstance(desc, Markup):
+                desc = str(desc)
+            if start_marker in desc and end_marker in desc:
+                try:
+                    i = desc.index(start_marker) + len(start_marker)
+                    j = desc.index(end_marker)
+                    order.mesa_pdf_summary_effective = desc[i:j].strip()
+                except ValueError:
+                    order.mesa_pdf_summary_effective = False
+            else:
+                order.mesa_pdf_summary_effective = False
+
+    @api.depends('name', 'technician_ids', 'partner_id', 'ticket_id')
+    def _compute_calendar_label(self):
+        for order in self:
+            order.calendar_label = order._format_calendar_event_name()
     
-    @api.depends('technician_signature_ids', 'technician_ids', 'customer_signature')
+    @api.depends('technician_signature_ids', 'technician_signature_ids.signature', 'technician_ids', 'customer_signature')
     def _compute_is_signed(self):
-        """Calcular si la orden está completamente firmada (todos los técnicos y el cliente)."""
+        """True solo si cada técnico asignado tiene firma con trazo y el cliente firmó."""
         for order in self:
-            # Verificar que todos los técnicos asignados hayan firmado
-            signed_technician_ids = order.technician_signature_ids.mapped('technician_id').ids
-            all_technicians_signed = (
-                len(order.technician_ids) > 0 and 
-                len(order.technician_ids) == len(order.technician_signature_ids) and
-                all(tech.id in signed_technician_ids for tech in order.technician_ids)
-            )
-            # Verificar que el cliente haya firmado
+            techs = order.technician_ids
+            if not techs:
+                all_technicians_signed = True
+            else:
+                signed_ids = order.technician_signature_ids.filtered(lambda s: bool(s.signature)).mapped(
+                    'technician_id'
+                ).ids
+                all_technicians_signed = all(t.id in signed_ids for t in techs)
             customer_signed = bool(order.customer_signature)
             order.is_signed = all_technicians_signed and customer_signed
     
@@ -340,30 +411,102 @@ class MaintenanceOrder(models.Model):
                 skip_status_validation=True
             ).write(update_vals)
     
+    def _visit_sequence_display_digits(self):
+        """MO-/VT-/VS-000004 → 000004 (solo dígitos/sufijo de secuencia)."""
+        name = (self.name or '').strip()
+        if not name or name == _('Nuevo') or name == 'Nuevo':
+            return ''
+        m = re.match(r'(?i)(?:VS|VT|MO)-(.+)$', name)
+        if m:
+            return m.group(1).strip()
+        return name
+
+    def _ticket_calendar_suffix(self):
+        """Sufijo tipo (#00005) usando el ticket de helpdesk si existe."""
+        self.ensure_one()
+        if not self.ticket_id:
+            return ''
+        tname = (self.ticket_id.name or '').strip()
+        if tname.startswith('#') and re.match(r'^#\d+$', tname):
+            return ' (%s)' % tname
+        return ' (#%05d)' % self.ticket_id.id
+
+    def _format_calendar_event_name(self):
+        """Texto compacto para calendario: Visita Técnica 000004 (#00005) — Técnicos."""
+        self.ensure_one()
+        num = self._visit_sequence_display_digits()
+        if not num:
+            raw = (self.name or '').strip()
+            if raw and raw not in (_('Nuevo'), 'Nuevo'):
+                num = raw
+        tick = self._ticket_calendar_suffix()
+        tech = ', '.join(self.technician_ids.mapped('name')) if self.technician_ids else _('Sin técnico')
+        return _('Visita Técnica %(num)s%(tick)s — %(tech)s') % {
+            'num': num,
+            'tick': tick,
+            'tech': tech,
+        }
+
+    def name_get(self):
+        """Nombre mostrado alineado con calendario (número sin prefijo, ticket, técnicos)."""
+        result = []
+        for order in self:
+            num_digits = order._visit_sequence_display_digits()
+            if not num_digits and (not order.name or order.name == _('Nuevo') or order.name == 'Nuevo'):
+                result.append((order.id, order.name or _('Nuevo')))
+                continue
+            num = num_digits or (order.name or '').strip()
+            tick = order._ticket_calendar_suffix()
+            base = _('Visita Técnica %(num)s%(tick)s') % {'num': num, 'tick': tick}
+            if order.technician_ids:
+                tech = ', '.join(order.technician_ids.mapped('name'))
+                label = _('%(base)s — %(tech)s') % {'base': base, 'tech': tech}
+            else:
+                label = base
+            result.append((order.id, label))
+        return result
+    
     @api.model
-    def create(self, vals):
+    def _maintenance_order_name_needs_sequence(self, name):
+        """True si debemos asignar número desde la secuencia (marcadores de nuevo registro)."""
+        if name is False or name is None:
+            return True
+        if not str(name).strip():
+            return True
+        s = str(name).strip()
+        if s in ('/', 'Nuevo', 'New'):
+            return True
+        return s == _('Nuevo')
+
+    @api.model
+    def _next_maintenance_order_sequence_name(self):
+        """Secuencia propia del módulo (code mesa.ayuda.maintenance.order); no usa 'maintenance.order' genérico."""
+        seq = self.env.ref('mesa_ayuda_inventario.seq_mesa_ayuda_maintenance_order', raise_if_not_found=False)
+        if seq:
+            return seq.next_by_id()
+        return self.env['ir.sequence'].next_by_code('mesa.ayuda.maintenance.order')
+
+    def action_open_visit_documentation(self):
+        """Compatibilidad: abre el ticket (el acta se edita en la pestaña «Acta de visita» del ticket)."""
+        return self.action_view_ticket()
+
+    @api.model_create_multi
+    def create(self, vals_list):
         """Generar número de orden automáticamente y crear ticket."""
-        if vals.get('name', _('Nuevo')) == _('Nuevo'):
-            vals['name'] = self.env['ir.sequence'].next_by_code('maintenance.order') or _('Nuevo')
-        order = super().create(vals)
-        
-        # ✅ Crear ticket automáticamente
-        order._create_automatic_ticket()
-        
-        # Asegurar que existan registros de firma para cada técnico asignado
+        for vals in vals_list:
+            if self._maintenance_order_name_needs_sequence(vals.get('name')):
+                vals['name'] = self._next_maintenance_order_sequence_name() or _('Nuevo')
+        orders = super().create(vals_list)
+        for order in orders:
+            order._create_automatic_ticket()
         if order.technician_ids:
             order._ensure_signature_records_for_technicians()
-        
-        # Si hay firmas al crear, propagarlas después de crear
         if order.technician_signature or order.customer_signature:
             order._propagate_signatures_to_maintenances()
-        
-        # ✅ Crear eventos de calendario y recordatorios si está programada
         if order.scheduled_date and order.state in ('scheduled', 'in_progress'):
             order._create_calendar_events()
             order._schedule_reminder_activities()
-        
-        return order
+        return orders
     
     def write(self, vals):
         """Sobrescribir write para propagar firmas y actualizar ticket."""
@@ -487,6 +630,54 @@ class MaintenanceOrder(models.Model):
             # ✅ Actualizar ticket con el cambio de estado
             order._update_ticket_status()
     
+    def _cron_visit_end_datetime(self):
+        """Momento de fin de ventana para cierre automático: deadline o inicio + 2 h."""
+        self.ensure_one()
+        if self.deadline_date:
+            return self.deadline_date
+        if self.scheduled_date:
+            return self.scheduled_date + timedelta(hours=2)
+        return False
+
+    @api.model
+    def cron_visit_orders_schedule_auto_start_stop(self):
+        """Cron: poner en marcha al llegar ``scheduled_date``; completar al vencer plazo (``deadline_date`` o inicio+2h)."""
+        now = fields.Datetime.now()
+        Maintenance = self.env['maintenance.order'].sudo()
+
+        to_start = Maintenance.search([
+            ('state', '=', 'scheduled'),
+            ('scheduled_date', '!=', False),
+            ('scheduled_date', '<=', now),
+        ])
+        for order in to_start:
+            try:
+                order.action_start()
+                _logger.info('Visita %s: inicio automático (fecha programada alcanzada).', order.name)
+            except Exception as e:
+                _logger.warning('Visita %s: inicio automático fallido: %s', order.name, e)
+
+        to_eval = Maintenance.search([
+            ('state', 'in', ('scheduled', 'in_progress')),
+        ])
+        for order in to_eval:
+            end_dt = order._cron_visit_end_datetime()
+            if not end_dt or end_dt > now:
+                continue
+            if order.state == 'scheduled' and order.scheduled_date and order.scheduled_date > now:
+                continue
+            try:
+                if order.state == 'scheduled':
+                    order.action_start()
+                incomplete = order.maintenance_ids.filtered(lambda m: m.status != 'completed')
+                if incomplete:
+                    incomplete.with_context(skip_status_validation=True).write({'status': 'completed'})
+                order.action_complete()
+                _logger.info('Visita %s: cierre automático (fin de ventana programada).', order.name)
+            except Exception as e:
+                _logger.warning('Visita %s: cierre automático fallido: %s', order.name, e)
+        return True
+    
     def action_complete(self):
         """Completar la orden, cerrar el ticket y adjuntar el reporte."""
         for order in self:
@@ -494,6 +685,13 @@ class MaintenanceOrder(models.Model):
             incomplete = order.maintenance_ids.filtered(lambda m: m.status != 'completed')
             if incomplete:
                 raise UserError(_('No se puede completar la orden. Hay %d mantenimiento(s) sin completar.') % len(incomplete))
+            if not order.is_signed:
+                raise UserError(
+                    _(
+                        'No puede completar la visita hasta registrar todas las firmas obligatorias: '
+                        'cada técnico asignado debe firmar en la pestaña «Firmas» de la orden y el cliente debe firmar.'
+                    )
+                )
             
             # ✅ Actualizar ticket con todos los detalles, cerrarlo y adjuntar reporte ANTES de cambiar el estado
             if order.ticket_id:
@@ -501,6 +699,7 @@ class MaintenanceOrder(models.Model):
             
             # Cambiar el estado después de procesar el ticket (con contexto para evitar doble procesamiento)
             order.with_context(skip_ticket_update_on_complete=True).state = 'completed'
+            order._cancel_calendar_events()
     
     def action_cancel(self):
         """Cancelar la orden."""
@@ -575,42 +774,56 @@ class MaintenanceOrder(models.Model):
             # No crear ticket si no hay cliente
             return False
         
-        # Preparar nombre del ticket según tipo de actividad
-        activity_type_label = dict(self._fields['activity_type'].selection).get(
-            self.activity_type, 
-            self.activity_type
-        )
-        ticket_name = _('Orden de Mantenimiento: %s (%s)') % (self.name, activity_type_label)
+        ticket_name = _('Visita Técnica %s') % (self.name,)
         
         # Preparar descripción del ticket con formato HTML organizado
         tech_names = ', '.join(self.technician_ids.mapped('name')) if self.technician_ids else _('No asignados')
         scheduled_date_str = self.scheduled_date.strftime('%d/%m/%Y %H:%M') if self.scheduled_date else _('No programada')
+        safe_name = escape(self.name or '')
+        safe_partner = escape(self.partner_id.name or _('N/A'))
+        safe_tech = escape(tech_names)
+        safe_sched = escape(scheduled_date_str)
         
         ticket_description = f'''
-<div style="padding: 15px; background-color: #e3f2fd; border-left: 4px solid #2196f3; border-radius: 4px; margin-bottom: 15px;">
-<h3 style="color: #1976d2; margin-top: 0;">📋 Información de la Orden de Mantenimiento</h3>
-<div style="line-height: 1.8;">
-<p style="margin: 5px 0;"><strong>Orden:</strong> {self.name}</p>
-<p style="margin: 5px 0;"><strong>Cliente:</strong> {self.partner_id.name or _("N/A")}</p>
-<p style="margin: 5px 0;"><strong>Fecha Programada:</strong> {scheduled_date_str}</p>
-<p style="margin: 5px 0;"><strong>Técnicos Asignados:</strong> {tech_names}</p>
+<div class="mesa-vt-hero" data-mesa-vt-hero="1">
+    <div class="mesa-vt-hero__inner">
+        <span class="mesa-vt-hero__badge">Visita técnica</span>
+        <h3 class="mesa-vt-hero__title"><span class="mesa-vt-hero__title-icon" aria-hidden="true">&#128196;</span> Información de la Visita Técnica</h3>
+        <div class="mesa-vt-hero__grid">
+            <div class="mesa-vt-hero__item"><span class="mesa-vt-hero__item-label">Referencia</span><span class="mesa-vt-hero__item-value">{safe_name}</span></div>
+            <div class="mesa-vt-hero__item"><span class="mesa-vt-hero__item-label">Cliente</span><span class="mesa-vt-hero__item-value">{safe_partner}</span></div>
+            <div class="mesa-vt-hero__item"><span class="mesa-vt-hero__item-label">Fecha programada</span><span class="mesa-vt-hero__item-value">{safe_sched}</span></div>
+            <div class="mesa-vt-hero__item"><span class="mesa-vt-hero__item-label">Técnicos asignados</span><span class="mesa-vt-hero__item-value">{safe_tech}</span></div>
+        </div>
 </div>
 </div>
 '''
         
         # Agregar descripción adicional si existe
         if self.description:
-            ticket_description += f'<div style="margin-top: 15px;"><p><strong>Descripción:</strong></p><p>{self.description}</p></div>'
+            safe_desc = escape(self.description)
+            ticket_description += f'<div class="mesa-vt-order-desc" style="margin-top: 15px;"><p><strong>Descripción:</strong></p><p>{safe_desc}</p></div>'
         
         # Crear el ticket
-        ticket = self.env['helpdesk.ticket'].create({
+        visit_category = self.env['helpdesk.ticket']._mesa_default_visit_ticket_category()
+        if not visit_category:
+            _logger.warning(
+                'No se encontró la categoría helpdesk «Visita técnica programada» (SERVICIO AL CLIENTE); '
+                'el ticket de la orden %s se crea sin category_id.',
+                self.name,
+            )
+        ticket_vals = {
             'name': ticket_name,
             'partner_id': self.partner_id.id,
             'description': ticket_description,
             'maintenance_order_id': self.id,
             'maintenance_category': 'maintenance',
             'user_id': self.technician_ids[0].id if self.technician_ids else self.env.user.id,
-        })
+            'visit_helpdesk_category_locked': True,
+        }
+        if visit_category:
+            ticket_vals['category_id'] = visit_category.id
+        ticket = self.env['helpdesk.ticket'].create(ticket_vals)
         
         # Vincular el ticket a la orden
         self.ticket_id = ticket.id
@@ -639,19 +852,27 @@ class MaintenanceOrder(models.Model):
                 product = maintenance.lot_id.product_id.name if maintenance.lot_id.product_id else _('N/A')
                 equipment_type = _('Empresa')
                 
-                equipment_rows.append(f'<tr><td>{serial}</td><td>{plate}</td><td>{product}</td><td>{equipment_type}</td></tr>')
+                equipment_rows.append(
+                    '<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>'
+                    % (
+                        escape(serial),
+                        escape(plate),
+                        escape(product),
+                        escape(equipment_type),
+                    )
+                )
         
         if equipment_rows:
             equipment_section = f'''
-<div style="margin-top: 20px; margin-bottom: 20px;">
-<h3 style="color: #2c3e50; border-bottom: 2px solid #667eea; padding-bottom: 5px;">📋 Equipos en esta Orden ({len(equipment_rows)} equipo(s))</h3>
-<table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+<div class="mesa-vt-equipment-section" data-mesa-equipment-block="1">
+<h3>Equipos en esta Orden ({len(equipment_rows)} equipo(s))</h3>
+<table>
 <thead>
-<tr style="background-color: #f8f9fa; border-bottom: 2px solid #dee2e6;">
-<th style="padding: 10px; text-align: left; border: 1px solid #dee2e6;">Número de Serie</th>
-<th style="padding: 10px; text-align: left; border: 1px solid #dee2e6;">Placa de Inventario</th>
-<th style="padding: 10px; text-align: left; border: 1px solid #dee2e6;">Producto</th>
-<th style="padding: 10px; text-align: left; border: 1px solid #dee2e6;">Tipo</th>
+<tr>
+<th>Número de Serie</th>
+<th>Placa de Inventario</th>
+<th>Producto</th>
+<th>Tipo</th>
 </tr>
 </thead>
 <tbody>
@@ -665,8 +886,16 @@ class MaintenanceOrder(models.Model):
             current_description = self.ticket_id.description or ''
             # Eliminar la sección de equipos anterior si existe (tanto texto como HTML)
             import re as re_module
-            # Eliminar sección HTML de equipos
-            current_description = re_module.sub(r'<div[^>]*>.*?Equipos en esta Orden.*?</div>', '', current_description, flags=re_module.DOTALL)
+            # Quitar bloque de equipos (formato nuevo con data-mesa-equipment-block o formato antiguo)
+            current_description = re_module.sub(
+                r'<div\b[^>]*\bdata-mesa-equipment-block="1"[^>]*>[\s\S]*?</div>\s*',
+                '',
+                current_description,
+                flags=re_module.DOTALL,
+            )
+            current_description = re_module.sub(
+                r'<div[^>]*>.*?Equipos en esta Orden.*?</div>', '', current_description, flags=re_module.DOTALL
+            )
             # Eliminar sección de texto de equipos
             if '--- Equipos en esta orden ---' in current_description:
                 parts = current_description.split('--- Equipos en esta orden ---')
@@ -749,11 +978,11 @@ class MaintenanceOrder(models.Model):
         
         try:
             # Actualizar la descripción del ticket con información de cancelación
-            cancellation_message = _('=== ORDEN DE MANTENIMIENTO CANCELADA ===\n')
-            cancellation_message += _('Orden de Mantenimiento: %s\n') % self.name
+            cancellation_message = _('=== VISITA TÉCNICA CANCELADA ===\n')
+            cancellation_message += _('Visita Técnica: %s\n') % self.name
             cancellation_message += _('Cliente: %s\n') % (self.partner_id.name or 'N/A')
             cancellation_message += _('Fecha de Cancelación: %s\n') % fields.Datetime.now().strftime('%d/%m/%Y %H:%M:%S')
-            cancellation_message += _('\nEsta orden de mantenimiento ha sido cancelada.')
+            cancellation_message += _('\nEsta visita técnica ha sido cancelada.')
             
             # Actualizar descripción del ticket
             new_description = (self.ticket_id.description or '') + '\n\n' + cancellation_message
@@ -829,8 +1058,386 @@ class MaintenanceOrder(models.Model):
         except Exception as e:
             _logger.error("❌ Error al cancelar el ticket: %s. Traceback: %s", str(e), traceback.format_exc())
     
+    def _mesa_acta_parse_equipment_summary_rows(self, html_content):
+        """Serie, placa y producto: solo tablas de equipo del acta (cabecera Serie/Placa), no tablas de contactos."""
+        rows = []
+        if not html_content:
+            return rows
+        for m in re.finditer(r'<table\b[^>]*>[\s\S]*?</table\s*>', html_content, re.I):
+            table_html = m.group(0)
+            if not _mesa_acta_table_html_is_equipment_block(table_html):
+                continue
+            m_tb = re.search(r'<tbody\b[^>]*>([\s\S]*?)</tbody\s*>', table_html, re.I)
+            if not m_tb:
+                continue
+            chunk = m_tb.group(1)
+            m = re.search(
+                r'<tr[^>]*>\s*<td[^>]*>([\s\S]*?)</td>\s*<td[^>]*>([\s\S]*?)</td>\s*<td[^>]*>([\s\S]*?)</td>',
+                chunk,
+                re.I,
+            )
+            if m:
+
+                def _cell(raw):
+                    t = re.sub(r'<[^>]+>', '', raw or '').strip()
+                    return html_stdlib.unescape(t)
+
+                rows.append((_cell(m.group(1)), _cell(m.group(2)), _cell(m.group(3))))
+        return rows
+
+    def _mesa_parse_close_summary_li_rows(self, html_content):
+        """Triple serie/placa/producto desde <li> del resumen de cierre (mismo HTML que va a la descripción del ticket)."""
+        rows = []
+        if not html_content:
+            return rows
+        for m in re.finditer(r'<li\b[^>]*>([\s\S]*?)</li\s*>', html_content, re.I):
+            inner = re.sub(r'<[^>]+>', '', m.group(1) or '')
+            inner = html_stdlib.unescape(inner).strip()
+            if not inner:
+                continue
+            # "Serie X · Placa Y — producto" (escape) o "Serie X - Placa Y — producto"
+            ma = re.match(
+                r'(?i)^serie\s+(.+?)\s*[·\.]\s*placa\s+(.+?)\s*[—–\-]\s*(.+)$',
+                inner,
+            )
+            if not ma:
+                ma = re.match(
+                    r'(?i)^serie\s+(.+?)\s+-\s+placa\s+(.+?)\s*[—–\-]\s*(.+)$',
+                    inner,
+                )
+            if ma:
+                rows.append((ma.group(1).strip(), ma.group(2).strip(), ma.group(3).strip()))
+        return rows
+
+    def _mesa_acta_equipment_block_html_chunk_for_lot(self, lot):
+        """Fragmento HTML del bloque de un equipo (desde la tabla con ``data-mesa-acta-equipment-lot-id``)."""
+        self.ensure_one()
+        if not lot:
+            return ''
+        html = str(self.visit_documentation_html or '')
+        if not html:
+            return ''
+        anchor = re.search(
+            rf'data-mesa-acta-equipment-lot-id=["\']{int(lot.id)}["\']',
+            html,
+            re.I,
+        )
+        if not anchor:
+            return ''
+        start = anchor.start()
+        rest = html[start:]
+        next_anchor = re.search(
+            r'data-mesa-acta-equipment-lot-id=["\']\d+["\']',
+            rest[80:],
+            re.I,
+        )
+        end = start + 80 + next_anchor.start() if next_anchor else len(html)
+        return html[start:end]
+
+    def _mesa_acta_equipment_followup_flags_for_lot(self, lot):
+        """Banderas activas en «Realizado» (botones del acta) para este lote."""
+        from odoo.addons.mesa_ayuda_inventario.wizard.acta_html_blocks import MESA_ACTA_FOLLOWUP_FLAG_KEYS
+
+        chunk = self._mesa_acta_equipment_block_html_chunk_for_lot(lot)
+        if not chunk:
+            return set()
+        active = set()
+        for key in MESA_ACTA_FOLLOWUP_FLAG_KEYS:
+            if re.search(
+                rf'data-mesa-acta-flag=["\']{re.escape(key)}["\'][^>]*data-mesa-acta-flag-active=["\']1["\']',
+                chunk,
+                re.I,
+            ):
+                active.add(key)
+                continue
+            if re.search(
+                rf'data-mesa-acta-flag=["\']{re.escape(key)}["\'][^>]*\bchecked\b',
+                chunk,
+                re.I,
+            ):
+                active.add(key)
+        return active
+
+    def _mesa_acta_fallback_equipment_block_html(self, lot):
+        """Mismo bloque visual que inserta el wizard de acta, con datos del lote y «Realizado» desde la línea de orden."""
+        self.ensure_one()
+        if not lot:
+            return ''
+        maint = self.maintenance_ids.filtered(lambda m: m.lot_id and m.lot_id.id == lot.id)[:1]
+        realizado_inner = '<p><br></p>'
+        if maint and maint.description and not mail_tools.is_html_empty(maint.description):
+            realizado_inner = maint.description
+        th_serie = _('Serie')
+        th_placa = _('Placa')
+        th_prod = _('Producto')
+        th_realizado = _('Realizado')
+        from odoo.addons.mesa_ayuda_inventario.wizard.acta_html_blocks import mesa_acta_equipment_block_html
+
+        serial = escape(lot.name or '')
+        plate_txt = (lot.inventory_plate or '').strip() or _('Sin placa')
+        plate = escape(plate_txt)
+        prod = escape(lot.product_id.display_name if lot.product_id else _('N/A'))
+        return mesa_acta_equipment_block_html(
+            lot.id, th_serie, th_placa, th_prod, serial, plate, prod, th_realizado,
+            realizado_inner=realizado_inner,
+            lbl_equipment_change=_('Cambio de Equipo'),
+            lbl_component_change=_('Cambio de Componente'),
+            lbl_maintenance_repair=_('Mantenimiento/Reparación'),
+        )
+
+    def _mesa_acta_html_equipment_block_for_lot(self, lot):
+        """Fragmento HTML del acta (un bloque por equipo del wizard) que corresponde al lote, o plantilla equivalente."""
+        self.ensure_one()
+        ticket = self.ticket_id
+        if not lot or not ticket:
+            return ''
+        html_content = (self.visit_documentation_html or '').strip()
+        if not html_content:
+            return self._mesa_acta_fallback_equipment_block_html(lot)
+        token = (lot.name or '').strip()
+        plate = (lot.inventory_plate or '').strip().lower()
+        pos = 0
+        while pos < len(html_content):
+            m_tb = re.search(r'<tbody\b[^>]*>', html_content[pos:], re.I)
+            if not m_tb:
+                break
+            tbody_tag_start = pos + m_tb.start()
+            start_inner = pos + m_tb.end()
+            rel = html_content[start_inner:]
+            m_end = re.search(r'</tbody\s*>', rel, re.I)
+            if not m_end:
+                break
+            chunk = rel[: m_end.start()]
+            pos = start_inner + m_end.end()
+            m = re.search(
+                r'<tr[^>]*>\s*<td[^>]*>([\s\S]*?)</td>\s*<td[^>]*>([\s\S]*?)</td>',
+                chunk,
+                re.I,
+            )
+            if not m:
+                continue
+
+            def _plain_cell(raw):
+                t = re.sub(r'<[^>]+>', '', raw or '').strip()
+                return html_stdlib.unescape(t)
+
+            c1 = ticket.sudo()._mesa_strip_acta_serial_cell(_plain_cell(m.group(1)))
+            c2 = ticket.sudo()._mesa_strip_acta_plate_cell(_plain_cell(m.group(2)))
+            match = (token and c1.lower() == token.lower()) or (plate and c2.lower() == plate)
+            if not match:
+                continue
+            prefix = html_content[:tbody_tag_start]
+            open_idx = -1
+            for mdiv in re.finditer(r'<div\s+style="[^"]*margin-bottom:\s*16px[^"]*"', prefix, re.I):
+                open_idx = mdiv.start()
+            if open_idx < 0:
+                return self._mesa_acta_fallback_equipment_block_html(lot)
+            sliced = _mesa_html_slice_balanced_div(html_content, open_idx)
+            if sliced:
+                return sliced
+            return self._mesa_acta_fallback_equipment_block_html(lot)
+        return self._mesa_acta_fallback_equipment_block_html(lot)
+
+    def _mesa_acta_fallback_contact_block_html(self, partner):
+        """Bloque HTML tipo acta para un contacto del cliente (sin coincidencia en el HTML guardado)."""
+        self.ensure_one()
+        if not partner:
+            return ''
+        th_name = _('Nombre')
+        th_email = _('Correo')
+        th_phone = _('Teléfono')
+        th_realizado = _('Realizado')
+        realizado_inner = '<p><br></p>'
+        from odoo.addons.mesa_ayuda_inventario.wizard.acta_html_blocks import mesa_acta_participant_partner_block_html
+
+        name = escape(partner.display_name or partner.name or '')
+        email = escape(partner.email or '')
+        phone = escape(
+            partner.phone
+            or getattr(partner, 'mobile', None)
+            or getattr(partner, 'mobile_phone', None)
+            or ''
+        )
+        return mesa_acta_participant_partner_block_html(
+            partner.id, th_name, th_email, th_phone, name, email, phone, th_realizado,
+            realizado_inner=realizado_inner,
+        )
+
+    def _mesa_acta_html_contact_block_for_partner(self, partner):
+        """Fragmento HTML del acta del bloque de contacto (``data-mesa-acta-participant-partner-id``; admite legacy user-id)."""
+        self.ensure_one()
+        if not partner:
+            return ''
+        html_content = (self.visit_documentation_html or '').strip()
+        if not html_content:
+            return self._mesa_acta_fallback_contact_block_html(partner)
+        pat = r'<div\b[^>]*data-mesa-acta-participant-partner-id=["\']%d["\'][^>]*>' % partner.id
+        m = re.search(pat, html_content, re.I)
+        if m:
+            open_idx = m.start()
+            sliced = _mesa_html_slice_balanced_div(html_content, open_idx)
+            if sliced:
+                return sliced
+            return self._mesa_acta_fallback_contact_block_html(partner)
+        Users = self.env['res.users'].sudo()
+        for uid in partner.user_ids.ids:
+            u = Users.browse(uid)
+            if u.exists() and u.active:
+                legacy = self._mesa_acta_html_participant_block_for_user(u)
+                if legacy:
+                    return legacy
+        return self._mesa_acta_fallback_contact_block_html(partner)
+
+    def _mesa_acta_fallback_participant_block_html(self, user):
+        """Bloque HTML tipo acta para un usuario del cliente (sin coincidencia en el HTML guardado)."""
+        self.ensure_one()
+        if not user:
+            return ''
+        th_name = _('Nombre')
+        th_login = _('Usuario')
+        th_email = _('Correo')
+        th_realizado = _('Realizado')
+        realizado_inner = '<p><br></p>'
+        from odoo.addons.mesa_ayuda_inventario.wizard.acta_html_blocks import mesa_acta_participant_user_block_html
+
+        name = escape(user.name or '')
+        login = escape(user.login or '')
+        email = escape(user.email or '')
+        return mesa_acta_participant_user_block_html(
+            user.id, th_name, th_login, th_email, name, login, email, th_realizado,
+            realizado_inner=realizado_inner,
+        )
+
+    def _mesa_acta_html_participant_block_for_user(self, user):
+        """Fragmento HTML del acta del bloque de usuario del cliente (data-mesa-acta-participant-user-id)."""
+        self.ensure_one()
+        if not user:
+            return ''
+        html_content = (self.visit_documentation_html or '').strip()
+        if not html_content:
+            return self._mesa_acta_fallback_participant_block_html(user)
+        pat = r'<div\b[^>]*data-mesa-acta-participant-user-id=["\']%d["\'][^>]*>' % user.id
+        m = re.search(pat, html_content, re.I)
+        if not m:
+            return self._mesa_acta_fallback_participant_block_html(user)
+        open_idx = m.start()
+        sliced = _mesa_html_slice_balanced_div(html_content, open_idx)
+        if sliced:
+            return sliced
+        return self._mesa_acta_fallback_participant_block_html(user)
+
+    def _mesa_build_ticket_close_summary_html(self, ticket):
+        """Resumen de cierre: tablas separadas para equipos y contactos (sin mezclar con filas de personas)."""
+        self.ensure_one()
+        ticket._mesa_backfill_acta_lots_if_empty()
+        ticket._mesa_backfill_acta_contacts_if_empty()
+        rows = self._mesa_acta_parse_equipment_summary_rows(self.visit_documentation_html or '')
+        if not rows and ticket.mesa_acta_selected_lot_ids:
+            rows = []
+            for lot in ticket.mesa_acta_selected_lot_ids:
+                rows.append(
+                    (
+                        (lot.name or '').strip(),
+                        (lot.inventory_plate or '').strip() or _('Sin placa'),
+                        lot.product_id.display_name if lot.product_id else _('N/A'),
+                    )
+                )
+        table_style = (
+            'width:100%;border-collapse:collapse;margin-top:8px;'
+            'font-size:13px;border:1px solid #dee2e6;border-radius:6px;overflow:hidden;'
+        )
+        th_style = (
+            'padding:8px 10px;text-align:left;background:#e8eef4;border-bottom:1px solid #dee2e6;'
+            'color:#2c3e50;font-weight:600;'
+        )
+        td_style = 'padding:8px 10px;border-bottom:1px solid #eef2f6;color:#212529;'
+        parts = [
+            '<p><strong>%s</strong></p>'
+            % escape(_('Resumen de cierre de la visita')),
+            '<p style="color:#495057;margin-bottom:12px;">%s</p>'
+            % escape(
+                _(
+                    'Se documentó la visita en el acta. A continuación constan los equipos y las personas '
+                    'registradas; el detalle por ítem está en la pestaña «Acta de visita».'
+                )
+            ),
+        ]
+        if rows:
+            parts.append('<p style="margin:16px 0 4px 0;"><strong>%s</strong></p>' % escape(_('Equipos')))
+            parts.append('<table style="%s"><thead><tr>' % table_style)
+            parts.append(
+                '<th style="%s">%s</th><th style="%s">%s</th><th style="%s">%s</th></tr></thead><tbody>'
+                % (
+                    th_style,
+                    escape(_('Serie')),
+                    th_style,
+                    escape(_('Placa')),
+                    th_style,
+                    escape(_('Producto')),
+                )
+            )
+            for serie, placa, prod in rows:
+                parts.append(
+                    '<tr><td style="%s">%s</td><td style="%s">%s</td><td style="%s">%s</td></tr>'
+                    % (
+                        td_style,
+                        escape(serie or '-'),
+                        td_style,
+                        escape(placa or _('sin placa')),
+                        td_style,
+                        escape(prod or '-'),
+                    )
+                )
+            parts.append('</tbody></table>')
+        else:
+            parts.append(
+                '<p style="color:#6c757d;font-style:italic;margin-top:8px;">%s</p>'
+                % escape(_('No se detectaron tablas de equipo en el acta; revise la pestaña «Acta de visita».'))
+            )
+        if ticket.mesa_acta_selected_contact_ids:
+            parts.append(
+                '<p style="margin:20px 0 4px 0;"><strong>%s</strong></p>'
+                % escape(_('Personas de contacto en la visita'))
+            )
+            parts.append('<table style="%s"><thead><tr>' % table_style)
+            parts.append(
+                '<th style="%s">%s</th><th style="%s">%s</th><th style="%s">%s</th></tr></thead><tbody>'
+                % (
+                    th_style,
+                    escape(_('Nombre')),
+                    th_style,
+                    escape(_('Correo')),
+                    th_style,
+                    escape(_('Teléfono')),
+                )
+            )
+            for collab in ticket.mesa_acta_selected_contact_ids.sorted(
+                lambda p: ((p.name or ''), (p.email or ''))
+            ):
+                nombre = (collab.name or '').strip() or (collab.display_name or '').strip() or '-'
+                correo = collab.email or _('sin correo')
+                tel = (
+                    collab.phone
+                    or getattr(collab, 'mobile', None)
+                    or getattr(collab, 'mobile_phone', None)
+                    or _('sin teléfono')
+                )
+                parts.append(
+                    '<tr><td style="%s">%s</td><td style="%s">%s</td><td style="%s">%s</td></tr>'
+                    % (
+                        td_style,
+                        escape(nombre),
+                        td_style,
+                        escape(str(correo)),
+                        td_style,
+                        escape(str(tel)),
+                    )
+                )
+            parts.append('</tbody></table>')
+        return ''.join(parts)
+
     def _complete_ticket_with_details(self):
-        """Completar el ticket: agregar detalles de mantenimientos, cerrarlo y adjuntar reporte PDF."""
+        """Al completar la orden: resumen en descripción del ticket, tickets hijos por acta, cerrar etapa, PDF y chatter."""
         self.ensure_one()
         if not self.ticket_id:
             _logger.warning("La orden %s no tiene ticket asociado", self.name)
@@ -839,105 +1446,55 @@ class MaintenanceOrder(models.Model):
         _logger.info("Iniciando proceso de completar ticket %s para la orden %s", self.ticket_id.name, self.name)
         
         try:
-            # 1. Crear resumen organizado con HTML formateado
-            # Información general de la orden
-            tech_names = ', '.join(self.technician_ids.mapped('name')) if self.technician_ids else _('N/A')
-            scheduled_date_str = self.scheduled_date.strftime('%d/%m/%Y %H:%M:%S') if self.scheduled_date else _('N/A')
-            
-            summary_header = f'''
-<div style="margin-top: 20px; margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-left: 4px solid #28a745; border-radius: 4px;">
-<h2 style="color: #28a745; margin-top: 0; margin-bottom: 15px;">✅ RESUMEN DE MANTENIMIENTOS COMPLETADOS</h2>
-<div style="line-height: 1.8;">
-<p style="margin: 5px 0;"><strong>Orden de Mantenimiento:</strong> {self.name}</p>
-<p style="margin: 5px 0;"><strong>Cliente:</strong> {self.partner_id.name or _("N/A")}</p>
-<p style="margin: 5px 0;"><strong>Fecha Programada:</strong> {scheduled_date_str}</p>
-<p style="margin: 5px 0;"><strong>Técnicos Asignados:</strong> {tech_names}</p>
-<p style="margin: 5px 0;"><strong>Total de Equipos:</strong> {len(self.maintenance_ids)} equipo(s)</p>
-</div>
-</div>
-'''
-            
-            # Crear tabla compacta de equipos mantenidos
-            equipment_rows = []
-            for idx, maintenance in enumerate(self.maintenance_ids, 1):
-                if maintenance.lot_id:
-                    # Equipo de la empresa
-                    plate = maintenance.inventory_plate or _('Sin placa')
-                    serial = maintenance.lot_id.name or _('N/A')
-                    product = maintenance.lot_id.product_id.name if maintenance.lot_id.product_id else _('N/A')
-                else:
-                    plate = _('N/A')
-                    serial = _('N/A')
-                    product = _('N/A')
-                
-                type_label = _('N/A')
-                if maintenance.maintenance_type:
-                    type_label = dict(maintenance._fields['maintenance_type'].selection).get(maintenance.maintenance_type, maintenance.maintenance_type)
-                
-                date_str = maintenance.maintenance_date.strftime('%d/%m/%Y %H:%M') if maintenance.maintenance_date else _('N/A')
-                
-                maint_techs = ', '.join(maintenance.technician_ids.mapped('name')) if maintenance.technician_ids else _('N/A')
-                
-                # Limpiar descripción si existe
-                description_text = ''
-                if maintenance.description:
-                    clean_description = re.sub('<[^<]+?>', '', maintenance.description)
-                    clean_description = clean_description.replace('&nbsp;', ' ').strip()
-                    if clean_description:
-                        description_text = clean_description[:150] + ('...' if len(clean_description) > 150 else '')
-                
-                equipment_rows.append(f'''
-<tr style="border-bottom: 1px solid #dee2e6;">
-<td style="padding: 10px; text-align: center; font-weight: bold;">{idx}</td>
-<td style="padding: 10px;">{serial}<br/><small style="color: #6c757d;">Placa: {plate}</small></td>
-<td style="padding: 10px;">{product}</td>
-<td style="padding: 10px;">{type_label}</td>
-<td style="padding: 10px;">{date_str}<br/><small style="color: #6c757d;">{maint_techs}</small></td>
-<td style="padding: 10px;"><small style="color: #6c757d;">{description_text or _("Sin descripción")}</small></td>
-</tr>
-''')
-            
-            equipment_table = f'''
-<div style="margin-top: 20px; margin-bottom: 20px;">
-<h3 style="color: #2c3e50; border-bottom: 2px solid #667eea; padding-bottom: 5px;">📋 Equipos Mantenidos ({len(equipment_rows)} equipo(s))</h3>
-<table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px;">
-<thead>
-<tr style="background-color: #667eea; color: white;">
-<th style="padding: 12px; text-align: center; border: 1px solid #dee2e6;">#</th>
-<th style="padding: 12px; text-align: left; border: 1px solid #dee2e6;">Serie / Placa</th>
-<th style="padding: 12px; text-align: left; border: 1px solid #dee2e6;">Producto</th>
-<th style="padding: 12px; text-align: left; border: 1px solid #dee2e6;">Tipo de Servicio</th>
-<th style="padding: 12px; text-align: left; border: 1px solid #dee2e6;">Fecha / Técnicos</th>
-<th style="padding: 12px; text-align: left; border: 1px solid #dee2e6;">Descripción</th>
-</tr>
-</thead>
-<tbody>
-{''.join(equipment_rows)}
-</tbody>
-</table>
-</div>
-'''
-            
-            # Combinar todo
-            summary_section = summary_header + equipment_table
-            
-            # Obtener descripción actual y limpiar resúmenes anteriores si existen
-            current_description = self.ticket_id.description or ''
-            # Eliminar resúmenes anteriores (tanto HTML como texto plano)
-            import re as re_module
-            # Eliminar sección HTML de resumen
-            current_description = re_module.sub(r'<div[^>]*>.*?RESUMEN DE MANTENIMIENTOS COMPLETADOS.*?</div>', '', current_description, flags=re_module.DOTALL)
-            current_description = re_module.sub(r'<div[^>]*>.*?Equipos Mantenidos.*?</div>', '', current_description, flags=re_module.DOTALL)
-            # Eliminar sección de texto plano
-            if '=== RESUMEN DE MANTENIMIENTOS COMPLETADOS ===' in current_description:
-                parts = current_description.split('=== RESUMEN DE MANTENIMIENTOS COMPLETADOS ===')
-                current_description = parts[0].strip()
-            
-            # Actualizar descripción del ticket
-            if current_description:
-                self.ticket_id.description = current_description + summary_section
+            # 1. Descripción del ticket: resumen breve (el acta completo sigue en la pestaña «Acta de visita»)
+            acta_raw = (self.visit_documentation_html or '').strip()
+            if acta_raw and not mail_tools.is_html_empty(self.visit_documentation_html):
+                ticket = self.ticket_id
+                summary_body = self._mesa_build_ticket_close_summary_html(ticket)
+                self.mesa_visit_pdf_summary_html = summary_body
+                desc_field = ticket._fields.get('description')
+                if desc_field:
+                    start_marker = '<!--MESA_ACTA_CIERRE_START-->'
+                    end_marker = '<!--MESA_ACTA_CIERRE_END-->'
+                    inner = (
+                        '<div style="margin-top:16px;padding:14px 16px;border-left:4px solid #0d6efd;'
+                        'background:#f8fafc;border-radius:6px;">'
+                        '<h3 style="color:#0b5ed7;margin-top:0;font-size:1.05rem;">%s</h3>%s</div>'
+                    ) % (_('Cierre de visita'), summary_body)
+                    block = '%s%s%s' % (start_marker, inner, end_marker)
+                    prev = ticket.description or ''
+                    if start_marker in prev and end_marker in prev:
+                        prev = re.sub(
+                            r'<!--MESA_ACTA_CIERRE_START-->.*?<!--MESA_ACTA_CIERRE_END-->',
+                            '',
+                            prev,
+                            count=1,
+                            flags=re.DOTALL,
+                        )
+                    if desc_field.type == 'html':
+                        # Markup evita doble escape en campos Html; el widget html en la vista muestra el acta formateado.
+                        ticket.sudo().write({'description': Markup(prev or '') + Markup(block)})
+                    else:
+                        ticket.sudo().write({'description': (prev + html2plaintext(inner)).strip()})
             else:
-                self.ticket_id.description = summary_section
+                _logger.info(
+                    'Orden %s completada sin contenido en acta de visita; no se inyecta bloque en descripción del ticket.',
+                    self.name,
+                )
+                self.mesa_visit_pdf_summary_html = False
+
+            # 1b. Tickets hijos desde el acta: mismo instante que «Completar» en la orden (no solo si la etapa final es «Resuelto»)
+            visit_ticket = self.ticket_id.sudo()
+            if hasattr(visit_ticket, '_mesa_try_create_acta_followup_tickets'):
+                try:
+                    visit_ticket._mesa_try_create_acta_followup_tickets()
+                except Exception as followup_err:
+                    _logger.error(
+                        'Error al crear tickets hijos desde el acta al completar la orden %s: %s',
+                        self.name,
+                        str(followup_err),
+                        exc_info=True,
+                    )
             
             # 2. Cerrar el ticket (buscar stage "Cerrado" o "Resuelto")
             ticket_closed = False
@@ -960,7 +1517,10 @@ class MaintenanceOrder(models.Model):
                             ], limit=1, order='sequence desc')
                             
                             if closed_stage:
-                                self.ticket_id.sudo().write({'stage_id': closed_stage[0].id})
+                                tw = self.env['helpdesk.ticket'].sudo()._mesa_merge_kanban_done_if_available(
+                                    {'stage_id': closed_stage[0].id}
+                                )
+                                self.ticket_id.sudo().write(tw)
                                 self.ticket_id.invalidate_recordset(['stage_id'])
                                 ticket_closed = True
                                 _logger.info("✅ Ticket %s cerrado usando stage con closed=True: %s", self.ticket_id.name, closed_stage[0].name)
@@ -978,7 +1538,10 @@ class MaintenanceOrder(models.Model):
                                     ], limit=1)
                                     
                                     if closed_stages_by_name:
-                                        self.ticket_id.sudo().write({'stage_id': closed_stages_by_name[0].id})
+                                        tw = self.env['helpdesk.ticket'].sudo()._mesa_merge_kanban_done_if_available(
+                                            {'stage_id': closed_stages_by_name[0].id}
+                                        )
+                                        self.ticket_id.sudo().write(tw)
                                         self.ticket_id.invalidate_recordset(['stage_id'])
                                         ticket_closed = True
                                         _logger.info("✅ Ticket %s cerrado usando stage por nombre '%s': %s", self.ticket_id.name, stage_name, closed_stages_by_name[0].name)
@@ -990,7 +1553,10 @@ class MaintenanceOrder(models.Model):
                         if not ticket_closed and all_stages:
                             last_stage = all_stages[-1]  # El último por sequence
                             try:
-                                self.ticket_id.sudo().write({'stage_id': last_stage.id})
+                                tw = self.env['helpdesk.ticket'].sudo()._mesa_merge_kanban_done_if_available(
+                                    {'stage_id': last_stage.id}
+                                )
+                                self.ticket_id.sudo().write(tw)
                                 self.ticket_id.invalidate_recordset(['stage_id'])
                                 ticket_closed = True
                                 _logger.info("✅ Ticket %s movido al último stage disponible: %s (ID: %s)", self.ticket_id.name, last_stage.name, last_stage.id)
@@ -1062,7 +1628,7 @@ class MaintenanceOrder(models.Model):
                             self.ticket_id.message_post(
                                 body=_('✅ Reporte PDF de la orden de mantenimiento adjuntado: %s') % attachment_name,
                                 subject=_('Reporte Adjuntado'),
-                                attachment_ids=[(6, 0, [attachment.id])]
+                                attachment_ids=[attachment.id]
                             )
                         except Exception as attach_error:
                             _logger.error("❌ Error al crear adjunto: %s. Traceback: %s", str(attach_error), traceback.format_exc())
@@ -1074,7 +1640,7 @@ class MaintenanceOrder(models.Model):
                 _logger.warning("⚠️ El reporte PDF NO se adjuntó al ticket %s", self.ticket_id.name)
             
             # 4. Notificar en el chatter del ticket sobre el cierre
-            status_message = _('✅ Orden de mantenimiento completada.')
+            status_message = _('✅ Visita técnica completada.')
             if ticket_closed:
                 status_message += _(' El ticket ha sido cerrado automáticamente.')
             else:
@@ -1109,12 +1675,6 @@ class MaintenanceOrder(models.Model):
         if self.calendar_event_ids:
             self.calendar_event_ids.unlink()
         
-        # Obtener tipo de actividad para el título
-        activity_type_label = dict(self._fields['activity_type'].selection).get(
-            self.activity_type, 
-            self.activity_type
-        )
-        
         # Calcular fecha de fin (usar deadline_date si existe, sino 2 horas después)
         start_date = self.scheduled_date
         if self.deadline_date:
@@ -1144,7 +1704,7 @@ class MaintenanceOrder(models.Model):
         # Crear un evento para cada técnico (o un evento compartido)
         # Opción 1: Un evento compartido con todos los técnicos
         event_vals = {
-            'name': f"{activity_type_label}: {self.name} - {self.partner_id.name if self.partner_id else 'Sin cliente'}",
+            'name': self._format_calendar_event_name(),
             'start': start_date,
             'stop': stop_date,
             'partner_ids': [(6, 0, [self.partner_id.id])] if self.partner_id else [],
@@ -1192,11 +1752,6 @@ class MaintenanceOrder(models.Model):
             return
         
         # Actualizar eventos existentes
-        activity_type_label = dict(self._fields['activity_type'].selection).get(
-            self.activity_type, 
-            self.activity_type
-        )
-        
         start_date = self.scheduled_date
         if self.deadline_date:
             stop_date = self.deadline_date
@@ -1220,7 +1775,7 @@ class MaintenanceOrder(models.Model):
         description = '\n'.join(description_parts) if description_parts else ''
         
         update_vals = {
-            'name': f"{activity_type_label}: {self.name} - {self.partner_id.name if self.partner_id else 'Sin cliente'}",
+            'name': self._format_calendar_event_name(),
             'start': start_date,
             'stop': stop_date,
             'description': description or '',
@@ -1272,10 +1827,7 @@ class MaintenanceOrder(models.Model):
         
         # Solo crear recordatorio si la fecha programada es en el futuro
         if reminder_date > fields.Datetime.now():
-            activity_type_label = dict(self._fields['activity_type'].selection).get(
-                self.activity_type, 
-                self.activity_type
-            )
+            visit_label = _('Visita técnica')
             
             # Buscar tipo de actividad "Recordatorio" o crear uno genérico
             activity_type = self.env['mail.activity.type'].search([
@@ -1294,16 +1846,18 @@ class MaintenanceOrder(models.Model):
                     self.activity_schedule(
                         activity_type_id=activity_type.id if activity_type else False,
                         date_deadline=reminder_date.date(),
-                        summary=_('Recordatorio: %s programado para %s') % (
-                            activity_type_label,
-                            scheduled_dt.strftime('%d/%m/%Y %H:%M')
-                        ),
-                        note=_('Recordatorio de %s\n\nCliente: %s\nFecha: %s\n%s') % (
-                            activity_type_label,
-                            self.partner_id.name if self.partner_id else 'N/A',
-                            scheduled_dt.strftime('%d/%m/%Y %H:%M'),
-                            self.visit_purpose if self.visit_purpose else (self.description or '')
-                        ),
+                        summary=_('Recordatorio: %(visit)s %(ref)s — %(when)s') % {
+                            'visit': visit_label,
+                            'ref': self.name,
+                            'when': scheduled_dt.strftime('%d/%m/%Y %H:%M'),
+                        },
+                        note=_('Recordatorio de %(visit)s %(ref)s\n\nCliente: %(client)s\nFecha: %(when)s\n%(extra)s') % {
+                            'visit': visit_label,
+                            'ref': self.name,
+                            'client': self.partner_id.name if self.partner_id else 'N/A',
+                            'when': scheduled_dt.strftime('%d/%m/%Y %H:%M'),
+                            'extra': self.visit_purpose if self.visit_purpose else (self.description or ''),
+                        },
                         user_id=technician.id
                     )
                 except Exception as e:

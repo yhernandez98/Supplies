@@ -6,6 +6,7 @@ from . import subscription_wizard
 from . import product_template
 from . import equipment_change_history
 from . import equipment_change_wizard
+from . import subscription_admin_reassign
 from . import stock_lot
 from . import stock_quant
 from . import ir_ui_menu

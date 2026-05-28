@@ -9,6 +9,14 @@ class SaleOrderLine(models.Model):
     """Extender Sale Order Line para verificar stock cuando se agregan productos."""
     _inherit = 'sale.order.line'
 
+    purchase_origin_line_id = fields.Many2one(
+        'purchase.order.line',
+        string='Línea de compra origen',
+        readonly=True,
+        copy=False,
+        help='Línea de cotización de compra aprobada desde la cual se creó esta línea automáticamente.',
+    )
+
     @api.model_create_multi
     def create(self, vals_list):
         """Sobrescribir creación para verificar stock cuando se agregan productos."""

@@ -149,7 +149,7 @@ class LicenseAssignment(models.Model):
         ('monthly_monthly', 'Mensual Mensual'),
         ('annual_monthly_commitment', 'Anual Compromiso Mensual'),
         ('annual', 'Anual'),
-    ], string='Tipo de Contratación', tracking=True, help='Tipo de contratación de la licencia')
+    ], string='Tipo de Contratación', required=True, tracking=True, help='Tipo de contratación de la licencia')
     contracting_type_description = fields.Html(
         string='Descripción del Tipo de Contratación',
         compute='_compute_contracting_type_description',
@@ -172,6 +172,12 @@ class LicenseAssignment(models.Model):
 
     # Relación con equipos
     equipment_ids = fields.One2many('license.equipment', 'assignment_id', string='Equipos Asignados')
+    unassignment_history_ids = fields.One2many(
+        'license.equipment.unassignment.history',
+        'assignment_id',
+        string='Historial de desasignaciones',
+        readonly=True,
+    )
     equipment_count = fields.Integer(string='Equipos Asignados', compute='_compute_equipment_count')
     
     # Relación con usuarios (contactos)
@@ -436,7 +442,12 @@ class LicenseAssignment(models.Model):
 
         pricelist = self.partner_id.property_product_pricelist
         usd_currency = self.env.ref('base.USD', raise_if_not_found=False)
-        trm_rate = self.trm_rate or (self.env['license.trm'].get_trm_for_date() if 'license.trm' in self.env else 0.0)
+        cutoff_day = 6
+        if self.license_id and self.license_id.name and hasattr(self.license_id.name, 'get_trm_cutoff_day'):
+            cutoff_day = self.license_id.name.get_trm_cutoff_day()
+        trm_rate = self.trm_rate or (
+            self.env['license.trm'].get_trm_for_date(cutoff_day=cutoff_day) if 'license.trm' in self.env else 0.0
+        )
 
         # 1) (Odoo 18 legacy) Precios recurrentes: sale.subscription.pricing
         # En Odoo 19 los recurrentes deberían venir desde la lista de precios (product.pricelist.item / suscripción),
@@ -855,15 +866,18 @@ class LicenseAssignment(models.Model):
     def _compute_trm_rate(self):
         trm_model = self.env['license.trm']
         for rec in self:
+            cutoff_day = 6
+            if rec.license_id and rec.license_id.name and hasattr(rec.license_id.name, 'get_trm_cutoff_day'):
+                cutoff_day = rec.license_id.name.get_trm_cutoff_day()
             if rec.start_date:
                 try:
-                    rec.trm_rate = trm_model.get_trm_for_date(rec.start_date)
+                    rec.trm_rate = trm_model.get_trm_for_date(rec.start_date, cutoff_day=cutoff_day)
                 except ValidationError:
                     rec.trm_rate = 0.0
             else:
                 # Si no hay fecha, usar TRM actual
                 try:
-                    rec.trm_rate = trm_model.get_trm_for_date()
+                    rec.trm_rate = trm_model.get_trm_for_date(cutoff_day=cutoff_day)
                 except ValidationError:
                     rec.trm_rate = 0.0
 
@@ -1291,7 +1305,10 @@ class LicenseAssignment(models.Model):
                         if pricelist.currency_id.name == 'USD':
                             unit_price_usd = price
                         elif pricelist.currency_id.name == 'COP':
-                            trm_rate = TRM.get_trm_for_date(date) if date else TRM.get_trm_for_date()
+                            cutoff_day = 6
+                            if license_template.name and hasattr(license_template.name, 'get_trm_cutoff_day'):
+                                cutoff_day = license_template.name.get_trm_cutoff_day()
+                            trm_rate = TRM.get_trm_for_date(date, cutoff_day=cutoff_day) if date else TRM.get_trm_for_date(cutoff_day=cutoff_day)
                             unit_price_usd = price / trm_rate if trm_rate > 0 else 0.0
                         else:
                             usd_currency = self.env.ref('base.USD', raise_if_not_found=False)
@@ -1309,7 +1326,10 @@ class LicenseAssignment(models.Model):
                 unit_price_usd = license_template.cost_usd or 0.0
         
         # Calcular TRM y precio en COP
-        trm_rate = TRM.get_trm_for_date(date) if date else TRM.get_trm_for_date()
+        cutoff_day = 6
+        if license_template.name and hasattr(license_template.name, 'get_trm_cutoff_day'):
+            cutoff_day = license_template.name.get_trm_cutoff_day()
+        trm_rate = TRM.get_trm_for_date(date, cutoff_day=cutoff_day) if date else TRM.get_trm_for_date(cutoff_day=cutoff_day)
         unit_price_cop = unit_price_usd * trm_rate
         
         return {

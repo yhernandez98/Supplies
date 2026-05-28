@@ -37,9 +37,6 @@
                         </group>
                         <group>
                             <field name="destination_location_id" readonly="1" options="{'no_open': True}"/>
-                            <field name="assigned_technician_user_id"
-                                   options="{'no_open': True}"
-                                   invisible="operation_type != 'exist_to_lab'"/>
                             <field name="loan_source_picking_id"
                                    options="{'no_open': True}"
                                    invisible="operation_type != 'lab_to_exist'"

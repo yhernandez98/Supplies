@@ -1,0 +1,302 @@
+/*
+ * Panel operaciones de campo — estética ejecutiva 2025:
+ * contraste alto, tipografía clara, acento teal sobre base fría,
+ * tarjetas “bento” oscuras para accesos principales, bandeja unificada para acciones rápidas.
+ */
+
+.mesa_sp_shell {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 12px 12px 32px;
+    background: linear-gradient(180deg, #e8ecf3 0%, #eef1f7 40%, #f4f6fa 100%);
+    border-radius: 0;
+}
+
+/* Hero: bloque editorial oscuro + acento lateral (no dorado) */
+.mesa_sp_hero {
+    position: relative;
+    border-radius: 16px;
+    padding: 32px 36px 30px;
+    margin-bottom: 20px;
+    overflow: hidden;
+    background: linear-gradient(125deg, #0a0f1a 0%, #121c2e 38%, #162536 100%);
+    box-shadow:
+        0 4px 6px rgba(10, 15, 26, 0.06),
+        0 24px 48px rgba(10, 15, 26, 0.28);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.mesa_sp_hero::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 12%;
+    bottom: 12%;
+    width: 4px;
+    border-radius: 4px;
+    background: linear-gradient(180deg, #2dd4bf 0%, #0d9488 50%, #0f766e 100%);
+    box-shadow: 0 0 20px rgba(45, 212, 191, 0.35);
+}
+
+.mesa_sp_hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse 55% 80% at 100% 0%, rgba(45, 212, 191, 0.09), transparent 50%),
+        radial-gradient(ellipse 40% 50% at 0% 100%, rgba(59, 130, 246, 0.06), transparent 45%);
+    pointer-events: none;
+}
+
+.mesa_sp_hero_inner {
+    position: relative;
+    z-index: 1;
+    padding-left: 16px;
+}
+
+.mesa_sp_kicker {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(226, 232, 240, 0.5);
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.mesa_sp_title {
+    font-size: clamp(1.5rem, 2.5vw, 1.85rem);
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    color: #f8fafc;
+    margin: 0 0 12px;
+    line-height: 1.15;
+}
+
+.mesa_sp_subtitle {
+    font-size: 0.9375rem;
+    color: rgba(226, 232, 240, 0.78);
+    max-width: 48rem;
+    margin: 0;
+    line-height: 1.55;
+    font-weight: 400;
+}
+
+.mesa_sp_subtitle strong {
+    color: #ccfbf1;
+    font-weight: 600;
+}
+
+/* Cuerpo en tarjeta blanca elevada */
+.mesa_sp_surface {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 24px 24px 20px;
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    box-shadow:
+        0 1px 2px rgba(15, 23, 42, 0.04),
+        0 12px 40px rgba(15, 23, 42, 0.06);
+}
+
+.mesa_sp_section_label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #64748b;
+    margin-bottom: 14px;
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.mesa_sp_section_label::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, #cbd5e1, transparent);
+    max-width: 120px;
+}
+
+/* Accesos principales: tarjetas oscuras tipo bento */
+.mesa_sp_hub_row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+}
+
+.mesa_sp_hub_tile {
+    position: relative;
+    min-height: 88px;
+    border-radius: 14px !important;
+    padding: 22px 24px !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.01em;
+    text-align: left !important;
+    justify-content: flex-start !important;
+    gap: 14px !important;
+    background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%) !important;
+    border: 1px solid rgba(148, 163, 184, 0.15) !important;
+    color: #f1f5f9 !important;
+    box-shadow:
+        0 2px 4px rgba(0, 0, 0, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.mesa_sp_hub_tile:hover {
+    transform: translateY(-3px);
+    border-color: rgba(45, 212, 191, 0.45) !important;
+    box-shadow:
+        0 12px 32px rgba(15, 23, 42, 0.35),
+        0 0 0 1px rgba(45, 212, 191, 0.2);
+}
+
+.mesa_sp_hub_tile .fa,
+.mesa_sp_hub_tile .oi,
+.mesa_sp_hub_tile i {
+    font-size: 1.35rem !important;
+    color: #5eead4 !important;
+    opacity: 1 !important;
+}
+
+.mesa_sp_hub_tile_alt {
+    background: linear-gradient(145deg, #172554 0%, #0f172a 100%) !important;
+}
+
+.mesa_sp_hub_tile_alt .fa,
+.mesa_sp_hub_tile_alt .oi,
+.mesa_sp_hub_tile_alt i {
+    color: #93c5fd !important;
+}
+
+/* Bandeja de acciones rápidas */
+.mesa_sp_action_tray {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 16px 16px 14px;
+    margin-bottom: 24px;
+}
+
+.mesa_sp_actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 0;
+}
+
+.mesa_sp_actions .btn {
+    border-radius: 10px;
+    padding: 11px 18px;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.01em;
+    transition: transform 0.14s ease, box-shadow 0.14s ease, background 0.14s ease;
+}
+
+.mesa_sp_actions .mesa_sp_btn_primary {
+    background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+    border: none;
+    color: #ecfdf5 !important;
+    box-shadow: 0 4px 14px rgba(13, 148, 136, 0.35);
+}
+
+.mesa_sp_actions .mesa_sp_btn_primary:hover {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+}
+
+.mesa_sp_actions .mesa_sp_btn_ghost {
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #1e293b !important;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.mesa_sp_actions .mesa_sp_btn_ghost:hover {
+    background: #f1f5f9 !important;
+    border-color: #94a3b8 !important;
+    color: #0f172a !important;
+}
+
+.mesa_sp_actions .mesa_sp_btn_ghost .fa,
+.mesa_sp_actions .mesa_sp_btn_ghost .oi,
+.mesa_sp_actions .mesa_sp_btn_ghost i {
+    color: #475569 !important;
+    opacity: 1 !important;
+}
+
+.mesa_sp_actions .mesa_sp_btn_primary .fa,
+.mesa_sp_actions .mesa_sp_btn_primary .oi,
+.mesa_sp_actions .mesa_sp_btn_primary i {
+    color: #ecfdf5 !important;
+    opacity: 1 !important;
+}
+
+/* KPIs: scorecard minimalista */
+.mesa_sp_kpi_grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0;
+    margin-bottom: 20px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+}
+
+.mesa_sp_kpi_card {
+    background: #fff;
+    padding: 18px 20px;
+    border-right: 1px solid #f1f5f9;
+    border-bottom: 1px solid #f1f5f9;
+    position: relative;
+}
+
+.mesa_sp_kpi_card:last-child {
+    border-right: none;
+}
+
+.mesa_sp_kpi_label {
+    display: block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #94a3b8;
+    margin-bottom: 8px;
+}
+
+.mesa_sp_kpi_card .o_field_widget input,
+.mesa_sp_kpi_card .o_input {
+    border: none !important;
+    background: transparent !important;
+    font-size: 1.875rem !important;
+    font-weight: 700 !important;
+    color: #0f766e !important;
+    padding: 0 !important;
+    height: auto !important;
+    letter-spacing: -0.02em;
+}
+
+.mesa_sp_footer_note {
+    font-size: 12px;
+    color: #64748b;
+    line-height: 1.5;
+    padding: 14px 18px;
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+}
+
+.o_form_view.mesa_sp_form .o_form_sheet_bg {
+    background: transparent;
+}
+
+.o_form_view.mesa_sp_form .o_form_sheet {
+    padding: 8px 4px 24px;
+    max-width: none;
+}

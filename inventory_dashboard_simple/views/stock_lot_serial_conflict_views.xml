@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="view_stock_lot_serial_multi_location_search" model="ir.ui.view">
+            <field name="name">stock.lot.serial.multi.location.search</field>
+            <field name="model">stock.lot</field>
+            <field name="arch" type="xml">
+                <search string="Series en varias ubicaciones">
+                    <field name="name" string="Número de serie"/>
+                    <field name="product_id"/>
+                    <field name="inventory_plate" string="Placa inventario"/>
+                </search>
+            </field>
+        </record>
+
+        <record id="view_stock_lot_serial_multi_location_list" model="ir.ui.view">
+            <field name="name">stock.lot.serial.multi.location.list</field>
+            <field name="model">stock.lot</field>
+            <field name="arch" type="xml">
+                <list string="Series en varias ubicaciones" create="0" edit="0" delete="0"
+                      default_order="product_id,name">
+                    <field name="name" string="Número de serie"/>
+                    <field name="product_id"/>
+                    <field name="inventory_plate" string="Placa inventario" optional="show"/>
+                    <field name="invdash_multi_location_detail" string="Ubicaciones (cantidad)"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="action_stock_lot_serial_multi_location" model="ir.actions.act_window">
+            <field name="name">Series en varias ubicaciones</field>
+            <field name="res_model">stock.lot</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="view_stock_lot_serial_multi_location_search"/>
+            <field name="view_id" ref="view_stock_lot_serial_multi_location_list"/>
+            <field name="domain" eval="[('invdash_serial_multi_location', '=', True)]"/>
+            <field name="context">{}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No hay series con stock en más de una ubicación
+                </p>
+                <p>
+                    Esta vista es <strong>informativa</strong>: lista números de serie que tienen cantidad positiva
+                    en <strong>más de una ubicación</strong> (interna o tránsito). Un mismo serial del mismo producto
+                    no debería estar repartido entre dos almacenes a la vez; suele indicar un movimiento sin cerrar o un ajuste duplicado.
+                </p>
+                <p>
+                    Varias líneas en la <strong>misma</strong> ubicación no generan alerta.
+                </p>
+            </field>
+        </record>
+    </data>
+</odoo>

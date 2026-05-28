@@ -23,7 +23,9 @@
                                 <tr>
                                     <td><span t-esc="rec.lot_id.name or ''"/></td>
                                     <td><span t-esc="rec.product_id.display_name or ''"/></td>
-                                    <td><span t-esc="rec.state"/></td>
+                                    <td>
+                                        <span t-esc="dict(rec._fields['state'].selection).get(rec.state, rec.state or '')"/>
+                                    </td>
                                     <td><span t-esc="rec.responsible_user_id.display_name or ''"/></td>
                                     <td><span t-esc="rec.technician_user_id.display_name or ''"/></td>
                                     <td><span t-esc="rec.expected_return_date or ''"/></td>

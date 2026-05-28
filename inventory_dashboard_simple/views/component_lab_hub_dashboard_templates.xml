@@ -93,8 +93,8 @@
                 <header class="lh_header">
                     <div class="lh_header_top">
                         <div>
-                            <h1 class="lh_title">Activos en laboratorio</h1>
-                            <div class="lh_sub">Hub centralizado de préstamos y devoluciones</div>
+                            <h1 class="lh_title">Activos en Laboratorio</h1>
+                            <div class="lh_sub">Centralización de Préstamos y Devoluciones</div>
                         </div>
                         <div>
                             <a t-attf-href="#{url_back}" class="lh_link">Volver</a>
@@ -156,7 +156,7 @@
 
                     <div class="lh_grid">
                         <section class="lh_col">
-                            <div class="lh_col_head"><h3 class="lh_col_title">En pool laboratorio</h3><span class="lh_col_count" t-esc="kpi_pool"/></div>
+                            <div class="lh_col_head"><h3 class="lh_col_title">En Laboratorio</h3><span class="lh_col_count" t-esc="kpi_pool"/></div>
                             <t t-if="cards_pool">
                                 <t t-foreach="cards_pool" t-as="c">
                                     <div class="lh_card">
@@ -174,7 +174,7 @@
                         </section>
 
                         <section class="lh_col">
-                            <div class="lh_col_head"><h3 class="lh_col_title">Con técnico (actas)</h3><span class="lh_col_count" t-esc="kpi_tech"/></div>
+                            <div class="lh_col_head"><h3 class="lh_col_title">Asinado a Técnico</h3><span class="lh_col_count" t-esc="kpi_tech"/></div>
                             <t t-if="tech_actas">
                                 <t t-foreach="tech_actas" t-as="a">
                                     <div class="lh_card acta-card" t-att-data-acta="a['acta_number']" data-acta-state="with_technician">
@@ -195,7 +195,7 @@
                         </section>
 
                         <section class="lh_col">
-                            <div class="lh_col_head"><h3 class="lh_col_title">Pendientes aprobación (actas)</h3><span class="lh_col_count" t-esc="kpi_pending_return_approval + kpi_pending_request_approval + kpi_pending_extension_approval"/></div>
+                            <div class="lh_col_head"><h3 class="lh_col_title">Pendientes Aprobación</h3><span class="lh_col_count" t-esc="kpi_pending_return_approval + kpi_pending_request_approval + kpi_pending_extension_approval"/></div>
                             <t t-if="extension_pending_actas">
                                 <div class="lh_section_title extension">Pendiente prórrogas</div>
                                 <t t-foreach="extension_pending_actas" t-as="a">
@@ -299,12 +299,12 @@
                             <tbody>
                                 <t t-foreach="inventory_rows" t-as="r">
                                     <tr>
-                                        <td t-esc="r.lot_id.name or ''"/>
-                                        <td t-esc="r.product_id.display_name or ''"/>
-                                        <td t-esc="r.state"/>
-                                        <td t-esc="r.responsible_user_id.display_name or ''"/>
-                                        <td t-esc="r.technician_user_id.display_name or ''"/>
-                                        <td t-esc="r.expected_return_date or ''"/>
+                                        <td t-esc="r['serial']"/>
+                                        <td t-esc="r['product']"/>
+                                        <td t-esc="r['state_label']"/>
+                                        <td t-esc="r['responsible']"/>
+                                        <td t-esc="r['technician']"/>
+                                        <td t-esc="r['expected_return_date']"/>
                                     </tr>
                                 </t>
                             </tbody>
@@ -353,18 +353,18 @@
                             </thead>
                             <tbody id="lh_acta_table_body">
                                 <t t-foreach="acta_rows" t-as="a">
-                                    <tr class="lh_acta_table_row" t-att-data-filter-date="a.event_date.strftime('%Y-%m-%d') if a.event_date else ''" t-att-data-filter-tech="a.technician_user_id.id if a.technician_user_id else ''">
-                                        <td t-esc="a.name or ''"/>
-                                        <td t-esc="a.event_date or ''"/>
-                                        <td t-esc="a.acta_type"/>
-                                        <td t-esc="a.assignment_id.lot_id.name or ''"/>
-                                        <td t-esc="a.assignment_id.product_id.display_name or ''"/>
-                                        <td t-esc="a.responsible_user_id.display_name or ''"/>
-                                        <td t-esc="a.technician_user_id.display_name or ''"/>
+                                    <tr class="lh_acta_table_row" t-att-data-filter-date="a['event_date_filter']" t-att-data-filter-tech="a['technician_id']">
+                                        <td t-esc="a['name']"/>
+                                        <td t-esc="a['event_date_display']"/>
+                                        <td t-esc="a['acta_type_label']"/>
+                                        <td t-esc="a['serial']"/>
+                                        <td t-esc="a['product']"/>
+                                        <td t-esc="a['responsible']"/>
+                                        <td t-esc="a['technician']"/>
                                         <td>
-                                            <a t-attf-href="#{hub_base_url}/report/pdf/inventory_dashboard_simple.report_component_lab_acta_pdf/#{a.id}" target="_blank" rel="noopener noreferrer" class="lh_acta_print_link">Imprimir</a>
+                                            <a t-attf-href="#{hub_base_url}/report/pdf/inventory_dashboard_simple.report_component_lab_acta_pdf/#{a['id']}" target="_blank" rel="noopener noreferrer" class="lh_acta_print_link">Imprimir</a>
                                         </td>
-                                        <td t-esc="a.created_by_user_id.display_name or ''"/>
+                                        <td t-esc="a['created_by']"/>
                                     </tr>
                                 </t>
                             </tbody>
@@ -402,7 +402,7 @@
                                 <div class="lh_request_item" t-attf-class="lh_request_item #{'' if r['is_available'] else 'disabled'}" t-att-data-available="1 if r['is_available'] else 0" t-att-data-id="r['id']" t-att-data-search="(r['serial'] + ' ' + r['product']).lower()">
                                     <div>
                                         <div><strong t-esc="r['product']"/></div>
-                                        <div class="lh_request_meta">Serial: <span t-esc="r['serial']"/> | Estado: <span t-esc="r['state']"/></div>
+                                        <div class="lh_request_meta">Serial: <span t-esc="r['serial']"/> | Estado: <span t-esc="r['state_label']"/></div>
                                     </div>
                                     <div>
                                         <span t-if="r['is_available']" class="pill ok">Disponible</span>
@@ -492,7 +492,7 @@
                                     <div class="lh_request_item lh_assign_tech_row" t-att-data-id="r['id']" t-att-data-search="(r['serial'] + ' ' + r['product']).lower()">
                                         <div>
                                             <div><strong t-esc="r['product']"/></div>
-                                            <div class="lh_request_meta">Serial: <span t-esc="r['serial']"/> | Estado: <span t-esc="r['state']"/></div>
+                                            <div class="lh_request_meta">Serial: <span t-esc="r['serial']"/> | Estado: <span t-esc="r['state_label']"/></div>
                                         </div>
                                         <div><input type="checkbox" class="lh_assign_tech_check" t-att-value="r['id']"/></div>
                                     </div>
@@ -531,7 +531,7 @@
                                 <div class="lh_request_item lh_pool_return_row" t-att-data-id="r['id']" t-att-data-search="(r['serial'] + ' ' + r['product']).lower()">
                                     <div>
                                         <div><strong t-esc="r['product']"/></div>
-                                        <div class="lh_request_meta">Serial: <span t-esc="r['serial']"/> | Estado: <span t-esc="r['state']"/></div>
+                                        <div class="lh_request_meta">Serial: <span t-esc="r['serial']"/> | Estado: <span t-esc="r['state_label']"/></div>
                                     </div>
                                     <div><input type="checkbox" class="lh_pool_return_check" t-att-value="r['id']"/></div>
                                 </div>
@@ -562,6 +562,12 @@
                                     <div>
                                         <div><strong>Acta: <t t-esc="a['acta_number']"/></strong> — <span class="lh_request_meta"><t t-esc="a['count']"/> ítem(s)</span></div>
                                         <div class="lh_request_meta">Técnico: <t t-esc="a['technician']"/></div>
+                                        <div class="lh_request_meta">Ítems:</div>
+                                        <ul class="lh_request_meta" style="margin:0.2rem 0 0 1rem; padding:0;">
+                                            <t t-foreach="a['items']" t-as="it">
+                                                <li><t t-esc="it.get('serial') or ''"/> - <t t-esc="it.get('product') or ''"/></li>
+                                            </t>
+                                        </ul>
                                     </div>
                                     <div><input type="checkbox" class="lh_rp_check" t-att-value="a['acta_number']"/></div>
                                 </div>
@@ -577,6 +583,12 @@
                                     <div>
                                         <div><strong>Acta: <t t-esc="a['acta_number']"/></strong> — <span class="lh_request_meta"><t t-esc="a['count']"/> ítem(s)</span></div>
                                         <div class="lh_request_meta">Técnico: <t t-esc="a['technician']"/></div>
+                                        <div class="lh_request_meta">Ítems:</div>
+                                        <ul class="lh_request_meta" style="margin:0.2rem 0 0 1rem; padding:0;">
+                                            <t t-foreach="a['items']" t-as="it">
+                                                <li><t t-esc="it.get('serial') or ''"/> - <t t-esc="it.get('product') or ''"/></li>
+                                            </t>
+                                        </ul>
                                     </div>
                                     <div><input type="checkbox" class="lh_rp_check" t-att-value="a['acta_number']"/></div>
                                 </div>
@@ -592,6 +604,12 @@
                                     <div>
                                         <div><strong>Acta: <t t-esc="a['acta_number']"/></strong> — <span class="lh_request_meta"><t t-esc="a['count']"/> ítem(s)</span></div>
                                         <div class="lh_request_meta">Solicitado por: <t t-esc="a['technician']"/></div>
+                                        <div class="lh_request_meta">Ítems:</div>
+                                        <ul class="lh_request_meta" style="margin:0.2rem 0 0 1rem; padding:0;">
+                                            <t t-foreach="a['items']" t-as="it">
+                                                <li><t t-esc="it.get('serial') or ''"/> - <t t-esc="it.get('product') or ''"/></li>
+                                            </t>
+                                        </ul>
                                     </div>
                                     <div><input type="checkbox" class="lh_rp_check" t-att-value="a['acta_number']"/></div>
                                 </div>
@@ -886,7 +904,7 @@
                                 actaItemsBody.innerHTML = '';
                                 items.forEach(function (it) {
                                     var tr = document.createElement('tr');
-                                    tr.innerHTML = '<td>' + (it.serial || '') + '</td><td>' + (it.product || '') + '</td><td>' + (it.state || '') + '</td>';
+                                    tr.innerHTML = '<td>' + (it.serial || '') + '</td><td>' + (it.product || '') + '</td><td>' + (it.state_label || it.state || '') + '</td>';
                                     actaItemsBody.appendChild(tr);
                                 });
                                 if (!items.length) {

@@ -7,6 +7,8 @@
             <list string="Categorías de Licencia" class="o_license_module_list" decoration-muted="not active">
                 <field name="name"/>
                 <field name="code"/>
+                <field name="use_default_trm_cutoff"/>
+                <field name="trm_cutoff_day"/>
                 <field name="license_count" string="Total Licencias"/>
                 <field name="active" widget="boolean_toggle"/>
             </list>
@@ -38,6 +40,12 @@
                         </group>
                         <group>
                             <field name="active" widget="boolean_toggle"/>
+                        </group>
+                    </group>
+                    <group string="Corte TRM">
+                        <group>
+                            <field name="use_default_trm_cutoff"/>
+                            <field name="trm_cutoff_day" invisible="use_default_trm_cutoff"/>
                         </group>
                     </group>
                     <notebook>

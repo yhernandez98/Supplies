@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_mesa_retiro_user_equipment_select_wizard_form" model="ir.ui.view">
+        <field name="name">mesa.service.retiro.user.equipment.select.wizard.form</field>
+        <field name="model">mesa.service.retiro.user.equipment.select.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Equipos a devolver">
+                <sheet>
+                    <field name="candidate_lot_ids" invisible="1"/>
+                    <field name="inactivate_flow" invisible="1"/>
+                    <p class="text-muted mb-2">
+                        El usuario puede tener varios equipos asignados. Marque los que devuelve;
+                        por cada uno con licencias de equipo se preguntará si desea retirarlas.
+                    </p>
+                    <group>
+                        <field name="partner_id" readonly="1"/>
+                        <field name="contact_id" readonly="1"/>
+                    </group>
+                    <group string="Equipos asignados al usuario">
+                        <field name="lot_ids" widget="many2many_checkboxes" nolabel="1" colspan="2"
+                               context="{'mesa_retiro_user_equipment_select': True}"/>
+                    </group>
+                </sheet>
+                <footer>
+                    <button name="action_confirm" type="object" string="Continuar" class="btn-primary"/>
+                    <button name="action_skip_no_equipment" type="object"
+                            string="Sin devolver equipos" class="btn-secondary"
+                            invisible="not inactivate_flow"/>
+                    <button string="Cancelar" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

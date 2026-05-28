@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_mesa_retiro_license_select_wizard_form" model="ir.ui.view">
+        <field name="name">mesa.service.retiro.license.select.wizard.form</field>
+        <field name="model">mesa.service.retiro.license.select.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Licencias a retirar">
+                <sheet>
+                    <field name="candidate_license_ids" invisible="1"/>
+                    <field name="for_user_tab" invisible="1"/>
+                    <field name="inactivate_flow" invisible="1"/>
+                    <field name="return_lot_id" invisible="1"/>
+                    <p class="text-muted mb-2" invisible="for_user_tab">
+                        Marque las licencias del equipo que desea retirar. El ticket incluirá únicamente
+                        las licencias seleccionadas (la cantidad contratada se mantiene).
+                    </p>
+                    <p class="text-muted mb-2" invisible="not for_user_tab">
+                        Marque las licencias del usuario (pestaña «Licencias del Usuario») que desea retirar.
+                        El ticket incluirá únicamente las licencias seleccionadas.
+                    </p>
+                    <group>
+                        <field name="partner_id" readonly="1"/>
+                        <field name="contact_id" readonly="1" invisible="not for_user_tab"/>
+                        <field name="lot_id" readonly="1" string="Equipo" invisible="for_user_tab"/>
+                    </group>
+                    <group string="Licencias asignadas al equipo" invisible="for_user_tab">
+                        <field name="license_equipment_ids" widget="many2many_checkboxes" nolabel="1" colspan="2"
+                               context="{'mesa_retiro_license_select': True}"/>
+                    </group>
+                    <group string="Licencias del usuario" invisible="not for_user_tab">
+                        <field name="license_equipment_ids" widget="many2many_checkboxes" nolabel="1" colspan="2"
+                               context="{'mesa_retiro_license_select': True}"/>
+                    </group>
+                </sheet>
+                <footer>
+                    <button name="action_confirm" type="object" string="Confirmar y crear ticket" class="btn-primary"/>
+                    <button name="action_skip_user_licenses" type="object"
+                            string="Sin retirar licencias" class="btn-secondary"
+                            invisible="not for_user_tab or not inactivate_flow"/>
+                    <button string="Cancelar" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_mesa_retiro_license_select_wizard" model="ir.actions.act_window">
+        <field name="name">Licencias a retirar</field>
+        <field name="res_model">mesa.service.retiro.license.select.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_mesa_retiro_license_select_wizard_form"/>
+        <field name="target">new</field>
+    </record>
+</odoo>

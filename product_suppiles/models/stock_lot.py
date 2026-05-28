@@ -244,6 +244,29 @@ class StockLot(models.Model):
         tracking=True
     )
 
+    def get_acta_reining_plazo_label(self):
+        """Etiqueta legible del plazo renting para actas PDF (QWeb)."""
+        self.ensure_one()
+        if "reining_plazo" not in self._fields:
+            return ""
+        val = self.reining_plazo
+        if not val:
+            return ""
+        sel = self._fields["reining_plazo"].selection
+        pairs = sel(self) if callable(sel) else (sel or [])
+        return dict(pairs).get(val, val)
+
+    def get_acta_entrega_subscription_service_price_safe(self):
+        """Precio recurrente del servicio para PDF; vacío si no aplica o no está el módulo de suscripción."""
+        self.ensure_one()
+        fn = getattr(self, "get_acta_entrega_subscription_service_price_display", None)
+        if not callable(fn):
+            return ""
+        try:
+            return fn() or ""
+        except Exception:
+            return ""
+
     @api.model
     def _get_view(self, view_id=None, view_type='form', **options):
         arch, view = super()._get_view(view_id=view_id, view_type=view_type, **options)

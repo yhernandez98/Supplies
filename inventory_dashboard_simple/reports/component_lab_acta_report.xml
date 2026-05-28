@@ -9,13 +9,7 @@
                         <table class="table table-sm">
                             <tr><th>Número</th><td><span t-esc="doc.name or ''"/></td></tr>
                             <tr><th>Fecha</th><td><span t-esc="doc.event_date or ''"/></td></tr>
-                            <tr><th>Tipo</th><td>
-                                <t t-if="doc.acta_type == 'assign_technician'">Entrega a técnico</t>
-                                <t t-elif="doc.acta_type == 'tech_return_request'">Solicitud devolución técnico</t>
-                                <t t-elif="doc.acta_type == 'tech_return_approved'">Aprobación devolución técnico</t>
-                                <t t-elif="doc.acta_type == 'tech_return_rejected'">Rechazo devolución técnico</t>
-                                <t t-else=""><span t-esc="doc.acta_type or ''"/></t>
-                            </td></tr>
+                            <tr><th>Tipo</th><td><span t-esc="dict(doc._fields['acta_type'].selection).get(doc.acta_type, doc.acta_type or '')"/></td></tr>
                             <tr><th>Serial</th><td><span t-esc="doc.assignment_id.lot_id.name or ''"/></td></tr>
                             <tr><th>Producto</th><td><span t-esc="doc.assignment_id.product_id.display_name or ''"/></td></tr>
                             <tr><th>Responsable</th><td><span t-esc="doc.responsible_user_id.display_name or ''"/></td></tr>

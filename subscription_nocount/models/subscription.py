@@ -5,7 +5,7 @@ import re
 from dateutil.relativedelta import relativedelta
 
 from odoo import api, fields, models, _
-from odoo.exceptions import UserError
+from odoo.exceptions import UserError, ValidationError
 from odoo.tools import float_round
 from odoo.tools.misc import format_date, formatLang, get_lang
 
@@ -49,9 +49,57 @@ class SubscriptionSubscription(models.Model):
         tracking=True,
         domain=[],
     )
+    auto_renewal = fields.Boolean(
+        string='Renovación automática',
+        default=False,
+        tracking=True,
+        help='Solo aplica con plan anual (12 meses o 1 año). Si está activa, al pasar la fecha de fin '
+             '(el día siguiente al último día del período) el cron renueva automáticamente: nuevo inicio = '
+             'día siguiente al fin anterior y nuevo fin +12 meses −1 día; la suscripción sigue activa. '
+             'Si está desmarcada, la suscripción se cancela automáticamente al vencer el período.',
+    )
+    is_annual_billing_plan = fields.Boolean(
+        compute='_compute_is_annual_billing_plan',
+        string='Plan facturación anual',
+        help='Indica si el plan recurrente es anual (periodo 12 meses o 1 año).',
+    )
+    annual_proforma_use_day7 = fields.Boolean(
+        string='Proforma anual: flujo día 7 (mes vencido)',
+        default=True,
+        tracking=True,
+        help='Si está activo, la proforma anual se genera el día 7 con el facturable guardado del mes anterior, '
+             'igual que las suscripciones mensuales. Si se desmarca, se usa una sola fecha al año y la proforma '
+             'sale del facturable en vivo (no requiere facturable guardado para esa emisión).',
+    )
+    annual_proforma_custom_date = fields.Date(
+        string='Fecha proforma anual (fuera del día 7)',
+        tracking=True,
+        help='Solo aplica con plan anual y con «flujo día 7» desactivado. En esa fecha se genera una proforma anual; '
+             'al ejecutarse, se programa automáticamente el mismo día del año siguiente.',
+    )
     reference_year = fields.Integer(string='Año consulta', help='Para consultar o guardar el facturable de un mes concreto (ej. facturación mes vencido).')
     reference_month = fields.Integer(string='Mes consulta', help='Mes (1-12) para consultar o guardar el facturable.')
-    monthly_amount = fields.Monetary(string='Acumulado', compute='_compute_monthly_amount', store=True, currency_field='currency_id', digits=(16, 0))
+    monthly_amount = fields.Monetary(
+        string='Acumulado',
+        compute='_compute_monthly_amount',
+        store=True,
+        currency_field='currency_id',
+        digits=(16, 0),
+        help='Si hay filas en «Productos agrupados» (pestaña Facturable), suma los costos COP de ahí. '
+             'Si esa tabla está vacía, el acumulado sale de las líneas técnicas de la suscripción (subtotal mensual), '
+             'aunque el formulario no las muestre: use «Actualizar productos» o revise el módulo de licencias/líneas.',
+    )
+    acumulado_origen = fields.Selection(
+        [
+            ('grouped', 'Productos agrupados (Facturable)'),
+            ('lines', 'Líneas de suscripción (subtotal mensual)'),
+        ],
+        string='Origen del acumulado',
+        compute='_compute_monthly_amount',
+        store=False,
+        readonly=True,
+        help='Indica de dónde se calculó el importe mostrado en Acumulado.',
+    )
     monthly_amount_usd = fields.Float(
         string='Total Mensual USD',
         compute='_compute_monthly_amount',
@@ -62,7 +110,7 @@ class SubscriptionSubscription(models.Model):
     monthly_amount_usd_display = fields.Char(
         string='Total Mensual USD',
         compute='_compute_monthly_amount_usd_display',
-        help='Total Mensual USD con signo $ (solo visual).',
+        help='USD del facturable en vivo y conversión a COP con TRM por categoría (default: mes anterior corte 6; personalizado: mes actual si ya existe TRM, si no mes anterior mismo corte).',
     )
     renting_estimado = fields.Monetary(
         string='Renting Estimado',
@@ -78,7 +126,7 @@ class SubscriptionSubscription(models.Model):
         store=False,
         currency_field='currency_id',
         digits=(16, 2),
-        help='Renting Estimado + (Acumulado USD del facturable × TRM del mes consultado o del mes actual).',
+        help='Renting Estimado + suma (cada línea USD del facturable × TRM según categoría: default mes anterior corte 6; corte personalizado mes actual si existe TRM, si no mes anterior).',
     )
     total_mes_anterior = fields.Monetary(
         string='Total Mes Anterior',
@@ -178,6 +226,13 @@ class SubscriptionSubscription(models.Model):
         compute='_compute_grouped_products',
         store=False,
         help='Productos agrupados por cantidad de seriales.',
+    )
+    grouped_product_trm_usd_ids = fields.Many2many(
+        'subscription.product.grouped',
+        string='Licencias USD (TRM)',
+        compute='_compute_grouped_product_trm_usd_ids',
+        readonly=True,
+        help='Solo licencias con costo en USD. Vista dedicada a la pestaña TRM (no duplicar el mismo One2many con distinto domain).',
     )
     location_quant_ids = fields.Many2many(
         'stock.quant',
@@ -286,6 +341,7 @@ class SubscriptionSubscription(models.Model):
                 subscription.name = self._build_subscription_name(
                     subscription.partner_id
                 )
+        records._subscription_sync_annual_end_date()
         return records
     
     @api.constrains('name', 'partner_id')
@@ -318,7 +374,31 @@ class SubscriptionSubscription(models.Model):
                         subscription.partner_id,
                         exclude_id=subscription.id
                     )
+        if not self.env.context.get('subscription_skip_end_date_sync'):
+            self._subscription_sync_annual_end_date()
         return res
+
+    @api.depends('plan_id', 'plan_id.billing_period_unit', 'plan_id.billing_period_value')
+    def _compute_is_annual_billing_plan(self):
+        for rec in self:
+            rec.is_annual_billing_plan = rec._subscription_plan_billing_kind() == 'annual'
+
+    @api.constrains('annual_proforma_use_day7', 'annual_proforma_custom_date', 'plan_id')
+    def _check_annual_proforma_custom_date(self):
+        for rec in self:
+            if rec._subscription_plan_billing_kind() == 'annual' and not rec.annual_proforma_use_day7:
+                if not rec.annual_proforma_custom_date:
+                    raise ValidationError(
+                        _('En suscripciones anuales sin el flujo del día 7 debe indicar la fecha de generación de la proforma anual.')
+                    )
+
+    def _subscription_sync_annual_end_date(self):
+        """Si el plan es anual: Fin = Inicio + 12 meses − 1 día (igual que licencias)."""
+        for rec in self:
+            if rec._subscription_plan_billing_kind() == 'annual' and rec.start_date:
+                end_d = rec.start_date + relativedelta(months=12) - relativedelta(days=1)
+                if rec.end_date != end_d:
+                    rec.with_context(subscription_skip_end_date_sync=True).write({'end_date': end_d})
 
     def _is_name_in_new_format(self, name, partner):
         """Verifica si el nombre está en el nuevo formato: Cliente NNN DD/MM/AAAA"""
@@ -360,7 +440,7 @@ class SubscriptionSubscription(models.Model):
                     _logger.warning('⚠️ Error eliminando columna equipment_change_count: %s', str(e))
         return res
 
-    @api.depends('line_ids', 'line_ids.subtotal_monthly', 'location_id', 'grouped_product_ids', 'grouped_product_ids.cost', 'grouped_product_ids.cost_currency_id', 'grouped_product_ids.quantity')
+    @api.depends('line_ids', 'line_ids.subtotal_monthly', 'line_ids.is_active', 'location_id', 'grouped_product_ids', 'grouped_product_ids.cost', 'grouped_product_ids.cost_currency_id', 'grouped_product_ids.quantity')
     def _compute_monthly_amount(self):
         """Calcula el total mensual sumando solo los costos en COP (facturable en vivo).
         Se excluyen costos en USD (ej. licencias sin TRM del mes siguiente) para no sumar dólares como pesos."""
@@ -383,33 +463,55 @@ class SubscriptionSubscription(models.Model):
                 total_usd = sum(g.cost for g in grouped if g.cost_currency_id and _is_usd(g.cost_currency_id))
                 subscription.monthly_amount_usd = total_usd
                 _logger.debug('💰 Total mensual (solo COP) desde productos agrupados: %s; USD: %s', total, total_usd)
+                subscription.acumulado_origen = 'grouped'
             else:
-                total = sum(subscription.line_ids.mapped('subtotal_monthly'))
+                # Solo líneas técnicas activas (líneas huérfanas desactivadas por sincronizar desde ubicación)
+                total = sum(
+                    l.subtotal_monthly
+                    for l in subscription.line_ids
+                    if l.is_active
+                )
                 subscription.monthly_amount_usd = 0.0
                 _logger.debug('💰 Total mensual calculado desde líneas de suscripción: %s', total)
+                subscription.acumulado_origen = 'lines'
             subscription.monthly_amount = total
 
-    @api.depends('monthly_amount_usd')
+    @api.depends(
+        'monthly_amount_usd',
+        'grouped_product_ids',
+        'grouped_product_ids.cost',
+        'grouped_product_ids.cost_currency_id',
+        'grouped_product_ids.is_license',
+        'grouped_product_ids.license_category',
+        'grouped_product_ids.lic_category_id',
+    )
     def _compute_monthly_amount_usd_display(self):
-        """Muestra la conversión USD->COP usando TRM del mes en curso (y también el USD)."""
+        """Conversión USD→COP línea a línea (solo costos USD del agrupado) con TRM según categoría y mes calendario."""
         for rec in self:
             val_usd = rec.monthly_amount_usd or 0.0
 
-            trm_rate = 0.0
-            if 'license.trm' in rec.env:
-                trm_model = rec.env['license.trm']
-                today = fields.Date.context_today(rec)
-                trm_date_current_month = datetime.date(today.year, today.month, 1)
-                trm_rate = trm_model.get_trm_for_date(trm_date_current_month) or 0.0
+            def _is_usd(currency):
+                if not currency:
+                    return False
+                return (getattr(currency, 'name', '') or '').upper() == 'USD' or (getattr(currency, 'code', '') or '').upper() == 'USD'
+
+            cop_val = 0.0
+            try:
+                grouped = rec.grouped_product_ids
+            except ValueError:
+                grouped = rec.env['subscription.product.grouped'].browse([])
+            for g in grouped:
+                if not g.cost_currency_id or not _is_usd(g.cost_currency_id):
+                    continue
+                rate = rec._get_trm_rate_for_grouped_usd_line(g)
+                cop_val += float(g.cost or 0.0) * float(rate or 0.0)
+            cop_val = float_round(cop_val, precision_digits=2)
 
             usd_str = formatLang(rec.env, val_usd, digits=2)
             usd_currency = rec.env.ref('base.USD', raise_if_not_found=False) or rec.env['res.currency'].search([('name', '=', 'USD')], limit=1)
             usd_money_str = formatLang(rec.env, val_usd, currency_obj=usd_currency, digits=2) if usd_currency else usd_str
-            if trm_rate and trm_rate > 0 and val_usd:
-                cop_val = val_usd * trm_rate
+            if cop_val and cop_val > 0 and val_usd:
                 cop_str = formatLang(rec.env, cop_val, currency_obj=rec.currency_id, digits=2)
-                # cop_str ya trae el símbolo monetario (ej. "$ 3.000.000"), así que NO agregamos otro "$".
-                # usd_money_str ya trae el símbolo monetario también.
                 rec.monthly_amount_usd_display = _('%s COP (%s USD)') % (cop_str, usd_money_str)
             else:
                 rec.monthly_amount_usd_display = _('%s USD (TRM pendiente)') % usd_money_str
@@ -420,12 +522,16 @@ class SubscriptionSubscription(models.Model):
         'grouped_product_ids.quantity',
         'grouped_product_ids.proyectado',
         'grouped_product_ids.is_license',
+        'grouped_product_ids.license_category',
+        'grouped_product_ids.lic_category_id',
+        'grouped_product_ids.cost',
+        'grouped_product_ids.cost_currency_id',
         'monthly_amount_usd',
         'reference_year',
         'reference_month',
     )
     def _compute_total_esperado_y_mes_anterior(self):
-        """Renting estimado = suma Proyectado sin licencias. Total esperado = renting + USD×TRM. Total mes anterior = facturable guardado."""
+        """Renting estimado = suma Proyectado sin licencias. Total esperado = renting + USD×TRM (misma lógica por categoría que Acumulado USD). Total mes anterior = facturable guardado."""
         for subscription in self:
             subscription.renting_estimado = 0.0
             subscription.total_esperado = 0.0
@@ -438,17 +544,20 @@ class SubscriptionSubscription(models.Model):
                 subscription.renting_estimado = sum(
                     g.proyectado for g in grouped if not g.is_license
                 ) or 0.0
-            today = fields.Date.context_today(subscription)
-            if subscription.reference_year and subscription.reference_month and 1 <= int(subscription.reference_month) <= 12:
-                trm_date = datetime.date(int(subscription.reference_year), int(subscription.reference_month), 1)
-            else:
-                trm_date = datetime.date(today.year, today.month, 1)
+
+            def _is_usd(currency):
+                if not currency:
+                    return False
+                return (getattr(currency, 'name', '') or '').upper() == 'USD' or (getattr(currency, 'code', '') or '').upper() == 'USD'
+
             usd_cop = 0.0
-            usd_amt = float(subscription.monthly_amount_usd or 0.0)
-            if usd_amt and 'license.trm' in self.env:
-                trm = self.env['license.trm'].get_trm_for_date(trm_date) or 0.0
-                if trm and trm > 0:
-                    usd_cop = usd_amt * float(trm)
+            for g in grouped:
+                if not g.cost_currency_id or not _is_usd(g.cost_currency_id):
+                    continue
+                rate = subscription._get_trm_rate_for_grouped_usd_line(g)
+                usd_cop += float(g.cost or 0.0) * float(rate or 0.0)
+            usd_cop = float_round(usd_cop, precision_digits=2)
+
             subscription.total_esperado = float_round(
                 float(subscription.renting_estimado or 0.0) + usd_cop,
                 precision_digits=2,
@@ -745,7 +854,14 @@ class SubscriptionSubscription(models.Model):
                             moved_out_lot_ids = move_lines.mapped('lot_id').ids
                             if moved_out_lot_ids:
                                 lots_moved_out = Lot.browse(moved_out_lot_ids).filtered(
-                                    lambda l: l.subscription_service_product_id
+                                    lambda l: (
+                                        l.subscription_service_product_id
+                                        and (
+                                            (l.active_subscription_id and l.active_subscription_id.id == subscription.id)
+                                            or (hasattr(l, 'last_subscription_id') and l.last_subscription_id and l.last_subscription_id.id == subscription.id)
+                                            or (l.id in usage_lot_ids)
+                                        )
+                                    )
                                 )
                                 exited_lots = (exited_lots | lots_moved_out)
                     for lot in exited_lots:
@@ -830,6 +946,7 @@ class SubscriptionSubscription(models.Model):
 
                 # Agregar licencias activas de la suscripción (si el módulo subscription_licenses está instalado)
                 # PRIORIDAD 1: Buscar desde license.assignment (modelo principal de asignación de licencias)
+                license_assignment_loaded = False
                 if 'license.assignment' in self.env:
                     try:
                         # Buscar licencias activas que coincidan con partner_id y location_id de la suscripción
@@ -841,6 +958,7 @@ class SubscriptionSubscription(models.Model):
                             license_domain.append(('location_id', '=', subscription.location_id.id))
 
                         active_licenses = self.env['license.assignment'].search(license_domain)
+                        license_assignment_loaded = bool(active_licenses)
                         _logger.info('📋 Licencias encontradas desde license.assignment: %s (Partner: %s, Location: %s)',
                                      len(active_licenses), subscription.partner_id.name, subscription.location_id.name if subscription.location_id else 'Sin ubicación')
 
@@ -848,6 +966,15 @@ class SubscriptionSubscription(models.Model):
                         for license_assignment in active_licenses:
                             if not license_assignment.license_id:
                                 continue
+                            if not subscription._license_assignment_matches_subscription_plan(license_assignment):
+                                continue
+                            # Si la suscripción tiene plan, excluir licencias cuyo producto no tenga regla
+                            # recurrente para ese plan en la lista de precios del cliente.
+                            lic_product = license_assignment.license_id.product_id
+                            if subscription.plan_id and lic_product:
+                                plan_item = subscription._get_recurring_pricelist_item(lic_product, subscription.plan_id)
+                                if not plan_item:
+                                    continue
                             license_category_name = 'Sin Categoría'
                             license_category_id = False
                             if license_assignment.license_id and license_assignment.license_id.name:
@@ -882,6 +1009,7 @@ class SubscriptionSubscription(models.Model):
                                 'is_license': True,
                                 'license_name': data['category_name'],
                                 'license_category': data['category_name'],
+                                'lic_category_id': data['category_id'] or False,
                                 'license_type_id': False,
                                 'cost': 0.0,
                             })
@@ -892,7 +1020,8 @@ class SubscriptionSubscription(models.Model):
                         _logger.error('❌ Error al incluir licencias desde license.assignment: %s', str(e), exc_info=True)
 
                 # PRIORIDAD 2: Buscar desde subscription.license.assignment (si existe, para compatibilidad)
-                if 'subscription.license.assignment' in self.env:
+                # Solo se usa cuando no hay datos del modelo principal (license.assignment).
+                if 'subscription.license.assignment' in self.env and not license_assignment_loaded:
                     try:
                         if hasattr(subscription, 'license_ids'):
                             active_licenses = subscription.license_ids.filtered(lambda l: l.active)
@@ -939,7 +1068,11 @@ class SubscriptionSubscription(models.Model):
                         _logger.error('❌ Error al incluir licencias desde subscription.license.assignment: %s', str(e), exc_info=True)
 
                 # Servicios de MESA DE SERVICIOS y ADMINISTRACION Y SEGURIDAD INFORMATICA desde la lista de precios del cliente
-                _SERVICES_BL_NAMES = ('MESA DE SERVICIOS', 'ADMINISTRACION Y SEGURIDAD INFORMATICA')
+                _SERVICES_BL_NAMES = (
+                    'MESA DE SERVICIOS',
+                    'ADMINISTRACION Y SEGURIDAD INFORMATICA',
+                    'SERVICIO DE INTERNET',
+                )
                 try:
                     pricelist = subscription.partner_id.property_product_pricelist if subscription.partner_id else False
                     if pricelist and 'product.business.line' in self.env:
@@ -1027,6 +1160,20 @@ class SubscriptionSubscription(models.Model):
                 )
                 subscription.grouped_product_ids = empty_recordset
 
+    @api.depends(
+        'grouped_product_ids',
+        'grouped_product_ids.is_license',
+        'grouped_product_ids.cost_currency_id',
+    )
+    def _compute_grouped_product_trm_usd_ids(self):
+        """Licencias con moneda de costo USD (pestaña TRM aplicadas)."""
+        for subscription in self:
+            subscription.grouped_product_trm_usd_ids = subscription.grouped_product_ids.filtered(
+                lambda g: g.is_license
+                and g.cost_currency_id
+                and (g.cost_currency_id.name or '').upper() == 'USD'
+            )
+
     @api.depends('line_ids', 'line_ids.component_item_type', 'line_ids.product_id', 'line_ids.location_id', 'location_id')
     def _compute_classified_lines(self):
         Location = self.env['stock.location']
@@ -1083,6 +1230,194 @@ class SubscriptionSubscription(models.Model):
             return unit_price * trm_rate
         return unit_price
 
+    def _get_license_category_cutoff_day(self, category):
+        """Obtiene el día de corte TRM desde categoría de licencia."""
+        if category and hasattr(category, 'get_trm_cutoff_day'):
+            try:
+                return int(category.get_trm_cutoff_day() or 6)
+            except Exception:
+                return 6
+        return 6
+
+    def _subscription_plan_billing_kind(self):
+        """Clasifica el plan de la suscripción para alinearlo con `license.assignment.contracting_type`.
+        - 'monthly': un mes de facturación.
+        - 'annual': 12 meses o 1 año.
+        - 'unknown': sin plan o periodo no reconocido (no se filtra por contratación).
+        """
+        self.ensure_one()
+        plan = self.plan_id
+        if not plan or 'sale.subscription.plan' not in self.env:
+            return 'unknown'
+        unit = getattr(plan, 'billing_period_unit', None)
+        val = getattr(plan, 'billing_period_value', None)
+        try:
+            val = int(val) if val is not None else 1
+        except (TypeError, ValueError):
+            val = 1
+        if unit == 'month' and val == 1:
+            return 'monthly'
+        if (unit == 'month' and val == 12) or (unit == 'year' and val == 1):
+            return 'annual'
+        return 'unknown'
+
+    def _license_assignment_matches_subscription_plan(self, assignment):
+        """Solo asignaciones cuyo `contracting_type` coincide con el plan recurrente de la suscripción.
+        - Plan mensual (1 mes): Mensual Mensual + Anual Compromiso Mensual (cobro mensual).
+        - Plan anual (12 meses / 1 año): solo contratos marcados «Anual» (pago una vez al año).
+        """
+        self.ensure_one()
+        if not assignment:
+            return False
+        if 'contracting_type' not in assignment._fields:
+            return True
+        kind = self._subscription_plan_billing_kind()
+        if kind == 'unknown':
+            return True
+        ct = assignment.contracting_type
+        if not ct:
+            return False
+        if kind == 'monthly':
+            return ct in ('monthly_monthly', 'annual_monthly_commitment')
+        if kind == 'annual':
+            return ct == 'annual'
+        return True
+
+    def _get_trm_exact_rate_month(self, year, month, cutoff_day):
+        """TRM exacta para año, mes (1-12) y día de corte (sin fallback a otro corte del mismo mes)."""
+        if 'license.trm' not in self.env:
+            return 0.0
+        TRM = self.env['license.trm']
+        trm = TRM.search([
+            ('year', '=', int(year)),
+            ('month', '=', str(int(month))),
+            ('cutoff_day', '=', int(cutoff_day)),
+            ('company_id', '=', self.env.company.id),
+            ('active', '=', True),
+        ], limit=1)
+        return float(trm.rate) if trm else 0.0
+
+    def _resolve_license_category_record(self, license_category_name):
+        """Resuelve `license.category` desde el texto de la línea agrupada.
+        Si el nombre no coincide exactamente con la tabla de categorías (mayúsculas, espacios),
+        usa licencias activas del cliente/ubicación: `assignment.license_id.name` es la categoría real."""
+        self.ensure_one()
+        Category = self.env['license.category'] if 'license.category' in self.env else False
+        if not Category:
+            return self.env['license.category'].browse()
+        name = (license_category_name or '').strip()
+        if not name:
+            return Category.browse()
+
+        rec = Category.search([('name', '=', name)], limit=1)
+        if rec:
+            return rec
+
+        name_norm = ' '.join(name.split()).upper()
+        for c in Category.search([('active', '=', True)]):
+            if ' '.join((c.name or '').split()).upper() == name_norm:
+                return c
+
+        rec = Category.search([('name', 'ilike', name)], limit=1)
+        if rec:
+            return rec
+
+        if 'license.assignment' in self.env and self.partner_id:
+            base_domain = [
+                ('partner_id', '=', self.partner_id.id),
+                ('state', '=', 'active'),
+            ]
+            # Primero ubicación estricta / jerarquía; si no hay match, mismo cliente sin filtrar ubicación.
+            domain_variants = []
+            if self.location_id:
+                domain_variants.append(base_domain + [('location_id', 'child_of', self.location_id.id)])
+                domain_variants.append(base_domain + [('location_id', '=', self.location_id.id)])
+            domain_variants.append(base_domain)
+            seen = set()
+            for domain in domain_variants:
+                for la in self.env['license.assignment'].search(domain):
+                    if la.id in seen:
+                        continue
+                    if not self._license_assignment_matches_subscription_plan(la):
+                        continue
+                    seen.add(la.id)
+                    lic = la.license_id
+                    if not lic or not getattr(lic, 'name', False):
+                        continue
+                    cat = lic.name
+                    cn = ' '.join((cat.name or '').split()).upper()
+                    if cn == name_norm:
+                        return cat
+        return Category.browse()
+
+    def _get_trm_rate_for_license_category(self, category_rec):
+        """TRM para `license.category` (recordset vacío = solo regla por defecto: mes anterior, corte 6)."""
+        self.ensure_one()
+        if 'license.trm' not in self.env:
+            return 0.0
+        today = fields.Date.context_today(self)
+        first_current = datetime.date(int(today.year), int(today.month), 1)
+        first_prev = first_current - relativedelta(months=1)
+
+        use_default_cutoff = True
+        if category_rec and category_rec.exists() and hasattr(category_rec, 'use_default_trm_cutoff'):
+            use_default_cutoff = bool(category_rec.use_default_trm_cutoff)
+
+        trm_model = self.env['license.trm']
+        if use_default_cutoff:
+            return float(trm_model.get_trm_for_date(first_prev, cutoff_day=6) or 0.0)
+
+        cutoff_day = self._get_license_category_cutoff_day(category_rec)
+        rate_current = self._get_trm_exact_rate_month(first_current.year, first_current.month, cutoff_day)
+        if rate_current and rate_current > 0:
+            return rate_current
+        return float(trm_model.get_trm_for_date(first_prev, cutoff_day=cutoff_day) or 0.0)
+
+    def _get_trm_rate_for_usd_acumulado_line(self, license_category_name):
+        """TRM de referencia para «Acumulado USD Estimado» (facturable en vivo).
+        Calendario según fecha de hoy (zona usuario):
+        - Categoría con corte por defecto (día 6): TRM del mes calendario anterior (ej. en mayo → abril, corte 6).
+        - Categoría con corte personalizado: TRM del mes actual si ya existe registro exacto mes+corte;
+          si no existe aún, usa la del mes anterior con ese mismo corte.
+        """
+        self.ensure_one()
+        category_rec = self._resolve_license_category_record(license_category_name)
+        return self._get_trm_rate_for_license_category(category_rec)
+
+    def _get_trm_rate_for_grouped_usd_line(self, grouped):
+        """Misma lógica TRM que `_get_trm_rate_for_usd_acumulado_line`, usando el id de categoría guardado en el agrupado."""
+        self.ensure_one()
+        category_rec = self.env['license.category']
+        if grouped.is_license and getattr(grouped, 'lic_category_id', None) and 'license.category' in self.env:
+            category_rec = self.env['license.category'].browse(grouped.lic_category_id)
+            if not category_rec.exists():
+                category_rec = self.env['license.category']
+        if not category_rec:
+            cat_name = (grouped.license_category or '').strip() if grouped.is_license else ''
+            category_rec = self._resolve_license_category_record(cat_name)
+        return self._get_trm_rate_for_license_category(category_rec)
+
+    def _get_trm_base_month_date(self):
+        """Mes base para consulta de TRM: referencia del facturable o mes actual."""
+        self.ensure_one()
+        if self.reference_year and self.reference_month and 1 <= self.reference_month <= 12:
+            return datetime.date(int(self.reference_year), int(self.reference_month), 1)
+        now_user = fields.Datetime.context_timestamp(self, fields.Datetime.now())
+        today_user = (now_user.date() if hasattr(now_user, 'date') else fields.Date.today())
+        return datetime.date(today_user.year, today_user.month, 1)
+
+    def _get_trm_lookup_date_for_category(self, category):
+        """Fecha TRM según categoría.
+        - Corte por defecto (día 6): mes siguiente (mes vencido).
+        - Corte personalizado: mes en curso.
+        """
+        self.ensure_one()
+        base_month = self._get_trm_base_month_date()
+        use_default_cutoff = True
+        if category and hasattr(category, 'use_default_trm_cutoff'):
+            use_default_cutoff = bool(category.use_default_trm_cutoff)
+        return base_month + relativedelta(months=1) if use_default_cutoff else base_month
+
     @api.onchange('partner_id')
     def _onchange_partner_id(self):
         for subscription in self:
@@ -1120,6 +1455,29 @@ class SubscriptionSubscription(models.Model):
                 plan_name = plan.name if plan else 'Sin plan'
                 _logger.info('✅ Precio actualizado para línea %s: %s (Plan: %s)', line.product_id.display_name, price, plan_name)
 
+    @api.onchange('plan_id')
+    def _onchange_plan_id_annual_cleanup(self):
+        """Plan no anual: sin fecha fin automática ni renovación automática en formulario."""
+        for rec in self:
+            if rec._subscription_plan_billing_kind() != 'annual':
+                rec.end_date = False
+                rec.auto_renewal = False
+                rec.annual_proforma_use_day7 = True
+                rec.annual_proforma_custom_date = False
+
+    @api.onchange('start_date', 'plan_id')
+    def _onchange_annual_subscription_end_date(self):
+        """Misma regla que `license.assignment`: fin = inicio + 12 meses − 1 día."""
+        for rec in self:
+            if rec._subscription_plan_billing_kind() == 'annual' and rec.start_date:
+                rec.end_date = rec.start_date + relativedelta(months=12) - relativedelta(days=1)
+
+    @api.onchange('annual_proforma_use_day7')
+    def _onchange_annual_proforma_use_day7(self):
+        for rec in self:
+            if rec.annual_proforma_use_day7:
+                rec.annual_proforma_custom_date = False
+
     def _get_price_for_product_with_plan(self, product, quantity=1.0, plan=None):
         """Obtiene el precio de un producto considerando el plan recurrente y la lista de precios.
         
@@ -1141,6 +1499,45 @@ class SubscriptionSubscription(models.Model):
         # Con plan o producto recurrente: usar _get_recurring_pricing + _compute_price (el .price del ítem puede ser etiqueta string)
         use_recurring = bool(plan) or getattr(product, 'recurring_invoice', False)
         if use_recurring:
+            # Fuente única y estricta: ítem recurrente de pricelist filtrado por plan/producto.
+            # Evita cruces mensual/anual cuando existen múltiples reglas para el mismo cliente.
+            recurring_item = self._get_recurring_pricelist_item(product, plan)
+            if recurring_item and hasattr(recurring_item, '_compute_price'):
+                try:
+                    price_value = recurring_item._compute_price(
+                        product,
+                        qty,
+                        uom=product.uom_id,
+                        date=fields.Datetime.now(),
+                        currency=pricelist.currency_id,
+                        plan_id=plan.id if plan else None,
+                    )
+                    if price_value is not None:
+                        try:
+                            price_value = float(price_value)
+                        except (TypeError, ValueError):
+                            pass
+                        else:
+                            _logger.info(
+                                '✅ Precio recurrente estricto por plan (%s): %s para producto %s',
+                                plan.display_name if plan else 'Sin plan',
+                                price_value,
+                                product.display_name,
+                            )
+                            return price_value
+                except Exception as e:
+                    _logger.debug('Error calculando precio recurrente estricto: %s', str(e))
+
+            # Si hay plan explícito y no existe ítem exacto, no usar fallback genérico.
+            if plan:
+                _logger.warning(
+                    '⚠️ No existe regla recurrente exacta para producto %s y plan %s en lista %s. Precio=0.',
+                    product.display_name,
+                    plan.display_name,
+                    pricelist.display_name,
+                )
+                return 0.0
+
             _logger.info('🔍 Buscando precio recurrente para producto %s (plan: %s) en pricelist %s',
                         product.display_name, plan.name if plan else 'cualquiera', pricelist.display_name)
             recurring_price = False
@@ -1155,6 +1552,19 @@ class SubscriptionSubscription(models.Model):
                         plan_id=plan.id if plan else None,
                         quantity=qty,
                     )
+                    # Protección: si se solicitó plan explícito, ignorar reglas devueltas con otro plan.
+                    # Esto evita mezclar mensual/anual cuando ambas reglas existen en la misma lista.
+                    if pricing_item and plan:
+                        item_plan = getattr(pricing_item, 'plan_id', False)
+                        if not item_plan or item_plan.id != plan.id:
+                            _logger.warning(
+                                '⚠️ _get_recurring_pricing devolvió plan distinto (%s) al solicitado (%s) para %s. '
+                                'Se ignora y se continúa con búsqueda estricta.',
+                                item_plan.display_name if item_plan else 'Sin plan',
+                                plan.display_name,
+                                product.display_name,
+                            )
+                            pricing_item = False
                     if pricing_item and hasattr(pricing_item, '_compute_price'):
                         date = fields.Datetime.now()
                         price_value = pricing_item._compute_price(
@@ -1369,6 +1779,9 @@ class SubscriptionSubscription(models.Model):
             if not recurring_price:
                 _logger.info('⚠️ No se encontró precio recurrente para producto %s con plan %s, usando precio estándar', 
                            product.display_name, plan.name)
+                # Regla estricta: con plan definido, nunca mezclar con precio de otro período
+                # (ej. tomar anual dentro de una suscripción mensual por fallback genérico).
+                return 0.0
         
         # PRIORIDAD 2: Usar el método estándar de la pricelist (busca en reglas de precio)
         price = pricelist._get_product_price(product, qty, partner=partner)
@@ -1405,6 +1818,9 @@ class SubscriptionSubscription(models.Model):
                     plan_id=plan_id,
                     quantity=1.0,
                 )
+                # Validar coincidencia estricta de plan para evitar tomar otro período.
+                if pricing_item and plan and getattr(pricing_item, 'plan_id', False).id != plan.id:
+                    pricing_item = None
                 if pricing_item:
                     return pricing_item
             except Exception:
@@ -1493,7 +1909,6 @@ class SubscriptionSubscription(models.Model):
             return line.stock_product_id.id if line.stock_product_id else line.product_id.id
 
         existing_map = {_line_key(line): line for line in main_lines}
-        processed = set()
         partner_active_keys = set()
         if self.partner_id:
             partner_active_lines = line_model.search([
@@ -1535,7 +1950,8 @@ class SubscriptionSubscription(models.Model):
             if item.get('lots'):
                 products_by_key[grouping_key]['lots'].extend(item.get('lots', []))
         
-        # Procesar productos agrupados
+        # Procesar productos agrupados. Claves que se sincronizan bien (excluye omitidos por conflicto con otra suscripción del mismo partner).
+        successfully_synced_grouping_keys = set()
         _logger.info('🔄 Procesando %s productos agrupados para suscripción %s', len(products_by_key), self.display_name)
         for grouping_key, grouped_item in products_by_key.items():
             product = grouped_item['product']  # service_product
@@ -1558,7 +1974,7 @@ class SubscriptionSubscription(models.Model):
                     self.display_name,
                 )
                 continue
-            
+
             # Usar el método que considera el plan recurrente si está configurado
             price = self._get_price_for_product_with_plan(product, qty, self.plan_id if self.plan_id else None)
             values = {
@@ -1608,18 +2024,34 @@ class SubscriptionSubscription(models.Model):
                 if track_usage:
                     new_line._update_usage(0.0, qty, sync_datetime, lot_quantities=lots if lots else None)
                 _logger.info('✅ Línea creada exitosamente: ID=%s', new_line.id)
-            processed.add(product_id)  # product_id es el service_product
+            # Misma clave (stock, servicio) que products_by_key / línea, no solo el producto de servicio
+            successfully_synced_grouping_keys.add(
+                (stock_product.id, product_id),
+            )
         if remove_missing:
-            # Filtrar líneas que no están en processed (usando product_id que es el service_product)
-            lines_to_remove = main_lines.filtered(lambda l: l.product_id.id not in processed)
-            if lines_to_remove:
+            # Poner a cero líneas principales que ya no salen de la ubicación. Antes se usaba solo product_id
+            # de servicio y no se anulaba una línea si otro stock compartía el mismo servicio.
+            to_clear = self.env['subscription.subscription.line']
+            for line in main_lines:
+                stock_id = line.stock_product_id.id if line.stock_product_id else line.product_id.id
+                pair_key = (stock_id, line.product_id.id)
+                if pair_key not in successfully_synced_grouping_keys:
+                    to_clear |= line
+            if to_clear:
                 if track_usage:
-                    for line in lines_to_remove:
+                    for line in to_clear:
                         line._update_usage(line.quantity, 0.0, sync_datetime, lot_quantities=[])
-                lines_to_remove.write({
+                to_clear.write({
                     'quantity': 0.0,
                     'is_active': False,
+                    'price_monthly': 0.0,
+                    'display_in_lines': False,
                 })
+                _logger.info(
+                    '↪ Líneas técnicas desactivadas (ya no en ubicación): %s - %s',
+                    len(to_clear),
+                    to_clear.mapped('display_name'),
+                )
     def _sync_component_lines(self, component_items, remove_missing=False, track_usage=False, sync_datetime=None):
         self.ensure_one()
         sync_datetime = sync_datetime or fields.Datetime.now()
@@ -2056,13 +2488,13 @@ class SubscriptionSubscription(models.Model):
             
             subscription._sync_subscription_lines(
                 main_products,
-                remove_missing=False,
+                remove_missing=True,
                 track_usage=True,
                 sync_datetime=sync_dt
             )
             subscription._sync_component_lines(
                 component_items,
-                remove_missing=False,
+                remove_missing=True,
                 track_usage=True,
                 sync_datetime=sync_dt,
             )
@@ -2075,6 +2507,98 @@ class SubscriptionSubscription(models.Model):
                 message_type='notification',
                 subtype_xmlid='mail.mt_note',
             )
+
+    def action_debug_plan_pricing(self):
+        """Genera un diagnóstico de precios por producto/plan en un popup (sin usar chatter)."""
+        self.ensure_one()
+        if not self.partner_id:
+            raise UserError(_('La suscripción no tiene cliente.'))
+        if not self.pricelist_id:
+            raise UserError(_('El cliente no tiene lista de precios configurada.'))
+        if not self.plan_id:
+            raise UserError(_('La suscripción no tiene plan recurrente configurado.'))
+
+        PricelistItem = self.env['product.pricelist.item'].with_context(active_test=False)
+
+        products = self.line_ids.filtered(lambda l: l.is_active and l.product_id).mapped('product_id')
+        if 'license.assignment' in self.env:
+            lic_domain = [('partner_id', '=', self.partner_id.id), ('state', '=', 'active')]
+            if self.location_id:
+                lic_domain.append(('location_id', '=', self.location_id.id))
+            for assignment in self.env['license.assignment'].search(lic_domain):
+                if not self._license_assignment_matches_subscription_plan(assignment):
+                    continue
+                if assignment.license_id and assignment.license_id.product_id:
+                    products |= assignment.license_id.product_id
+
+        products = products.sorted(lambda p: (p.display_name or '').upper())
+        max_products = 60
+        if len(products) > max_products:
+            products = products[:max_products]
+
+        lines = []
+        lines.append('<p><b>Debug de precios por plan</b></p>')
+        lines.append('<p>Plan suscripción: <b>%s</b> | Lista: <b>%s</b></p>' % (
+            self.plan_id.display_name or self.plan_id.name,
+            self.pricelist_id.display_name or self.pricelist_id.name,
+        ))
+        lines.append('<pre>')
+
+        for product in products:
+            chosen_item = self._get_recurring_pricelist_item(product, self.plan_id)
+            chosen_price = self._get_price_for_product_with_plan(product, 1.0, self.plan_id)
+            lines.append('Producto: %s [ID %s]' % (product.display_name, product.id))
+            lines.append('  -> Regla elegida: %s | Precio elegido: %s' % (
+                ('ID %s (plan %s)' % (
+                    chosen_item.id,
+                    chosen_item.plan_id.display_name if getattr(chosen_item, 'plan_id', False) else 'Sin plan',
+                )) if chosen_item else 'Ninguna',
+                chosen_price,
+            ))
+
+            item_domain = [('pricelist_id', '=', self.pricelist_id.id), '|',
+                           ('product_tmpl_id', '=', product.product_tmpl_id.id),
+                           ('product_id', '=', product.id)]
+            candidate_items = PricelistItem.search(item_domain, order='plan_id,id')
+            if not candidate_items:
+                lines.append('  -> Reglas en pricelist: Ninguna para este producto')
+                continue
+
+            lines.append('  -> Reglas candidatas:')
+            for item in candidate_items:
+                plan_name = item.plan_id.display_name if getattr(item, 'plan_id', False) else 'Sin plan'
+                try:
+                    item_price = item._compute_price(
+                        product,
+                        1.0,
+                        uom=product.uom_id,
+                        date=fields.Datetime.now(),
+                        currency=self.pricelist_id.currency_id,
+                        plan_id=item.plan_id.id if getattr(item, 'plan_id', False) else None,
+                    )
+                except Exception:
+                    item_price = 'ERR'
+                lines.append('     - item %s | plan=%s | compute_price=%s | fixed=%s' % (
+                    item.id,
+                    plan_name,
+                    item_price,
+                    getattr(item, 'fixed_price', ''),
+                ))
+            lines.append('')
+
+        lines.append('</pre>')
+
+        wizard = self.env['subscription.debug.pricing.wizard'].create({
+            'result_html': ''.join(lines),
+        })
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Debug de precios por plan'),
+            'res_model': 'subscription.debug.pricing.wizard',
+            'view_mode': 'form',
+            'res_id': wizard.id,
+            'target': 'new',
+        }
 
     @api.model
     def cron_sync_from_locations(self):
@@ -2127,10 +2651,14 @@ class SubscriptionSubscription(models.Model):
         Además: limpiar en lotes los last_subscription_id / pending_removal_date / last_subscription_service_id
         cuya pending_removal_date ya llegó, para que dejen de mostrarse en la suscripción."""
         today = fields.Date.context_today(self)
-        if today.day != 1:
+        # Blindaje operativo: permitir ejecución también el día 2
+        # en caso de atraso/fallo del cron del día 1.
+        if today.day not in (1, 2):
             return
-        _logger.info('Cron: día 1, sincronizando productos (facturable en vivo).')
+        _logger.info('Cron: día %s, sincronizando productos (facturable en vivo).', today.day)
         self.cron_sync_from_locations()
+        # Rescate: si el cron de "último día" no alcanzó a guardar, asegurar facturable del mes anterior.
+        self._ensure_previous_month_billables()
         # Quitar de los seriales la “baja pendiente”: ya es día 1, el registro no debe seguir en la suscripción
         Lot = self.env['stock.lot'].sudo()
         if hasattr(Lot, 'pending_removal_date'):
@@ -2150,7 +2678,41 @@ class SubscriptionSubscription(models.Model):
                 if hasattr(Lot, 'last_subscription_exit_date'):
                     clear_vals['last_subscription_exit_date'] = False
                 to_clear.write(clear_vals)
-                _logger.info('Cron día 1: limpiados last_subscription / pending_removal en %s lote(s).', len(to_clear))
+                _logger.info(
+                    'Cron día %s: limpiados last_subscription / pending_removal en %s lote(s).',
+                    today.day, len(to_clear)
+                )
+
+    @api.model
+    def _ensure_previous_month_billables(self):
+        """Crea facturable del mes anterior solo si falta (respaldo ante fallo de cron fin de mes)."""
+        today = fields.Date.context_today(self)
+        prev = today - relativedelta(months=1)
+        year, month = prev.year, prev.month
+        Billable = self.env['subscription.monthly.billable']
+        subscriptions = self.search([
+            ('state', '=', 'active'),
+            ('location_id', '!=', False),
+        ])
+        for subscription in subscriptions:
+            exists = Billable.search_count([
+                ('subscription_id', '=', subscription.id),
+                ('reference_year', '=', year),
+                ('reference_month', '=', month),
+            ])
+            if exists:
+                continue
+            try:
+                subscription.do_save_monthly_billable(year, month)
+                _logger.info(
+                    'Rescate día 1: creado facturable faltante %s-%s para suscripción %s.',
+                    year, month, subscription.display_name
+                )
+            except Exception as exc:
+                _logger.exception(
+                    'Rescate día 1: error creando facturable faltante %s-%s para %s: %s',
+                    year, month, subscription.display_name, exc
+                )
 
     @api.model
     def cron_apply_trm_saved_billables(self):
@@ -2205,23 +2767,45 @@ class SubscriptionSubscription(models.Model):
             len(billables),
         )
         Move = self.env['account.move']
-        month_end = prev.replace(day=calendar.monthrange(prev.year, prev.month)[1])
-        month_start = prev.replace(day=1)
         for billable in unique_billables:
             sub = billable.subscription_id
             if sub.state != 'active':
                 continue
-            # Reemplazar proforma existente del mes: borrar las en borrador de este mes y crear la nueva
+            # Plan anual sin flujo día 7: la proforma sale solo por fecha personalizada (facturable en vivo).
+            is_annual = sub._subscription_plan_billing_kind() == 'annual'
+            if is_annual and not sub.annual_proforma_use_day7:
+                continue
+            if is_annual and sub.annual_proforma_use_day7:
+                # Anual en día 7: máximo una proforma cada 12 meses.
+                last_annual = Move.search([
+                    ('subscription_id', '=', sub.id),
+                    ('x_is_proforma', '=', True),
+                    ('invoice_date', '!=', False),
+                ], order='invoice_date desc, id desc', limit=1)
+                if last_annual and last_annual.invoice_date:
+                    next_allowed = last_annual.invoice_date + relativedelta(years=1)
+                    if today < next_allowed:
+                        _logger.info(
+                            'Suscripción anual %s omitida en día 7: última proforma %s; próxima permitida %s.',
+                            sub.display_name,
+                            last_annual.invoice_date,
+                            next_allowed,
+                        )
+                        continue
+            # Reemplazar solo la proforma del MISMO período facturable (no tocar históricos).
+            period_tag = 'Billable %04d-%02d' % (year, month)
             existing = Move.search([
                 ('subscription_id', '=', sub.id),
                 ('x_is_proforma', '=', True),
-                ('invoice_date', '>=', month_start),
-                ('invoice_date', '<=', month_end),
+                ('invoice_origin', 'ilike', period_tag),
             ])
             draft = existing.filtered(lambda m: m.state == 'draft')
             if draft:
                 draft.unlink()
-                _logger.info('Suscripción %s: proforma(s) en borrador de %s-%s eliminada(s); se crea la nueva.', sub.display_name, year, month)
+                _logger.info(
+                    'Suscripción %s: proforma(s) en borrador del período %s eliminada(s); se crea la nueva.',
+                    sub.display_name, period_tag
+                )
             try:
                 sub._create_proforma_move_from_billable(billable)
             except UserError as err:
@@ -2620,6 +3204,7 @@ class SubscriptionSubscription(models.Model):
                 'quantity': g.quantity or 0,
                 'cost': g.cost or 0.0,
                 'is_license': bool(g.is_license),
+                'is_cost_usd': bool(g.cost_currency_id and (g.cost_currency_id.name or '').upper() == 'USD'),
             })
             if g.is_license:
                 self._save_monthly_billable_license_details(line, g, Detail)
@@ -2777,6 +3362,120 @@ class SubscriptionSubscription(models.Model):
                 pass
         return None
 
+    def _lot_billable_month_context(self):
+        """Año/mes de referencia para prorrateo (igual que Ver Detalles / facturable en vivo)."""
+        self.ensure_one()
+        now_utc = fields.Datetime.now()
+        now_user = fields.Datetime.context_timestamp(self, now_utc)
+        today_user = now_user.date() if hasattr(now_user, 'date') else fields.Date.today()
+        if self.reference_year and self.reference_month and 1 <= int(self.reference_month) <= 12:
+            year = int(self.reference_year)
+            month = int(self.reference_month)
+        else:
+            year = int(today_user.year)
+            month = int(today_user.month)
+        days_in_month = calendar.monthrange(year, month)[1]
+        if (year, month) == (today_user.year, today_user.month):
+            current_day = min(int(today_user.day), int(days_in_month))
+        else:
+            current_day = int(days_in_month)
+        return year, month, days_in_month, current_day, today_user
+
+    def _lot_days_used_in_billable_month(self, entry, exit_, year, month, current_day, today_user, days_in_month):
+        """Días en servicio en el mes (misma fórmula que Ver Detalles)."""
+        if entry is None and exit_ is None:
+            return current_day
+        if (
+            entry and exit_
+            and entry.year == year and entry.month == month
+            and exit_.year == year and exit_.month == month
+        ):
+            return max(0, exit_.day - entry.day + 1)
+        if entry and entry.year == year and entry.month == month:
+            return max(0, current_day - entry.day + 1)
+        if exit_ and exit_.year == year and exit_.month == month:
+            return max(0, exit_.day)
+        if (year, month) == (today_user.year, today_user.month):
+            return current_day
+        return days_in_month
+
+    def _lot_additional_monthly_cost(self, lot):
+        """Suma costos adicionales de elementos asociados al serial."""
+        if not lot or not hasattr(lot, 'lot_supply_line_ids'):
+            return 0.0
+        lines_with_cost = lot.lot_supply_line_ids.filtered(lambda l: l.has_cost)
+        total_additional = 0.0
+        for line in lines_with_cost:
+            related = getattr(line, 'related_lot_id', False)
+            if related and getattr(related, 'cost_additional', False):
+                total_additional += float(getattr(related, 'cost_additional_value', 0.0) or 0.0)
+            else:
+                total_additional += float(getattr(line, 'cost', 0.0) or 0.0)
+        return total_additional
+
+    def _resolve_lot_service_product(self, lot, product_id=None):
+        """Producto servicio para tarifa: agrupado, congelado en lote o activo."""
+        if product_id:
+            product = self.env['product.product'].browse(product_id)
+            return product if product.exists() else False
+        grouped = self.env['subscription.product.grouped'].search([
+            ('subscription_id', '=', self.id),
+            ('lot_ids', 'in', lot.id),
+        ], limit=1)
+        if grouped and grouped.product_id:
+            return grouped.product_id
+        if getattr(lot, 'last_subscription_service_id', None) and lot.last_subscription_service_id:
+            return lot.last_subscription_service_id
+        if getattr(lot, 'subscription_service_product_id', None) and lot.subscription_service_product_id:
+            return lot.subscription_service_product_id
+        return False
+
+    def _lot_billable_cost_breakdown(self, lot, product_id=None, entry_date=None, exit_date=None):
+        """Costos mensuales y prorrateados de un serial (misma lógica que Ver Detalles).
+
+        ``entry_date`` / ``exit_date`` opcionales: fechas del ajuste en Ajuste de Fechas;
+        si faltan, usa ``_lot_entry_exit_for_display`` (override, last_* o lote).
+        """
+        self.ensure_one()
+        empty = {
+            'cost_renting': 0.0,
+            'cost_renting_total': 0.0,
+            'cost_daily': 0.0,
+            'cost_to_date': 0.0,
+            'days_in_service': 0,
+        }
+        if not lot:
+            return empty
+
+        if entry_date is None and exit_date is None:
+            entry_display, exit_display = self._lot_entry_exit_for_display(lot)
+        else:
+            fallback_entry, fallback_exit = self._lot_entry_exit_for_display(lot)
+            entry_display = entry_date or fallback_entry
+            exit_display = exit_date or fallback_exit
+
+        entry = self._lot_date_for_billable(entry_display)
+        exit_ = self._lot_date_for_billable(exit_display)
+        year, month, days_in_month, current_day, today_user = self._lot_billable_month_context()
+        days_used = self._lot_days_used_in_billable_month(
+            entry, exit_, year, month, current_day, today_user, days_in_month,
+        )
+
+        service_product = self._resolve_lot_service_product(lot, product_id=product_id)
+        price_monthly = self._get_price_for_product(service_product, 1.0) if service_product else 0.0
+        additional = self._lot_additional_monthly_cost(lot)
+        total_monthly = (price_monthly or 0.0) + additional
+        cost_daily = round(total_monthly / float(days_in_month), 2) if days_in_month else 0.0
+        cost_to_date = round(cost_daily * float(days_used), 2)
+
+        return {
+            'cost_renting': price_monthly or 0.0,
+            'cost_renting_total': total_monthly,
+            'cost_daily': cost_daily,
+            'cost_to_date': cost_to_date,
+            'days_in_service': int(days_used),
+        }
+
     def _lot_entry_exit_for_display(self, lot):
         """Devuelve (entry_date, exit_date) para mostrar en esta suscripción.
         Si el lote salió de esta suscripción (last_subscription_id == self), usa las fechas congeladas
@@ -2806,7 +3505,9 @@ class SubscriptionSubscription(models.Model):
                 getattr(lot, 'active_subscription_id', None)
                 and lot.active_subscription_id.id == self.id
             ):
-                exit_ = getattr(lot, 'exit_date', None) or getattr(lot, 'last_exit_date_display', None)
+                # Si el serial está activo en esta suscripción, no usar respaldo histórico de salida.
+                # Evita mostrar una fecha de finalización arrastrada de un cliente anterior.
+                exit_ = getattr(lot, 'exit_date', None)
             else:
                 exit_ = (
                     getattr(lot, 'last_subscription_exit_date', None)
@@ -2824,9 +3525,9 @@ class SubscriptionSubscription(models.Model):
                 exit_ = getattr(lot, 'exit_date', None) or getattr(lot, 'last_exit_date_display', None)
             return (entry, exit_)
         if getattr(lot, 'active_subscription_id', None) and lot.active_subscription_id.id == self.id:
-            # Misma lógica que product_suppiles exit_date_display: exit_date o respaldo last_exit_date_display.
+            # En suscripción activa no mostrar respaldo histórico de salida.
             entry = getattr(lot, 'entry_date', None) or getattr(lot, 'last_entry_date_display', None)
-            exit_ = getattr(lot, 'exit_date', None) or getattr(lot, 'last_exit_date_display', None)
+            exit_ = getattr(lot, 'exit_date', None)
             return (entry, exit_)
         entry = getattr(lot, 'entry_date', None) or getattr(lot, 'last_entry_date_display', None)
         exit_ = getattr(lot, 'exit_date', None) or getattr(lot, 'last_exit_date_display', None)
@@ -2838,15 +3539,22 @@ class SubscriptionSubscription(models.Model):
         category_name = getattr(grouped_product, 'license_category', None) or ''
         total_qty = max(1, int(getattr(grouped_product, 'quantity', 0) or 0))
 
-        # Recalculamos en base al TRM del MES SIGUIENTE al facturable guardado.
         trm_rate = 0.0
+        trm_model = self.env['license.trm'] if 'license.trm' in self.env else False
         billable = getattr(billable_line, 'billable_id', None)
-        if 'license.trm' in self.env and billable and billable.reference_year and billable.reference_month:
-            trm_month = int(billable.reference_month) + 1
-            trm_year = int(billable.reference_year) + ((trm_month - 1) // 12)
-            trm_month = ((trm_month - 1) % 12) + 1
-            trm_date = datetime.date(trm_year, trm_month, 1)
-            trm_rate = self.env['license.trm'].get_trm_for_date(trm_date) or 0.0
+
+        def _lookup_trm_date_for_billable(category):
+            """Fecha TRM para facturable guardado.
+            Base = mes/año del facturable; default(6)=mes siguiente, personalizado=mes en curso.
+            """
+            if billable and billable.reference_year and billable.reference_month and 1 <= int(billable.reference_month) <= 12:
+                base_date = datetime.date(int(billable.reference_year), int(billable.reference_month), 1)
+            else:
+                base_date = self._get_trm_base_month_date()
+            use_default_cutoff = True
+            if category and hasattr(category, 'use_default_trm_cutoff'):
+                use_default_cutoff = bool(category.use_default_trm_cutoff)
+            return base_date + relativedelta(months=1) if use_default_cutoff else base_date
 
         # Fallback si por algún motivo no existen asignaciones o licencias.
         cost_per_unit_fallback = (getattr(grouped_product, 'cost', 0.0) or 0.0) / float(total_qty) if total_qty else 0.0
@@ -2896,10 +3604,15 @@ class SubscriptionSubscription(models.Model):
         assigned_count = 0
         default_service_name = category_name
         line_total_cost = 0.0
+        trm_rate_applied = 0.0
+        trm_cutoff_day_applied = 0
+        trm_date_applied = False
 
         # Igual que Ver Detalles: por cada asignación de la categoría, nombre = producto de esa asignación (tipo: Exchange Basic, etc.)
         for la in active_licenses:
             if not getattr(la, 'license_id', None):
+                continue
+            if not self._license_assignment_matches_subscription_plan(la):
                 continue
 
             lic_cat = (la.license_id.name.name if la.license_id.name else 'Sin Categoría') or 'Sin Categoría'
@@ -2915,7 +3628,16 @@ class SubscriptionSubscription(models.Model):
             if qty <= 0:
                 continue
 
-            unit_cost_assignment = self._get_license_unit_price_cop(product, trm_rate) if product else 0.0
+            trm_rate_assignment = trm_rate
+            if trm_model:
+                category = la.license_id.name if la.license_id else False
+                trm_date_assignment = _lookup_trm_date_for_billable(category)
+                cutoff_day = self._get_license_category_cutoff_day(category)
+                trm_rate_assignment = trm_model.get_trm_for_date(trm_date_assignment, cutoff_day=cutoff_day) or 0.0
+                trm_cutoff_day_applied = cutoff_day
+                trm_date_applied = trm_date_assignment
+            trm_rate_applied = trm_rate_assignment
+            unit_cost_assignment = self._get_license_unit_price_cop(product, trm_rate_assignment) if product else 0.0
             line_total_cost += float_round(unit_cost_assignment, precision_digits=2) * float(qty)
 
             equipment_lots = []
@@ -3025,6 +3747,12 @@ class SubscriptionSubscription(models.Model):
 
         if persist:
             billable_line.write({'cost': float_round(line_total_cost, precision_digits=2)})
+            if trm_date_applied and trm_rate_applied:
+                billable_line.write({
+                    'trm_rate_applied': trm_rate_applied,
+                    'trm_cutoff_day_applied': trm_cutoff_day_applied or 6,
+                    'trm_date_applied': trm_date_applied,
+                })
         return rows if not persist else None
 
     def _create_proforma_move(self):
@@ -3083,6 +3811,18 @@ class SubscriptionSubscription(models.Model):
             for grouped_product in products:
                 line_vals = grouped_product._prepare_invoice_line_values(self)
                 move_vals['invoice_line_ids'].append((0, 0, line_vals))
+                if grouped_product.is_license:
+                    trm_note = _('TRM aplicada no disponible')
+                    if grouped_product.trm_rate_applied:
+                        trm_note = _('TRM aplicada: %s | Corte día %s | %s') % (
+                            grouped_product.trm_rate_applied,
+                            grouped_product.trm_cutoff_day_applied or 6,
+                            grouped_product.trm_applied_note or '',
+                        )
+                    move_vals['invoice_line_ids'].append((0, 0, {
+                        'display_type': 'line_note',
+                        'name': trm_note,
+                    }))
         
         move = self.env['account.move'].create(move_vals)
         return move
@@ -3097,17 +3837,28 @@ class SubscriptionSubscription(models.Model):
         journal = self.env.ref('subscription_nocount.journal_proforma', raise_if_not_found=False)
         if not journal:
             raise UserError(_('No se encontró el diario de proformas.'))
+        invoice_date = fields.Date.context_today(self)
+        if billable.reference_year and billable.reference_month and 1 <= billable.reference_month <= 12:
+            invoice_date = datetime.date(
+                billable.reference_year,
+                billable.reference_month,
+                calendar.monthrange(billable.reference_year, billable.reference_month)[1],
+            )
         # Crear primero solo la cabecera del move (sin líneas) para evitar que el contexto
         # del formulario del billable inyecte default_subscription_id = billable.id en las líneas
         move_vals = {
             'move_type': 'out_invoice',
             'partner_id': self.partner_id.id,
             'currency_id': self.currency_id.id or self.env.company.currency_id.id,
-            'invoice_origin': self.name,
+            'invoice_origin': '%s | Billable %04d-%02d' % (
+                self.name,
+                int(billable.reference_year or 0),
+                int(billable.reference_month or 0),
+            ),
             'journal_id': journal.id,
             'subscription_id': self.id,
             'x_is_proforma': True,
-            'invoice_date': fields.Date.context_today(self),
+            'invoice_date': invoice_date,
         }
         seq = self._next_proforma_sequence()
         move_vals['name'] = self._get_proforma_title(seq)
@@ -3149,6 +3900,13 @@ class SubscriptionSubscription(models.Model):
                 line_vals = line._prepare_invoice_line_values(self)
                 line_vals['move_id'] = move.id
                 MoveLine.create(line_vals)
+                if line.is_license:
+                    trm_note = line.trm_applied_display or _('TRM aplicada no disponible')
+                    MoveLine.create({
+                        'move_id': move.id,
+                        'display_type': 'line_note',
+                        'name': trm_note,
+                    })
                 group_total += float(line.cost or 0)
             # Línea de subtotal del grupo (total que suma ese agrupamiento)
             if group_total != 0:
@@ -3210,12 +3968,157 @@ class SubscriptionSubscription(models.Model):
         for subscription in subscriptions:
             if subscription.end_date and subscription.end_date < today:
                 continue
+            # Suscripciones con facturación anual: no usar el flujo de fin de mes (proforma en vivo).
+            # Las anuales van por día 7 (facturable guardado) o por fecha personalizada (otro cron).
+            if subscription._subscription_plan_billing_kind() == 'annual':
+                continue
             try:
                 subscription.with_context(from_cron=True).action_generate_proforma()
             except UserError as err:
                 _logger.info('Suscripción %s omitida durante la generación automática: %s', subscription.display_name, err)
             except Exception as exc:
                 _logger.exception('Error al generar proforma automática para la suscripción %s: %s', subscription.display_name, exc)
+
+    @api.model
+    def cron_generate_annual_proforma_custom(self):
+        """Proforma anual única en la fecha indicada (sin facturable guardado; facturable en vivo)."""
+        today = fields.Date.context_today(self)
+        domain = [
+            ('state', '=', 'active'),
+            ('annual_proforma_use_day7', '=', False),
+            ('annual_proforma_custom_date', '!=', False),
+            ('annual_proforma_custom_date', '=', today),
+        ]
+        candidates = self.search(domain)
+        for sub in candidates:
+            if sub._subscription_plan_billing_kind() != 'annual':
+                continue
+            try:
+                sub.with_context(from_cron=True).action_generate_proforma()
+            except UserError as err:
+                _logger.info('Proforma anual (fecha propia) omitida %s: %s', sub.display_name, err)
+            except Exception as exc:
+                _logger.exception('Error proforma anual (fecha propia) %s: %s', sub.display_name, exc)
+                continue
+            _logger.info(
+                'Proforma anual (fecha propia) generada para %s en %s. '
+                'La fecha configurada se conserva sin cambios.',
+                sub.display_name,
+                sub.annual_proforma_custom_date or today,
+            )
+
+    @api.model
+    def _expiring_subscriptions_domain(self):
+        """Activas con fin de vigencia en los próximos 30 días (hoy incluido)."""
+        today = fields.Date.context_today(self)
+        limit = today + relativedelta(days=30)
+        return [
+            ('state', '=', 'active'),
+            ('end_date', '!=', False),
+            ('end_date', '>=', today),
+            ('end_date', '<=', limit),
+        ]
+
+    @api.model
+    def subscription_expiring_count(self):
+        """Conteo para badge en menú (web, mismo criterio que la acción de lista)."""
+        return self.search_count(self._expiring_subscriptions_domain())
+
+    @api.model
+    def cron_update_expiring_menu_badge(self):
+        """Mantiene el título del menú fijo; el número va en el badge (assets JS)."""
+        Menu = self.env.ref('subscription_nocount.menu_subscription_expiring', raise_if_not_found=False)
+        if not Menu:
+            return
+        name = _('Suscripciones a Vencer')
+        if Menu.name != name:
+            Menu.sudo().write({'name': name})
+
+    def _apply_annual_auto_renewal(self):
+        """Renueva el período anual: Inicio = Fin anterior + 1 día; Fin = Inicio + 12 meses − 1 día (regla del módulo).
+        Repite si hubo varios períodos vencidos (ej. servidor apagado).
+        Si usa proforma anual con fecha personalizada, avanza esa fecha un año por período renovado.
+        """
+        self.ensure_one()
+        today = fields.Date.context_today(self)
+        if self._subscription_plan_billing_kind() != 'annual':
+            return
+        renewals = 0
+        while self.end_date and self.end_date < today and self.state == 'active':
+            old_end = self.end_date
+            new_start = old_end + relativedelta(days=1)
+            vals = {'start_date': new_start}
+            if not self.annual_proforma_use_day7 and self.annual_proforma_custom_date:
+                vals['annual_proforma_custom_date'] = self.annual_proforma_custom_date + relativedelta(years=1)
+            self.write(vals)
+            renewals += 1
+            if renewals > 120:
+                _logger.error(
+                    'Renovación automática abortada tras 120 ciclos (suscripción %s). Revisar fechas.',
+                    self.display_name,
+                )
+                break
+        if renewals:
+            self.message_post(
+                body=_(
+                    'Período anual renovado automáticamente (%(n)s). Nuevo inicio: %(start)s, nuevo fin: %(end)s.'
+                ) % {
+                    'n': renewals,
+                    'start': format_date(self.env, self.start_date),
+                    'end': format_date(self.env, self.end_date),
+                },
+                subtype_xmlid='mail.mt_note',
+            )
+
+    @api.model
+    def cron_annual_subscription_end_of_term(self):
+        """Suscripciones anuales con período vencido: renueva fechas si «Renovación automática»; si no, cancela."""
+        today = fields.Date.context_today(self)
+        domain = [
+            ('state', '=', 'active'),
+            ('end_date', '!=', False),
+            ('end_date', '<', today),
+        ]
+        candidates = self.search(domain)
+        for sub in candidates:
+            if sub._subscription_plan_billing_kind() != 'annual':
+                continue
+            try:
+                if sub.auto_renewal:
+                    sub._apply_annual_auto_renewal()
+                else:
+                    sub.action_cancel()
+                    sub.message_post(
+                        body=_(
+                            'Suscripción anual cancelada automáticamente al vencer el período '
+                            '(renovación automática desactivada).'
+                        ),
+                        subtype_xmlid='mail.mt_note',
+                    )
+            except Exception as exc:
+                _logger.exception(
+                    'Error en fin de período anual para la suscripción %s: %s',
+                    sub.display_name,
+                    exc,
+                )
+
+    @api.model
+    def action_open_expiring_subscriptions(self):
+        """Abre suscripciones activas con fin en los próximos 30 días (para menú / servidor)."""
+        domain = self._expiring_subscriptions_domain()
+        count = self.search_count(domain)
+        res = {
+            'type': 'ir.actions.act_window',
+            'name': _('Suscripciones a vencer (%s)') % count,
+            'res_model': 'subscription.subscription',
+            'view_mode': 'list,form',
+            'domain': domain,
+            'context': dict(self.env.context),
+        }
+        search_view = self.env.ref('subscription_nocount.view_subscription_subscription_search', raise_if_not_found=False)
+        if search_view:
+            res['search_view_id'] = search_view.id
+        return res
 
     all_location_history_ids = fields.Many2many(
         'stock.move.line',
@@ -3350,7 +4253,13 @@ class SubscriptionSubscription(models.Model):
                     'price_monthly': 0.0,
                 })
             # Si NO es componente pero está oculto, mostrarlo
-            elif not is_component_related and not line.display_in_lines and not line.is_component_line:
+            elif (
+                not is_component_related
+                and not line.display_in_lines
+                and not line.is_component_line
+                and line.is_active
+                and (line.quantity or 0.0) > 0.0
+            ):
                 line.write({
                     'display_in_lines': True,
                     'is_component_line': False,
@@ -3769,26 +4678,12 @@ class SubscriptionSubscription(models.Model):
             subscription.usage_active_count = len(unique_lots)
 
     def action_equipment_change(self):
-        """Abre el wizard para cambio de equipo."""
-        self.ensure_one()
-        if self.state != 'active':
-            raise UserError(_('Solo puede realizar cambios de equipo en suscripciones activas.'))
-        if not self.location_id:
-            raise UserError(_('Debe establecer una ubicación para realizar cambios de equipo.'))
-        
-        return {
-            'type': 'ir.actions.act_window',
-            'name': _('Cambio de Equipo'),
-            'res_model': 'subscription.equipment.change.wizard',
-            'view_mode': 'form',
-            'target': 'new',
-            'context': {
-                'default_subscription_id': self.id,
-                'equipment_change_wizard': True,
-                'search_by_inventory_plate_only': True,
-                'active_model': 'subscription.equipment.change.wizard',  # Asegurar que active_model esté presente
-            },
-        }
+        """El cambio de equipo no se gestiona desde la ficha de suscripción."""
+        raise UserError(_(
+            'El cambio de equipo se realiza desde Mesa de Ayuda: '
+            'Órdenes y mantenimientos → Mantenimientos por equipo (o desde la orden) y abrir el serial '
+            '(botón «Cambio de Equipo»).'
+        ))
 
 
 class SubscriptionLotDateOverride(models.Model):
@@ -3878,27 +4773,21 @@ class SubscriptionLotDateOverride(models.Model):
 
     @api.depends('subscription_id', 'lot_id', 'entry_date', 'exit_date')
     def _compute_costs_from_lot(self):
-        """Reutiliza los cálculos del lote (costo mensual y costo al día) para mostrar en la pestaña de ajustes."""
+        """Misma lógica de costos que Ver Detalles (suscripción + fechas de ajuste / congeladas)."""
         for rec in self:
             rec.cost_to_date = 0.0
             rec.cost_renting_total = 0.0
             lot = rec.lot_id
-            if not lot:
+            sub = rec.subscription_id
+            if not lot or not sub:
                 continue
-            # Forzar recálculo del costo al día del lote (usa fechas actuales del mes)
-            try:
-                lot._compute_cost_to_date_display()
-            except Exception:
-                pass
-            rec.cost_to_date = getattr(lot, 'cost_to_date_current', 0.0) or 0.0
-            # Intentar obtener el costo renting mensual total desde el facturable / helpers
-            # Si no hay lógica específica, como fallback usar costo al día * días del mes.
-            try:
-                days_in_month = calendar.monthrange(fields.Date.context_today(self).year, fields.Date.context_today(self).month)[1]
-                cost_daily = getattr(lot, 'cost_to_date_current', 0.0) / max(1, min(getattr(lot, 'current_day_of_month', fields.Date.context_today(self).day), days_in_month))
-                rec.cost_renting_total = round(cost_daily * days_in_month, 2)
-            except Exception:
-                rec.cost_renting_total = rec.cost_to_date
+            costs = sub._lot_billable_cost_breakdown(
+                lot,
+                entry_date=rec.entry_date or None,
+                exit_date=rec.exit_date or None,
+            )
+            rec.cost_renting_total = costs['cost_renting_total']
+            rec.cost_to_date = costs['cost_to_date']
 
     def _lot_display_for_message(self):
         return (self.lot_id.display_name or self.lot_id.name or _('Serial')) if self.lot_id else _('Serial')
@@ -4649,6 +5538,8 @@ class SubscriptionProductGrouped(models.Model):
     is_license = fields.Boolean(string='Es Licencia', readonly=True, default=False, help='Indica si este registro representa una licencia')
     license_name = fields.Char(string='Nombre de Licencia', readonly=True, help='Nombre de la licencia cuando is_license=True')
     license_category = fields.Char(string='Categoría de Licencia', readonly=True, help='Categoría para agrupar licencias (ej: Office 365, Google Workspace)')
+    # ID de license.category al armar el agrupado (subscription_licenses). Entero para no exigir Many2one en el grafo de módulos.
+    lic_category_id = fields.Integer(string='Categoría lic. (id)', readonly=True, help='Resuelve TRM por categoría sin depender solo del texto.')
     # license_type_id se define en subscription_licenses (product.license.type) para evitar carga antes del comodel
     # Campo computed para mostrar el nombre correcto (producto o licencia)
     product_display_name = fields.Char(string='Producto', compute='_compute_product_display_name', store=False, help='Nombre del producto o licencia para mostrar')
@@ -4708,7 +5599,11 @@ class SubscriptionProductGrouped(models.Model):
     @api.depends('business_line_id', 'business_line_id.name')
     def _compute_show_view_details(self):
         """Oculta "Ver Detalles" para servicios que no agrupan equipos/seriales."""
-        _SERVICES_NO_DETAILS = ('MESA DE SERVICIOS', 'ADMINISTRACION Y SEGURIDAD INFORMATICA')
+        _SERVICES_NO_DETAILS = (
+            'MESA DE SERVICIOS',
+            'ADMINISTRACION Y SEGURIDAD INFORMATICA',
+            'SERVICIO DE INTERNET',
+        )
         names_upper = {n.strip().upper() for n in _SERVICES_NO_DETAILS}
         for record in self:
             if not record.business_line_id or not record.business_line_id.name:
@@ -4793,6 +5688,47 @@ class SubscriptionProductGrouped(models.Model):
         related='subscription_id.currency_id',
         readonly=True,
         store=True
+    )
+    trm_cutoff_day_applied = fields.Integer(
+        string='Corte TRM',
+        compute='_compute_trm_applied_info',
+        store=False,
+        readonly=True,
+    )
+    trm_rate_applied = fields.Float(
+        string='TRM aplicada',
+        compute='_compute_trm_applied_info',
+        store=False,
+        readonly=True,
+        digits=(16, 4),
+    )
+    trm_cost_cop_applied = fields.Monetary(
+        string='Valor COP (TRM)',
+        compute='_compute_trm_applied_info',
+        store=False,
+        readonly=True,
+        currency_field='currency_id',
+        digits=(16, 2),
+    )
+    trm_applied_note = fields.Char(
+        string='Detalle TRM',
+        compute='_compute_trm_applied_info',
+        store=False,
+        readonly=True,
+    )
+    is_cost_usd = fields.Boolean(
+        string='Costo en USD',
+        compute='_compute_is_cost_usd',
+        store=True,
+        readonly=True,
+        help='True cuando la moneda base de la línea es USD.',
+    )
+    trm_applies = fields.Boolean(
+        string='Aplica TRM',
+        compute='_compute_trm_applies',
+        store=True,
+        readonly=True,
+        help='Indica si la línea es licencia en USD y requiere TRM.',
     )
     location_id = fields.Many2one('stock.location', string='Ubicación', readonly=True)
 
@@ -4916,24 +5852,11 @@ class SubscriptionProductGrouped(models.Model):
                     total_cost = 0.0
                     trm_rate = 0.0
                     license_cost_in_usd = False  # True si hay precios en USD sin TRM (no sumar en Total Mensual)
-                    if 'license.trm' in self.env:
-                        trm_model = self.env['license.trm']
-                        sub = record.subscription_id
-                        if sub.reference_year and sub.reference_month and 1 <= sub.reference_month <= 12:
-                            _m = int(sub.reference_month) + 1
-                            _y = int(sub.reference_year)
-                            if _m > 12:
-                                _m = 1
-                                _y += 1
-                            trm_date = datetime.date(_y, _m, 1)
-                        else:
-                            now_user = fields.Datetime.context_timestamp(sub, fields.Datetime.now())
-                            today_user = (now_user.date() if hasattr(now_user, 'date') else fields.Date.today())
-                            first_current = datetime.date(today_user.year, today_user.month, 1)
-                            trm_date = first_current + relativedelta(months=1)
-                        trm_rate = trm_model.get_trm_for_date(trm_date) or 0.0
+                    trm_model = self.env['license.trm'] if 'license.trm' in self.env else False
                     for license_assignment in active_licenses:
                         if not license_assignment.license_id or not license_assignment.license_id.product_id:
+                            continue
+                        if not record.subscription_id._license_assignment_matches_subscription_plan(license_assignment):
                             continue
                         license_category_name = (license_assignment.license_id.name and license_assignment.license_id.name.name) or 'Sin Categoría'
                         if license_category_name != record.license_category:
@@ -4992,9 +5915,15 @@ class SubscriptionProductGrouped(models.Model):
                             if not price_currency:
                                 price_currency = pricelist.currency_id
                             unit_price_cop = unit_price
+                            trm_rate_assignment = trm_rate
+                            category = license_assignment.license_id.name if license_assignment.license_id else False
+                            if trm_model:
+                                trm_date_assignment = record.subscription_id._get_trm_lookup_date_for_category(category)
+                                cutoff_day = record.subscription_id._get_license_category_cutoff_day(category)
+                                trm_rate_assignment = trm_model.get_trm_for_date(trm_date_assignment, cutoff_day=cutoff_day) or 0.0
                             if price_currency and price_currency.name == 'USD':
-                                if trm_rate and trm_rate > 0:
-                                    unit_price_cop = unit_price * trm_rate
+                                if trm_rate_assignment and trm_rate_assignment > 0:
+                                    unit_price_cop = unit_price * trm_rate_assignment
                                 else:
                                     license_cost_in_usd = True
                             assignment_qty = float(license_assignment.quantity or 0.0)
@@ -5129,8 +6058,68 @@ class SubscriptionProductGrouped(models.Model):
                 record.cost = 0.0
                 record.cost_currency_id = record.subscription_id.currency_id.id if record.subscription_id and record.subscription_id.currency_id else company_currency_id
 
-    @api.depends('subscription_id', 'product_id', 'quantity', 'is_license', 'license_category', 'subscription_id.location_id', 'cost',
-                 'lot_ids', 'lot_id', 'has_subscription')
+    @api.depends('is_license', 'cost_currency_id', 'cost_currency_id.name')
+    def _compute_trm_applies(self):
+        for record in self:
+            is_usd = bool(record.cost_currency_id and (record.cost_currency_id.name or '').upper() == 'USD')
+            record.trm_applies = bool(record.is_license and is_usd)
+
+    @api.depends('cost_currency_id', 'cost_currency_id.name')
+    def _compute_is_cost_usd(self):
+        for record in self:
+            record.is_cost_usd = bool(record.cost_currency_id and (record.cost_currency_id.name or '').upper() == 'USD')
+
+    @api.depends(
+        'is_license', 'cost', 'cost_currency_id', 'license_category', 'lic_category_id',
+        'subscription_id', 'subscription_id.reference_year', 'subscription_id.reference_month'
+    )
+    def _compute_trm_applied_info(self):
+        for record in self:
+            record.trm_cutoff_day_applied = 0
+            record.trm_rate_applied = 0.0
+            record.trm_cost_cop_applied = 0.0
+            record.trm_applied_note = ''
+            if not record.is_license or not record.subscription_id:
+                continue
+            if 'license.trm' not in self.env:
+                record.trm_applied_note = _('Módulo TRM no disponible')
+                continue
+
+            sub = record.subscription_id
+            category_rec = False
+            if getattr(record, 'lic_category_id', None) and 'license.category' in self.env:
+                category_rec = self.env['license.category'].browse(record.lic_category_id)
+                if not category_rec.exists():
+                    category_rec = False
+            if not category_rec and record.license_category and 'license.category' in self.env:
+                category_rec = self.env['license.category'].search([('name', '=', record.license_category)], limit=1)
+            trm_date = sub._get_trm_lookup_date_for_category(category_rec)
+            cutoff_day = sub._get_license_category_cutoff_day(category_rec)
+            # license.trm.get_trm_for_date hace fallback (ej. corte 30 → toma corte 6 del mismo mes si no hay 30).
+            # En pestaña TRM aplicadas, el corte personalizado debe mostrar solo la TRM exacta mes+corte; si falta, 0.
+            use_custom_cutoff = bool(
+                category_rec
+                and category_rec.exists()
+                and hasattr(category_rec, 'use_default_trm_cutoff')
+                and not category_rec.use_default_trm_cutoff
+            )
+            if use_custom_cutoff:
+                rate = float(sub._get_trm_exact_rate_month(trm_date.year, trm_date.month, cutoff_day) or 0.0)
+            else:
+                rate = self.env['license.trm'].get_trm_for_date(trm_date, cutoff_day=cutoff_day) or 0.0
+            record.trm_cutoff_day_applied = cutoff_day
+            record.trm_rate_applied = rate
+
+            is_usd = bool(record.cost_currency_id and (record.cost_currency_id.name or '').upper() == 'USD')
+            if is_usd:
+                record.trm_cost_cop_applied = (record.cost or 0.0) * rate if rate and rate > 0 else 0.0
+            else:
+                record.trm_cost_cop_applied = record.cost or 0.0
+            record.trm_applied_note = _('Mes TRM %s | Corte %s') % (trm_date.strftime('%Y-%m'), cutoff_day)
+
+    @api.depends('subscription_id', 'product_id', 'quantity', 'is_license', 'license_category', 'subscription_id.location_id',
+                   'subscription_id.plan_id', 'cost',
+                   'lot_ids', 'lot_id', 'has_subscription')
     def _compute_proyectado(self):
         """Proyectado por línea: licencias = precio unitario (TRM mes en curso) × cantidad de la línea; equipos/servicios = total mes completo (precio unitario × cantidad)."""
         today = fields.Date.context_today(self)
@@ -5156,9 +6145,7 @@ class SubscriptionProductGrouped(models.Model):
             if 'license.assignment' not in self.env or 'license.trm' not in self.env:
                 return self.cost or 0.0
             trm_model = self.env['license.trm']
-            trm_rate = trm_model.get_trm_for_date(trm_date) or 0.0
-            if not trm_rate or trm_rate <= 0:
-                return self.cost or 0.0
+            trm_rate = trm_model.get_trm_for_date(trm_date, cutoff_day=6) or 0.0
             license_domain = [
                 ('partner_id', '=', self.subscription_id.partner_id.id),
                 ('state', '=', 'active'),
@@ -5170,6 +6157,8 @@ class SubscriptionProductGrouped(models.Model):
             total_proyectado = 0.0
             for license_assignment in active_licenses:
                 if not license_assignment.license_id or not license_assignment.license_id.product_id:
+                    continue
+                if not self.subscription_id._license_assignment_matches_subscription_plan(license_assignment):
                     continue
                 license_category_name = (license_assignment.license_id.name and license_assignment.license_id.name.name) or 'Sin Categoría'
                 if license_category_name != self.license_category:
@@ -5209,8 +6198,15 @@ class SubscriptionProductGrouped(models.Model):
                     if not price_currency:
                         price_currency = pricelist.currency_id
                     unit_price_cop = unit_price
+                    trm_rate_assignment = trm_rate
+                    category = license_assignment.license_id.name if license_assignment.license_id else False
+                    cutoff_day = self.subscription_id._get_license_category_cutoff_day(category)
+                    trm_rate_assignment = trm_model.get_trm_for_date(trm_date, cutoff_day=cutoff_day) or 0.0
                     if price_currency and price_currency.name == 'USD':
-                        unit_price_cop = unit_price * trm_rate
+                        if trm_rate_assignment and trm_rate_assignment > 0:
+                            unit_price_cop = unit_price * trm_rate_assignment
+                        else:
+                            continue
                     assignment_qty = float(license_assignment.quantity or 0.0)
                     total_proyectado += unit_price_cop * assignment_qty
                 except Exception:
@@ -5287,22 +6283,7 @@ class SubscriptionProductGrouped(models.Model):
             category_name = self.license_category or ''
             # En la lógica del facturable, el costo de licencias usa el MES SIGUIENTE (TRM del mes vencido).
             trm_rate = 0.0
-            if 'license.trm' in self.env:
-                trm_model = self.env['license.trm']
-                sub = self.subscription_id
-                if sub.reference_year and sub.reference_month and 1 <= sub.reference_month <= 12:
-                    _m = int(sub.reference_month) + 1
-                    _y = int(sub.reference_year)
-                    if _m > 12:
-                        _m = 1
-                        _y += 1
-                    trm_date = datetime.date(_y, _m, 1)
-                else:
-                    now_user = fields.Datetime.context_timestamp(sub, fields.Datetime.now())
-                    today_user = (now_user.date() if hasattr(now_user, 'date') else fields.Date.today())
-                    first_current = datetime.date(today_user.year, today_user.month, 1)
-                    trm_date = first_current + relativedelta(months=1)
-                trm_rate = trm_model.get_trm_for_date(trm_date) or 0.0
+            trm_model = self.env['license.trm'] if 'license.trm' in self.env else False
 
             # Fallback (si el detalle no se puede calcular): promedio del agrupado.
             fallback_cost_currency_id = (
@@ -5319,10 +6300,18 @@ class SubscriptionProductGrouped(models.Model):
             for license_assignment in active_licenses:
                 if not license_assignment.license_id:
                     continue
+                if not self.subscription_id._license_assignment_matches_subscription_plan(license_assignment):
+                    continue
                 license_category_name = (license_assignment.license_id.name and license_assignment.license_id.name.name) or 'Sin Categoría'
                 if license_category_name != category_name:
                     continue
                 product = license_assignment.license_id.product_id
+                # Respetar plan de la suscripción también en "Ver Detalles":
+                # no mostrar licencias cuyo producto no tenga regla para este plan.
+                if self.subscription_id.plan_id and product:
+                    plan_item = self.subscription_id._get_recurring_pricelist_item(product, self.subscription_id.plan_id)
+                    if not plan_item:
+                        continue
                 service_name = (product.display_name or product.name or category_name) if product else category_name
                 qty = int(license_assignment.quantity or 0)
                 if qty <= 0:
@@ -5339,10 +6328,16 @@ class SubscriptionProductGrouped(models.Model):
                     unit_price = self.subscription_id._get_price_for_product(product, 1.0) or 0.0
                     if unit_price > 0:
                         price_currency = self.subscription_id._get_currency_for_product_price(product, self.subscription_id.plan_id)
+                        trm_rate_assignment = trm_rate
+                        if trm_model:
+                            category = license_assignment.license_id.name if license_assignment.license_id else False
+                            trm_date_assignment = self.subscription_id._get_trm_lookup_date_for_category(category)
+                            cutoff_day = self.subscription_id._get_license_category_cutoff_day(category)
+                            trm_rate_assignment = trm_model.get_trm_for_date(trm_date_assignment, cutoff_day=cutoff_day) or 0.0
                         if price_currency and price_currency.name == 'USD':
                             usd_curr = self.env.ref('base.USD', raise_if_not_found=False) or self.env['res.currency'].search([('name', '=', 'USD')], limit=1)
-                            if trm_rate and trm_rate > 0:
-                                unit_cost_assignment = float_round(unit_price * trm_rate, precision_digits=2)
+                            if trm_rate_assignment and trm_rate_assignment > 0:
+                                unit_cost_assignment = float_round(unit_price * trm_rate_assignment, precision_digits=2)
                                 cost_currency_id_assignment = (
                                     self.subscription_id.currency_id.id
                                     if self.subscription_id and self.subscription_id.currency_id
@@ -5463,44 +6458,18 @@ class SubscriptionProductGrouped(models.Model):
         lot_sel = self.env['stock.lot']._fields.get('reining_plazo')
         sel_dict = dict(lot_sel.selection) if lot_sel and getattr(lot_sel, 'selection', None) else {}
 
-        price_monthly = self.subscription_id._get_price_for_product(self.product_id, 1.0) if self.product_id else 0.0
-
-        def _lot_additional_cost(lot):
-            if not lot or not hasattr(lot, 'lot_supply_line_ids'):
-                return 0.0
-            lines_with_cost = lot.lot_supply_line_ids.filtered(lambda l: l.has_cost)
-            total_additional = 0.0
-            for line in lines_with_cost:
-                related = getattr(line, 'related_lot_id', False)
-                if related and getattr(related, 'cost_additional', False):
-                    total_additional += float(getattr(related, 'cost_additional_value', 0.0) or 0.0)
-                else:
-                    total_additional += float(getattr(line, 'cost', 0.0) or 0.0)
-            return total_additional
-
         Line = self.env['subscription.equipment.serial.line']
         line_vals = []
         for lot in lots:
-            # Usar fechas "para esta suscripción": si el lote salió de esta suscripción usamos las congeladas
             entry_display, lot_exit_display = self.subscription_id._lot_entry_exit_for_display(lot)
             entry = self.subscription_id._lot_date_for_billable(entry_display)
             exit_ = self.subscription_id._lot_date_for_billable(lot_exit_display)
-            if entry is None and exit_ is None:
-                days_used = current_day
-            elif entry and exit_ and entry.year == year and entry.month == month and exit_.year == year and exit_.month == month:
-                days_used = max(0, exit_.day - entry.day + 1)
-            elif entry and entry.year == year and entry.month == month:
-                days_used = max(0, current_day - entry.day + 1)
-            elif exit_ and exit_.year == year and exit_.month == month:
-                days_used = max(0, exit_.day)
-            else:
-                days_used = current_day if (year, month) == (today_user.year, today_user.month) else days_in_month
-
-            additional = _lot_additional_cost(lot)
-            total_monthly = (price_monthly or 0.0) + additional
-            cost_daily_lot = round((total_monthly / float(days_in_month)), 2) if days_in_month else 0.0
-            cost_to_date = round(cost_daily_lot * float(days_used), 2)
-            # Días totales en sitio = desde activación hasta hoy (o hasta fecha salida si ya salió), no el total del contrato
+            costs = self.subscription_id._lot_billable_cost_breakdown(
+                lot,
+                product_id=self.product_id.id if self.product_id else False,
+                entry_date=entry_display,
+                exit_date=lot_exit_display,
+            )
             days_total_on_site = 0
             if entry:
                 today_d = today_user if isinstance(today_user, datetime.date) else datetime.date(today_user.year, today_user.month, today_user.day)
@@ -5519,7 +6488,7 @@ class SubscriptionProductGrouped(models.Model):
                 'inventory_plate': getattr(lot, 'inventory_plate', None) or '',
                 'lot_name': lot.name or '',
                 'assigned_user_id': getattr(lot, 'related_partner_id', False) and lot.related_partner_id.id or False,
-                'cost_renting': price_monthly or 0.0,
+                'cost_renting': costs['cost_renting'],
                 'entry_date': entry_display,
                 'exit_date': lot_exit_display,
                 'reining_plazo': plazo_label,
@@ -5527,9 +6496,9 @@ class SubscriptionProductGrouped(models.Model):
                 'days_total_month': days_in_month,
                 'current_day_of_month': current_day,
                 'month_display': month_display,
-                'days_in_service': int(days_used),
-                'cost_daily': cost_daily_lot or 0.0,
-                'cost_to_date': cost_to_date or 0.0,
+                'days_in_service': costs['days_in_service'],
+                'cost_daily': costs['cost_daily'],
+                'cost_to_date': costs['cost_to_date'],
                 'currency_id': self.subscription_id.currency_id.id if self.subscription_id.currency_id else self.env.company.currency_id.id,
             })
 
@@ -5837,3 +6806,10 @@ class SubscriptionEquipmentSerialLine(models.TransientModel):
             'view_mode': 'form',
             'target': 'new',
         }
+
+
+class SubscriptionDebugPricingWizard(models.TransientModel):
+    _name = 'subscription.debug.pricing.wizard'
+    _description = 'Debug de precios por plan'
+
+    result_html = fields.Html(string='Resultado', readonly=True)

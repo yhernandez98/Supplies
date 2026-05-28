@@ -2,87 +2,184 @@
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError
 import logging
+import re
 
 _logger = logging.getLogger(__name__)
+
+# ID fijo del tipo «Salida - Transporte» (histórico en Supplies).
+TRANSPORT_PICKING_TYPE_ID = 43
 
 
 class StockPicking(models.Model):
     _inherit = 'stock.picking'
 
+    def _is_devolucion_operation_type(self):
+        """True si el tipo de operación actual es de devolución (cliente → almacén)."""
+        self.ensure_one()
+        if not self.picking_type_id:
+            return False
+        name = (self.picking_type_id.name or '').lower()
+        return 'devoluc' in name
+
+    def _origin_indicates_devolucion_route(self):
+        """True si el origin del picking pertenece a una ruta de devolución (wizard rutas)."""
+        self.ensure_one()
+        origin = (self.origin or '').lower()
+        return 'devolucion' in origin or 'devolución' in origin
+
+    def _should_skip_transport_type_auto_update(self):
+        """
+        No forzar tipo Transporte (43) en devoluciones ni en la primera etapa de una ruta.
+        Evita salir del flujo RECIEND Devoluciones al guardar líneas en Operaciones.
+        """
+        self.ensure_one()
+        if self._is_devolucion_operation_type():
+            return True
+        if self._origin_indicates_devolucion_route():
+            return True
+        # Primera etapa del wizard (…-E1): aún no es Salida → Transporte
+        if self.origin and re.search(r'[\s-]E1\s*$', self.origin, re.IGNORECASE):
+            return True
+        return False
+
+    def _get_routes_from_picking_origin(self):
+        """Ruta asociada al origin (Ruta-…-W…-E#), no todas las rutas del producto."""
+        self.ensure_one()
+        Route = self.env['stock.route']
+        origin = (self.origin or '').strip()
+        if not origin.startswith('Ruta-'):
+            return Route.browse()
+        base = origin.split('-E')[0]
+        route_key = base.replace('Ruta-', '', 1)
+        if not route_key:
+            return Route.browse()
+        # El wizard trunca el nombre de ruta a 25 caracteres al armar el origin
+        prefix = route_key
+        if '-W' in route_key:
+            prefix = route_key.rsplit('-W', 1)[0]
+        candidates = Route.search([
+            '|',
+            ('name', 'ilike', prefix),
+            ('name', 'ilike', prefix[:25]),
+        ], limit=5)
+        return candidates
+
+    def _picking_is_salida_transport_leg(self):
+        """True si ubicaciones del picking coinciden con etapa Salida → Transporte."""
+        self.ensure_one()
+        if not self.location_id or not self.location_dest_id:
+            return False
+        src = (self.location_id.complete_name or self.location_id.name or '').lower()
+        dest = (self.location_dest_id.complete_name or self.location_dest_id.name or '').lower()
+        return 'salida' in src and 'transporte' in dest
+
+    def _transport_rule_applies_to_this_picking(self, rule):
+        """La regla Salida - Transporte solo aplica si el picking ES esa etapa (ubicaciones)."""
+        self.ensure_one()
+        if rule.name != 'Salida - Transporte':
+            return False
+        pt = rule.picking_type_id
+        loc_src = rule.location_src_id or (pt.default_location_src_id if pt else False)
+        loc_dest = rule.location_dest_id or (pt.default_location_dest_id if pt else False)
+        if loc_src and loc_dest:
+            return (
+                self.location_id.id == loc_src.id
+                and self.location_dest_id.id == loc_dest.id
+            )
+        return self._picking_is_salida_transport_leg()
+
     def _get_moves_for_route_check(self):
         """Odoo 19: move_ids_without_package fue eliminado; usar move_ids."""
         return getattr(self, 'move_ids_without_package', self.move_ids)
 
+    @api.model
+    def _get_routes_from_sale_moves(self, moves):
+        """Rutas ligadas a movimientos de venta (compatible Odoo 19 sin route_id en pedido)."""
+        Route = self.env['stock.route']
+        sale_moves = moves.filtered('sale_line_id')
+        if not sale_moves:
+            return Route.browse()
+
+        SaleOrder = self.env['sale.order']
+        SaleLine = self.env['sale.order.line']
+        routes = Route.browse()
+
+        if 'route_id' in SaleOrder._fields:
+            routes |= sale_moves.mapped('sale_line_id.order_id.route_id')
+
+        if 'route_id' in SaleLine._fields:
+            routes |= sale_moves.mapped('sale_line_id.route_id')
+
+        return routes.filtered(lambda r: r)
+
     def _check_and_update_picking_type_for_transport_route(self):
         """
-        Verifica si alguna ruta asociada tiene la regla 'Salida - Transporte'
-        y actualiza automáticamente el picking_type_id a 43.
-        
-        IMPORTANTE: NO actualiza pickings de recepción (incoming) para evitar
-        que se cambien a transporte cuando se guardan o actualizan.
-        
-        OPTIMIZADO: Verificaciones tempranas para evitar búsquedas costosas.
+        Verifica si el picking corresponde a la etapa «Salida - Transporte» de SU ruta
+        y actualiza picking_type_id a 43 solo en ese caso.
+
+        No usa todas las rutas del producto (evita pisar devoluciones al guardar líneas).
+        No toca recepciones ni pickings de devolución (tipo u origin).
         """
-        # OPTIMIZACIÓN: Verificaciones tempranas (ya se hacen en write(), pero por seguridad)
-        # Solo actualizar si el picking no está en estado final
+        self.ensure_one()
+
         if self.state in ('done', 'cancel'):
             return False
-        
-        # IMPORTANTE: NO actualizar pickings de recepción (incoming)
-        # Esto previene que las órdenes de recepción se cambien a transporte
+
         if self.picking_type_id and self.picking_type_id.code == 'incoming':
             return False
-        
-        # También verificar si tiene purchase_id (es una recepción)
+
         if self.purchase_id:
             return False
-        
-        # OPTIMIZACIÓN: Si ya es tipo 43, no hacer nada
-        if self.picking_type_id.id == 43:
+
+        if self._should_skip_transport_type_auto_update():
+            _logger.debug(
+                'Picking %s: omitido auto-tipo Transporte (devolución u etapa inicial de ruta)',
+                self.name,
+            )
             return False
-        
+
+        if self.picking_type_id.id == TRANSPORT_PICKING_TYPE_ID:
+            return False
+
         moves = self._get_moves_for_route_check()
-        # OPTIMIZACIÓN: Verificar que tenga movimientos antes de iterar
         if not moves:
             return False
-        
-        # OPTIMIZACIÓN: Verificar que el tipo de operación 43 existe UNA SOLA VEZ al inicio
-        # (en lugar de hacerlo después de todas las búsquedas)
-        picking_type_43 = self.env['stock.picking.type'].browse(43)
+
+        picking_type_43 = self.env['stock.picking.type'].browse(TRANSPORT_PICKING_TYPE_ID)
         if not picking_type_43.exists():
-            _logger.warning('El tipo de operación con ID 43 no existe. No se puede actualizar el picking %s', self.name)
+            _logger.warning(
+                'El tipo de operación con ID %s no existe. No se puede actualizar el picking %s',
+                TRANSPORT_PICKING_TYPE_ID, self.name,
+            )
             return False
-        
-        # Buscar si alguno de los movimientos tiene una ruta con la regla "Salida - Transporte"
-        routes_to_check = set()
-        
-        # OPTIMIZACIÓN: Usar mapped() para obtener rutas de forma más eficiente
-        # Obtener rutas de los productos de los movimientos
-        product_routes = moves.mapped('product_id.route_ids')
-        if product_routes:
-            routes_to_check.update(product_routes.ids)
-        
-        # También verificar rutas de la orden de venta si existe
-        sale_routes = moves.filtered('sale_line_id.order_id.route_id').mapped('sale_line_id.order_id.route_id')
-        if sale_routes:
-            routes_to_check.update(sale_routes.ids)
-        
+
+        routes_to_check = self._get_routes_from_picking_origin()
         if not routes_to_check:
-            return False
-        
-        # OPTIMIZACIÓN: Usar search_count en lugar de search cuando solo necesitamos saber si existe
-        has_transport_rule = self.env['stock.rule'].search_count([
-            ('route_id', 'in', list(routes_to_check)),
+            # Sin origin de ruta: solo ventas o leg Salida→Transporte ya visible en ubicaciones
+            if self._picking_is_salida_transport_leg():
+                sale_routes = self._get_routes_from_sale_moves(moves)
+                if sale_routes:
+                    routes_to_check = sale_routes
+            else:
+                return False
+
+        transport_rules = self.env['stock.rule'].search([
+            ('route_id', 'in', routes_to_check.ids),
             ('name', '=', 'Salida - Transporte'),
-        ], limit=1) > 0
-        
-        if not has_transport_rule:
+        ])
+        applicable = transport_rules.filtered(
+            lambda r: self._transport_rule_applies_to_this_picking(r)
+        )
+        if not applicable:
             return False
-        
-        # Actualizar el picking_type_id a 43
-        # OPTIMIZACIÓN: Usar contexto para evitar recursión (skip_transport_check)
-        self.with_context(skip_transport_check=True).write({'picking_type_id': 43})
-        _logger.info('Picking %s actualizado automáticamente: picking_type_id cambiado a 43 (Salida - Transporte)', self.name)
+
+        self.with_context(skip_transport_check=True).write({
+            'picking_type_id': TRANSPORT_PICKING_TYPE_ID,
+        })
+        _logger.info(
+            'Picking %s: tipo de operación actualizado a %s (etapa Salida - Transporte)',
+            self.name, picking_type_43.name,
+        )
         return True
 
     @api.model_create_multi
@@ -191,26 +288,18 @@ class StockPicking(models.Model):
         # Solo verificar si realmente se modificaron movimientos
         if 'move_ids_without_package' in vals or 'move_ids' in vals:
             for picking in self:
-                # OPTIMIZACIÓN 1: Verificaciones tempranas antes de hacer búsquedas costosas
-                # NO actualizar si es un picking de recepción
                 if picking.picking_type_id and picking.picking_type_id.code == 'incoming':
                     continue
                 if picking.purchase_id:
                     continue
-                
-                # OPTIMIZACIÓN 2: Si ya es tipo 43, no verificar (evita búsquedas innecesarias)
-                if picking.picking_type_id.id == 43:
+                if picking._should_skip_transport_type_auto_update():
                     continue
-                
-                # OPTIMIZACIÓN 3: Si está en estado final, no verificar
+                if picking.picking_type_id.id == TRANSPORT_PICKING_TYPE_ID:
+                    continue
                 if picking.state in ('done', 'cancel'):
                     continue
-                
-                # OPTIMIZACIÓN 4: Solo verificar si tiene movimientos (evita búsquedas en pickings vacíos)
                 if not picking._get_moves_for_route_check():
                     continue
-                
-                # Solo ahora hacer la verificación costosa
                 picking.with_context(skip_transport_check=True)._check_and_update_picking_type_for_transport_route()
         
         return result
@@ -274,32 +363,24 @@ class StockPicking(models.Model):
         )
         
         for picking in pickings_to_update:
-            routes_to_check = set()
-            moves = picking._get_moves_for_route_check()
-            # Obtener rutas de los productos de los movimientos
-            for move in moves:
-                if move.product_id and move.product_id.route_ids:
-                    product_routes = move.product_id.route_ids.filtered(lambda r: r.id in route_ids)
-                    if product_routes:
-                        routes_to_check.update(product_routes.ids)
-                
-                # También verificar rutas de la orden de venta si existe
-                if move.sale_line_id and move.sale_line_id.order_id and move.sale_line_id.order_id.route_id:
-                    if move.sale_line_id.order_id.route_id.id in route_ids:
-                        routes_to_check.add(move.sale_line_id.order_id.route_id.id)
-            
-            # Si se encontraron rutas con la regla "Salida - Transporte", actualizar
-            if routes_to_check:
-                # Verificar que realmente tenga la regla
-                has_transport_rule = self.env['stock.rule'].search_count([
-                    ('route_id', 'in', list(routes_to_check)),
-                    ('name', '=', 'Salida - Transporte'),
-                ]) > 0
-                
-                if has_transport_rule:
-                    picking.write({'picking_type_id': 43})
-                    updated_count += 1
-                    _logger.info('Picking %s actualizado: picking_type_id cambiado a 43', picking.name)
+            if picking._should_skip_transport_type_auto_update():
+                continue
+            routes = picking._get_routes_from_picking_origin()
+            if not routes:
+                continue
+            routes = routes.filtered(lambda r: r.id in route_ids)
+            if not routes:
+                continue
+            transport_rules = self.env['stock.rule'].search([
+                ('route_id', 'in', routes.ids),
+                ('name', '=', 'Salida - Transporte'),
+            ])
+            if transport_rules.filtered(
+                lambda r: picking._transport_rule_applies_to_this_picking(r)
+            ):
+                picking.write({'picking_type_id': TRANSPORT_PICKING_TYPE_ID})
+                updated_count += 1
+                _logger.info('Picking %s actualizado: picking_type_id cambiado a %s', picking.name, TRANSPORT_PICKING_TYPE_ID)
         
         _logger.info('Actualización masiva completada: %s pickings actualizados', updated_count)
         

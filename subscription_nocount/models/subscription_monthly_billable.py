@@ -43,12 +43,26 @@ class SubscriptionMonthlyBillable(models.Model):
         string='Líneas',
         readonly=True,
     )
+    line_trm_usd_ids = fields.Many2many(
+        'subscription.monthly.billable.line',
+        string='Líneas licencia USD (TRM)',
+        compute='_compute_line_trm_usd_ids',
+        readonly=True,
+        help='Solo líneas de licencia guardadas con costo en USD (pestaña TRM aplicadas).',
+    )
     name = fields.Char(
         string='Referencia',
         compute='_compute_name',
         store=True,
         readonly=True,
     )
+
+    @api.depends('line_ids', 'line_ids.is_license', 'line_ids.is_cost_usd')
+    def _compute_line_trm_usd_ids(self):
+        for billable in self:
+            billable.line_trm_usd_ids = billable.line_ids.filtered(
+                lambda l: l.is_license and l.is_cost_usd
+            )
 
     @api.depends('reference_year', 'reference_month', 'subscription_id.name')
     def _compute_name(self):
@@ -65,59 +79,111 @@ class SubscriptionMonthlyBillable(models.Model):
                 rec.name = rec.subscription_id.name or _('Facturable mensual')
 
     def action_apply_trm(self):
-        """Recalcula los importes de las líneas de licencia usando la TRM del mes SIGUIENTE al facturable.
-        Mes vencido: la TRM vigente es la que aplica desde el día 6 del mes siguiente (ej. facturable febrero → TRM de marzo)."""
+        """Recalcula TRM en facturable guardado para líneas de licencia en USD.
+        Usa el mes del facturable como base:
+        - categorías default (día 6): TRM del mes siguiente,
+        - categorías personalizadas: TRM del mes del facturable.
+        """
         self.ensure_one()
         if not (self.reference_year and self.reference_month and 1 <= self.reference_month <= 12):
             raise UserError(_('El facturable debe tener un año y mes válidos (1-12).'))
-        # TRM del mes siguiente (mes vencido: se usa la TRM que rige desde el 6 del mes siguiente)
-        trm_month = self.reference_month + 1
-        trm_year = self.reference_year
-        if trm_month > 12:
-            trm_month = 1
-            trm_year += 1
-        trm_date = datetime.date(trm_year, trm_month, 1)
-        trm_rate = 0.0
-        if 'license.trm' in self.env:
-            trm_rate = self.env['license.trm'].get_trm_for_date(trm_date)
-        if not trm_rate or trm_rate <= 0:
-            raise UserError(
-                _('No hay TRM configurada para %s (mes siguiente al facturable). Configure la TRM de ese mes antes de aplicar.')
-                % trm_date.strftime('%B %Y')
-            )
+        if 'license.trm' not in self.env:
+            raise UserError(_('El módulo de TRM no está disponible.'))
         subscription = self.subscription_id
-        license_lines = self.line_ids.filtered(lambda l: l.is_license)
+        usd_categories = set()
+        category_by_name = {}
+        if 'license.assignment' in self.env and subscription and subscription.partner_id:
+            license_domain = [
+                ('partner_id', '=', subscription.partner_id.id),
+                ('state', '=', 'active'),
+            ]
+            if subscription.location_id:
+                license_domain.append(('location_id', '=', subscription.location_id.id))
+            assignments = self.env['license.assignment'].search(license_domain)
+            for la in assignments:
+                if not la.license_id:
+                    continue
+                if not subscription._license_assignment_matches_subscription_plan(la):
+                    continue
+                category_name = (la.license_id.name and la.license_id.name.name) or 'Sin Categoría'
+                category_key = (category_name or '').strip().upper()
+                if category_key and category_key not in category_by_name:
+                    category_by_name[category_key] = la.license_id.name
+                product = la.license_id.product_id
+                if not product:
+                    continue
+                price_currency = subscription._get_currency_for_product_price(product, subscription.plan_id)
+                if not price_currency:
+                    pricelist = subscription.pricelist_id or (subscription.partner_id.property_product_pricelist if subscription.partner_id else False)
+                    price_currency = pricelist.currency_id if pricelist else False
+                if price_currency and (price_currency.name or '').upper() == 'USD':
+                    usd_categories.add(category_key)
+
+        license_lines = self.line_ids.filtered(
+            lambda l: l.is_license and (
+                l.is_cost_usd
+                or ((l.product_display_name or '').strip().upper() in usd_categories)
+            )
+        )
         if not license_lines and self.line_ids:
             return {'type': 'ir.actions.client', 'tag': 'display_notification', 'params': {
                 'title': _('Sin licencias'),
-                'message': _('No hay líneas de licencia en este facturable. Los importes de equipos no se modifican.'),
+                'message': _('No hay líneas de licencia en USD para recalcular TRM en este facturable.'),
                 'type': 'info',
                 'sticky': False,
             }}
-        if 'license.assignment' not in self.env:
-            raise UserError(_('El módulo de licencias no está disponible.'))
-        DetailModel = self.env['subscription.monthly.billable.line.detail']
+        trm_model = self.env['license.trm']
+        Category = self.env['license.category'] if 'license.category' in self.env else False
+
+        # Mes base = SIEMPRE el del facturable guardado (no el de la suscripción al abrir otro mes).
+        billable_base = datetime.date(int(self.reference_year), int(self.reference_month), 1)
+
+        def _trm_lookup_date_for_saved_line(category_rec):
+            use_default_cutoff = True
+            if category_rec and hasattr(category_rec, 'use_default_trm_cutoff'):
+                use_default_cutoff = bool(category_rec.use_default_trm_cutoff)
+            return billable_base + relativedelta(months=1) if use_default_cutoff else billable_base
+
+        applied_count = 0
         for line in license_lines:
-            # Recalcular detalles por serial para que el export del facturable guardado muestre el costo real por producto (no promedio).
-            category_name = (line.product_display_name or '').strip() or 'Sin Categoría'
-            stub = type(
-                'GroupedProductStub',
-                (),
-                {
-                    'license_category': category_name,
-                    'quantity': line.quantity or 0,
-                    'cost': line.cost or 0.0,
-                },
-            )()
-            subscription._save_monthly_billable_license_details(line, stub, DetailModel)
+            category_name = (line.product_display_name or '').strip()
+            category_key = category_name.upper()
+            category_rec = category_by_name.get(category_key)
+            if Category and category_name:
+                if not category_rec:
+                    category_rec = Category.search([('name', '=', category_name)], limit=1)
+                if not category_rec:
+                    category_rec = Category.search([('name', 'ilike', category_name)], limit=1)
+            trm_date = _trm_lookup_date_for_saved_line(category_rec)
+            cutoff_day = subscription._get_license_category_cutoff_day(category_rec)
+            trm_rate = trm_model.get_trm_for_date(trm_date, cutoff_day=cutoff_day) or 0.0
+            if not trm_rate or trm_rate <= 0:
+                continue
+
+            # Evitar sobreaplicar: si ya había TRM aplicada, recuperar base USD aproximada.
+            base_usd = float(line.cost or 0.0)
+            if line.trm_rate_applied and line.trm_rate_applied > 0:
+                base_usd = base_usd / float(line.trm_rate_applied)
+            new_cost_cop = float_round(base_usd * trm_rate, precision_digits=2)
+
+            line.write({
+                'cost': new_cost_cop,
+                'trm_rate_applied': trm_rate,
+                'trm_cutoff_day_applied': cutoff_day or 6,
+                'trm_date_applied': trm_date,
+                'is_cost_usd': True,
+            })
+            applied_count += 1
+
+        if applied_count <= 0:
+            raise UserError(_('No se pudo aplicar TRM: valide que existan TRM configuradas para los cortes requeridos de este facturable.'))
+
         new_total = sum(self.line_ids.mapped('cost'))
         self.write({'total_amount': float_round(new_total, precision_digits=2)})
-        _months = ('enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre')
-        trm_month_name = _months[trm_date.month - 1] if 1 <= trm_date.month <= 12 else trm_date.strftime('%B')
         return {'type': 'ir.actions.client', 'tag': 'display_notification', 'params': {
             'title': _('TRM aplicada'),
-            'message': _('Se recalculó el costo de las licencias con la TRM de %s %s (mes siguiente al facturable). Total actualizado: %s.')
-                % (trm_month_name, trm_date.year, self.currency_id.format(new_total)),
+            'message': _('Se recalcularon %s líneas de licencia en USD con su TRM por corte. Total actualizado: %s.')
+                % (applied_count, self.currency_id.format(new_total)),
             'type': 'success',
             'sticky': False,
         }}
@@ -276,6 +342,53 @@ class SubscriptionMonthlyBillableLine(models.Model):
         readonly=True,
     )
     is_license = fields.Boolean(string='Es licencia', readonly=True, help='True si esta línea es de licencias (Ver Detalles usa vista de 4 columnas).')
+    is_cost_usd = fields.Boolean(
+        string='Costo en USD',
+        readonly=True,
+        help='True cuando la línea se guardó con moneda base USD.',
+    )
+    usd_currency_id = fields.Many2one(
+        'res.currency',
+        string='USD',
+        compute='_compute_usd_cost_reference_fields',
+        readonly=True,
+    )
+    cost_usd_reference = fields.Monetary(
+        string='Costo USD',
+        currency_field='usd_currency_id',
+        digits=(16, 2),
+        compute='_compute_usd_cost_reference_fields',
+        readonly=True,
+        help='Referencia en USD: costo COP entre TRM aplicada, o monto USD si aún no hay TRM.',
+    )
+    trm_rate_applied = fields.Float(
+        string='TRM aplicada',
+        digits=(16, 4),
+        readonly=True,
+        help='TRM aplicada a esta línea de licencia al guardar/recalcular facturable.'
+    )
+    trm_cutoff_day_applied = fields.Integer(
+        string='Corte TRM',
+        readonly=True,
+        help='Día de corte TRM usado para esta línea de licencia.'
+    )
+    trm_date_applied = fields.Date(
+        string='Fecha base TRM',
+        readonly=True,
+        help='Primer día del mes en el que se consultó la TRM (uso interno).'
+    )
+    trm_month_label = fields.Char(
+        string='Mes TRM',
+        compute='_compute_trm_month_label',
+        readonly=True,
+        help='Nombre del mes de la TRM (solo mes, sin día; el corte va en Resumen).',
+    )
+    trm_applied_display = fields.Char(
+        string='TRM aplicada',
+        compute='_compute_trm_applied_display',
+        readonly=True,
+        help='Resumen legible de TRM aplicada para esta línea.'
+    )
     currency_id = fields.Many2one(
         'res.currency',
         related='billable_id.currency_id',
@@ -287,6 +400,52 @@ class SubscriptionMonthlyBillableLine(models.Model):
         string='Detalles por serial',
         readonly=True,
     )
+
+    @api.depends('cost', 'trm_rate_applied', 'is_cost_usd', 'is_license')
+    def _compute_usd_cost_reference_fields(self):
+        """Un solo compute: la moneda USD debe existir antes del Monetary (evita 500 por orden de cómputo)."""
+        usd = self.env.ref('base.USD', raise_if_not_found=False) or self.env['res.currency'].search(
+            [('name', '=', 'USD')], limit=1
+        )
+        usd_id = usd.id if usd else False
+        for rec in self:
+            rec.usd_currency_id = usd_id
+            if not usd_id or not rec.is_license or not rec.is_cost_usd:
+                rec.cost_usd_reference = 0.0
+                continue
+            if rec.trm_rate_applied and rec.trm_rate_applied > 0:
+                rec.cost_usd_reference = float_round(
+                    float(rec.cost or 0.0) / float(rec.trm_rate_applied),
+                    precision_digits=2,
+                )
+            else:
+                rec.cost_usd_reference = float_round(float(rec.cost or 0.0), precision_digits=2)
+
+    @api.depends('trm_date_applied')
+    def _compute_trm_month_label(self):
+        months = (
+            'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+            'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+        )
+        for rec in self:
+            d = rec.trm_date_applied
+            if not d or not hasattr(d, 'month') or not (1 <= d.month <= 12):
+                rec.trm_month_label = ''
+                continue
+            rec.trm_month_label = months[d.month - 1]
+
+    @api.depends('is_license', 'trm_rate_applied', 'trm_cutoff_day_applied', 'trm_date_applied')
+    def _compute_trm_applied_display(self):
+        for rec in self:
+            if not rec.is_license or not rec.trm_rate_applied:
+                rec.trm_applied_display = ''
+                continue
+            month_label = rec.trm_date_applied.strftime('%Y-%m') if rec.trm_date_applied else ''
+            rec.trm_applied_display = _('TRM %s | Corte %s | Mes %s') % (
+                rec.trm_rate_applied,
+                rec.trm_cutoff_day_applied or 6,
+                month_label,
+            )
 
     def _prepare_invoice_line_values(self, subscription):
         """Prepara los valores para una línea de factura desde una línea del facturable guardado (misma columna que el facturable: producto, línea de negocio, cantidad, costo)."""

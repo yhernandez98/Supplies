@@ -29,7 +29,7 @@ class ProductTemplate(models.Model):
     # CONSTRAINTS Y VALIDACIONES
     # ========================================
     
-    @api.constrains('tipo_producto', 'type')
+    @api.constrains('tipo_producto', 'type', 'detailed_type')
     def _check_consistency(self):
         """Valida consistencia entre tipo_producto y type"""
         for product in self:
@@ -38,8 +38,8 @@ class ProductTemplate(models.Model):
                 if product.type != expected_type:
                     raise ValidationError(_(
                         'Los campos "Tipo de Producto" y "Tipo de Producto Nativo" deben ser consistentes. '
-                        'Tipo de Producto: %s, Tipo esperado: %s'
-                    ) % (product.tipo_producto, expected_type))
+                        'Tipo de Producto: %s, Tipo nativo actual: %s, Tipo esperado: %s'
+                    ) % (product.tipo_producto, product.type, expected_type))
     
     # ========================================
     # MÉTODOS ONCHANGE (SINCRONIZACIÓN BIDIRECCIONAL)
@@ -56,32 +56,55 @@ class ProductTemplate(models.Model):
         """Sincronizar type con tipo_producto (sincronización inversa)"""
         if self.type:
             self.tipo_producto = self._map_type_to_tipo(self.type)
+
+    @api.onchange('detailed_type')
+    def _onchange_detailed_type(self):
+        """Sincronizar detailed_type con tipo_producto cuando Odoo no envía type explícito."""
+        if self.detailed_type:
+            native_type = self._map_detailed_type_to_type(self.detailed_type)
+            self.tipo_producto = self._map_type_to_tipo(native_type)
+            self.type = native_type
     
     # ========================================
     # MÉTODOS DE CREACIÓN Y ESCRITURA
     # ========================================
     
+    def _reconcile_vals_tipo_and_native(self, vals):
+        """
+        Sincroniza tipo_producto con type/detailed_type.
+        Si vienen ambos (p. ej. default consu + type service desde XML de hr_expense),
+        gana el tipo nativo de Odoo.
+        """
+        native = vals.get('type')
+        if not native and vals.get('detailed_type'):
+            native = self._map_detailed_type_to_type(vals['detailed_type'])
+        if native:
+            vals['type'] = native
+            vals['tipo_producto'] = self._map_type_to_tipo(native)
+            return
+        if 'tipo_producto' in vals and 'type' not in vals and 'detailed_type' not in vals:
+            vals['type'] = self._map_tipo_to_type(vals['tipo_producto'])
+
     @api.model_create_multi
     def create(self, vals_list):
         """Creación con sincronización automática"""
         for vals in vals_list:
-            # Sincronizar tipo_producto -> type
-            if 'tipo_producto' in vals and 'type' not in vals:
-                vals['type'] = self._map_tipo_to_type(vals['tipo_producto'])
-            # Sincronizar type -> tipo_producto
-            elif 'type' in vals and 'tipo_producto' not in vals:
-                vals['tipo_producto'] = self._map_type_to_tipo(vals['type'])
-        return super().create(vals_list)
+            self._reconcile_vals_tipo_and_native(vals)
+        records = super().create(vals_list)
+        # Tras el core: a veces type queda en service y el default dejó consu.
+        to_fix = records.filtered(
+            lambda r: r.tipo_producto != self._map_type_to_tipo(r.type)
+        )
+        if to_fix:
+            for rec in to_fix:
+                rec.write({'tipo_producto': self._map_type_to_tipo(rec.type)})
+        return records
     
     def write(self, vals):
         """Escritura con sincronización automática"""
-        # Sincronizar tipo_producto -> type
-        if 'tipo_producto' in vals and 'type' not in vals:
-            vals['type'] = self._map_tipo_to_type(vals['tipo_producto'])
-        # Sincronizar type -> tipo_producto
-        elif 'type' in vals and 'tipo_producto' not in vals:
-            vals['tipo_producto'] = self._map_type_to_tipo(vals['type'])
-        return super().write(vals)
+        copy_vals = dict(vals)
+        self._reconcile_vals_tipo_and_native(copy_vals)
+        return super().write(copy_vals)
     
     # ========================================
     # MÉTODOS HELPER
@@ -104,4 +127,13 @@ class ProductTemplate(models.Model):
             'product': 'factura',
         }
         return mapping.get(type_value, 'consu')
+
+    def _map_detailed_type_to_type(self, detailed_type):
+        """Normaliza detailed_type de Odoo a type nativo."""
+        if detailed_type == 'service':
+            return 'service'
+        if detailed_type in ('consu', 'product'):
+            return detailed_type
+        # Fallback seguro para tipos extendidos
+        return 'consu'
     

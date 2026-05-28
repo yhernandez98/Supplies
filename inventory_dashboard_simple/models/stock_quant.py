@@ -7,6 +7,46 @@ class StockQuant(models.Model):
     """Extender stock.quant para agregar campos relacionados del lote."""
     _inherit = 'stock.quant'
 
+    def _invdash_refresh_lot_pending_flags(self, lot_ids):
+        """Al mover cantidad/ubicación, actualizar exclusión Supp y pendientes sin depender solo del cache."""
+        if not lot_ids:
+            return
+        Lot = self.env['stock.lot']
+        if 'is_stock_in_supp_existencias' not in Lot._fields:
+            return
+        lots = Lot.browse([i for i in lot_ids if i])
+        lots = lots.exists()
+        if not lots:
+            return
+        lots._compute_is_stock_in_supp_existencias()
+        if 'invdash_pending_info' in Lot._fields:
+            lots._compute_invdash_pending_info()
+        if 'display_location_id' in Lot._fields and hasattr(Lot, '_compute_display_location_contact'):
+            lots._compute_display_location_contact()
+        if 'invdash_serial_multi_location' in Lot._fields and hasattr(Lot, '_compute_invdash_serial_multi_location'):
+            lots._compute_invdash_serial_multi_location()
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        quants = super().create(vals_list)
+        self._invdash_refresh_lot_pending_flags(quants.mapped('lot_id').ids)
+        return quants
+
+    def write(self, vals):
+        lot_ids = list(set(self.mapped('lot_id').ids))
+        res = super().write(vals)
+        touch = bool(vals.keys() & {'location_id', 'quantity'})
+        if touch:
+            lot_ids = list(set(lot_ids + self.mapped('lot_id').ids))
+            self._invdash_refresh_lot_pending_flags(lot_ids)
+        return res
+
+    def unlink(self):
+        lot_ids = list(set(self.mapped('lot_id').ids))
+        res = super().unlink()
+        self._invdash_refresh_lot_pending_flags(lot_ids)
+        return res
+
     # Campos editables del lote - computed para mostrar, editables para escribir
     lot_inventory_plate = fields.Char(
         string='Placa de Inventario',

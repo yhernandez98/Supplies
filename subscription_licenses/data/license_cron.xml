@@ -10,5 +10,15 @@
         <field name="active" eval="True"/>
     </record>
 
+    <record id="ir_cron_fetch_trm_from_web_daily" model="ir.cron">
+        <field name="name">Actualizar TRM web diaria</field>
+        <field name="model_id" ref="model_license_trm"/>
+        <field name="state">code</field>
+        <field name="code">model.cron_fetch_trm_from_web_daily()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="active" eval="True"/>
+    </record>
+
 </odoo>
 

@@ -24,6 +24,16 @@ class LicenseCategory(models.Model):
     )
     description = fields.Text(string='Descripción')
     active = fields.Boolean(string='Activo', default=True, tracking=True)
+    use_default_trm_cutoff = fields.Boolean(
+        string='Usar corte TRM por defecto (día 6)',
+        default=True,
+        help='Si está activo, esta categoría usa el corte global por defecto (día 6).'
+    )
+    trm_cutoff_day = fields.Integer(
+        string='Día de corte TRM',
+        default=6,
+        help='Día de corte TRM para esta categoría cuando usa corte personalizado.'
+    )
     
     # Contador de licencias en esta categoría
     license_count = fields.Integer(string='Total Licencias', compute='_compute_license_count', store=False)
@@ -44,6 +54,16 @@ class LicenseCategory(models.Model):
                 ])
             else:
                 rec.license_count = 0
+
+    @api.constrains('trm_cutoff_day')
+    def _check_trm_cutoff_day(self):
+        for rec in self:
+            if rec.trm_cutoff_day < 1 or rec.trm_cutoff_day > 31:
+                raise ValidationError(_('El día de corte TRM debe estar entre 1 y 31.'))
+
+    def get_trm_cutoff_day(self):
+        self.ensure_one()
+        return 6 if self.use_default_trm_cutoff else int(self.trm_cutoff_day or 6)
 
     def action_view_licenses(self):
         """Abre la vista de licencias de esta categoría."""

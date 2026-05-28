@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
-# Copyright 2026 Supplies De Colombia SAS
-# License LGPL-3.0 or later (https://www.gnu.org/licenses/lgpl-3.0.html).
 {
     'name': 'Personalización de Tipos de Operación de Stock',
-    'version': '19.0.1.0.0',
+    'version': '19.0.1.0.2',
     'category': 'Warehouse',
     'summary': 'Personaliza los nombres de los tipos de operación de entrega',
     'description': """
@@ -20,7 +18,7 @@ Características:
 * Actualización masiva de tipos de operación existentes
 * Actualización automática al crear nuevos tipos de operación
     """,
-    'author': 'Supplies De Colombia SAS',
+    'author': 'Supplies de Colombia',
     'website': 'https://www.suppliesdecolombia.com',
     'depends': [
         'base',

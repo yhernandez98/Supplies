@@ -6,13 +6,17 @@ from datetime import datetime, date, time, timedelta
 
 _logger = logging.getLogger(__name__)
 
-# Horas fijas para los crons del flujo (noche/madrugada; servidor)
-CRON_NEXTCALL_HOURS = {
-    'subscription_nocount.ir_cron_subscription_sync_last_day': 22,
-    'subscription_nocount.ir_cron_subscription_save_billable': 23,
-    'subscription_nocount.ir_cron_subscription_sync_first_day': 3,
-    'subscription_nocount.ir_cron_subscription_apply_trm': 2,
-    'subscription_nocount.ir_cron_subscription_proformas_from_saved': 6,
+# Horarios fijos para los crons del flujo (hora servidor)
+# Formato: (hora, minuto)
+CRON_NEXTCALL_TIMES = {
+    'subscription_nocount.ir_cron_subscription_sync_last_day': (19, 0),     # 07:00 pm
+    'subscription_nocount.ir_cron_subscription_save_billable': (22, 30),    # 10:30 pm
+    'subscription_nocount.ir_cron_subscription_sync_first_day': (3, 0),
+    'subscription_nocount.ir_cron_subscription_apply_trm': (2, 0),
+    'subscription_nocount.ir_cron_subscription_proformas_from_saved': (6, 0),
+    'subscription_nocount.ir_cron_subscription_annual_proforma_custom': (5, 0),
+    'subscription_nocount.ir_cron_subscription_expiring_menu_badge': (7, 0),
+    'subscription_nocount.ir_cron_subscription_annual_end_of_term': (4, 0),
 }
 
 
@@ -37,6 +41,12 @@ def post_init_hook(env):
                 env.cr.commit()
     except Exception as e:
         _logger.warning('No se pudieron reparar menús huérfanos en post_init_hook: %s', e)
+
+    try:
+        if 'subscription.subscription' in env:
+            env['subscription.subscription'].cron_update_expiring_menu_badge()
+    except Exception as e:
+        _logger.warning('post_init: menú Suscripciones a Vencer: %s', e)
 
     # Borrar registros de histórico mensual (modelos ya eliminados del módulo)
     for table in ('subscription_monthly_report_grouped_rel', 'subscription_monthly_report', 'subscription_monthly_grouped', 'subscription_monthly_snapshot'):
@@ -87,13 +97,14 @@ def post_init_hook(env):
     # Asignar próximas ejecuciones a los crons del flujo (horas fijas)
     try:
         now = datetime.now()
-        for xml_id, hour in CRON_NEXTCALL_HOURS.items():
+        for xml_id, hhmm in CRON_NEXTCALL_TIMES.items():
             try:
                 cron = env.ref(xml_id, raise_if_not_found=False)
                 if not cron:
                     continue
+                hour, minute = hhmm
                 # Próxima ejecución: hoy o mañana a la hora indicada
-                next_run = now.replace(hour=hour, minute=0, second=0, microsecond=0)
+                next_run = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
                 if next_run <= now:
                     next_run = next_run + timedelta(days=1)
                 cron.write({'nextcall': next_run})

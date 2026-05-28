@@ -87,30 +87,47 @@ class InventoryDashboardGroup(models.Model):
                 'res_model': 'stock.picking',
                 'domain': [('picking_type_id', 'in', group.picking_type_ids.ids)],
                 'context': {
-                    'search_default_waiting': 1,
-                    'search_default_delay': 1,
+                    'search_default_available': 1,
                 },
             }
             group.action_open_operations_data = json.dumps(action_data)
+
+    @api.model
+    def _stock_picking_dashboard_views(self):
+        """Lista/form estándar de Inventario (no la vista custom de Facturación)."""
+        list_view = self.env.ref('stock.vpicktree', raise_if_not_found=False)
+        if not list_view:
+            list_view = self.env.ref('stock.view_picking_tree', raise_if_not_found=False)
+        form_view = self.env.ref('stock.view_picking_form', raise_if_not_found=False)
+        views = []
+        if list_view:
+            views.append((list_view.id, 'list'))
+        if form_view:
+            views.append((form_view.id, 'form'))
+        return views
 
     def open_operations(self):
         """Abrir las operaciones de este grupo (método estándar para kanban click)."""
         self.ensure_one()
         if not self.picking_type_ids:
             return False
-        
-        return {
+
+        action = {
             'name': self.name,
             'type': 'ir.actions.act_window',
             'res_model': 'stock.picking',
             'view_mode': 'list,form',
             'domain': [('picking_type_id', 'in', self.picking_type_ids.ids)],
             'context': {
-                'search_default_waiting': 1,
-                'search_default_delay': 1,
+                'search_default_available': 1,
             },
             'target': 'current',
         }
+        views = self._stock_picking_dashboard_views()
+        if views:
+            action['views'] = views
+            action['view_id'] = views[0][0]
+        return action
 
     def action_open_operations(self):
         """Abrir las operaciones de este grupo (alias para compatibilidad)."""

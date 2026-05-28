@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <data>
         <!-- Formulario Número de serie/lote: igual que Odoo 18 (diseño pastel, columnas, pestañas completas).
              product_suppiles_partner: Usuario (before entry_date). mesa_ayuda: foto + Generar Hoja de Vida + pestañas Mantenimientos/Historial. -->
         <record id="view_production_lot_form_inherit_supplies" model="ir.ui.view">
@@ -188,5 +187,4 @@
                 </xpath>
             </field>
         </record>
-    </data>
 </odoo>

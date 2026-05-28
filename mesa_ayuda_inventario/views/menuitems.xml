@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
         <!-- ========================================== -->
@@ -68,39 +68,39 @@
                   sequence="20"
                   active="False"/>
 
-        <menuitem id="menu_lot_maintenance"
-                  name="Lotes y Mantenimientos"
-                  parent="menu_inventory_root"
-                  action="action_lot_maintenance"
-                  sequence="50"/>
+        <record id="action_helpdesk_lab_pool_hub" model="ir.actions.act_url">
+            <field name="name">Laboratorio</field>
+            <field name="url">/inventory_dashboard_simple/lab_hub</field>
+            <field name="target">self</field>
+        </record>
+
+        <menuitem id="menu_helpdesk_lab_pool_hub"
+                  name="Laboratorio"
+                  parent="menu_customer_inventory"
+                  action="action_helpdesk_lab_pool_hub"
+                  sequence="15"/>
 
         <!-- ========================================== -->
-        <!-- ÓRDENES DE SERVICIO -->
+        <!-- ÓRDENES Y MANTENIMIENTOS -->
         <!-- ========================================== -->
         <menuitem id="menu_service_orders_root"
-                  name="🔧 Órdenes de Servicio"
+                  name="🔧 Órdenes y mantenimientos"
                   parent="menu_helpdesk_inventory_root"
                   sequence="30"/>
 
-        <menuitem id="menu_maintenance_order_calendar"
-                  name="Calendario de Visitas"
+        <menuitem id="menu_mesa_ayuda_service_panel"
+                  name="Operaciones de campo"
                   parent="menu_service_orders_root"
-                  action="action_maintenance_order_calendar"
-                  sequence="10"
-                  groups="base.group_user"/>
+                  action="action_mesa_ayuda_service_panel_server"
+                  sequence="5"/>
 
-        <menuitem id="menu_maintenance_order"
-                  name="Órdenes de Servicio"
+        <menuitem id="menu_mesa_ayuda_technician_panel"
+                  name="Panel técnico"
                   parent="menu_service_orders_root"
-                  action="action_maintenance_order"
-                  sequence="20"/>
+                  action="action_mesa_ayuda_technician_panel_server"
+                  sequence="6"/>
 
-        <menuitem id="menu_mesa_service_solicitudes"
-                  name="Solicitudes"
-                  parent="menu_service_orders_root"
-                  action="action_mesa_service_solicitudes_wizard"
-                  sequence="30"
-                  groups="base.group_user"/>
+        <!-- Calendario de visitas, solicitudes, órdenes y mantenimientos: solo desde el panel -->
 
         <!-- ========================================== -->
         <!-- TICKETS Y REPARACIONES -->

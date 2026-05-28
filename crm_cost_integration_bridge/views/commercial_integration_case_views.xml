@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data>
+    <record id="view_commercial_integration_case_list" model="ir.ui.view">
+        <field name="name">commercial.integration.case.list</field>
+        <field name="model">commercial.integration.case</field>
+        <field name="arch" type="xml">
+            <list string="Casos integración">
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="state" widget="badge"
+                       decoration-success="state == 'operations_done'"
+                       decoration-info="state in ('calculator_ready', 'proposal_sent')"
+                       decoration-warning="state in ('awaiting_quotes', 'quote_selected')"
+                       decoration-danger="state in ('customer_rejected', 'cancelled')"/>
+                <field name="winning_purchase_order_id"/>
+                <field name="calculadora_id" optional="hide"/>
+                <field name="proposal_id" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_commercial_integration_case_form" model="ir.ui.view">
+        <field name="name">commercial.integration.case.form</field>
+        <field name="model">commercial.integration.case</field>
+        <field name="arch" type="xml">
+            <form string="Caso integración">
+                <header>
+                    <button name="action_open_calculadora" type="object" string="Abrir calculadora"
+                            class="btn-secondary" invisible="not calculadora_id"/>
+                    <button name="action_generate_proposal" type="object" string="Generar propuesta"
+                            class="btn-primary"
+                            invisible="state in ('customer_approved', 'customer_rejected', 'operations_done', 'cancelled')"/>
+                    <button name="action_open_proposal" type="object" string="Abrir propuesta"
+                            class="btn-secondary" invisible="not proposal_id"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="draft,awaiting_quotes,quote_selected,calculator_ready,proposal_draft,proposal_sent,customer_approved,operations_done"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name" readonly="1"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="partner_id"/>
+                            <field name="lead_id"/>
+                            <field name="sale_order_id"/>
+                            <field name="purchase_alert_id"/>
+                        </group>
+                        <group>
+                            <field name="warehouse_id"/>
+                            <field name="company_id" invisible="1"/>
+                            <field name="winning_purchase_order_id" readonly="state in ('operations_done', 'cancelled')"/>
+                            <field name="winning_selected_by" readonly="1"/>
+                            <field name="winning_selected_date" readonly="1"/>
+                            <field name="calculadora_id" readonly="1"/>
+                            <field name="proposal_id" readonly="1"/>
+                            <field name="operations_routed" readonly="1"/>
+                            <field name="last_picking_id" readonly="1"/>
+                            <field name="last_auto_purchase_id" readonly="1"/>
+                        </group>
+                    </group>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_commercial_integration_case_search" model="ir.ui.view">
+        <field name="name">commercial.integration.case.search</field>
+        <field name="model">commercial.integration.case</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="lead_id"/>
+                <field name="sale_order_id"/>
+                <filter string="Pendiente operación" name="not_routed" domain="[('operations_routed', '=', False), ('state', '=', 'customer_approved')]"/>
+                <filter string="Calculadora lista" name="calc_ready" domain="[('state', '=', 'calculator_ready')]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_commercial_integration_case" model="ir.actions.act_window">
+        <field name="name">Casos integración</field>
+        <field name="res_model">commercial.integration.case</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</data>

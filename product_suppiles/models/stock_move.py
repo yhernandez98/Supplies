@@ -1,9 +1,64 @@
 # -*- coding: utf-8 -*-
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError
+from odoo.fields import Command
+import re
 
 class StockMove(models.Model):
     _inherit = "stock.move"
+
+    @staticmethod
+    def _supplies_lot_ids_commands_clear_all(commands):
+        """True si los comandos M2M de lot_ids vacían la selección."""
+        if commands in (None, False):
+            return True
+        if not commands:
+            return True
+        if len(commands) == 1:
+            cmd = commands[0]
+            if isinstance(cmd, (list, tuple)):
+                if cmd[0] in (Command.CLEAR, 5):
+                    return True
+                if cmd[0] in (Command.SET, 6) and not cmd[2]:
+                    return True
+        return False
+
+    def _supplies_has_assigned_serial_lines(self):
+        self.ensure_one()
+        return bool(
+            self.product_id.tracking == 'serial'
+            and self.move_line_ids.filtered(lambda ml: ml.lot_id and ml.quantity)
+        )
+
+    def _set_lot_ids(self):
+        """
+        Evita que un lot_ids vacío (p. ej. al guardar el picking tras agregar otra línea)
+        borre seriales ya asignados en operaciones detalladas.
+        """
+        moves_to_set = self.env['stock.move']
+        for move in self:
+            if move._supplies_has_assigned_serial_lines() and not move.lot_ids:
+                continue
+            moves_to_set |= move
+        if moves_to_set:
+            super(StockMove, moves_to_set)._set_lot_ids()
+
+    def write(self, vals):
+        if (
+            'lot_ids' in vals
+            and not self.env.context.get('supplies_allow_lot_ids_clear')
+            and self._supplies_lot_ids_commands_clear_all(vals['lot_ids'])
+            and self.filtered(lambda m: m._supplies_has_assigned_serial_lines())
+        ):
+            vals = dict(vals)
+            del vals['lot_ids']
+        return super().write(vals)
+
+    @staticmethod
+    def _clean_product_label(name):
+        if not name:
+            return ''
+        return re.sub(r'^\s*\[[^\]]+\]\s*', '', name).strip()
 
     supply_parent_product_id = fields.Many2one(
         comodel_name="product.product",
@@ -52,21 +107,21 @@ class StockMove(models.Model):
     )
     
     # Campos para mostrar elementos asociados en columnas (desde move_line_ids)
-    associated_components = fields.Char(
+    associated_components = fields.Text(
         string='Componentes',
         compute='_compute_associated_elements',
         store=False,
         help='Números de serie de componentes asociados al producto principal'
     )
     
-    associated_peripherals = fields.Char(
+    associated_peripherals = fields.Text(
         string='Periféricos',
         compute='_compute_associated_elements',
         store=False,
         help='Números de serie de periféricos asociados al producto principal'
     )
     
-    associated_complements = fields.Char(
+    associated_complements = fields.Text(
         string='Complementos',
         compute='_compute_associated_elements',
         store=False,
@@ -187,6 +242,46 @@ class StockMove(models.Model):
         
         # Usar siempre la vista raíz: Odoo fusiona herencias (pestañas, campos) automáticamente.
         form_view_id = self.env.ref('stock.view_production_lot_form', raise_if_not_found=False)
+
+        def _resolve_final_route_scope(move):
+            """Obtiene ubicación/cliente final de la ruta (prioriza destino customer al final de la cadena)."""
+            final_location = False
+            visited = set()
+            stack = [move]
+            leaf_dest = False
+            while stack:
+                m = stack.pop()
+                if not m or not m.exists() or m.id in visited:
+                    continue
+                visited.add(m.id)
+                if m.move_dest_ids:
+                    for nxt in m.move_dest_ids:
+                        if nxt and nxt.exists() and nxt.id not in visited:
+                            stack.append(nxt)
+                else:
+                    if m.location_dest_id:
+                        leaf_dest = m.location_dest_id
+                    if m.location_dest_id and m.location_dest_id.usage == 'customer':
+                        final_location = m.location_dest_id
+                        break
+            if not final_location:
+                final_location = leaf_dest or move.location_dest_id
+
+            final_partner = False
+            if final_location:
+                partner_found = self.env['res.partner'].sudo().search(
+                    [('property_stock_customer', '=', final_location.id)],
+                    limit=1,
+                )
+                final_partner = partner_found.commercial_partner_id if partner_found else False
+            return final_location, final_partner
+
+        final_location, final_partner = _resolve_final_route_scope(self)
+        picking = self.picking_id
+        if not final_partner and picking and picking.partner_id:
+            if picking.picking_type_id and picking.picking_type_id.code == 'outgoing':
+                final_partner = picking.partner_id.commercial_partner_id
+
         # Abrir la vista del lote como wizard (modal) para que no se salgan de la vista del picking
         return {
             'type': 'ir.actions.act_window',
@@ -201,6 +296,11 @@ class StockMove(models.Model):
                 'active_model': 'stock.lot',
                 'default_lot_id': self.principal_lot_id.id,
                 'form_view_initial_mode': 'edit',  # Abrir en modo edición
+                # En el modal por ruta no propagar usuario a otros seriales relacionados.
+                'from_route_lot_editor': True,
+                # Licencias (equipo/usuario): usar alcance del destino final de la ruta.
+                'force_license_location_id': final_location.id if final_location else False,
+                'force_license_partner_id': final_partner.id if final_partner else False,
             },
         }
 
@@ -281,11 +381,13 @@ class StockMove(models.Model):
                 # Obtener nombre del producto
                 product_name = ''
                 if supply_line.product_id:
-                    product_name = supply_line.product_id.display_name or supply_line.product_id.name or ''
+                    product_name = self._clean_product_label(
+                        supply_line.product_id.name or supply_line.product_id.display_name or ''
+                    )
                 
-                # Formato: "Nombre Producto - Serial"
+                # Formato en líneas legibles para tabla: "Producto (Serial)"
                 if product_name:
-                    display_text = f"{product_name} - {serial_name}"
+                    display_text = f"{product_name} ({serial_name})"
                 else:
                     display_text = serial_name
                 
@@ -414,12 +516,57 @@ class StockMove(models.Model):
 
             move.supply_parent_product_id = parent.id if parent else False
 
+    def _supplies_snapshot_serial_lines(self):
+        """Reserva en memoria los seriales ya asignados antes de re-asignar stock."""
+        snapshot = {}
+        for move in self:
+            if move.product_id.tracking != 'serial':
+                continue
+            lines = move.move_line_ids.filtered(lambda ml: ml.lot_id and ml.quantity)
+            if not lines:
+                continue
+            snapshot[move.id] = [{
+                'lot_id': ml.lot_id.id,
+                'quantity': ml.quantity,
+                'location_id': ml.location_id.id,
+                'location_dest_id': ml.location_dest_id.id,
+                'picking_id': ml.picking_id.id,
+                'product_uom_id': ml.product_uom_id.id,
+            } for ml in lines]
+        return snapshot
+
+    def _supplies_restore_serial_lines(self, snapshot):
+        """Restaura seriales que se perdieron tras action_assign al agregar otra línea al picking."""
+        if not snapshot:
+            return
+        MoveLine = self.env['stock.move.line']
+        for move in self:
+            items = snapshot.get(move.id)
+            if not items:
+                continue
+            for item in items:
+                lot_id = item['lot_id']
+                if move.move_line_ids.filtered(lambda ml: ml.lot_id.id == lot_id and ml.quantity):
+                    continue
+                MoveLine.create({
+                    'move_id': move.id,
+                    'product_id': move.product_id.id,
+                    'picking_id': item['picking_id'],
+                    'location_id': item['location_id'],
+                    'location_dest_id': item['location_dest_id'],
+                    'product_uom_id': item['product_uom_id'],
+                    'lot_id': lot_id,
+                    'quantity': item['quantity'],
+                })
+
     def _action_assign(self):
         """
         Sobrescribe _action_assign para asegurar que los movimientos hijos usen solo el lote relacionado.
         Limpia líneas duplicadas después de que Odoo asigna el movimiento.
         """
+        serial_snapshot = self._supplies_snapshot_serial_lines()
         result = super()._action_assign()
+        self._supplies_restore_serial_lines(serial_snapshot)
         
         # Para movimientos hijos, asegurar que solo se use el lote relacionado correcto
         for move in self:
@@ -474,30 +621,4 @@ class StockMove(models.Model):
                                             if lines_to_unlink:
                                                 lines_to_unlink.unlink()
                             
-                            # Si no hay línea correcta pero hay líneas existentes, actualizar la primera
-                            # NO intentar crear líneas aquí para evitar recursión infinita
-                            elif move.move_line_ids:
-                                first_line = move.move_line_ids[0]
-                                if first_line.id and first_line.exists():
-                                    # Actualizar el lote de la primera línea
-                                    if not first_line.lot_id or first_line.lot_id.id != related_lot.id:
-                                        first_line.lot_id = related_lot.id
-                                    # Asegurar que la cantidad sea correcta
-                                    if first_line.quantity != move.product_uom_qty:
-                                        first_line.quantity = move.product_uom_qty
-                            
-                            # CORRECCIÓN: Solo eliminar líneas incorrectas si hay una línea correcta
-                            # Esto evita eliminar todas las líneas y causar el error "Registro faltante"
-                            if correct_line and len(correct_line) > 0:
-                                wrong_lines = move.move_line_ids.filtered(
-                                    lambda ml: ml.id and ml.exists() and
-                                             ml.id != correct_line[0].id and
-                                             (not ml.lot_id or not ml.lot_id.exists() or ml.lot_id.id != related_lot.id)
-                                )
-                                if wrong_lines:
-                                    # Verificar que las líneas a eliminar realmente existen
-                                    lines_to_unlink = wrong_lines.filtered(lambda ml: ml.id and ml.exists())
-                                    if lines_to_unlink:
-                                        lines_to_unlink.unlink()
-        
-        return result
+                            # Si no h

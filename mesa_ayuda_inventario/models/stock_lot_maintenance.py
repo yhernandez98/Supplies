@@ -673,20 +673,15 @@ class StockLotMaintenance(models.Model):
         return self.env.ref('mesa_ayuda_inventario.action_report_stock_lot_maintenance').report_action(self)
     
     def action_equipment_change(self):
-        """Abrir wizard para crear actividad de cambio de equipo."""
+        """Abre el wizard de cambio de equipo de suscripción (mismo flujo que en la suscripción)."""
         self.ensure_one()
-        return {
-            'name': _('Cambio de Equipo'),
-            'type': 'ir.actions.act_window',
-            'res_model': 'equipment.change.wizard',
-            'view_mode': 'form',
-            'target': 'new',
-            'context': {
-                'default_lot_id': self.lot_id.id if self.lot_id else False,
-                'default_maintenance_id': self.id,
-                'default_partner_id': self.customer_id.id if self.customer_id else False,
-            }
-        }
+        if not self.lot_id:
+            raise UserError(_('Este mantenimiento no tiene un equipo (serial) asociado.'))
+        if not hasattr(self.lot_id, 'action_open_equipment_change_wizard'):
+            raise UserError(_(
+                'El módulo de suscripciones no está disponible para abrir el cambio de equipo.'
+            ))
+        return self.lot_id.action_open_equipment_change_wizard()
     
     def action_request_element(self):
         """Abrir wizard para solicitar un elemento/componente."""

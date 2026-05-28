@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_mesa_panel_equipment_change_wizard_form" model="ir.ui.view">
+        <field name="name">mesa.panel.equipment.change.wizard.form</field>
+        <field name="model">mesa.panel.equipment.change.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Cambio de equipo" class="mesa_acta_wizard">
+                <sheet>
+                    <div class="mesa_acta_wizard_header">
+                        <p class="mesa_acta_wizard_header__title">Cambio de equipo</p>
+                        <p class="mesa_acta_wizard_header__hint">
+                            Seleccione el cliente y busque el equipo por placa de inventario.
+                            Al continuar se creará un ticket en etapa Nuevo, con el mismo formato que las solicitudes del acta de visita.
+                        </p>
+                    </div>
+                    <field name="allowed_lot_ids" invisible="1"/>
+                    <group string="Cliente y equipo">
+                        <field name="partner_id" options="{'no_create': True}" placeholder="Cliente (empresa)"/>
+                        <field name="inventory_plate" placeholder="Placa de inventario (ej. I0021316)"/>
+                        <field name="lot_id" options="{'no_create': True, 'no_open': True}" readonly="1"
+                               force_save="1" placeholder="Equipo encontrado (se completa al digitar la placa)"/>
+                    </group>
+                    <group string="Resumen" colspan="2">
+                        <field name="equipment_preview_html" widget="html" nolabel="1" colspan="2" readonly="1"/>
+                    </group>
+                </sheet>
+                <footer>
+                    <button name="action_create_ticket" type="object" string="Crear ticket" class="btn-primary"/>
+                    <button string="Cancelar" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_mesa_panel_equipment_change_wizard" model="ir.actions.act_window">
+        <field name="name">Cambio de equipo</field>
+        <field name="res_model">mesa.panel.equipment.change.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_mesa_panel_equipment_change_wizard_form"/>
+        <field name="target">new</field>
+    </record>
+</odoo>

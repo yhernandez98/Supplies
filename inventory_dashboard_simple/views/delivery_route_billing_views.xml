@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_delivery_route_billing_picking_list" model="ir.ui.view">
+        <field name="name">stock.picking.delivery.route.billing.list</field>
+        <field name="model">stock.picking</field>
+        <!-- Prioridad baja: no debe reemplazar la lista estándar del dashboard ni de Inventario -->
+        <field name="priority" eval="99"/>
+        <field name="arch" type="xml">
+            <list string="Facturación — Ruta de entrega" create="0" delete="0">
+                <field name="name" string="Albarán"/>
+                <field name="origin" string="Ruta"/>
+                <field name="partner_id" string="Cliente"/>
+                <button name="action_open_delivery_billing_lots"
+                        type="object"
+                        string="Completar seriales"
+                        icon="fa-edit"
+                        class="btn-link"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_delivery_route_billing_picking_search" model="ir.ui.view">
+        <field name="name">stock.picking.delivery.route.billing.search</field>
+        <field name="model">stock.picking</field>
+        <field name="priority" eval="99"/>
+        <field name="arch" type="xml">
+            <search string="Facturación ruta entrega">
+                <field name="name"/>
+                <field name="origin"/>
+                <field name="partner_id"/>
+                <filter string="Pendiente facturación" name="pending_billing"
+                        domain="[('invdash_delivery_billing_pending', '=', True)]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_delivery_route_billing_pending" model="ir.actions.act_window">
+        <field name="name">Facturación</field>
+        <field name="res_model">stock.picking</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_ids" eval="[
+            (5, 0, 0),
+            (0, 0, {'view_mode': 'list', 'view_id': ref('view_delivery_route_billing_picking_list')}),
+            (0, 0, {'view_mode': 'form', 'view_id': ref('stock.view_picking_form')}),
+        ]"/>
+        <field name="search_view_id" ref="view_delivery_route_billing_picking_search"/>
+        <field name="domain">[('id', 'in', [])]</field>
+        <field name="context">{'create': False}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No hay órdenes pendientes de datos de facturación.
+            </p>
+            <p>
+                Tras validar la etapa E2 (Alistamiento → Salida), las rutas de entrega en E3 o E4
+                aparecen aquí si falta Servicio, Suscripción, Plazo Renting o Fecha Activación
+                Renting en algún serial. Complete los datos y valide E3 y luego E4.
+            </p>
+        </field>
+    </record>
+
+    <record id="action_open_delivery_route_billing_refreshed" model="ir.actions.server">
+        <field name="name">Facturación (actualizar)</field>
+        <field name="model_id" ref="stock.model_stock_picking"/>
+        <field name="state">code</field>
+        <field name="code">action = env['stock.picking'].action_open_delivery_billing_refreshed()</field>
+    </record>
+</odoo>

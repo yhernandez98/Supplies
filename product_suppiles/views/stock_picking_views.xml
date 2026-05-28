@@ -6,7 +6,7 @@
     <field name="name">stock.picking.form.inherit.supplies.columns</field>
     <field name="model">stock.picking</field>
     <field name="inherit_id" ref="stock.view_picking_form"/>
-    <field name="priority">99999</field>
+    <field name="priority">999999</field>
     <field name="arch" type="xml">
       <xpath expr="//sheet" position="attributes">
         <attribute name="class" add="oe_stock_picking_sheet" separator=" "/>
@@ -16,28 +16,53 @@
       </xpath>
       <xpath expr="//header" position="inside">
         <button name="action_assign_supplies_relations" type="object" string="Asignar relaciones" class="btn-secondary" invisible="1"/>
+        <button name="action_debug_date_render" type="object" string="Debug fecha" class="btn-secondary"/>
+      </xpath>
+      <xpath expr="//field[@name='date_deadline']" position="attributes">
+        <attribute name="invisible">1</attribute>
+      </xpath>
+      <!-- Fecha programada: el div .o_row estándar encoge el flex y parte la fecha en vertical; contenedor ancho fijo + campo. -->
+      <xpath expr="//div[contains(@class,'o_row')][field[@name='scheduled_date']]" position="replace">
+        <div class="o_supplies_scheduled_date_wrap d-flex flex-row flex-nowrap align-items-center w-100">
+          <field name="scheduled_date" readonly="state in ['cancel', 'done']" required="id"
+                 decoration-warning="state not in ('done', 'cancel') and scheduled_date &lt; now"
+                 decoration-danger="state not in ('done', 'cancel') and scheduled_date &lt; current_date"
+                 decoration-bf="state not in ('done', 'cancel') and (scheduled_date &lt; current_date or scheduled_date &lt; now)"
+                 class="o_supplies_scheduled_date_single_line flex-grow-1 flex-shrink-0"/>
+        </div>
       </xpath>
 
-      <!-- Nueva pestaña "Productos principales": no depende del nombre de la pestaña Operaciones. -->
-      <xpath expr="//notebook" position="inside">
+      <!-- Productos principales: primera pestaña del cuaderno; luego Operaciones, etc. -->
+      <xpath expr="//notebook/page[1]" position="before">
         <page name="supplies_main_only" string="Productos principales" class="supplies-main-products-page">
-          <group string="Una fila por producto principal con sus componentes, periféricos y complementos en columnas" class="supplies-main-products-group">
-            <field name="move_ids_main_only" nolabel="1">
-              <list create="0" delete="0" decoration-muted="supply_kind != 'parent'" editable="false">
-                <field name="product_id"/>
-                <field name="supply_parent_product_id" column_invisible="1"/>
+          <group string="Producto Principal" class="supplies-main-products-group">
+            <group col="2">
+              <button name="action_detailed_operations" type="object" string="Cambiar seriales" class="btn-secondary"/>
+            </group>
+            <field name="move_line_ids_main_only" nolabel="1">
+              <list create="0" delete="0" decoration-muted="supply_kind != 'parent'" editable="false" class="o_supplies_main_products_list">
+                <field name="product_display_clean" string="Producto"/>
                 <field name="supply_kind" column_invisible="1"/>
-                <field name="principal_lot_serial" column_invisible="1"/>
-                <field name="principal_lot_id" string="Número de Serie" readonly="1" optional="show" invisible="supply_kind != 'parent' or not principal_lot_id" options="{'no_open': True, 'no_create': True}"/>
-                <button name="action_open_assign_serial" type="object" string="Asignar serial" icon="fa-edit" class="btn-primary btn-sm" invisible="supply_kind != 'parent'" title="Abrir operaciones detalladas para asignar el número de serie"/>
-                <button name="action_open_lot_wizard" type="object" string="✏️" invisible="supply_kind != 'parent' or not principal_lot_id or picking_id.state == 'done'" class="oe_link" title="Editar elementos asociados del lote"/>
-                <field name="product_components_count" string="Comp." readonly="1" optional="show" invisible="supply_kind != 'parent'"/>
-                <field name="product_peripherals_count" string="Perif." readonly="1" optional="show" invisible="supply_kind != 'parent'"/>
-                <field name="product_complements_count" string="Compl." readonly="1" optional="show" invisible="supply_kind != 'parent'"/>
-                <field name="product_uom_qty"/>
-                <field name="move_line_ids" column_invisible="1"/>
+                <field name="lot_id" string="Número de Serie" readonly="1" optional="show" invisible="supply_kind != 'parent' or not lot_id" options="{'no_create': True}"/>
+                <field name="associated_components" string="Componentes" readonly="1" optional="show" invisible="supply_kind != 'parent'" widget="text"/>
+                <field name="associated_peripherals" string="Periféricos" readonly="1" optional="show" invisible="supply_kind != 'parent'" widget="text"/>
+                <field name="associated_complements" string="Complementos" readonly="1" optional="show" invisible="supply_kind != 'parent'" widget="text"/>
+                <field name="associated_licenses" string="Licencias" readonly="1" optional="show" invisible="supply_kind != 'parent'" widget="text"/>
+                <button name="action_open_lot_wizard" type="object" string="Editar" invisible="supply_kind != 'parent' or not lot_id or picking_id.state == 'done'" class="btn-link" title="Editar elementos asociados del lote"/>
+                <field name="quantity" string="Demanda"/>
               </list>
             </field>
+          </group>
+        </page>
+      </xpath>
+      <xpath expr="//notebook/page[@name='note']" position="after">
+        <page name="observacion_li" string="Observación L&amp;I">
+          <group col="1">
+            <div class="alert alert-info" role="alert">
+              <strong>Uso exclusivo de Logística e Inventario:</strong>
+              la información registrada en esta pestaña se usará como observación en el acta de recepción o devolución de activos.
+            </div>
+            <field name="observation_li" nolabel="1" placeholder="Escribe aquí la observación..." readonly="state in ['done', 'cancel']"/>
           </group>
         </page>
       </xpath>
@@ -55,6 +80,7 @@
         <field name="associated_components" string="Componentes" readonly="1" optional="show" invisible="supply_kind != 'parent'" widget="text"/>
         <field name="associated_peripherals" string="Periféricos" readonly="1" optional="show" invisible="supply_kind != 'parent'" widget="text"/>
         <field name="associated_complements" string="Complementos" readonly="1" optional="show" invisible="supply_kind != 'parent'" widget="text"/>
+        <field name="associated_licenses" string="Licencias" readonly="1" optional="show" invisible="supply_kind != 'parent'" widget="text"/>
       </xpath>
     </field>
   </record>

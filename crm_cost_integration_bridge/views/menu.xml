@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data>
+    <menuitem id="menu_crm_cost_integration_root"
+              name="Integración calculadora"
+              parent="crm_sales_supplies.menu_crm_supplies_root"
+              sequence="22"/>
+
+    <menuitem id="menu_commercial_integration_case"
+              name="Casos integración"
+              parent="menu_crm_cost_integration_root"
+              action="action_commercial_integration_case"
+              sequence="10"/>
+
+    <menuitem id="menu_commercial_customer_proposal"
+              name="Propuestas cliente"
+              parent="menu_crm_cost_integration_root"
+              action="action_commercial_customer_proposal"
+              sequence="20"/>
+</data>

@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from collections import defaultdict
+
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError
 import logging
@@ -42,8 +44,9 @@ class StockLot(models.Model):
         'stock.location',
         string='Ubicación',
         compute='_compute_display_location_contact',
-        store=False,
-        help='Ubicación actual del lote (desde quants)'
+        store=True,
+        index=True,
+        help='Ubicación actual del lote (desde quants; almacenado para listados rápidos).'
     )
     
     display_contact_id = fields.Many2one(
@@ -51,9 +54,41 @@ class StockLot(models.Model):
         string='Contacto',
         compute='_compute_display_location_contact',
         store=True,
-        help='Contacto asociado a la ubicación del lote'
+        index=True,
+        help='Contacto asociado a la ubicación del lote (índice para agrupar en listados).'
     )
-    
+
+    is_stock_in_supp_existencias = fields.Boolean(
+        string='Stock en almacén Supp',
+        compute='_compute_is_stock_in_supp_existencias',
+        store=True,
+        index=True,
+        help='True si hay cantidad > 0 en ubicación interna del árbol «Supp/…» (Existencias, Alistamiento, Laboratorio, etc.); se excluye de pendientes de información.',
+    )
+
+    invdash_pending_info = fields.Boolean(
+        string='Pendiente información (dashboard)',
+        compute='_compute_invdash_pending_info',
+        store=True,
+        index=True,
+        help='Pre-calculado con el mismo criterio que «Productos Pendientes de Información» para consultas rápidas.',
+    )
+
+    invdash_serial_multi_location = fields.Boolean(
+        string='Serie en varias ubicaciones',
+        compute='_compute_invdash_serial_multi_location',
+        store=True,
+        index=True,
+        help='True si hay cantidad > 0 en más de una ubicación (interna o tránsito). Un serial no debería estar '
+             'repartido entre dos almacenes distintos.',
+    )
+    invdash_multi_location_detail = fields.Text(
+        string='Detalle por ubicación',
+        compute='_compute_invdash_serial_multi_location',
+        store=True,
+        help='Listado de ubicaciones con cantidad positiva cuando hay más de una.',
+    )
+
     has_excluded_supply_elements = fields.Boolean(
         string='Tiene Elementos Excluidos',
         compute='_compute_has_excluded_supply_elements',
@@ -352,37 +387,305 @@ class StockLot(models.Model):
                 }
             }
     
-    @api.depends('quant_ids', 'quant_ids.location_id', 'quant_ids.quantity', 'quant_ids.location_id.complete_name')
+    def _invdash_partner_from_location_chain(self, location, loc_partner_cache=None):
+        """Cliente cuya ubicación stock (`property_stock_customer`) coincide con esta ubicación o un padre (ej. serial en KANGU/Existencias → partner en KANGU)."""
+        Partner = self.env['res.partner'].sudo()
+        origin = location
+        loc = location
+        while loc:
+            if loc_partner_cache is not None and loc.id in loc_partner_cache:
+                cached = loc_partner_cache[loc.id]
+                if cached:
+                    return cached
+                loc = loc.location_id
+                continue
+            partner = Partner.search([('property_stock_customer', '=', loc.id)], limit=1)
+            res = partner[:1] if partner else self.env['res.partner']
+            if loc_partner_cache is not None:
+                loc_partner_cache[loc.id] = res
+            if res:
+                return res
+            loc = loc.location_id
+        # Fallback: inferir cliente por nombre raíz de la ubicación interna (ej. "IMCD/Existencias" -> partner "IMCD ...").
+        if origin and origin.complete_name:
+            root_name = (origin.complete_name.split('/')[0] or '').strip()
+            if root_name:
+                key = f'root::{root_name.lower()}'
+                if loc_partner_cache is not None and key in loc_partner_cache:
+                    cached = loc_partner_cache[key]
+                    if cached:
+                        return cached
+                candidates = Partner.search(
+                    [
+                        ('is_company', '=', True),
+                        '|',
+                        ('name', 'ilike', root_name),
+                        ('display_name', 'ilike', root_name),
+                    ],
+                    limit=8,
+                )
+                partner = self.env['res.partner']
+                if candidates:
+                    commercial = candidates.mapped('commercial_partner_id')
+                    commercial = commercial.filtered(lambda p: p)
+                    if len(commercial) == 1:
+                        partner = commercial[:1]
+                    else:
+                        # Si hay empate, tomar coincidencia exacta por nombre (si existe) para evitar asignaciones erróneas.
+                        exact = candidates.filtered(lambda p: (p.name or '').strip().lower() == root_name.lower())
+                        if len(exact) == 1:
+                            partner = exact.commercial_partner_id or exact
+                if loc_partner_cache is not None:
+                    loc_partner_cache[key] = partner
+                if partner:
+                    return partner
+        return self.env['res.partner']
+
+    def _invdash_resolve_display_contact(self, quant, loc_partner_cache=None):
+        """Prioridad: jerarquía de ubicación → propietario quant → suscripción → usuario relacionado (empresa)."""
+        self.ensure_one()
+        Partner = self.env['res.partner']
+        if quant and quant.location_id:
+            partner = self._invdash_partner_from_location_chain(quant.location_id, loc_partner_cache)
+            if partner:
+                return partner
+            if hasattr(quant, 'owner_id') and quant.owner_id:
+                return quant.owner_id
+        if 'active_subscription_id' in self._fields and self.active_subscription_id:
+            sub = self.active_subscription_id
+            if getattr(sub, 'partner_id', False):
+                return sub.partner_id
+        if 'related_partner_id' in self._fields and self.related_partner_id:
+            rel = self.related_partner_id
+            return rel.commercial_partner_id or rel
+        return Partner.browse()
+
+    @api.depends(
+        'quant_ids',
+        'quant_ids.location_id',
+        'quant_ids.quantity',
+        'quant_ids.location_id.complete_name',
+        'active_subscription_id',
+        'active_subscription_id.partner_id',
+        'related_partner_id',
+        'related_partner_id.commercial_partner_id',
+    )
     def _compute_display_location_contact(self):
-        """Calcular ubicación y contacto desde los quants del lote."""
+        """Calcular ubicación y contacto desde los quants del lote (1 consulta a quants por lote en lote)."""
+        Quant = self.env['stock.quant']
+        loc_partner_cache = {}
+
         for lot in self:
             lot.display_location_id = False
             lot.display_contact_id = False
-            
-            if not lot.id:
-                continue
-            
-            # Buscar el quant con mayor cantidad en ubicación interna
-            quant = self.env['stock.quant'].search([
-                ('lot_id', '=', lot.id),
+
+        records = self.filtered(lambda l: l.id)
+        if not records:
+            return
+
+        # Una sola búsqueda de quants; por lote se toma el de mayor cantidad (orden global por lote)
+        quants = Quant.search(
+            [
+                ('lot_id', 'in', records.ids),
                 ('quantity', '>', 0),
                 ('location_id.usage', '=', 'internal'),
-            ], order='quantity desc, in_date desc', limit=1)
-            
+            ],
+            order='lot_id asc, quantity desc, in_date desc',
+        )
+        best_quant_by_lot = {}
+        for q in quants:
+            lid = q.lot_id.id
+            if lid not in best_quant_by_lot:
+                best_quant_by_lot[lid] = q
+
+        for lot in records:
+            quant = best_quant_by_lot.get(lot.id)
             if quant and quant.location_id:
                 lot.display_location_id = quant.location_id
-                
-                # Buscar contacto desde la ubicación
-                # Buscar contacto desde property_stock_customer (ubicación del cliente)
-                partner = self.env['res.partner'].search([
-                    ('property_stock_customer', '=', quant.location_id.id)
-                ], limit=1)
-                if partner:
-                    lot.display_contact_id = partner
-                # Si no se encuentra por property_stock_customer, intentar buscar por owner_id del quant
-                elif hasattr(quant, 'owner_id') and quant.owner_id:
-                    lot.display_contact_id = quant.owner_id
-    
+                lot.display_contact_id = lot._invdash_resolve_display_contact(quant, loc_partner_cache)
+
+    @api.model
+    def _invdash_supp_subtree_location_ids(self):
+        """IDs de todo el subárbol bajo la carpeta «Supp» (Existencias, tránsito, laboratorio, etc.).
+
+        En pantalla muchas hijas son «tránsito», no «internas»; antes solo se tomaban internas y el stock
+        en Supp/Alistamiento, Supp/Laboratorio, etc. no contaba y los lotes seguían como pendientes.
+
+        Raíz: ubicación llamada «Supp» (la carpeta suele ser vista u operativa). Descendientes: `child_of`
+        sin filtrar por tipo — mismas rutas `complete_name` que empiezan por Supp/.
+        """
+        Location = self.env['stock.location'].sudo()
+        # La carpeta «Supp» no siempre es internal (a menudo es vista); no filtrar solo internal aquí.
+        roots = Location.search([('name', '=ilike', 'supp')])
+        if not roots:
+            anchors = Location.search([
+                '|', '|',
+                ('complete_name', 'ilike', '%Supp/Existencias%'),
+                ('complete_name', 'ilike', '%/Supp/%'),
+                ('complete_name', 'ilike', 'Supp/%'),
+            ], limit=80)
+            root_ids = set()
+            for loc in anchors:
+                cur = loc
+                depth = 0
+                while cur and depth < 40:
+                    nm = (cur.name or '').strip().lower()
+                    if nm == 'supp':
+                        root_ids.add(cur.id)
+                        break
+                    cur = cur.location_id
+                    depth += 1
+            if root_ids:
+                roots = Location.browse(list(root_ids))
+        if not roots:
+            _logger.debug(
+                'invdash: sin carpeta «Supp» ni ancla en nombre completo; '
+                'revisar ubicaciones en Inventario.'
+            )
+            return frozenset()
+        subtree = Location.search([('id', 'child_of', roots.ids)])
+        return frozenset(subtree.ids)
+
+    @api.depends(
+        'quant_ids',
+        'quant_ids.quantity',
+        'quant_ids.location_id',
+        'quant_ids.location_id.complete_name',
+        'quant_ids.location_id.usage',
+    )
+    def _compute_is_stock_in_supp_existencias(self):
+        """Stock en subárbol de la carpeta «Supp» (Existencias, Alistamiento, Laboratorio, etc.)."""
+        lots = self.filtered(lambda l: l.id)
+        for lot in self:
+            lot.is_stock_in_supp_existencias = False
+        if not lots:
+            return
+
+        supp_loc_ids = self.env['stock.lot']._invdash_supp_subtree_location_ids()
+        if not supp_loc_ids:
+            return
+
+        if len(lots) == 1:
+            lot = lots
+            for q in lot.quant_ids:
+                if (q.quantity or 0) <= 0:
+                    continue
+                if q.location_id and q.location_id.id in supp_loc_ids:
+                    lot.is_stock_in_supp_existencias = True
+                    break
+            return
+
+        Quants = self.env['stock.quant'].search(
+            [
+                ('lot_id', 'in', lots.ids),
+                ('quantity', '>', 0),
+            ]
+        )
+        hit_ids = set()
+        for q in Quants:
+            if q.location_id and q.location_id.id in supp_loc_ids:
+                hit_ids.add(q.lot_id.id)
+        for lot in lots:
+            if lot.id in hit_ids:
+                lot.is_stock_in_supp_existencias = True
+
+    def _invdash_meets_pending_info_criteria(self):
+        """Misma lógica que el dominio histórico de la vista (un solo lugar para mantener)."""
+        self.ensure_one()
+        if not self.id:
+            return False
+        cls = self.product_id.classification if self.product_id else False
+        if cls in ('component', 'peripheral'):
+            return False
+        if self.product_id:
+            cat_name = (self.product_id.asset_category_id.name or '').strip().lower()
+            class_name = (self.product_id.asset_class_id.name or '').strip().lower()
+            # Excluir solo ADAPTADOR (categoria COMPLEMENTO + clase ADAPTADOR), no todos los complementos.
+            if cat_name == 'complemento' and class_name == 'adaptador':
+                return False
+        if self.is_stock_in_supp_existencias:
+            return False
+
+        def _empty_char(val):
+            return val in (False, None, '')
+
+        missing = (
+            _empty_char(self.inventory_plate)
+            or _empty_char(self.billing_code)
+            or not self.entry_date
+            or not self.subscription_service_product_id
+            or not self.active_subscription_id
+        )
+        return bool(missing)
+
+    @api.depends(
+        'inventory_plate',
+        'security_plate',
+        'ref',
+        'billing_code',
+        'entry_date',
+        'subscription_service_product_id',
+        'active_subscription_id',
+        'product_id',
+        'product_id.classification',
+        'product_id.asset_category_id',
+        'product_id.asset_class_id',
+        'is_stock_in_supp_existencias',
+    )
+    def _compute_invdash_pending_info(self):
+        for lot in self:
+            lot.invdash_pending_info = lot._invdash_meets_pending_info_criteria()
+
+    @api.depends(
+        'quant_ids',
+        'quant_ids.quantity',
+        'quant_ids.location_id',
+        'quant_ids.location_id.usage',
+    )
+    def _compute_invdash_serial_multi_location(self):
+        """Detectar serial con stock positivo en más de una ubicación (mismo lote = mismo producto)."""
+        for lot in self:
+            lot.invdash_serial_multi_location = False
+            lot.invdash_multi_location_detail = ''
+        records = self.filtered(lambda l: l.id)
+        if not records:
+            return
+        Quant = self.env['stock.quant'].sudo()
+        quants = Quant.search(
+            [
+                ('lot_id', 'in', records.ids),
+                ('quantity', '>', 0),
+                ('location_id.usage', 'in', ('internal', 'transit')),
+            ]
+        )
+        loc_qty = defaultdict(lambda: defaultdict(float))
+        for q in quants:
+            loc_qty[q.lot_id.id][q.location_id.id] += q.quantity
+
+        Location = self.env['stock.location'].sudo()
+        for lot in records:
+            lmap = loc_qty.get(lot.id) or {}
+            if len(lmap) < 2:
+                continue
+            lot.invdash_serial_multi_location = True
+            loc_ids = list(lmap.keys())
+            locs = Location.browse(loc_ids)
+            name_by_id = {loc.id: (loc.complete_name or loc.name or '') for loc in locs}
+
+            def _sort_key(loc_id):
+                return name_by_id.get(loc_id, '')
+
+            parts = []
+            for loc_id in sorted(lmap.keys(), key=_sort_key):
+                qty = lmap[loc_id]
+                nm = name_by_id.get(loc_id, '')
+                if float(qty).is_integer():
+                    qtxt = str(int(qty))
+                else:
+                    qtxt = f'{float(qty):.2f}'.rstrip('0').rstrip('.')
+                parts.append(f'{nm} ({qtxt})')
+            lot.invdash_multi_location_detail = '; '.join(parts)
+
     @api.depends('ref', 'product_id')
     def _compute_internal_ref_id(self):
         """Calcular internal_ref_id desde el campo ref, filtrando por producto."""
@@ -587,4 +890,67 @@ class StockLot(models.Model):
             'view_mode': 'form',
             'target': 'new',
             'context': context,
+        }
+
+    @api.model
+    def domain_stock_lot_pending_information(self):
+        """Mismo criterio que la acción «Productos Pendientes de Información» (lista + badge)."""
+        return [('invdash_pending_info', '=', True)]
+
+    @api.model
+    def _refresh_invdash_pending_fields(self):
+        """Recalcula campos almacenados usados por la vista de pendientes.
+
+        Útil cuando cantidad/ubicación se actualiza por SQL directo (fuera del ORM),
+        porque los depends de campos store=True no se disparan automáticamente.
+        """
+        # IMPORTANTE rendimiento:
+        # no recorrer todo el inventario al abrir la vista (puede bloquear).
+        # Recalcular solo los lotes actualmente marcados como pendientes.
+        lot_ids = self.search([('invdash_pending_info', '=', True)]).ids
+        if not lot_ids:
+            return
+
+        batch_size = 300
+        for i in range(0, len(lot_ids), batch_size):
+            batch_ids = lot_ids[i:i + batch_size]
+            lots = self.browse(batch_ids)
+            lots._compute_display_location_contact()
+            lots._compute_is_stock_in_supp_existencias()
+            lots._compute_invdash_pending_info()
+
+    @api.model
+    def action_open_incomplete_fields_refreshed(self):
+        """Abre la vista de pendientes forzando refresh previo de campos store."""
+        self._refresh_invdash_pending_fields()
+        return self.env.ref('inventory_dashboard_simple.action_stock_lot_incomplete_fields').read()[0]
+
+    @api.model
+    def incomplete_pending_information_count(self):
+        """Conteo para badge en menú Inventario → Dashboard → Consultas."""
+        return self.env['stock.lot'].search_count(self.domain_stock_lot_pending_information())
+
+    @api.model
+    def domain_stock_lot_serial_multi_location(self):
+        """Mismo criterio que la acción «Series en varias ubicaciones»."""
+        return [('invdash_serial_multi_location', '=', True)]
+
+    @api.model
+    def serial_multi_location_count(self):
+        """Conteo para badge de «Series en varias ubicaciones»."""
+        return self.env['stock.lot'].search_count(self.domain_stock_lot_serial_multi_location())
+
+    @api.model
+    def dashboard_queries_badge_counts(self):
+        """Conteos de consultas del dashboard para pintar badges del menú."""
+        pending = self.incomplete_pending_information_count()
+        serial_multi = self.serial_multi_location_count()
+        excess_qty = self.env['stock.quant'].search_count([('quantity', '>', 1)])
+        delivery_billing = self.env['stock.picking'].delivery_route_billing_pending_count()
+        return {
+            'pending_info': pending,
+            'serial_multi_location': serial_multi,
+            'excess_quantity': excess_qty,
+            'delivery_billing': delivery_billing,
+            'dashboard_total': pending + serial_multi + excess_qty + delivery_billing,
         }

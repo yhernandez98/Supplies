@@ -1,0 +1,83 @@
+<!-- ========================= -->
+<!-- custom.layout_acta_entrega -->
+<!-- ========================= -->
+<t t-name="custom.layout_acta_entrega">
+    <div class="header" style="font-family:Helvetica, Arial, sans-serif; font-size:9px; margin:0; padding:0;">
+        <div style="border:1px solid #000; border-radius:14px; padding:0; margin:0; overflow:hidden;">
+            <table style="width:100%; border-collapse:collapse; table-layout:fixed; margin:0;">
+                <colgroup>
+                    <col style="width:18%;"/>
+                    <col style="width:31%;"/>
+                    <col style="width:31%;"/>
+                    <col style="width:20%;"/>
+                </colgroup>
+                <tr style="height:38px;">
+                    <td rowspan="3" style="border-right:1px solid #000; text-align:center; vertical-align:middle; padding:2px;">
+                        <img t-if="o and o.company_id and o.company_id.logo" t-att-src="image_data_uri(o.company_id.logo)" style="max-width:80px; max-height:62px; display:block; margin:0 auto;"/>
+                    </td>
+                    <td colspan="3" style="text-align:center; vertical-align:middle; padding:4px 6px;">
+                        <span style="font-weight:bold; text-transform:uppercase; font-size:13px; line-height:1;">ACTA DE ENTREGA</span>
+                    </td>
+                </tr>
+                <tr style="height:20px;">
+                    <td colspan="2" style="border-top:1px solid #000; border-right:1px solid #000; text-align:center; vertical-align:middle; font-size:10px; padding:2px 4px;">
+                        F-GLG-ADEN-001
+                    </td>
+                    <td rowspan="2" style="border-top:1px solid #000; text-align:center; vertical-align:middle; font-size:9px; padding:2px 4px;">
+                        Página <span class="page"/> de <span class="topage"/>
+                    </td>
+                </tr>
+                <tr style="height:18px;">
+                    <td style="border-top:1px solid #000; border-right:1px solid #000; font-size:8px; text-align:center; vertical-align:middle; padding:2px 4px;">Versión: 01</td>
+                    <td style="border-top:1px solid #000; font-size:8px; text-align:center; vertical-align:middle; padding:2px 4px;">Fecha de Creación: Julio 2023</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    <div class="article" t-att-data-oe-model="o and o._name" t-att-data-oe-id="o and o.id">
+        <t t-out="0"/>
+    </div>
+    <div class="footer"/>
+</t>
+
+<!-- ============================ -->
+<!-- custom.layout_acta_devolucion -->
+<!-- ============================ -->
+<t t-name="custom.layout_acta_devolucion">
+    <div class="header" style="font-family:Helvetica, Arial, sans-serif; font-size:9px; margin:0; padding:0;">
+        <div style="border:1px solid #000; border-radius:14px; padding:0; margin:0; overflow:hidden;">
+            <table style="width:100%; border-collapse:collapse; table-layout:fixed; margin:0;">
+                <colgroup>
+                    <col style="width:18%;"/>
+                    <col style="width:31%;"/>
+                    <col style="width:31%;"/>
+                    <col style="width:20%;"/>
+                </colgroup>
+                <tr style="height:38px;">
+                    <td rowspan="3" style="border-right:1px solid #000; text-align:center; vertical-align:middle; padding:2px;">
+                        <img t-if="o and o.company_id and o.company_id.logo" t-att-src="image_data_uri(o.company_id.logo)" style="max-width:80px; max-height:62px; display:block; margin:0 auto;"/>
+                    </td>
+                    <td colspan="3" style="text-align:center; vertical-align:middle; padding:4px 6px;">
+                        <span style="font-weight:bold; text-transform:uppercase; font-size:13px; line-height:1;">ACTA DE DEVOLUCIÓN</span>
+                    </td>
+                </tr>
+                <tr style="height:20px;">
+                    <td colspan="2" style="border-top:1px solid #000; border-right:1px solid #000; text-align:center; vertical-align:middle; font-size:10px; padding:2px 4px;">
+                        F-GLG-ADEV-001
+                    </td>
+                    <td rowspan="2" style="border-top:1px solid #000; text-align:center; vertical-align:middle; font-size:9px; padding:2px 4px;">
+                        Página <span class="page"/> de <span class="topage"/>
+                    </td>
+                </tr>
+                <tr style="height:18px;">
+                    <td style="border-top:1px solid #000; border-right:1px solid #000; font-size:8px; text-align:center; vertical-align:middle; padding:2px 4px;">Versión: 01</td>
+                    <td style="border-top:1px solid #000; font-size:8px; text-align:center; vertical-align:middle; padding:2px 4px;">Fecha de Creación: Julio 2023</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    <div class="article" t-att-data-oe-model="o and o._name" t-att-data-oe-id="o and o.id">
+        <t t-out="0"/>
+    </div>
+    <div class="footer"/>
+</t>

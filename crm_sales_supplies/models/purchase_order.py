@@ -498,6 +498,17 @@ class PurchaseOrder(models.Model):
             orders = self.env['purchase.order'].browse(orders_to_notify_approval)
             # Agrupar órdenes por alerta y crear una actividad por alerta
             self.env['purchase.order']._create_approval_activities_grouped(orders)
+            for order in orders:
+                # Al aprobar cotización CRM, marcarla automáticamente como ganadora en el flujo de integración.
+                if hasattr(order, 'action_mark_as_winning_quote_integration'):
+                    try:
+                        order.action_mark_as_winning_quote_integration()
+                    except Exception as err:
+                        _logger.warning(
+                            "No se pudo marcar automáticamente la cotización %s como ganadora: %s",
+                            order.name,
+                            err,
+                        )
         
         # Después de escribir, actualizar nombres según el cambio de estado
         if 'state' in vals:

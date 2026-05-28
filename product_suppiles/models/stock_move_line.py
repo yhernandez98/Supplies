@@ -4,6 +4,7 @@ from odoo.exceptions import ValidationError
 from odoo.exceptions import UserError
 from odoo.tools import float_round, float_compare
 import logging
+import re
 
 from collections import defaultdict
 from odoo.addons.stock_account.models.stock_move_line import (
@@ -11,6 +12,15 @@ from odoo.addons.stock_account.models.stock_move_line import (
 )
 
 _logger = logging.getLogger(__name__)
+
+
+def _clean_product_label(name):
+    """Quitar prefijo [CODIGO] para mostrar solo el nombre comercial."""
+    if not name:
+        return ''
+    return re.sub(r'^\s*\[[^\]]+\]\s*', '', name).strip()
+
+
 class StockMoveLine(models.Model):
     _inherit = "stock.move.line"
 
@@ -23,72 +33,196 @@ class StockMoveLine(models.Model):
         store=False,
         readonly=True,
     )
+
+    product_display_clean = fields.Char(
+        string='Producto',
+        compute='_compute_product_display_clean',
+        store=False,
+        help='Nombre del producto sin código interno entre corchetes.'
+    )
     
     # Campos para mostrar elementos asociados en columnas
-    associated_components = fields.Char(
+    associated_components = fields.Text(
         string='Componentes',
         compute='_compute_associated_elements',
         store=False,
         help='Números de serie de componentes asociados'
     )
     
-    associated_peripherals = fields.Char(
+    associated_peripherals = fields.Text(
         string='Periféricos',
         compute='_compute_associated_elements',
         store=False,
         help='Números de serie de periféricos asociados'
     )
     
-    associated_complements = fields.Char(
+    associated_complements = fields.Text(
         string='Complementos',
         compute='_compute_associated_elements',
         store=False,
         help='Números de serie de complementos asociados'
     )
+
+    associated_licenses = fields.Text(
+        string='Licencias',
+        compute='_compute_associated_elements',
+        store=False,
+        help='Licencias asociadas al activo principal (usuario/equipo).'
+    )
+
+    @api.depends('product_id', 'product_id.name')
+    def _compute_product_display_clean(self):
+        for line in self:
+            line.product_display_clean = _clean_product_label(line.product_id.name) if line.product_id else ''
     
-    @api.depends('lot_id', 'lot_id.lot_supply_line_ids', 'lot_id.lot_supply_line_ids.related_lot_id', 
-                 'lot_id.lot_supply_line_ids.item_type', 'lot_id.lot_supply_line_ids.related_lot_id.name')
+    @api.depends(
+        'lot_id',
+        'lot_id.lot_supply_line_ids',
+        'lot_id.lot_supply_line_ids.related_lot_id',
+        'lot_id.lot_supply_line_ids.item_type',
+        'lot_id.lot_supply_line_ids.related_lot_id.name',
+    )
     def _compute_associated_elements(self):
         """Calcular elementos asociados agrupados por tipo para mostrar en columnas."""
         for line in self:
             line.associated_components = ''
             line.associated_peripherals = ''
             line.associated_complements = ''
+            line.associated_licenses = ''
             
             # Solo procesar si es un producto principal y tiene lote
             if not line.lot_id or line.supply_kind != 'parent':
-                continue
-            
-            if not hasattr(line.lot_id, 'lot_supply_line_ids') or not line.lot_id.lot_supply_line_ids:
                 continue
             
             # Agrupar elementos asociados por tipo
             components = []
             peripherals = []
             complements = []
+            if hasattr(line.lot_id, 'lot_supply_line_ids') and line.lot_id.lot_supply_line_ids:
+                for supply_line in line.lot_id.lot_supply_line_ids:
+                    if not supply_line.related_lot_id:
+                        continue
+
+                    related_lot = supply_line.related_lot_id
+                    serial_name = related_lot.name or ''
+                    if not serial_name:
+                        continue
+                    product_name = ''
+                    if supply_line.product_id:
+                        product_name = _clean_product_label(
+                            supply_line.product_id.name or supply_line.product_id.display_name or ''
+                        )
+                    display_text = f"{product_name} ({serial_name})" if product_name else serial_name
+
+                    if supply_line.item_type == 'component':
+                        components.append(display_text)
+                    elif supply_line.item_type == 'peripheral':
+                        peripherals.append(display_text)
+                    elif supply_line.item_type == 'complement':
+                        complements.append(display_text)
+                    elif supply_line.item_type in ('monitor', 'ups'):
+                        # Monitores y UPS se muestran como periféricos
+                        peripherals.append(display_text)
             
-            for supply_line in line.lot_id.lot_supply_line_ids:
-                if not supply_line.related_lot_id:
+            # Unir en múltiples líneas para lectura vertical en la grilla.
+            line.associated_components = '\n'.join(components) if components else ''
+            line.associated_peripherals = '\n'.join(peripherals) if peripherals else ''
+            line.associated_complements = '\n'.join(complements) if complements else ''
+
+            # Licencias relacionadas del activo principal (lote).
+            user_lics = []
+            equipment_lics = []
+            if hasattr(line.lot_id, 'license_user_ids') and line.lot_id.license_user_ids:
+                user_lics = line.lot_id.license_user_ids.filtered_domain([('state', '=', 'assigned')]).mapped('service_product_id.display_name')
+            if hasattr(line.lot_id, 'license_equipment_ids') and line.lot_id.license_equipment_ids:
+                equipment_lics = line.lot_id.license_equipment_ids.filtered_domain([('state', '=', 'assigned')]).mapped('service_product_id.display_name')
+
+            # Mantener orden y evitar duplicados vacíos.
+            user_lics = [name for name in dict.fromkeys(user_lics) if name]
+            equipment_lics = [name for name in dict.fromkeys(equipment_lics) if name]
+            license_lines = []
+            if user_lics:
+                license_lines.append("Usuario: " + ', '.join(user_lics))
+            if equipment_lics:
+                license_lines.append("Equipo: " + ', '.join(equipment_lics))
+            line.associated_licenses = '\n'.join(license_lines) if license_lines else ''
+
+            # Si el lote no tiene asociados, reutilizar el resumen del movimiento para no dejar filas vacías.
+            if not line.associated_components and line.move_id and line.move_id.associated_components:
+                line.associated_components = line.move_id.associated_components
+            if not line.associated_peripherals and line.move_id and line.move_id.associated_peripherals:
+                line.associated_peripherals = line.move_id.associated_peripherals
+            if not line.associated_complements and line.move_id and line.move_id.associated_complements:
+                line.associated_complements = line.move_id.associated_complements
+
+    def action_open_lot_wizard(self):
+        """Editar asociados del lote principal desde una línea serializada."""
+        self.ensure_one()
+        if not self.move_id:
+            raise UserError(_('No se encontró el movimiento asociado a esta línea.'))
+        if not self.lot_id:
+            raise UserError(_('No hay lote/serial en la línea seleccionada.'))
+        if self.move_id.picking_id and self.move_id.picking_id.state == 'done':
+            raise UserError(_('No se pueden editar los elementos asociados de un picking ya validado.'))
+
+        form_view_id = self.env.ref('stock.view_production_lot_form', raise_if_not_found=False)
+
+        def _resolve_final_route_scope(move):
+            final_location = False
+            visited = set()
+            stack = [move]
+            leaf_dest = False
+            while stack:
+                m = stack.pop()
+                if not m or not m.exists() or m.id in visited:
                     continue
-                
-                serial_name = supply_line.related_lot_id.name or ''
-                if not serial_name:
-                    continue
-                
-                if supply_line.item_type == 'component':
-                    components.append(serial_name)
-                elif supply_line.item_type == 'peripheral':
-                    peripherals.append(serial_name)
-                elif supply_line.item_type == 'complement':
-                    complements.append(serial_name)
-                elif supply_line.item_type in ('monitor', 'ups'):
-                    # Monitores y UPS se muestran como periféricos
-                    peripherals.append(serial_name)
-            
-            # Unir los números de serie con comas
-            line.associated_components = ', '.join(components) if components else ''
-            line.associated_peripherals = ', '.join(peripherals) if peripherals else ''
-            line.associated_complements = ', '.join(complements) if complements else ''
+                visited.add(m.id)
+                if m.move_dest_ids:
+                    for nxt in m.move_dest_ids:
+                        if nxt and nxt.exists() and nxt.id not in visited:
+                            stack.append(nxt)
+                else:
+                    if m.location_dest_id:
+                        leaf_dest = m.location_dest_id
+                    if m.location_dest_id and m.location_dest_id.usage == 'customer':
+                        final_location = m.location_dest_id
+                        break
+            if not final_location:
+                final_location = leaf_dest or move.location_dest_id
+
+            final_partner = False
+            if final_location:
+                partner_found = self.env['res.partner'].sudo().search(
+                    [('property_stock_customer', '=', final_location.id)],
+                    limit=1,
+                )
+                final_partner = partner_found.commercial_partner_id if partner_found else False
+            return final_location, final_partner
+
+        final_location, final_partner = _resolve_final_route_scope(self.move_id)
+        picking = self.move_id.picking_id
+        if not final_partner and picking and picking.partner_id:
+            if picking.picking_type_id and picking.picking_type_id.code == 'outgoing':
+                final_partner = picking.partner_id.commercial_partner_id
+
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Editar Elementos Asociados - %s') % (self.lot_id.name or ''),
+            'res_model': 'stock.lot',
+            'res_id': self.lot_id.id,
+            'view_mode': 'form',
+            'view_id': form_view_id.id if form_view_id else False,
+            'target': 'new',
+            'context': {
+                'active_id': self.lot_id.id,
+                'active_model': 'stock.lot',
+                'default_lot_id': self.lot_id.id,
+                'form_view_initial_mode': 'edit',
+                'from_route_lot_editor': True,
+                'force_license_location_id': final_location.id if final_location else False,
+                'force_license_partner_id': final_partner.id if final_partner else False,
+            },
+        }
 
     @api.model_create_multi
     def create(self, vals_list):

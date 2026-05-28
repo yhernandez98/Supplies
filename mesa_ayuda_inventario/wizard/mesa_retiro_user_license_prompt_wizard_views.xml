@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_mesa_retiro_user_license_prompt_wizard_form" model="ir.ui.view">
+        <field name="name">mesa.service.retiro.user.license.prompt.wizard.form</field>
+        <field name="model">mesa.service.retiro.user.license.prompt.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Licencias del equipo">
+                <sheet>
+                    <group>
+                        <field name="equipment_label" readonly="1" string="Equipo"/>
+                        <field name="license_count" readonly="1"/>
+                    </group>
+                    <p class="text-muted">
+                        Este equipo tiene licencias asignadas en la pestaña «Licencias del Equipo».
+                        ¿Desea retirar alguna al registrar la devolución?
+                    </p>
+                </sheet>
+                <footer>
+                    <button name="action_remove_licenses" type="object"
+                            string="Sí, elegir licencias a retirar" class="btn-primary"
+                            invisible="license_count == 0"/>
+                    <button name="action_skip_licenses" type="object"
+                            string="No retirar licencias" class="btn-secondary"/>
+                    <button string="Cancelar" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

@@ -1,13 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <!-- Secuencia legacy desactivada: el número oficial usa seq_mesa_ayuda_maintenance_order (code mesa.ayuda.maintenance.order). -->
     <data noupdate="1">
         <record id="seq_maintenance_order" model="ir.sequence">
-            <field name="name">Secuencia Orden de Mantenimiento</field>
-            <field name="code">maintenance.order</field>
+            <field name="name">(Obsoleto) Secuencia antigua orden visita</field>
+            <field name="code">mesa.ayuda.legacy.maintenance.order.disabled</field>
             <field name="prefix">MO-</field>
             <field name="padding">6</field>
             <field name="number_increment">1</field>
             <field name="number_next">1</field>
+            <field name="active" eval="False"/>
         </record>
     </data>
 </odoo>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_license_equipment_unassignment_history_list" model="ir.ui.view">
+        <field name="name">license.equipment.unassignment.history.list</field>
+        <field name="model">license.equipment.unassignment.history</field>
+        <field name="arch" type="xml">
+            <list create="0" edit="0" delete="0">
+                <field name="unassignment_date" string="Fecha desasignación"/>
+                <field name="equipment_serial" string="Equipo"/>
+                <field name="assigned_name" string="Asignado"/>
+                <field name="category_name" string="Categoría"/>
+                <field name="license_product_name" string="Licencia"/>
+                <field name="assignment_date" string="Fecha asignación"/>
+                <field name="state_label" string="Estado"/>
+                <field name="source" string="Origen"/>
+                <field name="helpdesk_ticket_name" string="Ticket"/>
+                <field name="removed_by_id" string="Registrado por" optional="hide"/>
+            </list>
+        </field>
+    </record>
+</odoo>

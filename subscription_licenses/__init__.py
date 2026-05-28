@@ -147,3 +147,14 @@ def post_init_hook(env):
         env.cr.rollback()
         _logger.warning('⚠️ Relleno provider_partner_id: %s', str(e))
 
+    # 4) Flags de visibilidad Licencias del Equipo / Usuario en stock.lot (columnas almacenadas)
+    try:
+        lines = env['license.equipment'].search([('lot_id', '!=', False)])
+        if lines:
+            lot_ids = list(set(lines.mapped('lot_id').ids))
+            env['license.equipment']._recompute_show_tabs_for_lot_ids(lot_ids)
+            env.cr.commit()
+            _logger.info('✅ Visibilidad pestañas licencias (serial) recalculada (%d serie(s))', len(lot_ids))
+    except Exception as e:
+        env.cr.rollback()
+        _logger.warning('⚠️ Recalcular show_on_lot_*: %s', str(e))

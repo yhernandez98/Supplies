@@ -13,7 +13,9 @@
     ''',
     'author': 'Supplies De Colombia SAS',
     'category': 'Inventory/Helpdesk',
-    'version': '19.0.1.0.34',
+    'version': '19.0.1.0.157',
+    'pre_init_hook': 'mesa_ayuda_inventario.hooks.pre_init_hook',
+    'post_init_hook': 'mesa_ayuda_inventario.hooks.post_init_hook',
     'depends': [
         'stock',
         'product_suppiles',
@@ -35,7 +37,9 @@
     'data': [
         'security/ir.model.access.csv',
         'data/maintenance_order_sequence.xml',
+        'data/mesa_ayuda_maintenance_visit_sequence.xml',
         'data/cron_attachment_cleanup.xml',  # ✅ Cron job para limpiar attachments temporales
+        'data/cron_maintenance_visit_schedule.xml',  # Inicio/cierre automático de visitas por fechas
         # TEMPORALMENTE DESACTIVADO:
         # 'data/sequences.xml',
         'views/stock_lot_maintenance_views.xml',
@@ -44,6 +48,8 @@
         'views/component_change_views.xml',  # ✅ Vistas para cambios de componentes
         'views/maintenance_order_views.xml',
         'views/maintenance_order_calendar_views.xml',  # ✅ Vista de calendario para visitas
+        'views/mesa_ayuda_service_panel_views.xml',
+        'views/mesa_ayuda_technician_panel_views.xml',
         'views/maintenance_order_wizard_views.xml',
         'views/add_equipment_wizard_tree_views.xml',
         'views/add_equipment_wizard_views.xml',
@@ -55,6 +61,16 @@
         'wizard/customer_query_wizard_views.xml',
         'wizard/service_order_solicitudes_wizard_views.xml',
         'wizard/service_order_retiro_usuario_equipo_wizard_views.xml',
+        'wizard/mesa_retiro_license_select_wizard_views.xml',
+        'wizard/mesa_retiro_user_equipment_select_wizard_views.xml',
+        'wizard/mesa_retiro_user_license_prompt_wizard_views.xml',
+        'wizard/mesa_retiro_inactivate_equipment_prompt_wizard_views.xml',
+        'wizard/mesa_retiro_inactivate_user_license_prompt_wizard_views.xml',
+        'wizard/visit_documentation_wizard_views.xml',
+        'wizard/acta_other_operations_wizard_views.xml',
+        'wizard/acta_equipment_wizard_views.xml',
+        'wizard/acta_participants_wizard_views.xml',
+        'wizard/mesa_panel_equipment_change_wizard_views.xml',
         'views/alertas_renting_views.xml',  # Alertas > Equipos a terminar Renting (por fecha finalización)
         'views/helpdesk_ticket_category_views.xml',
         'views/helpdesk_ticket_views.xml',  # ✅ Activado - Vistas y acción de tickets
@@ -72,7 +88,11 @@
     'assets': {
         'web.assets_backend': [
             'mesa_ayuda_inventario/static/src/css/customer_inventory.css',
+            'mesa_ayuda_inventario/static/src/css/helpdesk_ticket_executive.css',
+            'mesa_ayuda_inventario/static/src/css/service_panel_executive.css',
             'mesa_ayuda_inventario/static/src/js/view_switcher.js',
+            'mesa_ayuda_inventario/static/src/js/mesa_technician_visit_list_view.js',
+            'mesa_ayuda_inventario/static/src/js/mesa_acta_visit_html_flags.js',
         ],
     },
     'application': True,

@@ -834,9 +834,44 @@ class StockLotCustomerInventory(models.Model):
                     licenses_text = '\n'.join(licenses_lines)
             
             lot.assigned_licenses_tree_display = licenses_text
-    
+
+    @api.depends_context('mesa_acta_equipment_wizard', 'mesa_retiro_user_equipment_select')
+    @api.depends('name', 'inventory_plate', 'product_id', 'product_id.display_name')
+    def _compute_display_name(self):
+        """Odoo 19: name_search del widget many2many_checkboxes usa display_name, no name_get."""
+        if self.env.context.get('mesa_acta_equipment_wizard') or self.env.context.get(
+            'mesa_retiro_user_equipment_select'
+        ):
+            for lot in self:
+                prod = lot.product_id.display_name if lot.product_id else _('Sin producto')
+                serial = lot.name or '—'
+                plate = (lot.inventory_plate or '').strip() or _('Sin placa')
+                if self.env.context.get('mesa_retiro_user_equipment_select'):
+                    lot.display_name = ' | '.join(
+                        (
+                            '%s: %s' % (_('Serie'), serial),
+                            '%s: %s' % (_('Placa'), plate),
+                            prod,
+                        )
+                    )
+                else:
+                    lot.display_name = ' | '.join(
+                        (
+                            prod,
+                            '%s: %s' % (_('Placa'), plate),
+                            '%s: %s' % (_('Serie'), serial),
+                        )
+                    )
+        else:
+            super()._compute_display_name()
+
     def name_get(self):
         """Personalizar la visualización para mostrar primero la placa de inventario si existe."""
+        if self.env.context.get('mesa_acta_equipment_wizard') or self.env.context.get(
+            'mesa_retiro_user_equipment_select'
+        ):
+            # Mantener coherente con _compute_display_name (name_search / listas OWL).
+            return [(lot.id, lot.display_name) for lot in self]
         result = []
         for lot in self:
             # Si tiene placa de inventario, mostrar SOLO la placa (prioridad)
@@ -1436,23 +1471,13 @@ class StockLotCustomerInventory(models.Model):
         return customer.action_generate_all_life_sheets()
     
     def action_equipment_change(self):
-        """Abrir wizard para crear actividad de cambio de equipo."""
+        """Abre el wizard de cambio de equipo de suscripción (inventario cliente / mismo serial)."""
         self.ensure_one()
-        
-        # Obtener el cliente directamente desde customer_id
-        partner_id = self.customer_id.id if self.customer_id else False
-        
-        return {
-            'name': _('Cambio de Equipo'),
-            'type': 'ir.actions.act_window',
-            'res_model': 'equipment.change.wizard',
-            'view_mode': 'form',
-            'target': 'new',
-            'context': {
-                'default_lot_id': self.id,
-                'default_partner_id': partner_id,
-            }
-        }
+        if not hasattr(self, 'action_open_equipment_change_wizard'):
+            raise UserError(_(
+                'El módulo de suscripciones no está disponible para abrir el cambio de equipo.'
+            ))
+        return self.action_open_equipment_change_wizard()
     
     def action_request_element(self):
         """Abrir wizard para solicitar un elemento/componente."""

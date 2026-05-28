@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="view_mesa_ayuda_technician_panel_form" model="ir.ui.view">
+            <field name="name">mesa.ayuda.technician.panel.form</field>
+            <field name="model">mesa.ayuda.technician.panel</field>
+            <field name="arch" type="xml">
+                <form string="Panel técnico" create="false" edit="false" delete="false" class="mesa_sp_form">
+                    <sheet class="mesa_sp_shell">
+                        <div class="mesa_sp_hero">
+                            <div class="mesa_sp_hero_inner">
+                                <div class="mesa_sp_kicker">Mesa de ayuda · Técnicos</div>
+                                <h1 class="mesa_sp_title">Panel técnico</h1>
+                                <p class="mesa_sp_subtitle">
+                                    Contenido filtrado según tu <strong>usuario de sesión</strong>.
+                                    Abre <strong>Visitas asignadas</strong> para ver tus visitas en curso o programadas.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="mesa_sp_surface">
+                            <group>
+                                <field name="user_id"/>
+                                <field name="visit_count" string="Visitas activas (tuyas)"/>
+                            </group>
+                            <div class="mesa_sp_hub_row" style="margin-top: 16px;">
+                                <button name="action_open_assigned_visits" type="object"
+                                        string="Visitas asignadas"
+                                        class="btn mesa_sp_hub_tile"
+                                        icon="fa-calendar"/>
+                            </div>
+                            <div class="mesa_sp_footer_note" style="margin-top: 20px;">
+                                Las visitas listadas son órdenes de servicio donde figuras como técnico asignado
+                                y el estado es borrador, programada o en progreso.
+                            </div>
+                        </div>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="action_mesa_ayuda_technician_panel_server" model="ir.actions.server">
+            <field name="name">Abrir panel técnico</field>
+            <field name="model_id" ref="base.model_res_users"/>
+            <field name="state">code</field>
+            <field name="code"><![CDATA[
+action = env['mesa.ayuda.technician.panel'].action_open_panel()
+]]></field>
+        </record>
+    </data>
+</odoo>

@@ -4,7 +4,7 @@
 
 {
     'name': 'Subscription No Accounting',
-    'version': '19.0.1.0.16',
+    'version': '19.0.1.0.49',
     'author': 'Supplies De Colombia SAS',
     'category': 'Sales/Subscriptions',
     'depends': ['mail', 'sale_subscription', 'stock', 'account', 'product_suppiles', 'product_suppiles_partner', 'report_xlsx'],
@@ -12,6 +12,8 @@
         'web.assets_backend': [
             'subscription_nocount/static/src/css/subscription_statusbar.css',
             'subscription_nocount/static/src/css/subscription_form_pastel.css',
+            'subscription_nocount/static/src/css/subscription_expiring_menu_badge.css',
+            'subscription_nocount/static/src/js/subscription_expiring_menu_badge.js',
         ],
     },
     'data': [

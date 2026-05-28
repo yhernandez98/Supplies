@@ -1,0 +1,419 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="report_supplies_acta_style_block">
+        <style type="text/css">
+            .sa_page { font-family: Arial, sans-serif; font-size: 10px; color: #111; padding: 0 28px; box-sizing: border-box; }
+            .sa_hdr { border: 1px solid #999; border-radius: 14px; overflow: hidden; margin-bottom: 10px; }
+            .sa_hdr table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+            .sa_hdr td { border-right: 1px solid #999; vertical-align: middle; }
+            .sa_hdr td:last-child { border-right: none; }
+            .sa_title { text-align: center; font-size: 17px; font-weight: 700; color: #8a8a8a; letter-spacing: 0.2px; }
+            .sa_subrow { border-top: 1px solid #999; font-size: 10px; color: #777; text-align: center; }
+            .sa_table { width: 100%; border-collapse: collapse; margin-top: 8px; table-layout: fixed; }
+            .sa_table th { background: #0b5cb7; color: #fff; border: 1px solid #2d2d2d; padding: 4px; text-align: center; font-size: 10px; }
+            .sa_table td { border: 1px solid #2d2d2d; padding: 4px; text-align: center; font-size: 10px; }
+            .sa_sign { margin-top: 30px; width: 100%; border-collapse: collapse; }
+            .sa_sign td { width: 50%; vertical-align: top; padding: 8px 18px; }
+            .sa_line { border-top: 1px solid #333; margin-top: 28px; }
+            .sa_sign strong { font-size: 10px; font-weight: 700; }
+            .sa_sign div { font-size: 10px; font-weight: 400; }
+            .sa_footer { margin-top: 20px; background: #8eb4d9; color: #fff; padding: 8px 12px; text-align: center; font-size: 10px; }
+            .sa_subtitle { font-weight: 700; margin: 8px 0 4px 0; }
+            .sa_justify { text-align: justify; }
+            table { page-break-inside: auto; }
+            tr { page-break-inside: avoid; page-break-after: auto; }
+        </style>
+    </template>
+
+    <template id="report_supplies_assignment_entrega_pdf">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <div class="page sa_page">
+                    <t t-call="inventory_dashboard_simple.report_supplies_acta_style_block"/>
+                    <div class="sa_hdr">
+                        <table>
+                            <tr>
+                                <td style="width:18%; text-align:center; padding:6px;">
+                                    <t t-set="logo_bin" t-value="(doc.user_id.company_id.logo if doc.user_id and doc.user_id.company_id and doc.user_id.company_id.logo else env.company.logo)"/>
+                                    <img t-if="logo_bin" t-att-src="image_data_uri(logo_bin)" style="max-height:60px; max-width:80px;"/>
+                                </td>
+                                <td style="width:62%;">
+                                    <div class="sa_title">ACTA DE ENTREGA DE ELEMENTOS Y HERRAMIENTAS DE TRABAJO</div>
+                                    <div class="sa_subrow">F-GAD-AEEHT-001</div>
+                                    <div class="sa_subrow">Version: 01 | Fecha de Creacion: Agosto 2023</div>
+                                </td>
+                                <td style="width:20%; text-align:center; font-weight:700; color:#777;">PAGINA 1 DE 1</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <t t-set="emp" t-value="doc.employee_id or env['hr.employee'].sudo().search([('user_id', '=', doc.user_id.id)], limit=1)"/>
+                    <t t-set="id_number" t-value="(emp.identification_id if emp and emp.identification_id else (doc.user_id.partner_id.vat if doc.user_id and doc.user_id.partner_id else ''))"/>
+                    <t t-set="emp_job" t-value="(emp.job_id.name if emp and emp.job_id else '')"/>
+                    <t t-set="emp_dept" t-value="(emp.department_id.name if emp and emp.department_id else '')"/>
+                    <t t-set="user_name_clean" t-value="doc._normalize_report_text((emp.name if emp else (doc.user_id.display_name or '')))"/>
+                    <t t-set="emp_job_clean" t-value="doc._normalize_report_text(emp_job)"/>
+                    <t t-set="emp_dept_clean" t-value="doc._normalize_report_text(emp_dept).replace('ó', 'o').replace('Ó', 'O').replace('Ã³', 'o').replace('Ã“', 'O').replace('�', '')"/>
+                    <t t-set="delivery_name_clean" t-value="doc._normalize_report_text(doc.delivery_user_id.display_name or '')"/>
+                    <t t-set="delivery_job_clean" t-value="doc._normalize_report_text(doc.delivery_job_name or '')"/>
+                    <t t-set="receiver_job_clean" t-value="doc._normalize_report_text(doc.receiver_job_name or '')"/>
+                    <t t-set="ret_dt_raw" t-value="(doc.return_date or doc.create_date)"/>
+                    <t t-set="ret_dt" t-value="(ret_dt_raw.date() if ret_dt_raw else False)"/>
+                    <t t-set="month_names_es" t-value="['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']"/>
+                    <t t-set="return_date_text" t-value="(str(ret_dt.day) + ' de ' + month_names_es[ret_dt.month - 1] + ' del ' + str(ret_dt.year)) if ret_dt else ''"/>
+                    <p style="margin:0 0 6px 0;" class="sa_justify">
+                        Se procede a la entrega de elementos de trabajo por parte de <strong>SUPPLIES DE COLOMBIA S.A.S</strong>, con NIT 830004631-7,
+                        al empleado, <strong><span t-esc="user_name_clean"/></strong>, mayor de edad, identificado(a) con la cedula de ciudadania
+                        <strong><span t-esc="id_number or ''"/></strong>, en presencia del analista de inventarios.
+                    </p>
+
+                    <div style="text-align:center; font-weight:700; margin:8px 0 6px 0;">Datos de empleado</div>
+                    <p style="margin:0;"><strong>Nombre:</strong> <span t-esc="user_name_clean"/></p>
+                    <p style="margin:0;"><strong>Cargo:</strong> <span t-esc="emp_job_clean"/></p>
+                    <p style="margin:0 0 6px 0;"><strong>Departamento:</strong> <span t-esc="emp_dept_clean"/></p>
+
+                    <p style="margin:0 0 8px 0;" class="sa_justify">
+                        Estos elementos se entregan para ejercer cabalmente sus funciones el empleado recibira del empleador las herramientas,
+                        medios fisicos y tecnologicos necesarios para la ejecucion eficiente de los servicios, obligandose a conservar debidamente
+                        tales herramientas y medios y destinarlos exclusivamente a la labor encomendada.
+                    </p>
+
+                    <div style="font-weight:700; margin:4px 0;">Herramientas entregadas:</div>
+                    <table class="sa_table">
+                        <thead>
+                            <tr>
+                                <th>ACTIVO</th><th>MARCA</th><th>MODELO</th><th>SERIAL</th><th>P. SEGURIDAD</th><th>P. INVENTARIO</th><th>OBSERVACIONES</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><span t-esc="doc.product_id.display_name or ''"/></td>
+                                <td><span t-esc="doc.product_id.name or ''"/></td>
+                                <td><span t-esc="doc.lot_id.model_name or ''"/></td>
+                                <td><span t-esc="doc.lot_id.name or ''"/></td>
+                                <td><span t-esc="doc.lot_id.security_plate or ''"/></td>
+                                <td><span t-esc="doc.lot_id.inventory_plate or ''"/></td>
+                                <td><span t-esc="doc.note or ''"/></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div style="font-weight:700; margin:8px 0 4px 0;">Elementos entregados:</div>
+                    <table class="sa_table" style="margin-top:2px;">
+                        <thead>
+                            <tr>
+                                <th style="width:18%;">CANTIDAD</th>
+                                <th>DESCRIPCION</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-if="doc.lot_id and doc.lot_id.lot_supply_line_ids">
+                                <t t-foreach="doc.lot_id.lot_supply_line_ids" t-as="ln">
+                                    <tr>
+                                        <td><span t-esc="ln.quantity or 1.0"/></td>
+                                        <td style="text-align:left;"><span t-esc="ln.product_id.display_name or ''"/> <t t-if="ln.related_lot_id">- Serial: <t t-esc="ln.related_lot_id.name or ''"/></t></td>
+                                    </tr>
+                                </t>
+                            </t>
+                            <t t-else="">
+                                <tr>
+                                    <td>1</td>
+                                    <td style="text-align:left;">Sin elementos adicionales asociados.</td>
+                                </tr>
+                            </t>
+                        </tbody>
+                    </table>
+
+                    <div class="sa_subtitle">Estado de elementos y herramientas:</div>
+                    <ul style="margin:0 0 8px 18px; padding:0;">
+                        <li>Todos los elementos y herramientas fueron revisados y se encuentran en buen estado.</li>
+                        <li>Se adjuntan fotografias de los elementos y herramientas entregadas en esta acta como referencia.</li>
+                    </ul>
+
+                    <div class="sa_subtitle">Responsabilidades:</div>
+                    <t t-set="dt_raw" t-value="(doc.assignment_date or doc.create_date)"/>
+                    <t t-set="dt_date" t-value="(dt_raw.date() if dt_raw else False)"/>
+                    <t t-set="month_names" t-value="['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE']"/>
+                    <t t-set="date_text" t-value="(str(dt_date.day) + ' DE ' + month_names[dt_date.month - 1] + ' ' + str(dt_date.year)) if dt_date else ''"/>
+                    <p style="margin:0 0 6px 0; text-align:justify;">
+                        El empleado <strong><span t-esc="user_name_clean"/></strong> es el unico responsable de los elementos entregados y debera velar por su uso adecuado y cuidado, por lo cual se compromete a cumplir con las recomendaciones de manejo de los elementos de trabajo. Ademas, reconoce que, en caso de cualquier dano, perdida o robo, el empleado debera hacerse responsable de la restitucion de los mismos o de los costos por el dano generado, por lo que autorizo al empleador para que deduzca o retenga lo que le corresponda por concepto de salarios, prestaciones sociales, indemnizaciones, vacaciones o cualquier otra acreencia laboral que pudiere resultar, los valores que se causen por dano, perdida o robo del elemento de trabajo debido a negligencia del empleado.
+                    </p>
+                    <p style="margin:0 0 6px 0; text-align:justify;">
+                        Leido el presente documento por las partes que en el intervienen y manifestandose de sus fines y alcances legales, lo firman de plena conformidad el dia <strong><span t-esc="date_text"/></strong>.
+                    </p>
+                    <p style="margin:10px 0 0 0;"><strong>Estado de entrega de los equipos:</strong></p>
+                    <div style="height:10px;"></div>
+                    <p style="margin:0 0 6px 0;"><span t-esc="doc._normalize_report_text(doc.note or 'Sin observaciones')"/></p>
+
+                    <div style="height:40px;"></div>
+                    <table class="sa_sign" style="margin-top:30px;">
+                        <tr>
+                            <td>
+                                <strong>Entrega</strong>
+                                <div t-if="doc.signature_delivery" style="margin-top:6px;">
+                                    <img t-att-src="image_data_uri(doc.signature_delivery)" style="max-height:45px; max-width:180px;"/>
+                                </div>
+                                <div class="sa_line"/>
+                                <div>Nombre: <span t-esc="delivery_name_clean"/></div>
+                                <div>Cargo: <span t-esc="delivery_job_clean"/></div>
+                            </td>
+                            <td>
+                                <strong>Recibe</strong>
+                                <div t-if="doc.signature_receiver" style="margin-top:6px;">
+                                    <img t-att-src="image_data_uri(doc.signature_receiver)" style="max-height:45px; max-width:180px;"/>
+                                </div>
+                                <div class="sa_line"/>
+                                <div>Nombre: <span t-esc="user_name_clean"/></div>
+                                <div>Cargo: <span t-esc="receiver_job_clean"/></div>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </t>
+        </t>
+    </template>
+
+    <template id="report_supplies_assignment_devolucion_pdf">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <div class="page sa_page">
+                    <t t-call="inventory_dashboard_simple.report_supplies_acta_style_block"/>
+                    <div class="sa_hdr">
+                        <table>
+                            <tr>
+                                <td style="width:18%; text-align:center; padding:6px;">
+                                    <t t-set="logo_bin" t-value="(doc.user_id.company_id.logo if doc.user_id and doc.user_id.company_id and doc.user_id.company_id.logo else env.company.logo)"/>
+                                    <img t-if="logo_bin" t-att-src="image_data_uri(logo_bin)" style="max-height:60px; max-width:80px;"/>
+                                </td>
+                                <td style="width:62%;">
+                                    <div class="sa_title">ACTA DE DEVOLUCION DE ELEMENTOS Y HERRAMIENTAS DE TRABAJO</div>
+                                    <div class="sa_subrow">F-GAD-ADEHT-001</div>
+                                    <div class="sa_subrow">Version: 01 | Fecha de Creacion: Agosto 2023</div>
+                                </td>
+                                <td style="width:20%; text-align:center; font-weight:700; color:#777;">PAGINA 1 DE 1</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <t t-set="emp" t-value="doc.employee_id or env['hr.employee'].sudo().search([('user_id', '=', doc.user_id.id)], limit=1)"/>
+                    <t t-set="id_number" t-value="(emp.identification_id if emp and emp.identification_id else (doc.user_id.partner_id.vat if doc.user_id and doc.user_id.partner_id else ''))"/>
+                    <t t-set="emp_job" t-value="(emp.job_id.name if emp and emp.job_id else '')"/>
+                    <t t-set="emp_dept" t-value="(emp.department_id.name if emp and emp.department_id else '')"/>
+                    <t t-set="user_name_clean" t-value="doc._normalize_report_text((emp.name if emp else (doc.user_id.display_name or '')))"/>
+                    <t t-set="emp_job_clean" t-value="doc._normalize_report_text(emp_job)"/>
+                    <t t-set="emp_dept_clean" t-value="doc._normalize_report_text(emp_dept).replace('ó', 'o').replace('Ó', 'O').replace('Ã³', 'o').replace('Ã“', 'O').replace('�', '')"/>
+                    <t t-set="delivery_name_clean" t-value="doc._normalize_report_text(doc.delivery_user_id.display_name or '')"/>
+                    <t t-set="delivery_job_clean" t-value="doc._normalize_report_text(doc.delivery_job_name or '')"/>
+                    <t t-set="receiver_job_clean" t-value="doc._normalize_report_text(doc.receiver_job_name or '')"/>
+                    <p class="sa_justify">
+                        Se procede a la entrega de elementos de trabajo por parte del empleado, <strong><span t-esc="user_name_clean"/></strong>,
+                        mayor de edad, identificado(a) con la cedula de ciudadania <strong><span t-esc="id_number or ''"/></strong>,
+                        a <strong>SUPPLIES DE COLOMBIA S.A.S</strong>, con NIT 830004631-7 en presencia del analista de inventarios.
+                    </p>
+                    <div style="text-align:center; font-weight:700; margin:8px 0 6px 0;">Datos de empleado</div>
+                    <p style="margin:0;"><strong>Nombre:</strong> <span t-esc="user_name_clean"/></p>
+                    <p style="margin:0;"><strong>Cargo:</strong> <span t-esc="emp_job_clean"/></p>
+                    <p style="margin:0 0 6px 0;"><strong>Departamento:</strong> <span t-esc="emp_dept_clean"/></p>
+                    <p>Se genera la devolucion de los siguientes elementos y herramientas de trabajo:</p>
+                    <table class="sa_table">
+                        <thead>
+                            <tr>
+                                <th>ACTIVO</th><th>MARCA</th><th>MODELO</th><th>SERIAL</th><th>P. SEGURIDAD</th><th>P. INVENTARIO</th><th>OBSERVACIONES</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><span t-esc="doc.product_id.display_name or ''"/></td>
+                                <td><span t-esc="doc.product_id.name or ''"/></td>
+                                <td><span t-esc="doc.lot_id.model_name or ''"/></td>
+                                <td><span t-esc="doc.lot_id.name or ''"/></td>
+                                <td><span t-esc="doc.lot_id.security_plate or ''"/></td>
+                                <td><span t-esc="doc.lot_id.inventory_plate or ''"/></td>
+                                <td><span t-esc="doc.note or ''"/></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <table class="sa_table" style="margin-top:10px;">
+                        <thead>
+                            <tr>
+                                <th style="width:18%;">CANTIDAD</th>
+                                <th>DESCRIPCION</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-if="doc.lot_id and doc.lot_id.lot_supply_line_ids">
+                                <t t-foreach="doc.lot_id.lot_supply_line_ids" t-as="ln">
+                                    <tr>
+                                        <td><span t-esc="ln.quantity or 1.0"/></td>
+                                        <td style="text-align:left;"><span t-esc="ln.product_id.display_name or ''"/> <t t-if="ln.related_lot_id">- Serial: <t t-esc="ln.related_lot_id.name or ''"/></t></td>
+                                    </tr>
+                                </t>
+                            </t>
+                            <t t-else="">
+                                <tr><td>1</td><td style="text-align:left;">Sin elementos adicionales asociados.</td></tr>
+                            </t>
+                        </tbody>
+                    </table>
+                    <div class="sa_subtitle">Estado de elementos y herramientas:</div>
+                    <ul style="margin:0 0 8px 18px; padding:0;">
+                        <li>Todos los elementos relacionados fueron recibidos para su revision.</li>
+                    </ul>
+                    <p class="sa_justify">
+                        Los suscritos dejan constancia que los elementos y herramientas relacionadas en el presente documento son todos los que fueron recibidos y usados durante el ejercicio del cargo del empleado dentro de la compania.
+                    </p>
+                    <p class="sa_justify">
+                        Leido el presente documento por LAS PARTES que en el intervienen y manifestandose de sus fines y alcances legales, lo firman de plena conformidad el dia <strong><span t-esc="return_date_text"/></strong>.
+                    </p>
+                    <table class="sa_sign">
+                        <tr>
+                            <td>
+                                <strong>Entrega</strong>
+                                <div t-if="doc.return_signature_delivery" style="margin-top:6px;">
+                                    <img t-att-src="image_data_uri(doc.return_signature_delivery)" style="max-height:45px; max-width:180px;"/>
+                                </div>
+                                <div class="sa_line"/>
+                                <div>Nombre: <span t-esc="user_name_clean"/></div>
+                                <div>Cargo: <span t-esc="receiver_job_clean"/></div>
+                            </td>
+                            <td>
+                                <strong>Recibe</strong>
+                                <div t-if="doc.return_signature_receiver" style="margin-top:6px;">
+                                    <img t-att-src="image_data_uri(doc.return_signature_receiver)" style="max-height:45px; max-width:180px;"/>
+                                </div>
+                                <div class="sa_line"/>
+                                <div>Nombre: <span t-esc="delivery_name_clean"/></div>
+                                <div>Cargo: <span t-esc="delivery_job_clean"/></div>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </t>
+        </t>
+    </template>
+
+    <template id="report_supplies_assignment_reassignment_pdf">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <div class="page sa_page">
+                    <t t-call="inventory_dashboard_simple.report_supplies_acta_style_block"/>
+                    <div class="sa_hdr">
+                        <table>
+                            <tr>
+                                <td style="width:18%; text-align:center; padding:6px;">
+                                    <t t-set="logo_bin" t-value="(doc.user_id.company_id.logo if doc.user_id and doc.user_id.company_id and doc.user_id.company_id.logo else env.company.logo)"/>
+                                    <img t-if="logo_bin" t-att-src="image_data_uri(logo_bin)" style="max-height:60px; max-width:80px;"/>
+                                </td>
+                                <td style="width:62%;">
+                                    <div class="sa_title">ACTA DE REASIGNACION DE EQUIPOS DE TRABAJO</div>
+                                    <div class="sa_subrow">F-GAD-ARET-001</div>
+                                    <div class="sa_subrow">Version: 01 | Fecha de Creacion: abril 2026</div>
+                                </td>
+                                <td style="width:20%; text-align:center; font-weight:700; color:#777;">PAGINA 1 DE 1</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <t t-set="emp" t-value="doc.employee_id or env['hr.employee'].sudo().search([('user_id', '=', doc.user_id.id)], limit=1)"/>
+                    <t t-set="id_number" t-value="(emp.identification_id if emp and emp.identification_id else (doc.user_id.partner_id.vat if doc.user_id and doc.user_id.partner_id else ''))"/>
+                    <t t-set="emp_job" t-value="(emp.job_id.name if emp and emp.job_id else '')"/>
+                    <t t-set="emp_dept" t-value="(emp.department_id.name if emp and emp.department_id else '')"/>
+                    <t t-set="user_name_clean" t-value="doc._normalize_report_text((emp.name if emp else (doc.user_id.display_name or '')))"/>
+                    <t t-set="emp_job_clean" t-value="doc._normalize_report_text(emp_job)"/>
+                    <t t-set="emp_dept_clean" t-value="doc._normalize_report_text(emp_dept).replace('ó', 'o').replace('Ó', 'O').replace('Ã³', 'o').replace('Ã“', 'O').replace('�', '')"/>
+                    <t t-set="month_names_es" t-value="['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']"/>
+                    <t t-set="date_text_reassign" t-value="(str(doc.date.day) + ' de ' + month_names_es[doc.date.month - 1] + ' de ' + str(doc.date.year)) if doc.date else ''"/>
+                    <t t-set="assignment_doc" t-value="doc.new_assignment_id"/>
+                    <t t-set="delivery_name_clean" t-value="doc._normalize_report_text((assignment_doc.delivery_user_id.display_name if assignment_doc and assignment_doc.delivery_user_id else ''))"/>
+                    <t t-set="delivery_job_clean" t-value="doc._normalize_report_text((assignment_doc.delivery_job_name if assignment_doc else ''))"/>
+                    <t t-set="receiver_job_clean" t-value="doc._normalize_report_text((assignment_doc.receiver_job_name if assignment_doc else ''))"/>
+                    <div style="text-align:center; font-weight:700; margin:8px 0 6px 0;">Datos del empleado</div>
+                    <p>En la fecha <strong><span t-esc="date_text_reassign"/></strong>, se realiza el cambio de elementos de trabajo al colaborador:</p>
+                    <p style="margin:0;"><strong>Nombre:</strong> <span t-esc="user_name_clean"/></p>
+                    <p style="margin:0;"><strong>Cargo:</strong> <span t-esc="emp_job_clean"/></p>
+                    <p style="margin:0;"><strong>Departamento:</strong> <span t-esc="emp_dept_clean"/></p>
+                    <p style="margin:0 0 8px 0;"><strong>Cedula:</strong> <span t-esc="id_number or ''"/></p>
+                    <h4 style="margin:10px 0 6px 0;">Equipos devueltos</h4>
+                    <table class="sa_table">
+                        <tr>
+                            <th>ACTIVO</th><th>MARCA</th><th>MODELO</th><th>SERIAL</th><th>PLACA SEGURIDAD</th><th>PLACA INVENTARIO</th>
+                        </tr>
+                        <tr>
+                            <td><span t-esc="doc.old_product_id.display_name or ''"/></td>
+                            <td><span t-esc="doc.old_product_id.name or ''"/></td>
+                            <td><span t-esc="doc.old_lot_id.model_name or ''"/></td>
+                            <td><span t-esc="doc.old_lot_id.name or ''"/></td>
+                            <td><span t-esc="doc.old_lot_id.security_plate or ''"/></td>
+                            <td><span t-esc="doc.old_lot_id.inventory_plate or ''"/></td>
+                        </tr>
+                    </table>
+                    <h4 style="margin:10px 0 6px 0;">Equipos entregados</h4>
+                    <table class="sa_table">
+                        <tr>
+                            <th>ACTIVO</th><th>MARCA</th><th>MODELO</th><th>SERIAL</th><th>PLACA SEGURIDAD</th><th>PLACA INVENTARIO</th>
+                        </tr>
+                        <tr>
+                            <td><span t-esc="doc.new_product_id.display_name or ''"/></td>
+                            <td><span t-esc="doc.new_product_id.name or ''"/></td>
+                            <td><span t-esc="doc.new_lot_id.model_name or ''"/></td>
+                            <td><span t-esc="doc.new_lot_id.name or ''"/></td>
+                            <td><span t-esc="doc.new_lot_id.security_plate or ''"/></td>
+                            <td><span t-esc="doc.new_lot_id.inventory_plate or ''"/></td>
+                        </tr>
+                    </table>
+                    <p style="margin:10px 0 0 0;"><strong>Estado de entrega de los equipos:</strong></p>
+                    <div style="height:10px;"></div>
+                    <p style="margin:0 0 6px 0;"><span t-esc="doc._normalize_report_text(doc.note or 'Sin observaciones')"/></p>
+                    <div style="height:40px;"></div>
+                    <div style="height:24px;"></div>
+                    <table class="sa_sign" style="margin-top:20px;">
+                        <tr>
+                            <td>
+                                <strong>Entrega</strong>
+                                <div t-if="assignment_doc and assignment_doc.signature_delivery" style="margin-top:6px;">
+                                    <img t-att-src="image_data_uri(assignment_doc.signature_delivery)" style="max-height:45px; max-width:180px;"/>
+                                </div>
+                                <div class="sa_line"/>
+                                <div>Nombre: <span t-esc="delivery_name_clean"/></div>
+                                <div>Cargo: <span t-esc="delivery_job_clean"/></div>
+                            </td>
+                            <td>
+                                <strong>Recibe</strong>
+                                <div t-if="assignment_doc and assignment_doc.signature_receiver" style="margin-top:6px;">
+                                    <img t-att-src="image_data_uri(assignment_doc.signature_receiver)" style="max-height:45px; max-width:180px;"/>
+                                </div>
+                                <div class="sa_line"/>
+                                <div>Nombre: <span t-esc="user_name_clean"/></div>
+                                <div>Cargo: <span t-esc="receiver_job_clean"/></div>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </t>
+        </t>
+    </template>
+
+    <record id="action_report_supplies_assignment_entrega" model="ir.actions.report">
+        <field name="name">Acta Entrega Equipos</field>
+        <field name="model">supplies.assignment</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">inventory_dashboard_simple.report_supplies_assignment_entrega_pdf</field>
+        <field name="report_file">inventory_dashboard_simple.report_supplies_assignment_entrega_pdf</field>
+        <field name="binding_model_id" ref="model_supplies_assignment"/>
+    </record>
+
+    <record id="action_report_supplies_assignment_devolucion" model="ir.actions.report">
+        <field name="name">Acta Devolucion Equipos</field>
+        <field name="model">supplies.assignment</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">inventory_dashboard_simple.report_supplies_assignment_devolucion_pdf</field>
+        <field name="report_file">inventory_dashboard_simple.report_supplies_assignment_devolucion_pdf</field>
+        <field name="binding_model_id" ref="model_supplies_assignment"/>
+    </record>
+
+    <record id="action_report_supplies_assignment_reassignment" model="ir.actions.report">
+        <field name="name">Acta Reasignacion Equipos</field>
+        <field name="model">supplies.assignment.reassignment</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">inventory_dashboard_simple.report_supplies_assignment_reassignment_pdf</field>
+        <field name="report_file">inventory_dashboard_simple.report_supplies_assignment_reassignment_pdf</field>
+        <field name="binding_model_id" ref="model_supplies_assignment_reassignment"/>
+    </record>
+</odoo>

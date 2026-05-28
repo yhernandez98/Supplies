@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data>
+    <record id="view_sale_order_form_integration_bridge" model="ir.ui.view">
+        <field name="name">sale.order.form.integration.bridge</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[hasclass('oe_button_box')]" position="inside">
+                <button name="action_view_integration_cases"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-link"
+                        invisible="integration_case_count == 0">
+                    <field name="integration_case_count" widget="statinfo" string="Integración"/>
+                </button>
+            </xpath>
+            <xpath expr="//sheet/group" position="after">
+                <group string="Propuesta comercial (cliente)" invisible="not calculator_projection_ready">
+                    <field name="calculator_projection_case_id" readonly="1"/>
+                    <field name="calculator_projection_currency_id" invisible="1"/>
+                    <field name="calculator_projection_total" widget="monetary" options="{'currency_field': 'calculator_projection_currency_id'}" readonly="1"/>
+                    <field name="calculator_projection_24" widget="monetary" options="{'currency_field': 'calculator_projection_currency_id'}" readonly="1"/>
+                    <field name="calculator_projection_36" widget="monetary" options="{'currency_field': 'calculator_projection_currency_id'}" readonly="1"/>
+                    <field name="calculator_projection_48" widget="monetary" options="{'currency_field': 'calculator_projection_currency_id'}" readonly="1"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+</data>

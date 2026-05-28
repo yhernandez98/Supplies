@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="view_supplies_assignment_tree" model="ir.ui.view">
+            <field name="name">supplies.assignment.tree</field>
+            <field name="model">supplies.assignment</field>
+            <field name="arch" type="xml">
+                <list string="Asignaciones Supplies" default_order="id desc">
+                    <field name="name"/>
+                    <field name="state"/>
+                    <field name="signature_state"/>
+                    <field name="employee_id"/>
+                    <field name="user_id"/>
+                    <field name="product_id"/>
+                    <field name="lot_id"/>
+                    <field name="quantity"/>
+                    <field name="availability_display" string="Disponibilidad"/>
+                    <field name="assignment_date"/>
+                    <field name="return_date"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_supplies_assignment_form" model="ir.ui.view">
+            <field name="name">supplies.assignment.form</field>
+            <field name="model">supplies.assignment</field>
+            <field name="arch" type="xml">
+                <form string="Asignación Supplies">
+                    <header>
+                        <button name="action_open_supplies_hub"
+                                type="object"
+                                string="Volver a Asignaciones"
+                                class="btn-secondary"/>
+                        <button name="action_confirm_assignment"
+                                type="object"
+                                string="Confirmar asignación"
+                                class="btn-primary"
+                                invisible="state != 'draft'"/>
+                        <button name="action_return_assignment"
+                                type="object"
+                                string="Registrar devolución"
+                                class="btn-secondary"
+                                invisible="state != 'assigned'"/>
+                        <field name="state" widget="statusbar" statusbar_visible="draft,assigned,returned"/>
+                        <field name="signature_state" widget="statusbar" statusbar_visible="pending,signed"/>
+                        <field name="return_signature_state" widget="statusbar" statusbar_visible="pending,signed" invisible="not return_pending_signature"/>
+                    </header>
+                    <sheet>
+                        <group>
+                            <group>
+                                <field name="name" readonly="1"/>
+                                <field name="employee_id" readonly="state != 'draft'"/>
+                                <field name="user_id" readonly="1"/>
+                                <field name="product_id" readonly="state != 'draft'"/>
+                                <field name="lot_id" readonly="state != 'draft'" domain="[('product_id', '=', product_id)]"/>
+                                <field name="quantity" readonly="state != 'draft'"/>
+                            </group>
+                            <group>
+                                <field name="availability_display" readonly="1"/>
+                                <field name="delivery_user_id" readonly="1"/>
+                                <field name="source_location_id" readonly="1"/>
+                                <field name="destination_location_id" readonly="1"/>
+                                <field name="assignment_picking_id" readonly="1"/>
+                                <field name="return_picking_id" readonly="1"/>
+                            </group>
+                        </group>
+                        <group string="Firmas del acta" invisible="state != 'assigned'">
+                            <group>
+                                <field name="delivery_job_name" readonly="1"/>
+                                <field name="signature_delivery" widget="signature"/>
+                            </group>
+                            <group>
+                                <field name="receiver_job_name" readonly="1"/>
+                                <field name="signature_receiver" widget="signature"/>
+                            </group>
+                        </group>
+                        <group string="Firmas acta devolución" invisible="state != 'assigned'">
+                            <group>
+                                <field name="return_pending_signature" readonly="1"/>
+                                <field name="return_signature_request_date" readonly="1"/>
+                                <field name="return_signature_delivery" widget="signature"/>
+                            </group>
+                            <group>
+                                <field name="return_signature_state" readonly="1"/>
+                                <field name="return_signature_receiver" widget="signature"/>
+                            </group>
+                        </group>
+                        <group>
+                            <field name="note" placeholder="Observaciones de la asignación."/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_supplies_assignment_search" model="ir.ui.view">
+            <field name="name">supplies.assignment.search</field>
+            <field name="model">supplies.assignment</field>
+            <field name="arch" type="xml">
+                <search string="Buscar asignaciones">
+                    <field name="name"/>
+                    <field name="employee_id"/>
+                    <field name="user_id"/>
+                    <field name="product_id"/>
+                    <field name="lot_id"/>
+                    <filter name="filter_assigned" string="Asignados" domain="[('state', '=', 'assigned')]"/>
+                    <filter name="filter_draft" string="Borradores" domain="[('state', '=', 'draft')]"/>
+                    <filter name="filter_returned" string="Devueltos" domain="[('state', '=', 'returned')]"/>
+                    <filter name="filter_pending_signature" string="Pendiente firmas" domain="[('signature_state', '=', 'pending')]"/>
+                    <separator/>
+                    <filter name="group_state" string="Agrupar por Estado" context="{'group_by': 'state'}"/>
+                    <filter name="group_user" string="Agrupar por Usuario" context="{'group_by': 'user_id'}"/>
+                    <filter name="group_product" string="Agrupar por Producto" context="{'group_by': 'product_id'}"/>
+                </search>
+            </field>
+        </record>
+
+        <record id="action_supplies_assignment" model="ir.actions.act_window">
+            <field name="name">Asignaciones Supplies</field>
+            <field name="res_model">supplies.assignment</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="view_supplies_assignment_search"/>
+            <field name="context">{'search_default_filter_assigned': 1}</field>
+            <field name="help" type="html">
+                <p>Gestione las asignaciones de productos de Supp/Existencias al personal de Supplies.</p>
+                <p>Mientras un registro esté en estado Asignado, ese serial queda fuera de existencias.</p>
+            </field>
+        </record>
+    </data>
+</odoo>

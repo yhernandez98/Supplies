@@ -4,6 +4,7 @@ import datetime
 from dateutil.relativedelta import relativedelta
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError
+from odoo.tools.misc import formatLang
 import logging
 
 _logger = logging.getLogger(__name__)
@@ -66,9 +67,10 @@ class StockLot(models.Model):
     )
 
     def write(self, vals):
+        skip_exit_tracking = bool(self.env.context.get('skip_subscription_exit_tracking'))
         # Al quitar la suscripción del serial (producto sale a otro cliente): mantener registro hasta día 1 del mes siguiente.
         # Solo guardar last_subscription_id si aún no hay uno (A→B→C mismo día: no sobrescribir con B, así A sigue viendo salida y B no aparece).
-        if 'active_subscription_id' in vals and vals.get('active_subscription_id') is False:
+        if (not skip_exit_tracking) and 'active_subscription_id' in vals and vals.get('active_subscription_id') is False:
             today = fields.Date.context_today(self)
             next_month = today + relativedelta(months=1)
             first_next = datetime.date(next_month.year, next_month.month, 1)
@@ -88,7 +90,7 @@ class StockLot(models.Model):
             # No borrar last_exit_date_display ni last_entry_date_display aquí: la suscripción debe seguir
             # mostrando las fechas hasta el día 1 (el cron las limpia entonces).
         # Si también quitan el servicio, guardar para mostrar hasta el día 1
-        if 'subscription_service_product_id' in vals and vals.get('subscription_service_product_id') is False:
+        if (not skip_exit_tracking) and 'subscription_service_product_id' in vals and vals.get('subscription_service_product_id') is False:
             for lot in self:
                 if lot.subscription_service_product_id and not vals.get('last_subscription_service_id'):
                     vals = dict(vals, last_subscription_service_id=lot.subscription_service_product_id.id)
@@ -180,61 +182,69 @@ class StockLot(models.Model):
 
     @api.depends('quant_ids', 'quant_ids.location_id', 'quant_ids.quantity', 'location_partner_id')
     def _compute_available_subscription_ids(self):
-        """Calcular suscripciones disponibles según el cliente de la ubicación del lote."""
+        """Calcular suscripciones disponibles según el cliente de la ubicación del lote.
+
+        Si el formulario se abre con ``force_license_partner_id`` (p. ej. editor desde orden de
+        entrega, mismo contexto que el filtro de Usuario), se listan todas las suscripciones en
+        borrador/activo de ese cliente comercial, sin exigir coincidencia de ubicación (evita lista
+        vacía cuando el serial está en tránsito).
+        """
+        Subscription = self.env['subscription.subscription']
         for lot in self:
-            # Inicializar como lista vacía
-            lot.available_subscription_ids = []
-            
             if not lot.id:
+                lot.available_subscription_ids = Subscription.browse()
                 continue
-            
-            # Obtener el cliente de la ubicación
+
+            forced_pid = lot.env.context.get('force_license_partner_id')
+            if forced_pid:
+                forced = lot.env['res.partner'].browse(forced_pid).exists()
+                if forced:
+                    commercial = forced.commercial_partner_id or forced
+                    subs = Subscription.search([
+                        ('state', 'in', ('draft', 'active')),
+                        ('partner_id', 'child_of', commercial.id),
+                    ])
+                    lot.available_subscription_ids = subs
+                else:
+                    lot.available_subscription_ids = Subscription.browse()
+                continue
+
             customer_partner_id = False
             customer_location_id = False
-            
-            # Intentar obtener desde location_partner_id (product_suppiles_partner)
+
             if hasattr(lot, 'location_partner_id') and lot.location_partner_id:
                 customer_partner_id = lot.location_partner_id.id
-            
-            # Intentar obtener desde customer_id (mesa_ayuda_inventario)
+
             if not customer_partner_id and hasattr(lot, 'customer_id') and lot.customer_id:
                 customer_partner_id = lot.customer_id.id
-            
-            # Intentar obtener desde customer_location_id (mesa_ayuda_inventario)
+
             if hasattr(lot, 'customer_location_id') and lot.customer_location_id:
                 customer_location_id = lot.customer_location_id.id
-            
-            # Si no hay customer_location_id, intentar obtener desde quants
+
             if not customer_location_id and lot.quant_ids:
                 quant = lot.quant_ids.filtered(lambda q: q.quantity > 0 and q.location_id.usage == 'internal')
                 if quant:
                     location = quant[0].location_id
                     customer_location_id = location.id
-                    
-                    # Si no hay customer_partner_id, intentar obtenerlo desde la ubicación
                     if not customer_partner_id:
                         partner = lot.env['res.partner'].search([
                             ('property_stock_customer', '=', location.id)
                         ], limit=1)
                         if partner:
                             customer_partner_id = partner.id
-            
-            # Buscar suscripciones según el cliente y ubicación
+
             domain = [('state', 'in', ('draft', 'active'))]
-            
+
             if customer_partner_id:
                 domain.append(('partner_id', '=', customer_partner_id))
-            
+
             if customer_location_id:
                 domain.append(('location_id', '=', customer_location_id))
-            
-            # Si tenemos al menos cliente o ubicación, buscar suscripciones
+
             if customer_partner_id or customer_location_id:
-                subscriptions = lot.env['subscription.subscription'].search(domain)
-                lot.available_subscription_ids = subscriptions.ids
+                lot.available_subscription_ids = Subscription.search(domain)
             else:
-                # Si no hay cliente ni ubicación, no mostrar ninguna suscripción
-                lot.available_subscription_ids = []
+                lot.available_subscription_ids = Subscription.browse()
     
     @api.onchange('quant_ids')
     def _onchange_quant_ids_update_subscriptions(self):
@@ -248,6 +258,10 @@ class StockLot(models.Model):
 
     def name_get(self):
         """Personaliza el nombre mostrado para mostrar solo la placa de inventario cuando se usa desde el wizard."""
+        # Wizard acta de visita (mesa_ayuda_inventario): debe verse producto + placa + serie (p. ej. varios «5050»).
+        # No aplicar el modo «solo placa/serie» de subscription.equipment.change.wizard.
+        if self.env.context.get('mesa_acta_equipment_wizard'):
+            return super().name_get()
         context = self.env.context or {}
         
         # LOGGING DETALLADO: Registrar todo el contexto para depuración
@@ -435,25 +449,73 @@ class StockLot(models.Model):
                 _logger.error("Error crítico en _name_search, retornando lista vacía")
                 return []
 
-    def action_open_subscription_equipment_changes(self):
-        """Abrir el wizard de cambios de equipo con el lote actual como equipo anterior."""
+    def get_acta_entrega_subscription_service_price_display(self):
+        """Texto del precio recurrente del servicio del serial para PDFs (acta entrega/devolución).
+
+        Solo cuando hay ``subscription_service_product_id`` y ``active_subscription_id``:
+        misma fuente que el resto del módulo (``_get_price_for_product`` + moneda de la regla).
+        Si falta dato o no hay precio calculable, cadena vacía (no se muestra nada en QWeb).
+        El importe 0 se muestra formateado cuando la lista define precio cero.
+        """
         self.ensure_one()
-        
-        # Buscar la suscripción relacionada con este lot a través de usage activo
+        service = self.subscription_service_product_id
+        sub = self.active_subscription_id
+        if not service or not sub:
+            return ''
+        try:
+            price = sub._get_price_for_product(service, 1.0)
+            if price is None:
+                return ''
+            currency = sub._get_currency_for_product_price(service, sub.plan_id)
+            if not currency:
+                currency = (
+                    sub.currency_id
+                    or (sub.partner_id.property_product_pricelist.currency_id if sub.partner_id and sub.partner_id.property_product_pricelist else False)
+                    or self.env.company.currency_id
+                )
+            digits = int(currency.decimal_places) if currency else 2
+            return formatLang(self.env, price, currency_obj=currency, digits=digits)
+        except Exception:
+            _logger.debug(
+                'get_acta_entrega_subscription_service_price_display: lote %s sin precio mostrable',
+                self.id,
+                exc_info=True,
+            )
+            return ''
+
+    def _get_subscription_for_equipment_change(self):
+        """Suscripción activa con ubicación para el wizard de cambio de equipo.
+
+        Prioridad: ``active_subscription_id`` en el serial; si no, uso activo
+        (``subscription.subscription.usage``).
+        """
+        self.ensure_one()
+        Subscription = self.env['subscription.subscription']
+        sub = getattr(self, 'active_subscription_id', Subscription.browse())
+        if sub and sub.state == 'active' and sub.location_id:
+            return sub
         usage = self.env['subscription.subscription.usage'].search([
             ('lot_id', '=', self.id),
-            ('date_end', '=', False),  # Solo usage activo
+            ('date_end', '=', False),
         ], limit=1, order='date_start desc')
-        
-        if not usage or not usage.subscription_id:
+        if usage and usage.subscription_id:
+            s = usage.subscription_id
+            if s.state == 'active' and s.location_id:
+                return s
+        return Subscription.browse()
+
+    def action_open_equipment_change_wizard(self):
+        """Abre el wizard real de cambio de equipo (mismo que en la suscripción).
+
+        Puede llamarse desde la ficha del serial, inventario cliente o mantenimiento.
+        """
+        self.ensure_one()
+        sub = self._get_subscription_for_equipment_change()
+        if not sub:
             raise UserError(_(
-                'No se encontró una suscripción activa asociada a este equipo.\n'
-                'El equipo debe estar en uso en una suscripción activa para realizar cambios.'
+                'No hay suscripción activa con ubicación vinculada a este serial para el cambio de equipo.\n'
+                'Asigne «Suscripción activa» en el serial o verifique que el equipo esté en uso en una suscripción.'
             ))
-        
-        subscription_id = usage.subscription_id.id
-        
-        # Abrir el wizard directamente con los valores por defecto
         return {
             'type': 'ir.actions.act_window',
             'name': _('Cambio de Equipo'),
@@ -461,12 +523,16 @@ class StockLot(models.Model):
             'view_mode': 'form',
             'target': 'new',
             'context': {
-                'default_subscription_id': subscription_id,
-                'default_old_equipment_inventory_plate_search': self.id,  # Prellenar con el lote actual
-                'default_old_equipment_lot_id': self.id,  # Prellenar con el lote actual
+                'default_subscription_id': sub.id,
+                'default_old_equipment_inventory_plate_search': self.id,
+                'default_old_equipment_lot_id': self.id,
                 'equipment_change_wizard': True,
                 'search_by_inventory_plate_only': True,
                 'active_model': 'subscription.equipment.change.wizard',
             },
         }
+
+    def action_open_subscription_equipment_changes(self):
+        """Compatibilidad: mismo flujo que ``action_open_equipment_change_wizard``."""
+        return self.action_open_equipment_change_wizard()
 

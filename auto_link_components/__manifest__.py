@@ -1,13 +1,8 @@
-# -*- coding: utf-8 -*-
-# Copyright 2026 Supplies De Colombia SAS
-# License LGPL-3.0 or later (https://www.gnu.org/licenses/lgpl-3.0.html).
-
 {
     'name': 'Product Supplies Auto Relations',
     'version': '19.0.1.0.0',
     'category': 'Inventory',
     'summary': 'Automatiza la creación de relaciones entre componentes basándose en el número de lote',
-    'author': 'Supplies De Colombia SAS',
     'description': """
         Este módulo extiende product_supplies para:
         - Crear automáticamente relaciones entre productos compuestos y sus componentes

@@ -4,7 +4,7 @@
 
 {
     'name': 'CRM Sales Supplies Integration',
-    'version': '19.0.1.0.21',
+    'version': '19.0.1.0.25',
     'author': 'Supplies De Colombia SAS',
     'category': 'Sales/CRM',
     'depends': [
@@ -53,6 +53,7 @@
         'web.assets_backend': [
             'crm_sales_supplies/static/src/css/inventory_style.css',
             'crm_sales_supplies/static/src/js/inventory_view.js',
+            'crm_sales_supplies/static/src/js/purchase_alert_menu_badge.js',
         ],
     },
 }

@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
-# Copyright 2026 Supplies De Colombia SAS
-# License LGPL-3.0 or later (https://www.gnu.org/licenses/lgpl-3.0.html).
 {
     'name': 'DIAN NIT Colombia',
     'version': '19.0.1.0.1',
-    'author': 'Supplies De Colombia SAS',
+    'author': 'Felipe Valbuena',
     'website': 'https://www.example.com',
     'category': 'Localization/Colombia',
     'summary': 'Gestion completa de NIT colombiano con algoritmo DIAN para facturacion',
