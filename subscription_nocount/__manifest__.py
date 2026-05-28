@@ -27,4 +27,10 @@
         'views/subscription_dashboard_templates.xml',
         'views/subscription_views.xml',
         'views/product_views.xml',
-        'views/pricelist_views.
+        'views/pricelist_views.xml',
+        'views/stock_lot_form_inherit_subscription_fields.xml',
+    ],
+    'application': True,
+    'license': 'LGPL-3',
+    'post_init_hook': 'post_init_hook',
+}

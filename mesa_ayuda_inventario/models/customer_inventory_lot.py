@@ -1573,4 +1573,38 @@ class StockLotCustomerInventory(models.Model):
                     for condition in domain:
                         if isinstance(condition, (list, tuple)) and len(condition) >= 3:
                             if condition[0] == 'customer_id' and condition[1] == '=':
-                  
+                                customer_id = condition[2]
+                                break
+                except:
+                    pass
+        
+        if not customer_id:
+            raise UserError(_('No se pudo determinar el cliente para cambiar de vista. Por favor, asegúrate de estar viendo el inventario de un cliente específico.'))
+        
+        customer = self.env['res.partner'].browse(customer_id)
+        return customer.action_view_customer_inventory_kanban()
+    
+    def action_view_component_changes(self):
+        """Abrir vista del historial completo de cambios de componentes para este equipo."""
+        self.ensure_one()
+        
+        # Obtener todos los cambios de componentes relacionados con este equipo
+        all_changes = self.env['maintenance.component.change']
+        for maintenance in self.maintenance_ids:
+            all_changes |= maintenance.component_change_ids
+        
+        # Obtener los IDs únicos
+        change_ids = all_changes.sorted('change_date', reverse=True).ids
+        
+        return {
+            'name': _('Historial de Cambios de Componentes - %s') % (self.name or ''),
+            'type': 'ir.actions.act_window',
+            'res_model': 'maintenance.component.change',
+            'view_mode': 'list,form',
+            'domain': [('id', 'in', change_ids)],
+            'context': {
+                'default_lot_id': self.id,
+                'search_default_lot_id': self.id,
+            },
+            'target': 'current',
+        }

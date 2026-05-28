@@ -1022,4 +1022,263 @@ class Calculadora(models.Model):
         pago_mensual_total = pago_base_equipo + servicio_mensual
         
         # Total a pagar
-        total_pagar = 
+        total_pagar = pago_mensual_total * plazo_calc
+        
+        # Calcular valor del equipo sin garantía (siempre)
+        valor_equipo_sin_garantia_cop = self._convert_to_company_currency(
+            self.valor_usd * (1 + self.porcentaje_utilidad / 100.0),
+            usd,
+        ) if usd else 0.0
+        
+        # Calcular valor de garantía en COP si está incluida
+        garantia_cop = 0.0
+        if incluir_seguro and self.valor_garantia_usd > 0:
+            garantia_cop = self._convert_to_company_currency(
+                self.valor_garantia_usd * (1 + self.porcentaje_utilidad / 100.0),
+                usd,
+            ) if usd else 0.0
+        
+        return {
+            'costo_equipo_usd': costo_equipo_base_usd,
+            'costo_equipo_cop': costo_equipo_cop,
+            'valor_equipo_sin_garantia_cop': valor_equipo_sin_garantia_cop,
+            'garantia_cop': garantia_cop,
+            'servicio_mensual': servicio_mensual,
+            'pago_base_equipo': pago_base_equipo,
+            'pago_mensual_total': pago_mensual_total,
+            'total_pagar': total_pagar,
+            'plazo': plazo_calc,
+        }
+    
+    def get_escenarios_resumen(self):
+        """
+        Obtiene los 4 escenarios para el reporte.
+        Los escenarios muestran el desglose de los valores calculados.
+        
+        IMPORTANTE: El Escenario 1 (con seguro y servicios) debería coincidir con
+        los valores por plazo mostrados en la interfaz cuando el equipo tiene garantía configurada.
+        
+        :return: Diccionario con los 4 escenarios y sus valores por plazo
+        """
+        self.ensure_one()
+        
+        escenarios = {
+            'escenario_1': {
+                'nombre': 'Con Seguro y Servicios Técnicos',
+                'incluir_seguro': True,
+                'incluir_servicios': True,
+                'plazos': {}
+            },
+            'escenario_2': {
+                'nombre': 'Sin Seguro pero con Servicios Técnicos',
+                'incluir_seguro': False,
+                'incluir_servicios': True,
+                'plazos': {}
+            },
+            'escenario_3': {
+                'nombre': 'Con Seguro pero sin Servicios Técnicos',
+                'incluir_seguro': True,
+                'incluir_servicios': False,
+                'plazos': {}
+            },
+            'escenario_4': {
+                'nombre': 'Sin Seguro ni Servicios Técnicos',
+                'incluir_seguro': False,
+                'incluir_servicios': False,
+                'plazos': {}
+            },
+        }
+        
+        # Calcular valores para cada escenario en los diferentes plazos
+        # Usa _calcular_escenario que ya tiene toda la lógica de cálculo
+        for esc_key, esc_data in escenarios.items():
+            for plazo in PLAZOS_COMPARACION_MESES:
+                valores = self._calcular_escenario(
+                    incluir_seguro=esc_data['incluir_seguro'],
+                    incluir_servicios=esc_data['incluir_servicios'],
+                    plazo=plazo
+                )
+                esc_data['plazos'][plazo] = valores
+        
+        return escenarios
+    
+    def validar_consistencia_calculos(self):
+        """
+        Valida que los cálculos de la interfaz web coincidan con los del reporte.
+        Retorna un diccionario con los resultados de la validación.
+        """
+        self.ensure_one()
+        resultados = {
+            'valido': True,
+            'errores': [],
+            'advertencias': []
+        }
+        
+        # Validar que valor_24_meses coincida con Escenario 1 a 24 meses
+        # (solo si hay garantía configurada)
+        if self.valor_garantia_usd > 0:
+            escenario_1 = self.get_escenarios_resumen()['escenario_1']
+            valor_24_escenario = escenario_1['plazos'][24]['pago_mensual_total']
+            diferencia = abs(self.valor_24_meses - valor_24_escenario)
+            
+            # Permitir pequeñas diferencias por redondeo (menos de 1 COP)
+            if diferencia > 1.0:
+                resultados['valido'] = False
+                resultados['errores'].append(
+                    f"valor_24_meses ({self.valor_24_meses:,.2f}) no coincide con "
+                    f"Escenario 1 a 24 meses ({valor_24_escenario:,.2f}). "
+                    f"Diferencia: {diferencia:,.2f} COP"
+                )
+            elif diferencia > 0.01:
+                resultados['advertencias'].append(
+                    f"Pequeña diferencia en valor_24_meses: {diferencia:,.2f} COP"
+                )
+        
+        # Validar que pago_mensual coincida con el escenario correspondiente
+        # según el plazo configurado
+        pm = self._plazo_meses_int()
+        if pm in PLAZOS_COMPARACION_MESES:
+            escenario_1 = self.get_escenarios_resumen()['escenario_1']
+            valor_plazo_escenario = escenario_1['plazos'][pm]['pago_mensual_total']
+            diferencia = abs(self.pago_mensual - valor_plazo_escenario)
+            
+            if diferencia > 1.0:
+                resultados['valido'] = False
+                resultados['errores'].append(
+                    f"pago_mensual ({self.pago_mensual:,.2f}) no coincide con "
+                    f"Escenario 1 a {pm} meses ({valor_plazo_escenario:,.2f}). "
+                    f"Diferencia: {diferencia:,.2f} COP"
+                )
+        
+        return resultados
+
+    def _ensure_line_count(self):
+        """Mantiene line_ids sincronizado con cantidad_equipos.
+
+        En formularios nuevos (padre sin guardar) no se debe usar create()/unlink()
+        sobre las líneas: el cliente web espera ids virtuales (NewId) y mezclar
+        enteros reales rompe el diff del onchange (AttributeError: 'int' has no 'origin').
+        """
+        Line = self.env["calculadora.costos.line"]
+        for record in self:
+            target = max(1, min(100, record.cantidad_equipos or 1))
+            lines = record.line_ids.sorted("sequence")
+            current = len(lines)
+            if current < target:
+                if record._origin:
+                    vals_list = []
+                    for seq in range(current + 1, target + 1):
+                        vals_list.append({
+                            "calculadora_id": record.id,
+                            "sequence": seq,
+                        })
+                    Line.create(vals_list)
+                else:
+                    record.line_ids = [
+                        (
+                            0,
+                            0,
+                            {
+                                "sequence": seq,
+                                "name": record.name or "Equipo",
+                                "moneda_equipo": "USD",
+                                "product_qty": 1.0,
+                                "price_unit": 0.0,
+                                "monto_garantia": 0.0,
+                            },
+                        )
+                        for seq in range(current + 1, target + 1)
+                    ]
+            elif current > target:
+                to_remove = lines[target:]
+                if record._origin:
+                    to_remove.unlink()
+                else:
+                    record.line_ids = [(2, line.id) for line in to_remove]
+
+    @api.depends(
+        "line_ids",
+        "line_ids.name",
+        "line_ids.product_id",
+        "line_ids.product_qty",
+        "line_ids.price_unit",
+        "line_ids.monto_garantia",
+        "line_ids.moneda_equipo",
+        "line_ids.subtotal_base_cop",
+        "applied_currency_rate",
+        "rate_date",
+    )
+    def _compute_equipo_campos(self):
+        usd = self.env.ref("base.USD", raise_if_not_found=False)
+        cop = self.env.ref("base.COP", raise_if_not_found=False)
+        for record in self:
+            lines = record.line_ids.sorted("sequence")
+            for idx in range(1, 21):
+                line = lines[idx - 1] if len(lines) >= idx else False
+                setattr(record, f"equipo_{idx}_nombre", line.name if line else False)
+                setattr(record, f"equipo_{idx}_product_id", line.product_id if line else False)
+                if line:
+                    amt = line.amount_equipment()
+                    source_currency = record._line_source_currency(line)
+                    evu = record._convert_currency_amount(amt, source_currency, usd) if usd and source_currency else 0.0
+                    eg = record._convert_currency_amount(line.monto_garantia or 0.0, source_currency, usd) if usd and source_currency else 0.0
+                    evc = record._convert_currency_amount(amt, source_currency, cop) if cop and source_currency else 0.0
+                    egc = record._convert_currency_amount(line.monto_garantia or 0.0, source_currency, cop) if cop and source_currency else 0.0
+                    st = line.subtotal_base_cop
+                else:
+                    evu = eg = evc = egc = st = 0.0
+                setattr(record, f"equipo_{idx}_valor_usd", evu)
+                setattr(record, f"equipo_{idx}_garantia_usd", eg)
+                setattr(record, f"equipo_{idx}_valor_cop", evc)
+                setattr(record, f"equipo_{idx}_garantia_cop", egc)
+                setattr(record, f"equipo_{idx}_costo_total_cop", st)
+
+    def _inverse_equipo_campos(self):
+        for record in self:
+            record._ensure_line_count()
+            lines = record.line_ids.sorted("sequence")
+            for idx in range(1, min(record.cantidad_equipos, 20) + 1):
+                line = lines[idx - 1]
+                vu = getattr(record, f"equipo_{idx}_valor_usd", 0.0) or 0.0
+                vg = getattr(record, f"equipo_{idx}_garantia_usd", 0.0) or 0.0
+                vc = getattr(record, f"equipo_{idx}_valor_cop", 0.0) or 0.0
+                gc = getattr(record, f"equipo_{idx}_garantia_cop", 0.0) or 0.0
+                # Prefer COP si el usuario editó esos campos; si no, USD
+                if vc or gc:
+                    line.write({
+                        "name": getattr(record, f"equipo_{idx}_nombre", False) or False,
+                        "product_id": getattr(record, f"equipo_{idx}_product_id", False).id
+                        if getattr(record, f"equipo_{idx}_product_id", False)
+                        else False,
+                        "moneda_equipo": "COP",
+                        "product_qty": 1.0,
+                        "price_unit": vc,
+                        "monto_garantia": gc,
+                    })
+                else:
+                    line.write({
+                        "name": getattr(record, f"equipo_{idx}_nombre", False) or False,
+                        "product_id": getattr(record, f"equipo_{idx}_product_id", False).id
+                        if getattr(record, f"equipo_{idx}_product_id", False)
+                        else False,
+                        "moneda_equipo": "USD",
+                        "product_qty": 1.0,
+                        "price_unit": vu,
+                        "monto_garantia": vg,
+                    })
+
+    @api.onchange("cantidad_equipos")
+    def _onchange_cantidad_equipos(self):
+        self._ensure_line_count()
+    
+    def action_print_report(self):
+        """Acción para imprimir el reporte PDF"""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.report',
+            'report_name': 'calculadora_costos.report_calculadora',
+            'report_type': 'qweb-pdf',
+            'res_model': 'calculadora.costos',
+            'res_id': self.id,
+            'context': self.env.context,
+        }

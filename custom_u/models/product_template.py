@@ -97,4 +97,43 @@ class ProductTemplate(models.Model):
         )
         if to_fix:
             for rec in to_fix:
-                rec.write({'tipo_producto': self._map_type_to_tipo(rec.t
+                rec.write({'tipo_producto': self._map_type_to_tipo(rec.type)})
+        return records
+    
+    def write(self, vals):
+        """Escritura con sincronización automática"""
+        copy_vals = dict(vals)
+        self._reconcile_vals_tipo_and_native(copy_vals)
+        return super().write(copy_vals)
+    
+    # ========================================
+    # MÉTODOS HELPER
+    # ========================================
+    
+    def _map_tipo_to_type(self, tipo_producto):
+        """Mapea tipo_producto a type nativo"""
+        mapping = {
+            'consu': 'consu',
+            'service': 'service',
+            'factura': 'product',
+        }
+        return mapping.get(tipo_producto, 'consu')
+    
+    def _map_type_to_tipo(self, type_value):
+        """Mapea type nativo a tipo_producto"""
+        mapping = {
+            'consu': 'consu',
+            'service': 'service',
+            'product': 'factura',
+        }
+        return mapping.get(type_value, 'consu')
+
+    def _map_detailed_type_to_type(self, detailed_type):
+        """Normaliza detailed_type de Odoo a type nativo."""
+        if detailed_type == 'service':
+            return 'service'
+        if detailed_type in ('consu', 'product'):
+            return detailed_type
+        # Fallback seguro para tipos extendidos
+        return 'consu'
+    

@@ -1156,4 +1156,32 @@
                         if (poolReturnConfirm) {
                             poolReturnConfirm.addEventListener('click', function () {
                                 var ids = [];
-                                document.querySelectorAll('.lh_pool_return_check:checked').for
+                                document.querySelectorAll('.lh_pool_return_check:checked').forEach(function (c) { ids.push(c.value); });
+                                if (!ids.length) {
+                                    alert('Seleccione al menos un activo.');
+                                    return;
+                                }
+                                selectedInput.value = ids.join(',');
+                                selectedActaInput.value = '';
+                                actionInput.value = 'responsible_return';
+                                if (pendingKindHidden) pendingKindHidden.value = '';
+                                if (poolReturnModal) poolReturnModal.style.display = 'none';
+                                submitForm.submit();
+                            });
+                        }
+                        modalConfirm.addEventListener('click', function () {
+                            submitForm.submit();
+                        });
+                    })();
+                </script>
+            </body>
+        </html>
+    </template>
+
+    <record id="action_component_lab_hub_dashboard" model="ir.actions.act_url">
+        <field name="name">Vista general del pool</field>
+        <field name="url">/inventory_dashboard_simple/lab_hub</field>
+        <field name="target">self</field>
+    </record>
+</odoo>
+

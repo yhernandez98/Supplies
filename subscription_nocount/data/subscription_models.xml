@@ -17,4 +17,10 @@
         <field name="info">Historial de cambios de equipo en suscripciones</field>
     </record>
 
-    <reco
+    <record id="model_subscription_admin_reassign_wizard" model="ir.model">
+        <field name="name">subscription.admin.reassign.wizard</field>
+        <field name="model">subscription.admin.reassign.wizard</field>
+        <field name="info">Wizard de corrección administrativa de serial sin cobro</field>
+    </record>
+</odoo>
+

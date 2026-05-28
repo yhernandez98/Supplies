@@ -47,4 +47,10 @@ class SaleOrderLine(models.Model):
                 if line.order_id and line.order_id.opportunity_id and line.order_id.state == 'draft':
                     try:
                         line.order_id._compute_stock_availability()
-                        line.order_id.fl
+                        line.order_id.flush_recordset()
+                        line.order_id._create_purchase_alerts_automatically()
+                    except Exception as e:
+                        _logger.error("Error en verificación automática para línea %s: %s", line.id, str(e))
+        
+        return result
+

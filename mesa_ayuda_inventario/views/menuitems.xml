@@ -156,4 +156,7 @@
                   action="action_helpdesk_ticket_pause_request"
                   sequence="40"/>
         <!-- Menú Políticas SLA omitido: requiere módulo helpdesk_sla (modelo helpdesk.sla.policy) -->
-        <!-- Menú Base de conocimiento omiti
+        <!-- Menú Base de conocimiento omitido: requiere app Knowledge (modelo knowledge.article) -->
+
+    </data>
+</odoo>

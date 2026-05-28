@@ -121,4 +121,26 @@ class StockLot(models.Model):
         
         # Evitar recursión infinita
         if self.id in visited:
-    
+            return self.env['stock.lot']
+        
+        visited.add(self.id)
+        related_lots = self.env['stock.lot']
+        
+        # Buscar lotes que tienen este lote como principal
+        # Usar contexto para evitar recursión en búsquedas mejoradas
+        lots_as_components = self.env['stock.lot'].with_context(skip_search_enhancement=True).search([
+            ('principal_lot_id', '=', self.id)
+        ])
+        related_lots |= lots_as_components
+        
+        # Buscar lotes a través de las líneas de suministro
+        if hasattr(self, 'lot_supply_line_ids'):
+            for supply_line in self.lot_supply_line_ids:
+                if supply_line.related_lot_id and supply_line.related_lot_id.id not in visited:
+                    related_lots |= supply_line.related_lot_id
+                    # También obtener los lotes relacionados de este lote (recursivo)
+                    sub_related = supply_line.related_lot_id._get_related_lots(visited)
+                    related_lots |= sub_related
+        
+        return related_lots
+

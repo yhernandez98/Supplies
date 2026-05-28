@@ -5976,4 +5976,840 @@ class SubscriptionProductGrouped(models.Model):
 
                 # Moneda: mismo ítem que el precio (única fuente: _get_currency_for_product_price)
                 plan = record.subscription_id.plan_id if record.subscription_id else None
- 
+                cost_currency_id = record.subscription_id.currency_id.id if record.subscription_id and record.subscription_id.currency_id else company_currency_id
+                try:
+                    cost_curr = record.subscription_id._get_currency_for_product_price(record.product_id, plan)
+                    if cost_curr and cost_curr.id:
+                        cost_currency_id = cost_curr.id
+                except Exception:
+                    pass
+                # Nunca dejar cost_currency_id False (evita error en lista computeAggregates: .id de undefined)
+                if not cost_currency_id:
+                    cost_currency_id = record.subscription_id.currency_id.id if record.subscription_id and record.subscription_id.currency_id else company_currency_id
+
+                # Prorrateo por días: productos (no licencias) con lot_ids/lot_id.
+                # Misma fórmula que "Ver Detalles" (Costo Días En Sitio): costo = suma de (costo_diario × días_servicio) por serial,
+                # con costo_diario = (costo_renting_base + costo_adicional) / días_mes, para que el total coincida con el detalle.
+                lots_for_prorate = record.lot_ids or (record.lot_id if record.lot_id else self.env['stock.lot'])
+                use_prorated = (
+                    record.has_subscription
+                    and not record.is_license
+                    and lots_for_prorate
+                )
+                if use_prorated and lots_for_prorate:
+                    now_utc = fields.Datetime.now()
+                    now_user = fields.Datetime.context_timestamp(record.subscription_id, now_utc)
+                    today_user = (now_user.date() if hasattr(now_user, 'date') else fields.Date.today())
+                    ref_year = record.subscription_id.reference_year if record.subscription_id else None
+                    ref_month = record.subscription_id.reference_month if record.subscription_id else None
+                    if ref_year and ref_month and 1 <= ref_month <= 12:
+                        year, month = int(ref_year), int(ref_month)
+                    else:
+                        year, month = today_user.year, today_user.month
+                    days_in_month = calendar.monthrange(year, month)[1]
+                    current_day = min(int(today_user.day), days_in_month) if (year, month) == (today_user.year, today_user.month) else days_in_month
+
+                    def _lot_additional_cost(lot):
+                        if not lot or not hasattr(lot, 'lot_supply_line_ids'):
+                            return 0.0
+                        lines_with_cost = lot.lot_supply_line_ids.filtered(lambda l: l.has_cost)
+                        total_additional = 0.0
+                        for line in lines_with_cost:
+                            related = getattr(line, 'related_lot_id', False)
+                            if related and getattr(related, 'cost_additional', False):
+                                total_additional += float(getattr(related, 'cost_additional_value', 0.0) or 0.0)
+                            else:
+                                # Fallback temporal para no romper datos históricos.
+                                total_additional += float(getattr(line, 'cost', 0.0) or 0.0)
+                        return total_additional
+
+                    total_cost = 0.0
+                    for lot in lots_for_prorate:
+                        entry_display, lot_exit_display = record.subscription_id._lot_entry_exit_for_display(lot)
+                        entry = record.subscription_id._lot_date_for_billable(entry_display)
+                        exit_ = record.subscription_id._lot_date_for_billable(lot_exit_display)
+                        if entry is None and exit_ is None:
+                            days_used = current_day
+                        elif entry and exit_ and entry.year == year and entry.month == month and exit_.year == year and exit_.month == month:
+                            days_used = max(0, exit_.day - entry.day + 1)
+                        elif entry and entry.year == year and entry.month == month:
+                            days_used = max(0, current_day - entry.day + 1)
+                        elif exit_ and exit_.year == year and exit_.month == month:
+                            days_used = max(0, exit_.day)
+                        else:
+                            days_used = current_day if (year, month) == (today_user.year, today_user.month) else days_in_month
+                        additional = _lot_additional_cost(lot)
+                        total_monthly_lot = (price_monthly or 0.0) + additional
+                        cost_daily_lot = (total_monthly_lot / float(days_in_month)) if days_in_month else 0.0
+                        cost_to_date_lot = cost_daily_lot * float(days_used)
+                        total_cost += cost_to_date_lot
+                    record.cost = float_round(total_cost, precision_digits=2)
+                    record.cost_currency_id = cost_currency_id
+                    _logger.info('💰 Prorrateo producto %s: %s seriales, mes %s/%s, costo total=%s (suma Costo Días En Sitio)',
+                                 record.product_id.display_name, len(lots_for_prorate), month, year, record.cost)
+                else:
+                    # Sin prorrateo: costo = precio unitario mensual * cantidad (price_monthly ya es por 1 unidad)
+                    record.cost = float_round((price_monthly or 0.0) * float(record.quantity), precision_digits=2)
+                    record.cost_currency_id = cost_currency_id
+                    _logger.info('💰 Costo producto %s: %s (precio unit. mensual: %s, cantidad: %s)',
+                                record.product_id.display_name, record.cost, price_monthly, record.quantity)
+            except Exception:
+                # Si hay cualquier error, dejar en 0; moneda nunca False
+                record.cost = 0.0
+                record.cost_currency_id = record.subscription_id.currency_id.id if record.subscription_id and record.subscription_id.currency_id else company_currency_id
+
+    @api.depends('is_license', 'cost_currency_id', 'cost_currency_id.name')
+    def _compute_trm_applies(self):
+        for record in self:
+            is_usd = bool(record.cost_currency_id and (record.cost_currency_id.name or '').upper() == 'USD')
+            record.trm_applies = bool(record.is_license and is_usd)
+
+    @api.depends('cost_currency_id', 'cost_currency_id.name')
+    def _compute_is_cost_usd(self):
+        for record in self:
+            record.is_cost_usd = bool(record.cost_currency_id and (record.cost_currency_id.name or '').upper() == 'USD')
+
+    @api.depends(
+        'is_license', 'cost', 'cost_currency_id', 'license_category', 'lic_category_id',
+        'subscription_id', 'subscription_id.reference_year', 'subscription_id.reference_month'
+    )
+    def _compute_trm_applied_info(self):
+        for record in self:
+            record.trm_cutoff_day_applied = 0
+            record.trm_rate_applied = 0.0
+            record.trm_cost_cop_applied = 0.0
+            record.trm_applied_note = ''
+            if not record.is_license or not record.subscription_id:
+                continue
+            if 'license.trm' not in self.env:
+                record.trm_applied_note = _('Módulo TRM no disponible')
+                continue
+
+            sub = record.subscription_id
+            category_rec = False
+            if getattr(record, 'lic_category_id', None) and 'license.category' in self.env:
+                category_rec = self.env['license.category'].browse(record.lic_category_id)
+                if not category_rec.exists():
+                    category_rec = False
+            if not category_rec and record.license_category and 'license.category' in self.env:
+                category_rec = self.env['license.category'].search([('name', '=', record.license_category)], limit=1)
+            trm_date = sub._get_trm_lookup_date_for_category(category_rec)
+            cutoff_day = sub._get_license_category_cutoff_day(category_rec)
+            # license.trm.get_trm_for_date hace fallback (ej. corte 30 → toma corte 6 del mismo mes si no hay 30).
+            # En pestaña TRM aplicadas, el corte personalizado debe mostrar solo la TRM exacta mes+corte; si falta, 0.
+            use_custom_cutoff = bool(
+                category_rec
+                and category_rec.exists()
+                and hasattr(category_rec, 'use_default_trm_cutoff')
+                and not category_rec.use_default_trm_cutoff
+            )
+            if use_custom_cutoff:
+                rate = float(sub._get_trm_exact_rate_month(trm_date.year, trm_date.month, cutoff_day) or 0.0)
+            else:
+                rate = self.env['license.trm'].get_trm_for_date(trm_date, cutoff_day=cutoff_day) or 0.0
+            record.trm_cutoff_day_applied = cutoff_day
+            record.trm_rate_applied = rate
+
+            is_usd = bool(record.cost_currency_id and (record.cost_currency_id.name or '').upper() == 'USD')
+            if is_usd:
+                record.trm_cost_cop_applied = (record.cost or 0.0) * rate if rate and rate > 0 else 0.0
+            else:
+                record.trm_cost_cop_applied = record.cost or 0.0
+            record.trm_applied_note = _('Mes TRM %s | Corte %s') % (trm_date.strftime('%Y-%m'), cutoff_day)
+
+    @api.depends('subscription_id', 'product_id', 'quantity', 'is_license', 'license_category', 'subscription_id.location_id',
+                   'subscription_id.plan_id', 'cost',
+                   'lot_ids', 'lot_id', 'has_subscription')
+    def _compute_proyectado(self):
+        """Proyectado por línea: licencias = precio unitario (TRM mes en curso) × cantidad de la línea; equipos/servicios = total mes completo (precio unitario × cantidad)."""
+        today = fields.Date.context_today(self)
+        trm_date_current_month = datetime.date(today.year, today.month, 1)
+
+        for record in self:
+            if record.is_license:
+                record.proyectado = record._compute_proyectado_license(trm_date_current_month)
+            else:
+                record.proyectado = record._compute_proyectado_equipment_service()
+
+    def _compute_proyectado_license(self, trm_date):
+        """Proyectado para licencias: precio unitario en COP (TRM mes en curso) × cantidad de la línea (record.quantity)."""
+        self.ensure_one()
+        if not self.subscription_id or not self.license_category or not self.quantity:
+            return 0.0
+        try:
+            pricelist = self.pricelist_id
+            if not pricelist and self.subscription_id.partner_id:
+                pricelist = self.subscription_id.partner_id.property_product_pricelist
+            if not pricelist:
+                return 0.0
+            if 'license.assignment' not in self.env or 'license.trm' not in self.env:
+                return self.cost or 0.0
+            trm_model = self.env['license.trm']
+            trm_rate = trm_model.get_trm_for_date(trm_date, cutoff_day=6) or 0.0
+            license_domain = [
+                ('partner_id', '=', self.subscription_id.partner_id.id),
+                ('state', '=', 'active'),
+            ]
+            if self.subscription_id.location_id:
+                license_domain.append(('location_id', '=', self.subscription_id.location_id.id))
+            active_licenses = self.env['license.assignment'].search(license_domain)
+            # Proyectado = suma por cada asignación de la categoría: (precio unit. COP con TRM mes curso × cantidad asignación)
+            total_proyectado = 0.0
+            for license_assignment in active_licenses:
+                if not license_assignment.license_id or not license_assignment.license_id.product_id:
+                    continue
+                if not self.subscription_id._license_assignment_matches_subscription_plan(license_assignment):
+                    continue
+                license_category_name = (license_assignment.license_id.name and license_assignment.license_id.name.name) or 'Sin Categoría'
+                if license_category_name != self.license_category:
+                    continue
+                product = license_assignment.license_id.product_id
+                try:
+                    unit_price = self.subscription_id._get_price_for_product(product, 1.0) or 0.0
+                    if unit_price <= 0.0:
+                        continue
+                    price_currency = None
+                    if 'sale.subscription.pricing' in self.env and self.subscription_id.plan_id:
+                        try:
+                            PricingModel = self.env['sale.subscription.pricing']
+                            pricing_domain = [
+                                ('pricelist_id', '=', pricelist.id),
+                                ('plan_id', '=', self.subscription_id.plan_id.id),
+                            ]
+                            if 'product_template_id' in PricingModel._fields:
+                                pricing_domain.append(('product_template_id', '=', product.product_tmpl_id.id))
+                                pricing_rec = PricingModel.search(pricing_domain, limit=1)
+                            elif 'product_tmpl_id' in PricingModel._fields:
+                                pricing_domain.append(('product_tmpl_id', '=', product.product_tmpl_id.id))
+                                pricing_rec = PricingModel.search(pricing_domain, limit=1)
+                            else:
+                                pricing_rec = self.env['sale.subscription.pricing'].browse([])
+                            if not pricing_rec and 'product_id' in PricingModel._fields:
+                                pricing_domain = [
+                                    ('pricelist_id', '=', pricelist.id),
+                                    ('plan_id', '=', self.subscription_id.plan_id.id),
+                                    ('product_id', '=', product.id),
+                                ]
+                                pricing_rec = PricingModel.search(pricing_domain, limit=1)
+                            if pricing_rec and len(pricing_rec) > 0 and hasattr(pricing_rec[0], 'currency_id') and pricing_rec[0].currency_id:
+                                price_currency = pricing_rec[0].currency_id
+                        except Exception:
+                            pass
+                    if not price_currency:
+                        price_currency = pricelist.currency_id
+                    unit_price_cop = unit_price
+                    trm_rate_assignment = trm_rate
+                    category = license_assignment.license_id.name if license_assignment.license_id else False
+                    cutoff_day = self.subscription_id._get_license_category_cutoff_day(category)
+                    trm_rate_assignment = trm_model.get_trm_for_date(trm_date, cutoff_day=cutoff_day) or 0.0
+                    if price_currency and price_currency.name == 'USD':
+                        if trm_rate_assignment and trm_rate_assignment > 0:
+                            unit_price_cop = unit_price * trm_rate_assignment
+                        else:
+                            continue
+                    assignment_qty = float(license_assignment.quantity or 0.0)
+                    total_proyectado += unit_price_cop * assignment_qty
+                except Exception:
+                    continue
+            return float_round(total_proyectado, precision_digits=2) if total_proyectado > 0 else (self.cost or 0.0)
+        except Exception:
+            return self.cost or 0.0
+
+    def _compute_proyectado_equipment_service(self):
+        """Proyectado para equipos/servicios = suma de la columna 'Costo Renting' (y costo adicional por serial) de cada serial del grupo; es decir, total mes completo por serial."""
+        self.ensure_one()
+        if not self.subscription_id:
+            return 0.0
+        try:
+            lots = self.lot_ids or (self.env['stock.lot'].browse([self.lot_id.id]) if self.lot_id else self.env['stock.lot'])
+            if lots:
+                total = 0.0
+                for lot in lots:
+                    service_product = getattr(lot, 'subscription_service_product_id', None) or self.product_id
+                    if not service_product:
+                        continue
+                    monthly = self.subscription_id._get_price_for_product(service_product, 1.0) or 0.0
+                    additional = 0.0
+                    if getattr(lot, 'lot_supply_line_ids', None):
+                        lines_with_cost = lot.lot_supply_line_ids.filtered(lambda l: getattr(l, 'has_cost', False))
+                        additional = 0.0
+                        for line in lines_with_cost:
+                            related = getattr(line, 'related_lot_id', False)
+                            if related and getattr(related, 'cost_additional', False):
+                                additional += float(getattr(related, 'cost_additional_value', 0.0) or 0.0)
+                            else:
+                                additional += float(getattr(line, 'cost', 0.0) or 0.0)
+                    total += monthly + additional
+                return float_round(total, precision_digits=2)
+            # Sin seriales (ej. servicio sin equipos): precio unitario × cantidad
+            if self.product_id and self.quantity:
+                price_monthly = self.subscription_id._get_price_for_product(self.product_id, 1.0) or 0.0
+                return float_round(price_monthly * float(self.quantity), precision_digits=2)
+            return 0.0
+        except Exception:
+            return self.cost or 0.0
+
+    def action_view_serials(self):
+        """Abre una vista con los seriales de este producto o servicio de suscripción.
+        También funciona para licencias, mostrando los seriales que tienen asignadas esas licencias."""
+        self.ensure_one()
+        if not self.subscription_id or not self.subscription_id.location_id:
+            raise UserError(_('No hay ubicación definida para mostrar las series.'))
+        
+        Quant = self.env['stock.quant']
+        
+        # Si es una licencia, mostrar los seriales que tienen asignadas esas licencias
+        if self.is_license:
+            if not self.license_category:
+                raise UserError(_('No hay categoría de licencia para mostrar las series.'))
+            
+            # Buscar todas las asignaciones de licencias activas para este cliente y ubicación
+            license_domain = [
+                ('partner_id', '=', self.subscription_id.partner_id.id),
+                ('state', '=', 'active'),
+            ]
+            if self.subscription_id.location_id:
+                license_domain.append(('location_id', '=', self.subscription_id.location_id.id))
+            
+            if 'license.assignment' not in self.env:
+                raise UserError(_('El módulo de licencias no está disponible.'))
+            
+            active_licenses = self.env['license.assignment'].search(license_domain)
+            
+            # Filtrar por categoría y construir una fila por unidad, con el nombre del tipo de licencia (producto) en cada fila
+            # Así si ANTIVIRUS tiene GravityZone Enterprise (27) y GravityZone Enterprise Server (1), se ve cada tipo en su fila.
+            Line = self.env['subscription.license.serial.line']
+            location_id = self.subscription_id.location_id.id if self.subscription_id.location_id else False
+            category_name = self.license_category or ''
+            # En la lógica del facturable, el costo de licencias usa el MES SIGUIENTE (TRM del mes vencido).
+            trm_rate = 0.0
+            trm_model = self.env['license.trm'] if 'license.trm' in self.env else False
+
+            # Fallback (si el detalle no se puede calcular): promedio del agrupado.
+            fallback_cost_currency_id = (
+                self.cost_currency_id.id
+                if getattr(self, 'cost_currency_id', None) and self.cost_currency_id
+                else (self.subscription_id.currency_id.id if self.subscription_id and self.subscription_id.currency_id else self.env.company.currency_id.id)
+            )
+            fallback_unit_cost = (
+                float_round((self.cost or 0.0) / float(self.quantity or 1.0), precision_digits=2)
+                if self.quantity
+                else float_round(self.cost or 0.0, precision_digits=2)
+            )
+            line_vals = []
+            for license_assignment in active_licenses:
+                if not license_assignment.license_id:
+                    continue
+                if not self.subscription_id._license_assignment_matches_subscription_plan(license_assignment):
+                    continue
+                license_category_name = (license_assignment.license_id.name and license_assignment.license_id.name.name) or 'Sin Categoría'
+                if license_category_name != category_name:
+                    continue
+                product = license_assignment.license_id.product_id
+                # Respetar plan de la suscripción también en "Ver Detalles":
+                # no mostrar licencias cuyo producto no tenga regla para este plan.
+                if self.subscription_id.plan_id and product:
+                    plan_item = self.subscription_id._get_recurring_pricelist_item(product, self.subscription_id.plan_id)
+                    if not plan_item:
+                        continue
+                service_name = (product.display_name or product.name or category_name) if product else category_name
+                qty = int(license_assignment.quantity or 0)
+                if qty <= 0:
+                    continue
+
+                # Calcular costo unitario REAL para este producto de licencia (no usar promedio del agrupado).
+                unit_cost_assignment = 0.0
+                cost_currency_id_assignment = (
+                    self.subscription_id.currency_id.id
+                    if self.subscription_id and self.subscription_id.currency_id
+                    else self.env.company.currency_id.id
+                )
+                if product:
+                    unit_price = self.subscription_id._get_price_for_product(product, 1.0) or 0.0
+                    if unit_price > 0:
+                        price_currency = self.subscription_id._get_currency_for_product_price(product, self.subscription_id.plan_id)
+                        trm_rate_assignment = trm_rate
+                        if trm_model:
+                            category = license_assignment.license_id.name if license_assignment.license_id else False
+                            trm_date_assignment = self.subscription_id._get_trm_lookup_date_for_category(category)
+                            cutoff_day = self.subscription_id._get_license_category_cutoff_day(category)
+                            trm_rate_assignment = trm_model.get_trm_for_date(trm_date_assignment, cutoff_day=cutoff_day) or 0.0
+                        if price_currency and price_currency.name == 'USD':
+                            usd_curr = self.env.ref('base.USD', raise_if_not_found=False) or self.env['res.currency'].search([('name', '=', 'USD')], limit=1)
+                            if trm_rate_assignment and trm_rate_assignment > 0:
+                                unit_cost_assignment = float_round(unit_price * trm_rate_assignment, precision_digits=2)
+                                cost_currency_id_assignment = (
+                                    self.subscription_id.currency_id.id
+                                    if self.subscription_id and self.subscription_id.currency_id
+                                    else self.env.company.currency_id.id
+                                )
+                            else:
+                                unit_cost_assignment = float_round(unit_price, precision_digits=2)
+                                cost_currency_id_assignment = usd_curr.id if usd_curr else cost_currency_id_assignment
+                        else:
+                            unit_cost_assignment = float_round(unit_price, precision_digits=2)
+                            cost_currency_id_assignment = (
+                                self.subscription_id.currency_id.id
+                                if self.subscription_id and self.subscription_id.currency_id
+                                else self.env.company.currency_id.id
+                            )
+                # Equipos asignados a esta asignación (esta licencia concreta)
+                equipment_lots = []
+                if 'license.equipment' in self.env:
+                    equipment_records = self.env['license.equipment'].search([
+                        ('assignment_id', '=', license_assignment.id),
+                        ('state', '=', 'assigned'),
+                        ('lot_id', '!=', False),
+                    ])
+                    equipment_lots = [e.lot_id for e in equipment_records if e.lot_id]
+                # Filas con serial asignado: una por cada equipo (lote) asignado a esta licencia
+                if equipment_lots:
+                    quants = Quant.search([
+                        ('location_id', 'child_of', self.subscription_id.location_id.id),
+                        ('lot_id', 'in', [l.id for l in equipment_lots]),
+                        ('quantity', '>', 0),
+                    ])
+                    # Un registro por lote (evitar duplicar si el mismo lote tiene varios quants)
+                    seen_lot_ids = set()
+                    for q in quants:
+                        if not q.lot_id or q.lot_id.id in seen_lot_ids:
+                            continue
+                        seen_lot_ids.add(q.lot_id.id)
+                        lot_row = q.lot_id
+                        line_vals.append({
+                            'location_id': q.location_id.id if q.location_id else location_id,
+                            'product_id': q.product_id.id if q.product_id else (product.id if product else False),
+                            'lot_id': lot_row.id,
+                            'inventory_plate': getattr(q, 'inventory_plate', None) or (lot_row.inventory_plate if lot_row else ''),
+                            'license_service_name': service_name,
+                            # Agrupamiento = categoría principal (ANTIVIRUS, KASEYA, etc.)
+                            'business_line_name': category_name,
+                            'cost_currency_id': cost_currency_id_assignment,
+                            'cost': unit_cost_assignment,
+                            'assignment_group': 'assigned',
+                            'assigned_user_id': getattr(lot_row, 'related_partner_id', False) and lot_row.related_partner_id.id or False,
+                        })
+                # Filas no asignadas para esta licencia: cantidad - equipos ya listados
+                num_assigned = len(equipment_lots) if equipment_lots else 0
+                missing = qty - num_assigned
+                for _dummy in range(missing):
+                    line_vals.append({
+                        'location_id': location_id,
+                        'product_id': product.id if product else False,
+                        'license_service_name': service_name,
+                        'business_line_name': category_name,
+                        'cost_currency_id': cost_currency_id_assignment,
+                        'cost': unit_cost_assignment,
+                        'assignment_group': 'unassigned',
+                        'assigned_user_id': False,
+                    })
+            if not line_vals:
+                line_vals.append({
+                    'location_id': location_id,
+                    'license_service_name': category_name,
+                    'business_line_name': category_name,
+                    'cost_currency_id': fallback_cost_currency_id,
+                    'cost': fallback_unit_cost,
+                    'assignment_group': 'unassigned',
+                    'assigned_user_id': False,
+                })
+            lines = Line.create(line_vals)
+            return {
+                'type': 'ir.actions.act_window',
+                'name': _('Series con licencias %s') % self.license_category,
+                'res_model': 'subscription.license.serial.line',
+                'view_mode': 'list',
+                'domain': [('id', 'in', lines.ids)],
+                'context': {'create': False, 'edit': False, 'delete': False, 'group_by': 'business_line_name'},
+            }
+
+        # EQUIPOS / SERVICIOS (no licencias)
+        # Importante: el facturable en vivo puede incluir lotes que ya salieron del cliente (sin stock.quant en ubicación).
+        # Por eso "Ver Detalles" NO debe depender solo de stock.quant; generamos una lista (transiente) desde los lotes.
+        lots = (self.lot_ids or self.env['stock.lot'])
+        if self.quantity and lots and len(lots) > int(self.quantity):
+            lots = lots[:int(self.quantity)]
+
+        # Determinar mes/año igual que el facturable: reference_* si existe; si no, mes actual (zona usuario)
+        now_utc = fields.Datetime.now()
+        now_user = fields.Datetime.context_timestamp(self.subscription_id, now_utc)
+        today_user = (now_user.date() if hasattr(now_user, 'date') else fields.Date.today())
+
+        if self.subscription_id.reference_year and self.subscription_id.reference_month and 1 <= self.subscription_id.reference_month <= 12:
+            year = int(self.subscription_id.reference_year)
+            month = int(self.subscription_id.reference_month)
+        else:
+            year = int(today_user.year)
+            month = int(today_user.month)
+
+        days_in_month = calendar.monthrange(year, month)[1]
+        first_day = datetime.date(year, month, 1)
+        last_day = datetime.date(year, month, days_in_month)
+        if (year, month) == (today_user.year, today_user.month):
+            current_day = min(int(today_user.day), int(days_in_month))
+        else:
+            current_day = int(days_in_month)
+        _month_names = (
+            'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+            'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+        )
+        month_display = f'{_month_names[month - 1]} {year}' if 1 <= month <= 12 else ''
+
+        lot_sel = self.env['stock.lot']._fields.get('reining_plazo')
+        sel_dict = dict(lot_sel.selection) if lot_sel and getattr(lot_sel, 'selection', None) else {}
+
+        Line = self.env['subscription.equipment.serial.line']
+        line_vals = []
+        for lot in lots:
+            entry_display, lot_exit_display = self.subscription_id._lot_entry_exit_for_display(lot)
+            entry = self.subscription_id._lot_date_for_billable(entry_display)
+            exit_ = self.subscription_id._lot_date_for_billable(lot_exit_display)
+            costs = self.subscription_id._lot_billable_cost_breakdown(
+                lot,
+                product_id=self.product_id.id if self.product_id else False,
+                entry_date=entry_display,
+                exit_date=lot_exit_display,
+            )
+            days_total_on_site = 0
+            if entry:
+                today_d = today_user if isinstance(today_user, datetime.date) else datetime.date(today_user.year, today_user.month, today_user.day)
+                end = (exit_ if exit_ and exit_ < today_d else today_d)
+                if end >= entry:
+                    days_total_on_site = max(0, (end - entry).days + 1)
+
+            plazo_label = (sel_dict.get(lot.reining_plazo) or lot.reining_plazo or '') if lot else ''
+            product_name = lot.product_id.display_name if getattr(lot, 'product_id', None) else (self.product_id.display_name if self.product_id else '')
+
+            line_vals.append({
+                'subscription_id': self.subscription_id.id,
+                'location_id': self.subscription_id.location_id.id,
+                'lot_id': lot.id if lot else False,
+                'product_name': product_name or '',
+                'inventory_plate': getattr(lot, 'inventory_plate', None) or '',
+                'lot_name': lot.name or '',
+                'assigned_user_id': getattr(lot, 'related_partner_id', False) and lot.related_partner_id.id or False,
+                'cost_renting': costs['cost_renting'],
+                'entry_date': entry_display,
+                'exit_date': lot_exit_display,
+                'reining_plazo': plazo_label,
+                'days_total_on_site': days_total_on_site,
+                'days_total_month': days_in_month,
+                'current_day_of_month': current_day,
+                'month_display': month_display,
+                'days_in_service': costs['days_in_service'],
+                'cost_daily': costs['cost_daily'],
+                'cost_to_date': costs['cost_to_date'],
+                'currency_id': self.subscription_id.currency_id.id if self.subscription_id.currency_id else self.env.company.currency_id.id,
+            })
+
+        lines = Line.create(line_vals) if line_vals else Line.browse([])
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Detalles - %s') % (self.product_display_name or self.product_id.display_name),
+            'res_model': 'subscription.equipment.serial.line',
+            'view_mode': 'list',
+            'views': [(self.env.ref('subscription_nocount.view_subscription_equipment_serial_line_tree').id, 'list')],
+            'domain': [('id', 'in', lines.ids)],
+            'context': {'create': False, 'edit': False, 'delete': False, 'group_by': 'business_line_name'},
+        }
+
+    def _prepare_invoice_line_values(self, subscription):
+        """Prepara los valores para crear una línea de factura desde un producto agrupado."""
+        self.ensure_one()
+        # Usar el costo total calculado, dividido por la cantidad para obtener el precio unitario
+        # O usar el precio unitario directamente si está disponible
+        price_unit = self.cost / float(self.quantity) if self.quantity > 0 else 0.0
+        
+        # Construir el nombre de la línea
+        name_parts = []
+        if self.has_subscription:
+            name_parts.append(_('Suscripción: %s') % self.product_id.display_name)
+        else:
+            name_parts.append(self.product_id.display_name)
+        
+        if self.quantity > 1:
+            name_parts.append(_('(Cantidad: %s)') % self.quantity)
+        
+        name = ' - '.join(name_parts) if name_parts else self.product_id.display_name
+        
+        return {
+            'product_id': self.product_id.id,
+            'name': name,
+            'quantity': float_round(float(self.quantity), precision_digits=2),
+            'price_unit': float_round(price_unit, precision_digits=2),
+            'tax_ids': [(6, 0, self.product_id.taxes_id.ids)],
+        }
+
+
+class SubscriptionLicenseSerialLine(models.TransientModel):
+    """Líneas de la vista «Series con licencias» cuando no hay seriales asignados.
+    Muestra tantas filas como cantidad (ej. 50 para KASEYA) con la misma estructura que stock.quant."""
+    _name = 'subscription.license.serial.line'
+    _description = 'Línea de serie/licencia (vista placeholder)'
+
+    location_id = fields.Many2one('stock.location', string='Ubicación')
+    product_id = fields.Many2one('product.product', string='Producto')
+    lot_id = fields.Many2one('stock.lot', string='Número de serie/lote')
+    inventory_plate = fields.Char(string='Placa de Inventario')
+    assigned_user_id = fields.Many2one('res.partner', string='Usuario Asignado', readonly=True)
+    assigned_user_display_name = fields.Char(
+        string='Usuario Asignado',
+        compute='_compute_assigned_user_display_name_license',
+        store=False,
+    )
+    license_service_name = fields.Char(string='Licencia/Servicio Asignado')
+    # Para licencias, este campo lo rellenamos al crear las líneas (ej. ANTIVIRUS, KASEYA 365, etc.)
+    business_line_name = fields.Char(string='Agrupamiento', readonly=True)
+    cost_currency_id = fields.Many2one('res.currency', string='Moneda', readonly=True)
+    cost = fields.Monetary(
+        string='Costo',
+        currency_field='cost_currency_id',
+        readonly=True,
+        digits=(16, 2),
+        group_operator=False,
+    )
+    assignment_group = fields.Selection(
+        [
+            ('assigned', 'Asignada'),
+            ('unassigned', 'No asignada'),
+        ],
+        string='Estado asignación',
+        help='Para agrupar por licencias asignadas y no asignadas',
+    )
+
+    @api.depends('assigned_user_id', 'assigned_user_id.name')
+    def _compute_assigned_user_display_name_license(self):
+        for rec in self:
+            p = rec.assigned_user_id
+            rec.assigned_user_display_name = (p.name or '').strip() if p else ''
+
+
+class SubscriptionEquipmentSerialLine(models.TransientModel):
+    """Detalle de equipos/servicios para "Ver Detalles" en facturable en vivo.
+    Se genera desde lotes (incluye los que ya salieron del cliente y no tienen stock.quant en ubicación)."""
+    _name = 'subscription.equipment.serial.line'
+    _description = 'Detalle equipo (vista transiente)'
+    _order = 'business_line_name, product_name, inventory_plate, lot_name'
+
+    subscription_id = fields.Many2one('subscription.subscription', string='Suscripción', readonly=True)
+    location_id = fields.Many2one('stock.location', string='Ubicación', readonly=True)
+    lot_id = fields.Many2one('stock.lot', string='Serial/Lote', readonly=True)
+    product_name = fields.Char(string='Producto', readonly=True)
+    inventory_plate = fields.Char(string='Placa de Inventario', readonly=True)
+    lot_name = fields.Char(string='Número de serie/lote', readonly=True)
+    assigned_user_id = fields.Many2one('res.partner', string='Usuario Asignado', readonly=True)
+    assigned_user_display_name = fields.Char(
+        string='Usuario Asignado',
+        compute='_compute_assigned_user_display_name_equipment',
+        store=False,
+    )
+    cost_renting = fields.Monetary(
+        string='Costo Renting',
+        currency_field='currency_id',
+        readonly=True,
+        digits=(16, 2),
+        group_operator=False,
+    )
+    cost_additional = fields.Monetary(
+        string='Costo Adicional',
+        currency_field='currency_id',
+        digits=(16, 2),
+        readonly=True,
+        compute='_compute_cost_additional',
+        help='Suma de los costos de los elementos asociados con costo (Elementos Con Costo del serial).',
+        group_operator=False,
+    )
+    cost_renting_total = fields.Monetary(
+        string='Costo Renting (total)',
+        currency_field='currency_id',
+        digits=(16, 2),
+        readonly=True,
+        compute='_compute_cost_additional',
+        help='Costo Renting base + Costo adicional.',
+        group_operator=False,
+    )
+    entry_date = fields.Date(string='Fecha Activación Renting', readonly=True)
+    exit_date = fields.Date(string='Fecha Finalización Renting', readonly=True)
+    reining_plazo = fields.Char(string='Plazo Renting', readonly=True)
+    days_total_on_site = fields.Integer(string='Días totales en sitio', readonly=True, group_operator=False)
+    days_total_month = fields.Integer(string='Días total del mes', readonly=True, group_operator=False)
+    current_day_of_month = fields.Integer(string='Día del mes en curso', readonly=True, group_operator=False)
+    month_display = fields.Char(string='Mes', readonly=True)
+    days_in_service = fields.Integer(string='Días En Servicio', readonly=True, group_operator=False)
+    tiempo_en_sitio_display = fields.Char(
+        string='Tiempo En Sitio',
+        compute='_compute_tiempo_displays',
+        help='Tiempo en sitio en formato "X meses y Y días".',
+    )
+    tiempo_restante_display = fields.Char(
+        string='Tiempo Restante',
+        compute='_compute_tiempo_displays',
+        help='Tiempo restante hasta fecha finalización en "X meses y Y días".',
+    )
+    cost_daily = fields.Monetary(
+        string='Costo Diario',
+        currency_field='currency_id',
+        readonly=True,
+        digits=(16, 2),
+        group_operator=False,
+    )
+    cost_to_date = fields.Monetary(
+        string='Costo Días En Servicio',
+        currency_field='currency_id',
+        readonly=True,
+        digits=(16, 2),
+        group_operator=False,
+    )
+    currency_id = fields.Many2one('res.currency', string='Moneda', readonly=True)
+
+    business_line_name = fields.Char(
+        string='Agrupamiento',
+        readonly=True,
+        compute='_compute_business_line_name',
+        store=True,
+        help='Mismo texto de "Agrupamiento" que se muestra en "Ajuste de Fechas".',
+    )
+
+    @api.depends('lot_id', 'subscription_id')
+    def _compute_business_line_name(self):
+        """Obtiene el label del "Agrupamiento" desde Productos Agrupados."""
+        for rec in self:
+            name = ''
+            lot = rec.lot_id
+            sub = rec.subscription_id
+            if lot and sub:
+                grouped = self.env['subscription.product.grouped'].search([
+                    ('subscription_id', '=', sub.id),
+                    ('lot_ids', 'in', lot.id),
+                ], limit=1)
+                if grouped and grouped.product_display_name:
+                    name = grouped.product_display_name
+            rec.business_line_name = name or ''
+
+    @api.depends('assigned_user_id', 'assigned_user_id.name')
+    def _compute_assigned_user_display_name_equipment(self):
+        for rec in self:
+            p = rec.assigned_user_id
+            rec.assigned_user_display_name = (p.name or '').strip() if p else ''
+
+    @api.depends(
+        'lot_id',
+        'lot_id.lot_supply_line_ids',
+        'lot_id.lot_supply_line_ids.has_cost',
+        'lot_id.lot_supply_line_ids.cost',
+        'lot_id.lot_supply_line_ids.related_lot_id',
+        'lot_id.lot_supply_line_ids.related_lot_id.cost_additional',
+        'lot_id.lot_supply_line_ids.related_lot_id.cost_additional_value',
+    )
+    def _compute_cost_additional(self):
+        """Suma de costos de elementos asociados con costo (Elementos Con Costo del serial)."""
+        for rec in self:
+            additional = 0.0
+            if rec.lot_id and hasattr(rec.lot_id, 'lot_supply_line_ids'):
+                lines_with_cost = rec.lot_id.lot_supply_line_ids.filtered(lambda l: l.has_cost)
+                for line in lines_with_cost:
+                    related = getattr(line, 'related_lot_id', False)
+                    if related and getattr(related, 'cost_additional', False):
+                        additional += float(getattr(related, 'cost_additional_value', 0.0) or 0.0)
+                    else:
+                        additional += float(getattr(line, 'cost', 0.0) or 0.0)
+            rec.cost_additional = additional
+            rec.cost_renting_total = (rec.cost_renting or 0.0) + additional
+
+    def _months_and_days_calendar(self, start_date, end_date):
+        """Meses completos de calendario y días restantes entre dos fechas. Devuelve (meses, días)."""
+        if not start_date or not end_date:
+            return (0, 0)
+        try:
+            start = start_date.date() if isinstance(start_date, datetime.datetime) else start_date
+            end = end_date.date() if isinstance(end_date, datetime.datetime) else end_date
+            if not hasattr(start, 'year'):
+                start = fields.Date.from_string(start) if start else None
+            if not hasattr(end, 'year'):
+                end = fields.Date.from_string(end) if end else None
+            if not start or not end or end < start:
+                return (0, 0)
+            months = 0
+            d = start
+            while True:
+                next_d = d + relativedelta(months=1)
+                if next_d <= end:
+                    months += 1
+                    d = next_d
+                else:
+                    break
+            remaining = (end - d).days
+            return (months, remaining)
+        except Exception:
+            return (0, 0)
+
+    @api.depends('entry_date', 'exit_date', 'days_total_on_site')
+    def _compute_tiempo_displays(self):
+        """Tiempo En Sitio y Tiempo Restante en formato 'X meses y Y días' (meses de calendario reales)."""
+        today = fields.Date.context_today(self)
+        for rec in self:
+            # Tiempo En Sitio: desde entry_date hasta (exit_date si ya salió, si no hoy)
+            if not rec.entry_date:
+                rec.tiempo_en_sitio_display = '0 días'
+            else:
+                end_site = today
+                if rec.exit_date:
+                    exit_d = rec.exit_date if hasattr(rec.exit_date, 'year') else getattr(rec.exit_date, 'date', lambda: rec.exit_date)()
+                    if hasattr(exit_d, 'date'):
+                        exit_d = exit_d.date()
+                    if exit_d < today:
+                        end_site = exit_d
+                meses, dias = rec._months_and_days_calendar(rec.entry_date, end_site)
+                if meses and dias:
+                    rec.tiempo_en_sitio_display = '%d meses y %d días' % (meses, dias)
+                elif meses:
+                    rec.tiempo_en_sitio_display = '%d meses' % meses
+                elif dias:
+                    rec.tiempo_en_sitio_display = '%d días' % dias
+                else:
+                    rec.tiempo_en_sitio_display = '0 días'
+            # Tiempo Restante: desde hoy hasta exit_date
+            if not rec.exit_date:
+                rec.tiempo_restante_display = ''
+            else:
+                try:
+                    exit_d = rec.exit_date
+                    if hasattr(exit_d, 'date'):
+                        exit_d = exit_d.date()
+                    if exit_d < today:
+                        rec.tiempo_restante_display = _('Finalizado')
+                    else:
+                        meses, dias = rec._months_and_days_calendar(today, exit_d)
+                        if meses and dias:
+                            rec.tiempo_restante_display = '%d meses y %d días' % (meses, dias)
+                        elif meses:
+                            rec.tiempo_restante_display = '%d meses' % meses
+                        elif dias:
+                            rec.tiempo_restante_display = '%d días' % dias
+                        else:
+                            rec.tiempo_restante_display = '0 días'
+                except Exception:
+                    rec.tiempo_restante_display = ''
+
+    def action_ver_detalles_elementos_costo(self):
+        """Abre wizard con los elementos con costo de este serial (solo visible si cost_additional > 0)."""
+        self.ensure_one()
+        if not self.lot_id:
+            return {'type': 'ir.actions.act_window_close'}
+        Wizard = self.env['subscription.equipment.cost.detail.wizard']
+        wizard = Wizard.create({'lot_id': self.lot_id.id})
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Elementos Con Costo - %s') % (self.lot_name or self.product_name or _('Serial')),
+            'res_model': 'subscription.equipment.cost.detail.wizard',
+            'res_id': wizard.id,
+            'view_mode': 'form',
+            'target': 'new',
+        }
+
+
+class SubscriptionDebugPricingWizard(models.TransientModel):
+    _name = 'subscription.debug.pricing.wizard'
+    _description = 'Debug de precios por plan'
+
+    result_html = fields.Html(string='Resultado', readonly=True)

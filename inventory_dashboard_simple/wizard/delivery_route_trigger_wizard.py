@@ -871,4 +871,6 @@ class DeliveryRouteTriggerWizardLine(models.TransientModel):
     @api.onchange('lot_id')
     def _onchange_lot_id(self):
         """Actualizar cantidad por defecto cuando se selecciona un lote."""
-        if self.lot_id and self.lot_id.
+        if self.lot_id and self.lot_id.product_id and not self.quantity:
+            self.quantity = 1.0
+

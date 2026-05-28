@@ -201,4 +201,46 @@ class StockPicking(models.Model):
         promote = done_pick.filtered(lambda p: p.component_lab_temp_out)
         pool_promote = promote.filtered(lambda p: p.component_lab_pool_intake)
         legacy_promote = promote - pool_promote
-  
+        if pool_promote:
+            for p in pool_promote:
+                p._component_lab_create_pool_assignments()
+            pool_promote.write({'component_lab_temp_out': False})
+        if legacy_promote:
+            legacy_promote.write({
+                'component_lab_loan_active': True,
+                'component_lab_temp_out': False,
+            })
+        for ret in done_pick.filtered(lambda p: p.component_lab_source_loan_picking_id):
+            src = ret.component_lab_source_loan_picking_id
+            if not src:
+                continue
+            if src.component_lab_loan_active:
+                src.write({
+                    'component_lab_loan_active': False,
+                    'component_lab_pending_responsible_approval': True,
+                })
+            elif not src.component_lab_loan_completed and not src.component_lab_pending_responsible_approval:
+                src.write({'component_lab_pending_responsible_approval': True})
+        return res
+
+    def action_cancel(self):
+        returns_before = self.filtered(lambda p: p.component_lab_source_loan_picking_id)
+        had_temp = self.filtered(lambda p: p.component_lab_temp_out)
+        res = super().action_cancel()
+        if had_temp:
+            had_temp.write({'component_lab_temp_out': False})
+
+        cancelled = self.filtered(lambda p: p.state == 'cancel')
+        cancelled_loan = cancelled.filtered(lambda p: p.component_lab_loan_active)
+        if cancelled_loan:
+            cancelled_loan.write({'component_lab_loan_active': False})
+
+        for ret in (returns_before & cancelled):
+            src = ret.component_lab_source_loan_picking_id
+            if src.state == 'done':
+                src.write({
+                    'component_lab_loan_active': True,
+                    'component_lab_loan_completed': False,
+                    'component_lab_pending_responsible_approval': False,
+                })
+        return res

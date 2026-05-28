@@ -205,4 +205,14 @@
                         <p><strong>Entregado por</strong></p>
                         <p t-esc="(picking.partner_id.name if picking and picking.partner_id else '')"/>
                     </div>
-                    <div class="col-6" style
+                    <div class="col-6" style="text-align:center;">
+                        <p>______________________________</p>
+                        <p><strong>Recibido por</strong></p>
+                        <p t-esc="(picking.company_id.name if picking and picking.company_id else '')"/>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+</odoo>
+

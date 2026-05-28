@@ -103,4 +103,13 @@ def post_init_hook(env):
                 if not cron:
                     continue
                 hour, minute = hhmm
-                # Próxima ejecución: h
+                # Próxima ejecución: hoy o mañana a la hora indicada
+                next_run = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+                if next_run <= now:
+                    next_run = next_run + timedelta(days=1)
+                cron.write({'nextcall': next_run})
+                _logger.info('Cron %s: próxima ejecución %s', cron.name, next_run)
+            except Exception as e:
+                _logger.warning('No se pudo asignar hora al cron %s: %s', xml_id, e)
+    except Exception as e:
+        _logger.warning('Error asignando horas a crons en post_init_hook: %s', e)

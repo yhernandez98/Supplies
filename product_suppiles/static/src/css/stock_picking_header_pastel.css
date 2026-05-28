@@ -107,4 +107,133 @@
 .o_form_sheet.oe_stock_picking_sheet .supplies-main-products-page .o_field_x2many,
 .o_form_sheet.oe_stock_picking_sheet .supplies-main-products-page .o_field_x2many .o_list_renderer,
 .o_form_sheet.oe_stock_picking_sheet .supplies-main-products-page .o_list_view,
-.o_form_sheet.oe_stock_picking_sheet .supplies-main-produc
+.o_form_sheet.oe_stock_picking_sheet .supplies-main-products-page .o_list_table_wrapper,
+.o_form_sheet.oe_stock_picking_sheet .supplies-main-products-page .o_list_container,
+.o_form_sheet.oe_stock_picking_sheet .supplies-main-products-page .o_list_table {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+.o_form_sheet.oe_stock_picking_sheet .supplies-main-products-page .o_list_table_wrapper,
+.o_form_sheet.oe_stock_picking_sheet .supplies-main-products-page .o_list_container {
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+    overscroll-behavior-x: none !important;
+}
+
+.o_form_sheet.oe_stock_picking_sheet .supplies-main-products-page .o_list_view,
+.o_form_sheet.oe_stock_picking_sheet .supplies-main-products-page .o_list_renderer {
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+}
+
+.o_form_sheet.oe_stock_picking_sheet .supplies-main-products-page .o_supplies_main_products_list,
+.o_form_sheet.oe_stock_picking_sheet .supplies-main-products-page .o_list_view table.o_list_table {
+    table-layout: fixed !important;
+    width: 100% !important;
+    min-width: 0 !important;
+}
+
+.o_form_sheet.oe_stock_picking_sheet .supplies-main-products-page .o_list_table th[data-name="product_display_clean"],
+.o_form_sheet.oe_stock_picking_sheet .supplies-main-products-page .o_list_table td[name="product_display_clean"] {
+    width: 26% !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+.o_form_sheet.oe_stock_picking_sheet .supplies-main-products-page .o_list_table th[data-name="lot_id"],
+.o_form_sheet.oe_stock_picking_sheet .supplies-main-products-page .o_list_table td[name="lot_id"] {
+    width: 10% !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+.o_form_sheet.oe_stock_picking_sheet .supplies-main-products-page .o_list_table th[data-name="associated_components"],
+.o_form_sheet.oe_stock_picking_sheet .supplies-main-products-page .o_list_table td[name="associated_components"],
+.o_form_sheet.oe_stock_picking_sheet .supplies-main-products-page .o_list_table th[data-name="associated_peripherals"],
+.o_form_sheet.oe_stock_picking_sheet .supplies-main-products-page .o_list_table td[name="associated_peripherals"],
+.o_form_sheet.oe_stock_picking_sheet .supplies-main-products-page .o_list_table th[data-name="associated_complements"],
+.o_form_sheet.oe_stock_picking_sheet .supplies-main-products-page .o_list_table td[name="associated_complements"] {
+    width: 16% !important;
+    white-space: pre-wrap !important;
+    line-height: 1.2 !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    word-break: break-word !important;
+}
+
+.o_form_sheet.oe_stock_picking_sheet .supplies-main-products-page .o_list_table th[data-name="action_open_lot_wizard"],
+.o_form_sheet.oe_stock_picking_sheet .supplies-main-products-page .o_list_table td[name="action_open_lot_wizard"] {
+    width: 8% !important;
+    min-width: 6.5rem !important;
+    white-space: nowrap !important;
+}
+
+.o_form_sheet.oe_stock_picking_sheet .supplies-main-products-page .o_list_table th[data-name="quantity"],
+.o_form_sheet.oe_stock_picking_sheet .supplies-main-products-page .o_list_table td[name="quantity"] {
+    width: 8% !important;
+    text-align: right !important;
+    white-space: nowrap !important;
+}
+
+/* Botones de fila: mantener visibles dentro de celdas compactas. */
+.o_form_sheet.oe_stock_picking_sheet .supplies-main-products-page .o_list_view td .btn,
+.o_form_sheet.oe_stock_picking_sheet .supplies-main-products-page .o_list_view td .oe_link {
+    max-width: 100% !important;
+    white-space: nowrap !important;
+}
+
+/* Fecha programada: evitar min-width:0 en filas flex (encoge el widget y parte la fecha en vertical). */
+.o_form_sheet.oe_stock_picking_sheet .o_supplies_scheduled_date_wrap {
+    box-sizing: border-box !important;
+    min-width: 280px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+}
+
+.o_form_sheet.oe_stock_picking_sheet .o_inner_group .o_row:has(.o_field_widget[name="scheduled_date"]),
+.o_form_sheet.oe_stock_picking_sheet .o_inner_group .o_row:has(.o_field_widget[data-name="scheduled_date"]) {
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    width: 100% !important;
+}
+
+.o_form_sheet.oe_stock_picking_sheet .o_field_widget[name="scheduled_date"],
+.o_form_sheet.oe_stock_picking_sheet .o_field_widget[data-name="scheduled_date"],
+.o_form_sheet.oe_stock_picking_sheet .o_field_widget.o_supplies_scheduled_date_single_line {
+    flex: 1 0 auto !important;
+    min-width: 260px !important;
+    max-width: none !important;
+    width: auto !important;
+    white-space: nowrap !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+}
+
+.o_form_sheet.oe_stock_picking_sheet .o_field_widget[name="scheduled_date"] *,
+.o_form_sheet.oe_stock_picking_sheet .o_field_widget[data-name="scheduled_date"] *,
+.o_form_sheet.oe_stock_picking_sheet .o_field_widget.o_supplies_scheduled_date_single_line * {
+    white-space: nowrap !important;
+}
+
+.o_form_sheet.oe_stock_picking_sheet .o_field_widget[name="scheduled_date"] input,
+.o_form_sheet.oe_stock_picking_sheet .o_field_widget[data-name="scheduled_date"] input,
+.o_form_sheet.oe_stock_picking_sheet .o_field_widget.o_supplies_scheduled_date_single_line input {
+    min-width: 16rem !important;
+}
+
+.o_form_sheet.oe_stock_picking_sheet .o_inner_group .o_td_value:has(.o_field_widget[name="scheduled_date"]),
+.o_form_sheet.oe_stock_picking_sheet .o_inner_group .o_td_value:has(.o_field_widget[data-name="scheduled_date"]),
+.o_form_sheet.oe_stock_picking_sheet .o_inner_group tr:has(.o_field_widget[name="scheduled_date"]) > td.o_td_value {
+    min-width: min(100%, 320px) !important;
+    max-width: none !important;
+    overflow: visible !important;
+}
+
+.o_form_sheet.oe_stock_picking_sheet .o_inner_group .o_group_col_6:has(.o_field_widget[name="scheduled_date"]),
+.o_form_sheet.oe_stock_picking_sheet .o_inner_group .o_group_col_6:has(.o_field_widget[data-name="scheduled_date"]) {
+    min-width: min(100%, 360px) !important;
+}

@@ -13,4 +13,6 @@ access_component_lab_tech_return_wizard_stock,component.lab.tech.return.wizard s
 access_component_lab_responsible_return_wizard_stock,component.lab.responsible.return.wizard stock,model_component_lab_responsible_return_wizard,stock.group_stock_user,1,1,1,1
 access_component_lab_responsible_return_wizard_line_stock,component.lab.responsible.return.wizard.line stock,model_component_lab_responsible_return_wizard_line,stock.group_stock_user,1,1,1,1
 access_component_lab_acta_stock,component.lab.acta stock,model_component_lab_acta,stock.group_stock_user,1,1,1,1
-ac
+access_supplies_assignment_stock,supplies.assignment stock,model_supplies_assignment,stock.group_stock_user,1,1,1,1
+access_supplies_assignment_reassignment_stock,supplies.assignment.reassignment stock,model_supplies_assignment_reassignment,stock.group_stock_user,1,1,1,1
+

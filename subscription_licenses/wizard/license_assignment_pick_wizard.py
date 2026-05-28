@@ -107,4 +107,62 @@ class LicenseAssignmentPickWizard(models.TransientModel):
                 ('state', '=', 'assigned'),
             ], limit=1)
             if existing:
-                raise UserError(_('Esta asignación ya está creada para est
+                raise UserError(_('Esta asignación ya está creada para este equipo.'))
+
+            LicenseEquipment.create({
+                'assignment_id': assignment.id,
+                'lot_id': self.lot_id.id,
+                'contact_id': False,
+                'state': 'assigned',
+                'assignment_date': assignment_date,
+            })
+        else:
+            related_partner_id = self.related_partner_id
+            if not related_partner_id:
+                raise UserError(_('El equipo no tiene un usuario relacionado asignado.'))
+
+            existing = LicenseEquipment.search([
+                ('assignment_id', '=', assignment.id),
+                ('contact_id', '=', related_partner_id.id),
+                ('state', '=', 'assigned'),
+            ], limit=1)
+            if existing:
+                # Ya existe línea de usuario: solo actualizar vínculo de equipo/serial si aplica.
+                if not existing.lot_id:
+                    existing.write({'lot_id': self.lot_id.id})
+                    LicenseEquipment.search([
+                        ('assignment_id', '=', assignment.id),
+                        ('lot_id', '=', self.lot_id.id),
+                        ('contact_id', '=', False),
+                        ('state', '=', 'assigned'),
+                    ]).unlink()
+                    return {'type': 'ir.actions.act_window_close'}
+                if existing.lot_id.id == self.lot_id.id:
+                    return {'type': 'ir.actions.act_window_close'}
+                # Misma licencia de usuario asociada a otro serial: mover vínculo a este equipo.
+                existing.write({'lot_id': self.lot_id.id})
+                LicenseEquipment.search([
+                    ('assignment_id', '=', assignment.id),
+                    ('lot_id', '=', self.lot_id.id),
+                    ('contact_id', '=', False),
+                    ('state', '=', 'assigned'),
+                ]).unlink()
+                return {'type': 'ir.actions.act_window_close'}
+
+            LicenseEquipment.create({
+                'assignment_id': assignment.id,
+                'lot_id': self.lot_id.id,
+                'contact_id': related_partner_id.id,
+                'state': 'assigned',
+                'assignment_date': assignment_date,
+            })
+            # Blindaje: si existía una fila de equipo para la misma asignación/serial, eliminarla.
+            LicenseEquipment.search([
+                ('assignment_id', '=', assignment.id),
+                ('lot_id', '=', self.lot_id.id),
+                ('contact_id', '=', False),
+                ('state', '=', 'assigned'),
+            ]).unlink()
+
+        return {'type': 'ir.actions.act_window_close'}
+

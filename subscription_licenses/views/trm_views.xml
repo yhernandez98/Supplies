@@ -63,4 +63,13 @@
         <field name="context">{'search_default_active': 1}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
-                Configure
+                Configure las tasas de cambio (TRM) mes a mes
+            </p>
+            <p>
+                Ingrese o sincronice la tasa de cambio de dólares a pesos colombianos por mes y día de corte.
+                Esta información se utilizará para calcular los costos de las licencias en pesos según el corte configurado.
+            </p>
+        </field>
+    </record>
+</odoo>
+

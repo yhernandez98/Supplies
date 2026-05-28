@@ -50,4 +50,7 @@
     'application': True,
     'license': 'LGPL-3',
     'installable': True,
-    'pre_init_hook': 'pre_i
+    'pre_init_hook': 'pre_init_hook',
+    'post_init_hook': 'post_init_hook',
+}
+

@@ -75,4 +75,25 @@
                   sequence="35"/>
         <menuitem id="menu_delivery_route_billing"
                   name="Facturación"
-   
+                  parent="menu_inventory_dashboard_queries"
+                  action="action_open_delivery_route_billing_refreshed"
+                  sequence="38"/>
+        <menuitem id="menu_stock_lot_incomplete_fields"
+                  name="Productos Pendientes de Información"
+                  parent="menu_inventory_dashboard_queries"
+                  action="action_open_stock_lot_incomplete_fields_refreshed"
+                  sequence="40"/>
+        <menuitem id="menu_internal_reference"
+                  name="Referencias Internas"
+                  parent="menu_inventory_dashboard_queries"
+                  action="action_internal_reference"
+                  sequence="50"/>
+
+        <!-- Configuración -->
+        <menuitem id="menu_inventory_dashboard_config"
+                  name="Configurar Grupos"
+                  parent="menu_inventory_dashboard_config_root"
+                  action="action_inventory_dashboard_config"
+                  sequence="10"/>
+    </data>
+</odoo>

@@ -15,4 +15,10 @@
                     <field name="active_subscription_id" string="Suscripción" optional="show"
                            invisible="not show_subscription_service_fields"
                            options="{'no_create': True, 'no_create_edit': True}"
-      
+                           placeholder="Elija la suscripción del cliente…"/>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</odoo>
+

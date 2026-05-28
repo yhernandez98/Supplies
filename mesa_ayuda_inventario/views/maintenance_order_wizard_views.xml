@@ -49,4 +49,11 @@
 
         <!-- Acción para el Wizard -->
         <record id="action_maintenance_order_wizard" model="ir.actions.act_window">
-            <field name="name">Crear Orden de Mant
+            <field name="name">Crear Orden de Mantenimiento</field>
+            <field name="res_model">maintenance.order.wizard</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+        </record>
+    </data>
+</odoo>
+

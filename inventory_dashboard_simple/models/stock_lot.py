@@ -628,4 +628,329 @@ class StockLot(models.Model):
         'active_subscription_id',
         'product_id',
         'product_id.classification',
+        'product_id.asset_category_id',
+        'product_id.asset_class_id',
+        'is_stock_in_supp_existencias',
+    )
+    def _compute_invdash_pending_info(self):
+        for lot in self:
+            lot.invdash_pending_info = lot._invdash_meets_pending_info_criteria()
+
+    @api.depends(
+        'quant_ids',
+        'quant_ids.quantity',
+        'quant_ids.location_id',
+        'quant_ids.location_id.usage',
+    )
+    def _compute_invdash_serial_multi_location(self):
+        """Detectar serial con stock positivo en más de una ubicación (mismo lote = mismo producto)."""
+        for lot in self:
+            lot.invdash_serial_multi_location = False
+            lot.invdash_multi_location_detail = ''
+        records = self.filtered(lambda l: l.id)
+        if not records:
+            return
+        Quant = self.env['stock.quant'].sudo()
+        quants = Quant.search(
+            [
+                ('lot_id', 'in', records.ids),
+                ('quantity', '>', 0),
+                ('location_id.usage', 'in', ('internal', 'transit')),
+            ]
+        )
+        loc_qty = defaultdict(lambda: defaultdict(float))
+        for q in quants:
+            loc_qty[q.lot_id.id][q.location_id.id] += q.quantity
+
+        Location = self.env['stock.location'].sudo()
+        for lot in records:
+            lmap = loc_qty.get(lot.id) or {}
+            if len(lmap) < 2:
+                continue
+            lot.invdash_serial_multi_location = True
+            loc_ids = list(lmap.keys())
+            locs = Location.browse(loc_ids)
+            name_by_id = {loc.id: (loc.complete_name or loc.name or '') for loc in locs}
+
+            def _sort_key(loc_id):
+                return name_by_id.get(loc_id, '')
+
+            parts = []
+            for loc_id in sorted(lmap.keys(), key=_sort_key):
+                qty = lmap[loc_id]
+                nm = name_by_id.get(loc_id, '')
+                if float(qty).is_integer():
+                    qtxt = str(int(qty))
+                else:
+                    qtxt = f'{float(qty):.2f}'.rstrip('0').rstrip('.')
+                parts.append(f'{nm} ({qtxt})')
+            lot.invdash_multi_location_detail = '; '.join(parts)
+
+    @api.depends('ref', 'product_id')
+    def _compute_internal_ref_id(self):
+        """Calcular internal_ref_id desde el campo ref, filtrando por producto."""
+        for lot in self:
+            if lot.ref and lot.product_id:
+                internal_ref = self.env['internal.reference'].search([
+                    ('name', '=', lot.ref),
+                    ('product_id', '=', lot.product_id.id)
+                ], limit=1)
+                lot.internal_ref_id = internal_ref.id if internal_ref else False
+            else:
+                lot.internal_ref_id = False
+    
+    def _inverse_internal_ref_id(self):
+        """Actualizar ref desde internal_ref_id."""
+        for lot in self:
+            if lot.internal_ref_id:
+                lot.ref = lot.internal_ref_id.name
+            else:
+                lot.ref = False
+    
+    @api.onchange('product_id')
+    def _onchange_product_id_internal_ref(self):
+        """Limpiar referencia interna cuando cambia el producto."""
+        for lot in self:
+            if lot.internal_ref_id:
+                # Verificar que la referencia interna pertenezca al producto actual
+                if lot.internal_ref_id.product_id != lot.product_id:
+                    lot.internal_ref_id = False
+                    lot.ref = False
+
+    @api.model
+    def _name_search(self, name='', args=None, operator='ilike', limit=100, order=None):
+        """Permitir búsqueda por número de serie y placa de inventario, con filtro de ubicación según el contexto.
         
+        Basado en la implementación de mesa_ayuda_inventario/models/customer_inventory_lot.py
+        """
+        if args is None:
+            args = []
+        
+        # Verificar si se debe filtrar por ubicación desde el contexto
+        filter_by_location = self.env.context.get('filter_by_location', False)
+        operation_type = self.env.context.get('wizard_operation_type', False)
+        partner_id = self.env.context.get('wizard_partner_id', False)
+        
+        # Mantener compatibilidad con el contexto antiguo
+        filter_by_supplies = self.env.context.get('filter_by_supplies_location', False)
+        if filter_by_supplies and not filter_by_location:
+            filter_by_location = True
+            operation_type = 'delivery'
+        
+        # Obtener lotes disponibles según el tipo de operación
+        available_lot_ids = None
+        if filter_by_location:
+            location_to_use = None
+            
+            if operation_type == 'delivery':
+                # ENTREGA: Buscar lotes en Supp/Existencias
+                supplies_location = self.env['stock.location'].search([
+                    ('complete_name', 'ilike', 'Supp/Existencias'),
+                    ('usage', '=', 'internal'),
+                ], limit=1)
+                
+                if supplies_location:
+                    location_to_use = supplies_location
+                else:
+                    _logger.warning("No se encontró la ubicación Supp/Existencias")
+                    return []
+                    
+            elif operation_type == 'return' and partner_id:
+                # DEVOLUCIÓN: Buscar lotes en la ubicación del cliente
+                partner = self.env['res.partner'].browse(partner_id)
+                customer_location = partner.property_stock_customer
+                
+                if customer_location:
+                    location_to_use = customer_location
+                else:
+                    _logger.warning("Cliente %s no tiene ubicación configurada", partner.name)
+                    return []
+            else:
+                # Fallback: usar Supp/Existencias si no se especifica
+                supplies_location = self.env['stock.location'].search([
+                    ('complete_name', 'ilike', 'Supp/Existencias'),
+                    ('usage', '=', 'internal'),
+                ], limit=1)
+                
+                if supplies_location:
+                    location_to_use = supplies_location
+                else:
+                    return []
+            
+            if location_to_use:
+                # Obtener todas las ubicaciones hijas
+                location_ids = self.env['stock.location'].search([
+                    ('id', 'child_of', location_to_use.id)
+                ]).ids
+                
+                # Buscar quants en la ubicación correspondiente con cantidad > 0
+                quants = self.env['stock.quant'].search([
+                    ('location_id', 'in', location_ids),
+                    ('quantity', '>', 0),
+                    ('lot_id', '!=', False),
+                ])
+                
+                # Obtener IDs únicos de lotes disponibles
+                available_lot_ids = list(set(quants.mapped('lot_id').ids))
+                
+                if not available_lot_ids:
+                    _logger.debug("No hay lotes disponibles en la ubicación seleccionada")
+                    return []
+        
+        # Si hay un término de búsqueda, buscar en múltiples campos
+        # Buscar en: inventory_plate, name (número de serie), y display_contact_id (contacto)
+        if name and name.strip():
+            search_term = name.strip()
+            
+            # Búsqueda normal: buscar en múltiples campos
+            # Buscar contactos que coincidan con el término de búsqueda
+            partner_ids = []
+            try:
+                partners = self.env['res.partner'].search([
+                    '|',
+                    ('name', operator, search_term),
+                    ('display_name', operator, search_term)
+                ], limit=100)
+                partner_ids = partners.ids
+            except Exception:
+                pass
+            
+            # Construir dominio de búsqueda: inventory_plate, name, o display_contact_id
+            search_domain = [
+                '|', '|',
+                ('inventory_plate', operator, search_term),  # Buscar en placa de inventario
+                ('name', operator, search_term),  # Buscar en número de serie
+            ]
+            
+            # Si se encontraron contactos, agregar búsqueda por contacto
+            if partner_ids:
+                search_domain.append(('display_contact_id', 'in', partner_ids))
+            else:
+                # Si no se encontraron contactos, aún buscar por display_contact_id.name
+                search_domain.append(('display_contact_id.name', operator, search_term))
+            
+            # Si hay filtro de ubicación, aplicarlo directamente
+            if available_lot_ids is not None:
+                location_filter = [('id', 'in', available_lot_ids)]
+                domain = ['&'] + search_domain + location_filter
+            else:
+                # Si no hay filtro de ubicación, usar args si existen
+                if args:
+                    domain = ['&'] + search_domain + args
+                else:
+                    domain = search_domain
+            
+            _logger.debug("Búsqueda de lotes - name: %s, operation_type: %s, available_lots: %d, partners: %d", 
+                         name, operation_type, len(available_lot_ids) if available_lot_ids else 0, len(partner_ids))
+            
+            # Llamar al método padre con name='' porque ya construimos el dominio completo
+            return super(StockLot, self)._name_search(name='', args=domain, operator=operator, limit=limit, order=order)
+        
+        # Si no hay término de búsqueda, aplicar solo filtros de ubicación
+        if available_lot_ids is not None:
+            domain = [('id', 'in', available_lot_ids)]
+            return super(StockLot, self)._name_search(name='', args=domain, operator=operator, limit=limit, order=order)
+        
+        # Si no hay filtro de ubicación ni búsqueda, usar método padre normal
+        return super(StockLot, self)._name_search(name=name, args=args, operator=operator, limit=limit, order=order)
+    
+    def action_open_quant_editor(self):
+        """Abrir wizard para actualizar cantidad de inventario con este lote."""
+        self.ensure_one()
+        
+        # Verificar que el lote esté guardado (tenga ID)
+        if not self.id or (hasattr(self, '_origin') and self._origin.id == False):
+            raise UserError(_('Debe guardar el lote primero antes de actualizar la cantidad.'))
+        
+        # Buscar ubicación Supp/Existencias por defecto
+        supplies_location = self.env['stock.location'].search([
+            ('complete_name', 'ilike', 'Supp/Existencias'),
+            ('usage', '=', 'internal'),
+        ], limit=1)
+        
+        # Construir contexto con TODA la información necesaria
+        context = {
+            'default_lot_id': self.id,
+            'default_location_id': supplies_location.id if supplies_location else False,
+            'active_id': self.id,
+            'active_model': 'stock.lot',
+        }
+        
+        # CRÍTICO: Agregar producto SIEMPRE si existe
+        if self.product_id:
+            context['default_product_id'] = self.product_id.id
+            _logger.info("Abriendo wizard con lote %s y producto %s", self.name, self.product_id.name)
+        else:
+            _logger.warning("Lote %s no tiene producto asignado", self.name)
+        
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Actualizar Cantidad de Inventario'),
+            'res_model': 'quant.editor.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': context,
+        }
+
+    @api.model
+    def domain_stock_lot_pending_information(self):
+        """Mismo criterio que la acción «Productos Pendientes de Información» (lista + badge)."""
+        return [('invdash_pending_info', '=', True)]
+
+    @api.model
+    def _refresh_invdash_pending_fields(self):
+        """Recalcula campos almacenados usados por la vista de pendientes.
+
+        Útil cuando cantidad/ubicación se actualiza por SQL directo (fuera del ORM),
+        porque los depends de campos store=True no se disparan automáticamente.
+        """
+        # IMPORTANTE rendimiento:
+        # no recorrer todo el inventario al abrir la vista (puede bloquear).
+        # Recalcular solo los lotes actualmente marcados como pendientes.
+        lot_ids = self.search([('invdash_pending_info', '=', True)]).ids
+        if not lot_ids:
+            return
+
+        batch_size = 300
+        for i in range(0, len(lot_ids), batch_size):
+            batch_ids = lot_ids[i:i + batch_size]
+            lots = self.browse(batch_ids)
+            lots._compute_display_location_contact()
+            lots._compute_is_stock_in_supp_existencias()
+            lots._compute_invdash_pending_info()
+
+    @api.model
+    def action_open_incomplete_fields_refreshed(self):
+        """Abre la vista de pendientes forzando refresh previo de campos store."""
+        self._refresh_invdash_pending_fields()
+        return self.env.ref('inventory_dashboard_simple.action_stock_lot_incomplete_fields').read()[0]
+
+    @api.model
+    def incomplete_pending_information_count(self):
+        """Conteo para badge en menú Inventario → Dashboard → Consultas."""
+        return self.env['stock.lot'].search_count(self.domain_stock_lot_pending_information())
+
+    @api.model
+    def domain_stock_lot_serial_multi_location(self):
+        """Mismo criterio que la acción «Series en varias ubicaciones»."""
+        return [('invdash_serial_multi_location', '=', True)]
+
+    @api.model
+    def serial_multi_location_count(self):
+        """Conteo para badge de «Series en varias ubicaciones»."""
+        return self.env['stock.lot'].search_count(self.domain_stock_lot_serial_multi_location())
+
+    @api.model
+    def dashboard_queries_badge_counts(self):
+        """Conteos de consultas del dashboard para pintar badges del menú."""
+        pending = self.incomplete_pending_information_count()
+        serial_multi = self.serial_multi_location_count()
+        excess_qty = self.env['stock.quant'].search_count([('quantity', '>', 1)])
+        delivery_billing = self.env['stock.picking'].delivery_route_billing_pending_count()
+        return {
+            'pending_info': pending,
+            'serial_multi_location': serial_multi,
+            'excess_quantity': excess_qty,
+            'delivery_billing': delivery_billing,
+            'dashboard_total': pending + serial_multi + excess_qty + delivery_billing,
+        }

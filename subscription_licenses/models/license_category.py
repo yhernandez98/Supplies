@@ -72,4 +72,28 @@ class LicenseCategory(models.Model):
             return {
                 'type': 'ir.actions.act_window',
                 'name': _('Licencias de %s') % self.name,
-                'res_model': 'license.tem
+                'res_model': 'license.template',
+                'view_mode': 'list,form',
+                'domain': [('name', '=', self.id), ('active', '=', True)],
+                'context': {'default_name': self.id},
+            }
+        else:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Error'),
+                    'message': _('El modelo license.template no está disponible.'),
+                    'type': 'warning',
+                }
+            }
+
+    def action_activate(self):
+        """Activa la categoría."""
+        for rec in self:
+            rec.active = True
+
+    def action_deactivate(self):
+        """Desactiva la categoría."""
+        for rec in self:
+            rec.active = False

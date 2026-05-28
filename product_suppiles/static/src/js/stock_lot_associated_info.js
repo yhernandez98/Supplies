@@ -323,4 +323,44 @@
             rows.forEach(function(row) {
                 const summaryCell = row.querySelector('td[data-name="associated_items_summary"]') ||
                                   row.querySelector('td:has([name="associated_items_summary"])');
-                const serialsCell = ro
+                const serialsCell = row.querySelector('td[data-name="associated_items_serials"]') ||
+                                  row.querySelector('td:has([name="associated_items_serials"])');
+                if (summaryCell) summaryCell.style.display = '';
+                if (serialsCell) serialsCell.style.display = '';
+            });
+        } else {
+            // NO ocultar las columnas, solo dejarlas visibles pero vacías
+            // summaryColumn.style.display = 'none';
+            // serialsColumn.style.display = 'none';
+        }
+    }
+    
+    function initColumnToggle() {
+        toggleAssociatedColumns();
+        
+        // Observar cambios en el DOM
+        if (window.MutationObserver) {
+            const observer = new MutationObserver(function() {
+                toggleAssociatedColumns();
+            });
+            
+            if (document.body) {
+                observer.observe(document.body, {
+                    childList: true,
+                    subtree: true
+                });
+            }
+        }
+        
+        // Ejecutar con delays para asegurar que la tabla esté renderizada
+        setTimeout(toggleAssociatedColumns, 300);
+        setTimeout(toggleAssociatedColumns, 800);
+        setTimeout(toggleAssociatedColumns, 1500);
+    }
+    
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initColumnToggle);
+    } else {
+        initColumnToggle();
+    }
+})();

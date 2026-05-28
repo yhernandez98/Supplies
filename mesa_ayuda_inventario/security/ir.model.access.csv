@@ -41,4 +41,15 @@ access_product_asset_category_read,product.asset.category - Lectura Inventario C
 access_product_asset_class_read,product.asset.class - Lectura Inventario Clientes,product_suppiles.model_product_asset_class,base.group_user,1,0,0,0
 access_customer_query_wizard_user,customer.query.wizard - Usuario Mesa de Ayuda,mesa_ayuda_inventario.model_customer_query_wizard,base.group_user,1,1,1,1
 access_customer_contract_summary_wizard_user,customer.contract.summary.wizard - Usuario Mesa de Ayuda,mesa_ayuda_inventario.model_customer_contract_summary_wizard,base.group_user,1,1,1,1
-access_customer_contract_summary_line_wizard_user,customer.contract.summary.line.wizard - Usuario Mesa de Ayuda,mesa_ayuda_inventario.model_customer
+access_customer_contract_summary_line_wizard_user,customer.contract.summary.line.wizard - Usuario Mesa de Ayuda,mesa_ayuda_inventario.model_customer_contract_summary_line_wizard,base.group_user,1,1,1,1
+access_customer_contract_summary_group_line_wizard_user,customer.contract.summary.group.line.wizard - Usuario Mesa de Ayuda,mesa_ayuda_inventario.model_customer_contract_summary_group_line_wizard,base.group_user,1,1,1,1
+access_customer_admin_supplies_flag_user,customer.admin.supplies.flag - Usuario Mesa de Ayuda,mesa_ayuda_inventario.model_customer_admin_supplies_flag,base.group_user,1,1,1,1
+access_customer_admin_supplies_service_flag_user,customer.admin.supplies.service.flag - Usuario Mesa de Ayuda,mesa_ayuda_inventario.model_customer_admin_supplies_service_flag,base.group_user,1,1,1,1
+access_mesa_service_solicitudes_wizard_user,mesa.service.solicitudes.wizard - Usuario Mesa de Ayuda,mesa_ayuda_inventario.model_mesa_service_solicitudes_wizard,base.group_user,1,1,1,1
+access_mesa_service_retiro_usuario_equipo_wizard_user,mesa.service.retiro.usuario.equipo.wizard - Usuario Mesa de Ayuda,mesa_ayuda_inventario.model_mesa_service_retiro_usuario_equipo_wizard,base.group_user,1,1,1,1
+access_mesa_service_retiro_license_select_wizard_user,mesa.service.retiro.license.select.wizard - Usuario Mesa de Ayuda,mesa_ayuda_inventario.model_mesa_service_retiro_license_select_wizard,base.group_user,1,1,1,1
+access_mesa_service_retiro_user_equipment_select_wizard_user,mesa.service.retiro.user.equipment.select.wizard - Usuario Mesa de Ayuda,mesa_ayuda_inventario.model_mesa_service_retiro_user_equipment_select_wizard,base.group_user,1,1,1,1
+access_mesa_service_retiro_user_license_prompt_wizard_user,mesa.service.retiro.user.license.prompt.wizard - Usuario Mesa de Ayuda,mesa_ayuda_inventario.model_mesa_service_retiro_user_license_prompt_wizard,base.group_user,1,1,1,1
+access_mesa_retiro_inactivate_equipment_prompt_wizard_user,mesa.retiro.inactivate.equipment.prompt.wizard - Usuario Mesa de Ayuda,mesa_ayuda_inventario.model_mesa_retiro_inactivate_equipment_prompt_wizard,base.group_user,1,1,1,1
+access_mesa_retiro_inactivate_user_license_prompt_wizard_user,mesa.retiro.inactivate.user.license.prompt.wizard - Usuario Mesa de Ayuda,mesa_ayuda_inventario.model_mesa_retiro_inactivate_user_license_prompt_wizard,base.group_user,1,1,1,1
+access_mesa_panel_equipment_change_wizard_user,mesa.panel.equipment.change.wizard - Usuario Mesa de Ayuda,mesa_ayuda_inventario.model_mesa_panel_equipment_change_wizard,base.group_user,1,1,1,1

@@ -467,4 +467,72 @@ class StockLot(models.Model):
             if price is None:
                 return ''
             currency = sub._get_currency_for_product_price(service, sub.plan_id)
-            if 
+            if not currency:
+                currency = (
+                    sub.currency_id
+                    or (sub.partner_id.property_product_pricelist.currency_id if sub.partner_id and sub.partner_id.property_product_pricelist else False)
+                    or self.env.company.currency_id
+                )
+            digits = int(currency.decimal_places) if currency else 2
+            return formatLang(self.env, price, currency_obj=currency, digits=digits)
+        except Exception:
+            _logger.debug(
+                'get_acta_entrega_subscription_service_price_display: lote %s sin precio mostrable',
+                self.id,
+                exc_info=True,
+            )
+            return ''
+
+    def _get_subscription_for_equipment_change(self):
+        """Suscripción activa con ubicación para el wizard de cambio de equipo.
+
+        Prioridad: ``active_subscription_id`` en el serial; si no, uso activo
+        (``subscription.subscription.usage``).
+        """
+        self.ensure_one()
+        Subscription = self.env['subscription.subscription']
+        sub = getattr(self, 'active_subscription_id', Subscription.browse())
+        if sub and sub.state == 'active' and sub.location_id:
+            return sub
+        usage = self.env['subscription.subscription.usage'].search([
+            ('lot_id', '=', self.id),
+            ('date_end', '=', False),
+        ], limit=1, order='date_start desc')
+        if usage and usage.subscription_id:
+            s = usage.subscription_id
+            if s.state == 'active' and s.location_id:
+                return s
+        return Subscription.browse()
+
+    def action_open_equipment_change_wizard(self):
+        """Abre el wizard real de cambio de equipo (mismo que en la suscripción).
+
+        Puede llamarse desde la ficha del serial, inventario cliente o mantenimiento.
+        """
+        self.ensure_one()
+        sub = self._get_subscription_for_equipment_change()
+        if not sub:
+            raise UserError(_(
+                'No hay suscripción activa con ubicación vinculada a este serial para el cambio de equipo.\n'
+                'Asigne «Suscripción activa» en el serial o verifique que el equipo esté en uso en una suscripción.'
+            ))
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Cambio de Equipo'),
+            'res_model': 'subscription.equipment.change.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_subscription_id': sub.id,
+                'default_old_equipment_inventory_plate_search': self.id,
+                'default_old_equipment_lot_id': self.id,
+                'equipment_change_wizard': True,
+                'search_by_inventory_plate_only': True,
+                'active_model': 'subscription.equipment.change.wizard',
+            },
+        }
+
+    def action_open_subscription_equipment_changes(self):
+        """Compatibilidad: mismo flujo que ``action_open_equipment_change_wizard``."""
+        return self.action_open_equipment_change_wizard()
+
