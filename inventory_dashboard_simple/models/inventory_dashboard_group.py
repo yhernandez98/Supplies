@@ -241,17 +241,4 @@ class InventoryDashboardGroup(models.Model):
             if picking_types:
                 try:
                     group = self.create({
-                        'name': group_config['name'],
-                        'sequence': group_config['sequence'],
-                        'operation_type': group_config['code'],
-                        'picking_type_ids': [(6, 0, picking_types.ids)],
-                    })
-                    _logger.info("Grupo creado: %s con %d tipos de operación", group_config['name'], len(picking_types))
-                except Exception as e:
-                    # Si falla, loguear y continuar con el siguiente
-                    _logger.warning("Error creando grupo %s: %s", group_config['name'], str(e))
-                    continue
-        
-        _logger.info("Inicialización de grupos completada")
-
-
+          

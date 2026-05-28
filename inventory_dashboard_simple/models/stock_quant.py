@@ -128,44 +128,4 @@ class StockQuant(models.Model):
 
     @api.onchange('lot_id')
     def _onchange_lot_id(self):
-        """Actualizar campos relacionados cuando cambia el lote."""
-        if self.lot_id:
-            self._compute_lot_fields()
-
-    def action_correct_quantity_to_one(self):
-        """
-        Corrige la cantidad de los quants seleccionados a 1.
-        Solo actúa sobre registros con cantidad > 1; reduce usando _update_available_quantity.
-        """
-        quants_to_fix = self.filtered(lambda q: (q.quantity or 0) > 1)
-        if not quants_to_fix:
-            raise UserError(_('Ningún registro seleccionado tiene cantidad mayor a 1.'))
-        # Guardar datos antes de modificar (los registros pueden cambiar tras _update_available_quantity)
-        to_apply = []
-        for quant in quants_to_fix:
-            current = quant.quantity or 0
-            if current <= 1:
-                continue
-            delta = 1.0 - current
-            to_apply.append((quant.product_id, quant.location_id, delta, quant.lot_id, quant.owner_id, quant.package_id))
-        Quant = self.env['stock.quant'].sudo()
-        for product_id, location_id, delta, lot_id, owner_id, package_id in to_apply:
-            Quant._update_available_quantity(
-                product_id,
-                location_id,
-                delta,
-                lot_id=lot_id,
-                owner_id=owner_id,
-                package_id=package_id or False,
-            )
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': _('Cantidad corregida'),
-                'message': _('Se corrigió la cantidad a 1 en %s registro(s).') % len(to_apply),
-                'type': 'success',
-                'sticky': False,
-            },
-        }
-
+        """Actualizar campos relacionados cu

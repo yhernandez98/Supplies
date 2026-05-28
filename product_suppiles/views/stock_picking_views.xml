@@ -79,35 +79,4 @@
         <field name="supply_kind" column_invisible="1"/>
         <field name="associated_components" string="Componentes" readonly="1" optional="show" invisible="supply_kind != 'parent'" widget="text"/>
         <field name="associated_peripherals" string="Periféricos" readonly="1" optional="show" invisible="supply_kind != 'parent'" widget="text"/>
-        <field name="associated_complements" string="Complementos" readonly="1" optional="show" invisible="supply_kind != 'parent'" widget="text"/>
-        <field name="associated_licenses" string="Licencias" readonly="1" optional="show" invisible="supply_kind != 'parent'" widget="text"/>
-      </xpath>
-    </field>
-  </record>
-
-  <!-- Actualizar Fecha Finalizacion Renting en devoluciones ya validadas -->
-  <record id="action_backfill_renting_exit_dates" model="ir.actions.server">
-    <field name="name">Actualizar Fecha Finalizacion Renting (devoluciones ya hechas)</field>
-    <field name="model_id" ref="stock.model_stock_picking"/>
-    <field name="state">code</field>
-    <field name="code">result = env['stock.picking'].action_backfill_renting_exit_dates()</field>
-  </record>
-  <menuitem id="menu_action_backfill_renting_exit_dates"
-            name="Actualizar F. Finalizacion Renting (devoluciones ya hechas)"
-            parent="stock.menu_stock_config_settings"
-            action="action_backfill_renting_exit_dates"
-            sequence="50"/>
-
-  <!-- Quitar F. Finalizacion Renting puesta por error en entregas -->
-  <record id="action_clear_exit_date_from_deliveries" model="ir.actions.server">
-    <field name="name">Quitar F. Finalizacion Renting (entregas procesadas por error)</field>
-    <field name="model_id" ref="stock.model_stock_picking"/>
-    <field name="state">code</field>
-    <field name="code">result = env['stock.picking'].action_clear_exit_date_from_deliveries()</field>
-  </record>
-  <menuitem id="menu_action_clear_exit_date_from_deliveries"
-            name="Quitar F. Finalizacion Renting (entregas por error)"
-            parent="stock.menu_stock_config_settings"
-            action="action_clear_exit_date_from_deliveries"
-            sequence="51"/>
-</odoo>
+        <field name="as

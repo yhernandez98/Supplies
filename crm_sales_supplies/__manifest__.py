@@ -53,8 +53,4 @@
         'web.assets_backend': [
             'crm_sales_supplies/static/src/css/inventory_style.css',
             'crm_sales_supplies/static/src/js/inventory_view.js',
-            'crm_sales_supplies/static/src/js/purchase_alert_menu_badge.js',
-        ],
-    },
-}
-
+            'crm_sales_su

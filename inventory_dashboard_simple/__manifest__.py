@@ -42,21 +42,4 @@
         'views/delivery_route_billing_views.xml',
         'wizard/component_transfer_wizard_views.xml',
         'views/component_lab_pending_views.xml',
-        'views/component_lab_pool_views.xml',
-        'views/component_lab_hub_dashboard_templates.xml',
-        'reports/component_lab_assignment_report.xml',
-        'reports/component_lab_acta_report.xml',
-        'reports/supplies_assignment_report.xml',
-        'views/stock_picking_supplies_lab_inherit.xml',
-        'wizard/quant_editor_wizard_views.xml',
-        'views/inventory_dashboard_views.xml',
-        'views/product_relation_search_views.xml',
-        'views/menuitems.xml',
-    ],
-    'pre_init_hook': 'pre_init_hook',
-    'post_init_hook': 'post_init_hook',
-    'installable': True,
-    'application': False,
-    'auto_install': False,
-}
-
+        'views/compon

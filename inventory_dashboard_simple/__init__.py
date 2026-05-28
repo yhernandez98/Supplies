@@ -133,29 +133,4 @@ def post_init_hook(env):
     except Exception as e:
         _logger.warning('Recálculo facturación ruta entrega: %s', str(e), exc_info=True)
 
-    # Marcar préstamos lab. ya devueltos (histórico antes del flag component_lab_loan_completed)
-    try:
-        Pick = env['stock.picking']
-        if (
-            'component_lab_loan_completed' in Pick._fields
-            and 'component_lab_pending_responsible_approval' in Pick._fields
-        ):
-            historical = Pick.search([
-                ('component_lab_return_picking_id', '!=', False),
-                ('component_lab_return_picking_id.state', '=', 'done'),
-                ('state', '=', 'done'),
-                ('component_lab_loan_completed', '=', False),
-                ('component_lab_pending_responsible_approval', '=', False),
-                ('lab_responsible_user_id', '!=', False),
-            ])
-            if historical:
-                historical.write({
-                    'component_lab_loan_completed': True,
-                    'component_lab_loan_active': False,
-                })
-                _logger.info(
-                    '✅ Préstamos lab. históricos marcados como completados: %s albarán(es)',
-                    len(historical),
-                )
-    except Exception as e:
-        _logger.error('❌ Error al marcar préstamos lab. completados: %s', str(e), exc_info=True)
+    # Marcar préstamos lab

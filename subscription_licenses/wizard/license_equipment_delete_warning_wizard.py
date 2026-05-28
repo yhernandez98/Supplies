@@ -142,4 +142,4 @@ class LicenseEquipmentDeleteWarningWizard(models.TransientModel):
         equipment.remove_from_assignment_list(source='manual_delete')
         
         # Cerrar el wizard (la ventana se cierra; el listado se actualiza y se ve el cambio)
-        return {'type': 'ir.actions.act_window_close'}
+        return {'type': 'ir.actions.act_windo

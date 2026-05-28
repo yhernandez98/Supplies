@@ -22,5 +22,4 @@ from . import license_provider_report_line  # Líneas de reporte/facturación de
 from . import license_provider_report_group  # Agrupación por cliente (un registro por cliente para vista resumida)
 from . import license_provider_delete_wizard  # Wizard de confirmación para eliminar proveedores
 # from . import subscription_license_assignment  # Desactivado: ya no se usa
-# from . import subscription_subscription  # Desactivado: ya no se usa
-
+# from . import subs

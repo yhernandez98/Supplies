@@ -42,11 +42,4 @@
                 <p>
                     Visualiza todas las visitas y mantenimientos programados en formato de calendario.
                     <br/>
-                    <strong>Nota:</strong> Los técnicos pueden ver solo sus asignaciones usando el filtro o accediendo al calendario nativo de Odoo.
-                </p>
-            </field>
-        </record>
-
-    </data>
-</odoo>
-
+                    <strong>Nota:</stron

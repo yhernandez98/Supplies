@@ -219,3 +219,4 @@ class MaintenanceOrderWizardLine(models.TransientModel):
         help='Descripción específica para este equipo'
     )
 
+                                                                 

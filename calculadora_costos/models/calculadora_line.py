@@ -210,13 +210,4 @@ class CalculadoraCostosLine(models.Model):
                 raise ValidationError(_("La cantidad debe ser mayor que cero."))
 
     @api.constrains("moneda_equipo", "calculadora_id")
-    def _check_supported_currency(self):
-        for line in self:
-            if line.moneda_equipo not in ("USD", "COP"):
-                raise ValidationError(_("Las líneas solo admiten moneda COP o USD."))
-            if not line.calculadora_id.currency_id:
-                raise ValidationError(_("Defina primero la moneda de la cotización antes de capturar líneas."))
-            if line.moneda_equipo == "USD" and not line.calculadora_id.applied_currency_rate:
-                raise ValidationError(
-                    _("No hay una tasa de conversión disponible para líneas en USD en la fecha seleccionada.")
-                )
+    d

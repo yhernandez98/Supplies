@@ -280,33 +280,4 @@
         <field name="view_mode">list,form</field>
         <field name="context">{'search_default_active': 1}</field>
         <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">
-                Cree una nueva asignación de licencia
-            </p>
-            <p>
-                Asigne licencias a clientes especificando la cantidad y la ubicación donde se encuentran los equipos.
-                Luego podrá asignar equipos específicos a cada licencia.
-            </p>
-            <p>
-                <strong>Tip:</strong> Use el filtro "Agrupar por Cliente" para ver todas las licencias de cada cliente agrupadas.
-            </p>
-        </field>
-    </record>
-
-    <record id="action_license_assignment_by_partner" model="ir.actions.act_window">
-        <field name="name">Asignaciones Agrupadas por Cliente</field>
-        <field name="res_model">license.assignment</field>
-        <field name="view_mode">list,form</field>
-        <field name="context">{'search_default_active': 1, 'search_default_group_partner': 1}</field>
-        <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">
-                Vista agrupada por cliente
-            </p>
-            <p>
-                Esta vista muestra todas las licencias agrupadas por cliente, facilitando la identificación 
-                de qué licencias tiene contratadas cada cliente.
-            </p>
-        </field>
-    </record>
-</odoo>
-
+   

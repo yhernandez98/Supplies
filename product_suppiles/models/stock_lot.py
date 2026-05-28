@@ -963,22 +963,4 @@ class StockLot(models.Model):
             message_parts.append("<br/><strong>🔍 Detalles de Campos:</strong><br/>")
             message_parts.append("<ul style='margin-left: 20px;'>")
             for idx, field in enumerate(field_order, 1):
-                readonly_text = " <span style='color: orange;'>(solo lectura)</span>" if field['readonly'].lower() in ['1', 'true', 'True'] else ""
-                widget_text = f" <span style='color: blue;'>[{field['widget']}]</span>" if field['widget'] else ""
-                message_parts.append(
-                    f"<li style='margin-bottom: 3px;'><b>{idx}.</b> <code style='background: #f0f0f0; padding: 2px 4px;'>{field['name']}</code> - {field['string']}{readonly_text}{widget_text}</li>"
-                )
-            message_parts.append("</ul>")
-        
-        message = "".join(message_parts)
-        
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': _('🐛 Debug - Información de Vista'),
-                'message': message,
-                'type': 'info',
-                'sticky': True,
-            }
-        }
+                readonly_text = " <span style='color: o

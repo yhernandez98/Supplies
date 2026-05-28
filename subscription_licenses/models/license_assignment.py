@@ -1356,34 +1356,4 @@ class LicenseAssignment(models.Model):
         }
     
     def action_view_license_details_by_product(self):
-        """Abre la vista de detalles de licencias para el producto de esta asignación."""
-        self.ensure_one()
-        if not self.partner_id:
-            raise UserError(_('No hay cliente asociado.'))
-        
-        # Buscar la suscripción del cliente para obtener el contexto
-        subscription = self.env['subscription.subscription'].search([
-            ('partner_id', '=', self.partner_id.id),
-        ], limit=1)
-        
-        product_id = self.license_id.product_id.id if self.license_id and self.license_id.product_id else False
-        
-        if subscription and product_id:
-            return subscription.action_view_license_details(product_id=product_id)
-        else:
-            # Fallback: mostrar todas las licencias del cliente
-            return {
-                'type': 'ir.actions.act_window',
-                'name': _('Detalle de Licencias'),
-                'res_model': 'license.assignment',
-                'view_mode': 'list,form',
-                'domain': [
-                    ('partner_id', '=', self.partner_id.id),
-                    ('state', '=', 'active'),
-                ],
-                'context': {
-                    'default_partner_id': self.partner_id.id,
-                    'search_default_active': 1,
-                },
-            }
-
+        """Abre la vista de detalles de licencias para el producto de esta asignaci

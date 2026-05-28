@@ -73,30 +73,4 @@
         'wizard/mesa_panel_equipment_change_wizard_views.xml',
         'views/alertas_renting_views.xml',  # Alertas > Equipos a terminar Renting (por fecha finalización)
         'views/helpdesk_ticket_category_views.xml',
-        'views/helpdesk_ticket_views.xml',  # ✅ Activado - Vistas y acción de tickets
-        'views/helpdesk_ticket_template_views.xml',
-        'views/helpdesk_timer_pause_request_views.xml',
-        'views/helpdesk_ticket_pause_request_views.xml',
-        'views/repair_order_views.xml',  # ✅ Activado - Vistas de reparaciones
-        'views/pricelist_admin_supplies_views.xml',
-        'views/menuitems.xml',  # ✅ Cargar menús antes de debug_log_views
-        'views/debug_log_views.xml',  # ✅ Herramienta de debug (después de menuitems para que el menú padre exista)
-        'reports/stock_lot_life_sheet_report.xml',
-        'reports/stock_lot_maintenance_report.xml',
-        'reports/maintenance_order_report.xml',  # ✅ Reporte de orden completa
-    ],
-    'assets': {
-        'web.assets_backend': [
-            'mesa_ayuda_inventario/static/src/css/customer_inventory.css',
-            'mesa_ayuda_inventario/static/src/css/helpdesk_ticket_executive.css',
-            'mesa_ayuda_inventario/static/src/css/service_panel_executive.css',
-            'mesa_ayuda_inventario/static/src/js/view_switcher.js',
-            'mesa_ayuda_inventario/static/src/js/mesa_technician_visit_list_view.js',
-            'mesa_ayuda_inventario/static/src/js/mesa_acta_visit_html_flags.js',
-        ],
-    },
-    'application': True,
-    'license': 'LGPL-3',
-    'installable': True,
-}
-
+        'views/helpdesk_ticket_views.

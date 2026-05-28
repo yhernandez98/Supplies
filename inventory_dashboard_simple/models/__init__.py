@@ -9,7 +9,4 @@ from . import stock_quant
 from . import stock_picking
 from . import stock_picking_delivery_billing
 from . import component_lab_assignment
-from . import component_lab_acta
-from . import supplies_assignment
-from . import supplies_assignment_reassignment
-from . import product_relation_search
+from . import component_la

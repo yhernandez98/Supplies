@@ -921,3 +921,4 @@ class StockLotMaintenance(models.Model):
         message = "\n".join(debug_info)
         raise UserError(message)
 
+                                                    

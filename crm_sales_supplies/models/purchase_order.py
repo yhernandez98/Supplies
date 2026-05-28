@@ -603,19 +603,4 @@ class PurchaseOrder(models.Model):
         result = super().button_confirm()
         
         # Actualizar estado de alertas relacionadas a "Orden Enviada" cuando se confirma la orden
-        for order in self:
-            # Buscar alertas relacionadas a través de purchase_order_ids (many2many)
-            alerts = self.env['purchase.alert'].search([
-                ('purchase_order_ids', 'in', [order.id]),
-                ('state', 'in', ('pending', 'purchase_created')),
-            ])
-            if alerts:
-                alerts.write({'state': 'sent'})
-                for alert in alerts:
-                    alert.message_post(
-                        body=_('Orden de compra %s confirmada. Alerta marcada como Orden Enviada.') % order.name
-                    )
-        
-        return result
-    
-
+        for order in s

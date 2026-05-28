@@ -15,4 +15,4 @@ from . import subscription_pricing
 from . import product_pricelist_item
 from . import export_licenses_equipos_xlsx
 from . import export_monthly_licenses_equipos_xlsx
-from . import export_licenses_equipos_pdf_reports
+from .
