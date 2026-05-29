@@ -3295,16 +3295,9 @@ class SubscriptionSubscription(models.Model):
         entry_raw, lot_exit_raw = self._lot_entry_exit_for_display(lot)
         entry = self._lot_date_for_billable(entry_raw)
         exit_ = self._lot_date_for_billable(lot_exit_raw)
-        if entry is None and exit_ is None:
-            days_used = current_day
-        elif entry and exit_ and entry.year == year and entry.month == month and exit_.year == year and exit_.month == month:
-            days_used = max(0, exit_.day - entry.day + 1)
-        elif entry and entry.year == year and entry.month == month:
-            days_used = max(0, current_day - entry.day + 1)
-        elif exit_ and exit_.year == year and exit_.month == month:
-            days_used = max(0, exit_.day)
-        else:
-            days_used = days_in_month
+        days_used = self._lot_days_used_in_billable_month(
+            entry, exit_, year, month, current_day, datetime.date.today(), days_in_month,
+        )
         price_monthly = self._get_price_for_product(grouped_product.product_id, 1.0) or 0.0
         cost_daily = round(price_monthly / days_in_month, 2) if days_in_month else 0.0
         cost_to_date = round(cost_daily * days_used, 2)
@@ -3383,8 +3376,20 @@ class SubscriptionSubscription(models.Model):
 
     def _lot_days_used_in_billable_month(self, entry, exit_, year, month, current_day, today_user, days_in_month):
         """Días en servicio en el mes (misma fórmula que Ver Detalles)."""
+        first_day = datetime.date(year, month, 1)
+        last_day = datetime.date(year, month, days_in_month)
         if entry is None and exit_ is None:
             return current_day
+        if entry is not None and entry > last_day:
+            return 0
+        if exit_ is not None and exit_ < first_day:
+            return 0
+        if (
+            entry is not None
+            and (year, month) == (today_user.year, today_user.month)
+            and entry > today_user
+        ):
+            return 0
         if (
             entry and exit_
             and entry.year == year and entry.month == month
@@ -6028,16 +6033,9 @@ class SubscriptionProductGrouped(models.Model):
                         entry_display, lot_exit_display = record.subscription_id._lot_entry_exit_for_display(lot)
                         entry = record.subscription_id._lot_date_for_billable(entry_display)
                         exit_ = record.subscription_id._lot_date_for_billable(lot_exit_display)
-                        if entry is None and exit_ is None:
-                            days_used = current_day
-                        elif entry and exit_ and entry.year == year and entry.month == month and exit_.year == year and exit_.month == month:
-                            days_used = max(0, exit_.day - entry.day + 1)
-                        elif entry and entry.year == year and entry.month == month:
-                            days_used = max(0, current_day - entry.day + 1)
-                        elif exit_ and exit_.year == year and exit_.month == month:
-                            days_used = max(0, exit_.day)
-                        else:
-                            days_used = current_day if (year, month) == (today_user.year, today_user.month) else days_in_month
+                        days_used = record.subscription_id._lot_days_used_in_billable_month(
+                            entry, exit_, year, month, current_day, today_user, days_in_month,
+                        )
                         additional = _lot_additional_cost(lot)
                         total_monthly_lot = (price_monthly or 0.0) + additional
                         cost_daily_lot = (total_monthly_lot / float(days_in_month)) if days_in_month else 0.0

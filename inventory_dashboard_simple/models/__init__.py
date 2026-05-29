@@ -8,6 +8,8 @@ from . import stock_lot_supply_line
 from . import stock_quant
 from . import stock_picking
 from . import stock_picking_delivery_billing
+from . import stock_move
+from . import stock_move_line
 from . import component_lab_assignment
 from . import component_lab_acta
 from . import supplies_assignment

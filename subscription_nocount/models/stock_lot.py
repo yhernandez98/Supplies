@@ -168,7 +168,10 @@ class StockLot(models.Model):
             # Días activos en el mes: desde entry (o inicio mes) hasta exit (o hoy)
             end = min(exit_date or today_date, today_date)
             start = max(entry_date or first_day, first_day)
-            days_used = max(0, (end - start).days + 1)
+            if entry_date is not None and entry_date > today_date:
+                days_used = 0
+            else:
+                days_used = max(0, (end - start).days + 1)
             # Día del mes: con fechas = días activos; sin fechas = días transcurridos en el mes
             if entry_date is not None or exit_date is not None:
                 lot.current_day_of_month = days_used

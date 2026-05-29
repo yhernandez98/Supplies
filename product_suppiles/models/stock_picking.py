@@ -774,9 +774,10 @@ class StockPicking(models.Model):
     def _clear_renting_dates_on_delivery_to_client(self):
         """
         Cuando el picking es una ENTREGA al cliente (producto entra a ubicación de cliente),
-        limpia exit_date y last_exit_date_display en los lotes y establece entry_date a la
-        fecha de la entrega, para que "Tiempo En Sitio" y "Días En Sitio" cuenten desde la
-        reentrega (mismo equipo entregado de nuevo al cliente).
+        limpia exit_date y last_exit_date_display en los lotes cuando corresponde a una salida
+        real previa del cliente. Si exit_date es una fecha futura (fin de contrato por plazo
+        renting), se conserva. Si entry_date está vacía, la establece a la fecha de la entrega;
+        si ya fue definida manualmente, se respeta.
         """
         today = fields.Date.context_today(self)
         for picking in self:
@@ -802,20 +803,35 @@ class StockPicking(models.Model):
                         continue
                     lot = line.lot_id
                     vals = {}
+                    exit_d = None
                     if hasattr(lot, 'exit_date') and lot.exit_date:
-                        vals['exit_date'] = False
-                    if hasattr(lot, 'last_exit_date_display') and lot.last_exit_date_display:
-                        vals['last_exit_date_display'] = False
-                    # Siempre actualizar entry_date a la fecha de esta entrega para que Tiempo En Sitio cuente desde la reentrega
-                    if hasattr(lot, 'entry_date'):
+                        exit_d = lot.exit_date
+                        if hasattr(exit_d, 'year') and hasattr(exit_d, 'month'):
+                            pass
+                        else:
+                            exit_d = fields.Date.to_date(exit_d)
+                        # Solo limpiar salida real previa; respetar fin de contrato (fecha futura del plazo)
+                        if not exit_d or exit_d <= delivery_date:
+                            vals['exit_date'] = False
+                            if hasattr(lot, 'last_exit_date_display') and lot.last_exit_date_display:
+                                vals['last_exit_date_display'] = False
+                    # Si ya tiene fecha de activación (p. ej. llenada en E3), respetarla;
+                    # si está vacía, usar la fecha de entrega al cliente.
+                    if hasattr(lot, 'entry_date') and not lot.entry_date:
                         vals['entry_date'] = delivery_date
                     if not vals:
                         continue
                     lot.sudo().write(vals)
-                    _logger.info(
-                        "Entrega al cliente: lote %s - entry_date=%s, fechas salida limpiadas (%s)",
-                        lot.name, delivery_date, dest.complete_name
-                    )
+                    if 'entry_date' in vals:
+                        _logger.info(
+                            "Entrega al cliente: lote %s - entry_date=%s (automática), fechas salida limpiadas (%s)",
+                            lot.name, delivery_date, dest.complete_name
+                        )
+                    else:
+                        _logger.info(
+                            "Entrega al cliente: lote %s - entry_date=%s conservada, fechas salida limpiadas (%s)",
+                            lot.name, lot.entry_date, dest.complete_name
+                        )
                     # Refrescar la suscripción para que la vista muestre las nuevas fechas
                     if hasattr(lot, 'active_subscription_id') and lot.active_subscription_id and hasattr(lot.active_subscription_id, 'invalidate_recordset'):
                         lot.active_subscription_id.invalidate_recordset(['grouped_product_ids'])

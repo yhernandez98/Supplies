@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_picking_form_delivery_route_aqua" model="ir.ui.view">
+        <field name="name">stock.picking.form.delivery.route.aqua</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.view_picking_form"/>
+        <field name="priority" eval="50"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="attributes">
+                <attribute name="class" add="o_delivery_route_picking" separator=" "/>
+            </xpath>
+            <xpath expr="//sheet" position="inside">
+                <field name="invdash_delivery_route_stage" invisible="1"/>
+                <div class="o_route_wizard_hero o_delivery_route_picking_hero"
+                     invisible="invdash_delivery_route_stage == 0">
+                    <div class="o_route_wizard_hero_inner">
+                        <div class="o_route_wizard_title o_route_wizard_title_inline">
+                            <field name="invdash_delivery_route_stage_label"
+                                   readonly="1"
+                                   nolabel="1"/>
+                        </div>
+                        <p class="o_route_wizard_subtitle">
+                            Ruta de entrega Supplies — complete los datos del serial en cada etapa antes de validar.
+                        </p>
+                    </div>
+                </div>
+            </xpath>
+        </field>
+    </record>
+</odoo>

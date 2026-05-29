@@ -245,6 +245,9 @@ class StockQuant(models.Model):
             current_day = days_in_month
         month_name = self._MONTH_NAMES[month - 1] if 1 <= month <= 12 else ''
         subscription_id = self.env.context.get('subscription_id') or self.env.context.get('default_subscription_id')
+        first_day = datetime.date(year, month, 1)
+        last_day = datetime.date(year, month, days_in_month)
+        today_date = today if isinstance(today, datetime.date) else datetime.date(today.year, today.month, today.day)
 
         for quant in self:
             quant.lot_month_name = month_name
@@ -276,6 +279,16 @@ class StockQuant(models.Model):
 
             if entry is None and exit_ is None:
                 days_used = current_day
+            elif entry is not None and entry > last_day:
+                days_used = 0
+            elif exit_ is not None and exit_ < first_day:
+                days_used = 0
+            elif (
+                entry is not None
+                and (year, month) == (today.year, today.month)
+                and entry > today_date
+            ):
+                days_used = 0
             elif (
                 entry is not None and exit_ is not None
                 and entry.year == year and entry.month == month

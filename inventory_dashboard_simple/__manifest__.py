@@ -11,10 +11,11 @@
     ''',
     'author': 'Supplies De Colombia SAS',
     'category': 'Inventory/Inventory',
-    'version': '19.0.0.0.110',
+    'version': '19.0.0.0.126',
     'depends': [
         'stock',
         'product_suppiles',  # Para usar el campo inventory_plate en stock.lot y mover productos relacionados
+        'product_suppiles_partner',  # Usuario en serial + herencia vista E1
         'mesa_ayuda_inventario',  # Para acceso a inventario de clientes
         'subscription_nocount',  # Servicio / Suscripción en stock.lot (pending info + badge)
     ],
@@ -41,7 +42,10 @@
         'views/supplies_assignment_views.xml',
         'views/supplies_hub_dashboard_templates.xml',
         'wizard/delivery_route_trigger_wizard_views.xml',
+        'wizard/delivery_route_validation_wizard_views.xml',
+        'views/delivery_route_picking_views.xml',
         'views/delivery_route_billing_views.xml',
+        'views/stock_lot_delivery_route_fields_views.xml',
         'wizard/component_transfer_wizard_views.xml',
         'views/component_lab_pending_views.xml',
         'views/component_lab_pool_views.xml',

@@ -1,12 +1,23 @@
 /* Wizard «Procesar Ruta» — tema pastel Aqua
-   En Odoo 19 la clase del <form> XML va en .o_form_view, no en <form>. */
+   En Odoo 19 la clase del <form> XML va en .o_form_view, no en <form>.
+   También aplica a: albaranes E1–E4, wizard validación, menú Facturación.
+   El formulario del serial conserva su tema pastel propio (product_suppiles). */
 
 .o_route_trigger_wizard,
 .o_route_trigger_wizard_dialog,
+.o_delivery_route_picking,
+.o_delivery_route_picking_dialog,
+.o_delivery_route_validation_wizard,
 .o_dialog:has(.o_route_trigger_wizard),
+.o_dialog:has(.o_delivery_route_picking),
+.o_dialog:has(.o_delivery_route_validation_wizard),
 .modal:has(.o_route_trigger_wizard),
+.modal:has(.o_delivery_route_picking),
+.modal:has(.o_delivery_route_validation_wizard),
 [class*="dialog"]:has(.o_route_trigger_wizard),
-[class*="Dialog"]:has(.o_route_trigger_wizard) {
+[class*="dialog"]:has(.o_delivery_route_picking),
+[class*="Dialog"]:has(.o_route_trigger_wizard),
+[class*="Dialog"]:has(.o_delivery_route_picking) {
     --route-aqua-50: #e8fbfb;
     --route-aqua-100: #c8f3f2;
     --route-aqua-200: #a8ebe9;
@@ -20,12 +31,16 @@
 
 .o_dialog:has(.o_route_trigger_wizard) .modal-dialog,
 .modal:has(.o_route_trigger_wizard) .modal-dialog,
-.o_route_trigger_wizard_dialog .modal-dialog {
+.o_route_trigger_wizard_dialog .modal-dialog,
+.o_dialog:has(.o_delivery_route_validation_wizard) .modal-dialog,
+.modal:has(.o_delivery_route_validation_wizard) .modal-dialog {
     max-width: min(960px, 96vw) !important;
 }
 
 .o_route_trigger_wizard .o_form_sheet,
-.o_route_trigger_wizard_dialog .o_form_sheet {
+.o_route_trigger_wizard_dialog .o_form_sheet,
+.o_delivery_route_picking .o_form_sheet,
+.o_delivery_route_validation_wizard .o_form_sheet {
     background: linear-gradient(180deg, var(--route-aqua-50) 0%, #f8fdfd 140px) !important;
     padding: 1.25rem 1.5rem 1.5rem !important;
     border-radius: 12px;
@@ -34,7 +49,10 @@
 }
 
 .o_route_trigger_wizard .o_route_wizard_hero,
-.o_route_trigger_wizard_dialog .o_route_wizard_hero {
+.o_route_trigger_wizard_dialog .o_route_wizard_hero,
+.o_delivery_route_picking .o_route_wizard_hero,
+.o_delivery_route_picking .o_delivery_route_picking_hero,
+.o_delivery_route_validation_wizard .o_route_wizard_hero {
     position: relative;
     border-radius: 12px;
     padding: 1.1rem 1.35rem;
@@ -276,6 +294,126 @@
 
 /* Pestaña activa subrayado aqua */
 .o_route_trigger_wizard .nav-tabs .nav-link.active,
-.o_route_trigger_wizard_dialog .nav-tabs .nav-link.active {
+.o_route_trigger_wizard_dialog .nav-tabs .nav-link.active,
+.o_delivery_route_picking .nav-tabs .nav-link.active,
+.o_delivery_route_validation_wizard .nav-tabs .nav-link.active {
     border-bottom: 2px solid var(--route-aqua-500) !important;
+}
+
+/* —— Albaranes E1–E4 (formulario completo) —— */
+.o_delivery_route_picking .o_form_sheet.oe_stock_picking_sheet {
+    background: linear-gradient(180deg, var(--route-aqua-50) 0%, #fff 120px) !important;
+    border-radius: 12px;
+    border: 1px solid rgba(69, 181, 180, 0.15);
+    box-shadow: 0 2px 12px var(--route-aqua-shadow);
+}
+
+.o_delivery_route_picking .o_delivery_route_picking_hero {
+    margin-bottom: 1rem;
+}
+
+.o_delivery_route_picking .oe_picking_header_pastel .btn:not(.btn-link):not(.oe_link),
+.o_delivery_route_picking .o_statusbar_status .btn-primary {
+    background: linear-gradient(
+        180deg,
+        var(--route-aqua-300) 0%,
+        var(--route-aqua-400) 50%,
+        var(--route-aqua-500) 100%
+    ) !important;
+    color: #fff !important;
+    border: 1px solid var(--route-aqua-600) !important;
+    border-radius: 8px !important;
+    box-shadow: 0 1px 3px var(--route-aqua-shadow), inset 0 1px 0 var(--route-aqua-reflejo) !important;
+}
+
+.o_delivery_route_picking .oe_picking_header_pastel .btn:not(.btn-link):not(.oe_link):hover {
+    background: linear-gradient(
+        180deg,
+        var(--route-aqua-400) 0%,
+        var(--route-aqua-500) 50%,
+        var(--route-aqua-600) 100%
+    ) !important;
+    transform: translateY(-1px);
+}
+
+.o_delivery_route_picking .nav-tabs .nav-link {
+    color: var(--route-aqua-600) !important;
+    font-weight: 500;
+}
+
+.o_delivery_route_picking .nav-tabs .nav-link.active {
+    color: var(--route-aqua-600) !important;
+    font-weight: 600;
+    background: linear-gradient(180deg, var(--route-aqua-50) 0%, var(--route-aqua-100) 100%) !important;
+    border-color: rgba(69, 181, 180, 0.25) rgba(69, 181, 180, 0.25) transparent !important;
+}
+
+.o_delivery_route_picking .o_group .o_td_label .o_form_label {
+    color: var(--route-aqua-600) !important;
+    font-weight: 600;
+}
+
+/* —— Lista menú Facturación —— */
+.o_delivery_route_billing_list thead th {
+    background: linear-gradient(180deg, var(--route-aqua-50) 0%, var(--route-aqua-100) 100%) !important;
+    color: var(--route-aqua-600) !important;
+    font-weight: 600 !important;
+}
+
+.o_delivery_route_billing_list tbody tr:nth-child(even) {
+    background: #f6fcfc !important;
+}
+
+.o_delivery_route_billing_list tbody tr:hover {
+    background: #ecf9f9 !important;
+}
+
+.o_delivery_route_billing_list .btn-primary,
+.o_action_manager .o_list_view.o_delivery_route_billing_list .btn-primary {
+    background: linear-gradient(
+        180deg,
+        var(--route-aqua-300) 0%,
+        var(--route-aqua-400) 50%,
+        var(--route-aqua-500) 100%
+    ) !important;
+    color: #fff !important;
+    border: 1px solid var(--route-aqua-600) !important;
+    border-radius: 8px !important;
+    font-weight: 600;
+}
+
+.o_route_wizard_title_inline {
+    color: #fff !important;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+/* Botones aqua — wizard validación + albarán ruta */
+.o_dialog:has(.o_delivery_route_validation_wizard) .btn-primary,
+.o_delivery_route_validation_wizard .btn-primary,
+.o_delivery_route_picking .btn-primary:not(.btn-link) {
+    background: linear-gradient(
+        180deg,
+        var(--route-aqua-300) 0%,
+        var(--route-aqua-400) 50%,
+        var(--route-aqua-500) 100%
+    ) !important;
+    color: #fff !important;
+    border: 1px solid var(--route-aqua-600) !important;
+    border-radius: 8px !important;
+    font-weight: 600;
+}
+
+.o_dialog:has(.o_delivery_route_validation_wizard) .btn-secondary,
+.o_delivery_route_validation_wizard .btn-secondary {
+    background: linear-gradient(
+        180deg,
+        var(--route-aqua-100) 0%,
+        var(--route-aqua-200) 50%,
+        var(--route-aqua-300) 100%
+    ) !important;
+    color: var(--route-aqua-600) !important;
+    border: 1px solid var(--route-aqua-400) !important;
+    border-radius: 8px !important;
+    font-weight: 600;
 }

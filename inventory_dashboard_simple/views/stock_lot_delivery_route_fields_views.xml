@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Campos de control técnicos (grupo oculto; ancla: company_id técnico del sheet). -->
+    <record id="view_production_lot_form_delivery_route_flags_root" model="ir.ui.view">
+        <field name="name">production.lot.form.delivery.route.flags.root</field>
+        <field name="model">stock.lot</field>
+        <field name="inherit_id" ref="stock.view_production_lot_form"/>
+        <field name="priority" eval="199"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form/sheet/field[@name='company_id']" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+            <xpath expr="//form/sheet/field[@name='company_id']" position="after">
+                <group invisible="1" class="o_stock_lot_delivery_route_flags">
+                    <field name="show_delivery_route_e3_billing_fields" invisible="1"/>
+                    <field name="show_delivery_route_cost_fields" invisible="1"/>
+                    <field name="show_delivery_route_e1_minimal_form" invisible="1"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- E1: formulario mínimo. E1/E2: ocultar costos. E1/E2: ocultar facturación; E3+: visible. -->
+    <record id="view_production_lot_form_delivery_route_e3_fields" model="ir.ui.view">
+        <field name="name">production.lot.form.delivery.route.e3.fields</field>
+        <field name="model">stock.lot</field>
+        <field name="inherit_id" ref="product_suppiles.view_production_lot_form_inherit_supplies"/>
+        <field name="priority" eval="220"/>
+        <field name="arch" type="xml">
+            <!-- E1: ocultar usuario (herencia product_suppiles_partner) -->
+            <xpath expr="//field[@name='security_plate']" position="attributes">
+                <attribute name="invisible">show_delivery_route_e1_minimal_form</attribute>
+            </xpath>
+            <xpath expr="//field[@name='hostname']" position="attributes">
+                <attribute name="invisible">show_delivery_route_e1_minimal_form or lot_classification in ('component', 'complement', 'peripheral', 'monitor', 'ups', 'spare')</attribute>
+            </xpath>
+            <xpath expr="//field[@name='ref']" position="attributes">
+                <attribute name="invisible">show_delivery_route_e1_minimal_form</attribute>
+            </xpath>
+            <xpath expr="//field[@name='model_name']" position="attributes">
+                <attribute name="invisible">show_delivery_route_e1_minimal_form</attribute>
+            </xpath>
+            <xpath expr="//sheet/group//field[@name='company_id']" position="attributes">
+                <attribute name="invisible">show_delivery_route_e1_minimal_form</attribute>
+            </xpath>
+            <xpath expr="//sheet/notebook" position="attributes">
+                <attribute name="invisible">show_delivery_route_e1_minimal_form</attribute>
+            </xpath>
+            <!-- Facturación: E3+ -->
+            <xpath expr="//field[@name='billing_code']" position="attributes">
+                <attribute name="invisible">not show_delivery_route_e3_billing_fields</attribute>
+            </xpath>
+            <xpath expr="//field[@name='billing_code']/following-sibling::field[@name='entry_date'][1]" position="attributes">
+                <attribute name="invisible">lot_classification in ('component', 'complement', 'spare') or not show_delivery_route_e3_billing_fields</attribute>
+            </xpath>
+            <xpath expr="//field[@name='billing_code']/following-sibling::field[@name='exit_date'][1]" position="attributes">
+                <attribute name="invisible">lot_classification in ('component', 'complement', 'spare') or not show_delivery_route_e3_billing_fields</attribute>
+            </xpath>
+            <xpath expr="//field[@name='reining_plazo']" position="attributes">
+                <attribute name="invisible">lot_classification in ('component', 'complement', 'spare') or not show_delivery_route_e3_billing_fields</attribute>
+            </xpath>
+            <!-- Costos: ocultos E1 y E2 -->
+            <xpath expr="//sheet//field[@name='standard_price']" position="attributes">
+                <attribute name="invisible">not lot_valuated or not show_delivery_route_cost_fields</attribute>
+            </xpath>
+            <xpath expr="//field[@name='cost_additional']" position="attributes">
+                <attribute name="invisible">lot_classification not in ('component', 'complement', 'peripheral') or not show_delivery_route_cost_fields</attribute>
+            </xpath>
+            <xpath expr="//field[@name='cost_additional_value']" position="attributes">
+                <attribute name="invisible">lot_classification not in ('component', 'complement', 'peripheral') or not show_delivery_route_cost_fields</attribute>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_production_lot_form_delivery_route_e1_partner" model="ir.ui.view">
+        <field name="name">production.lot.form.delivery.route.e1.partner</field>
+        <field name="model">stock.lot</field>
+        <field name="inherit_id" ref="product_suppiles_partner.view_production_lot_form_inherit_partner"/>
+        <field name="priority" eval="221"/>
+        <field name="arch" type="xml">
+            <xpath expr="//group[contains(@class, 'o_usuario_box_row')]" position="attributes">
+                <attribute name="invisible">show_delivery_route_e1_minimal_form</attribute>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_stock_lot_form_delivery_route_subscription_fields" model="ir.ui.view">
+        <field name="name">stock.lot.form.delivery.route.subscription.fields</field>
+        <field name="model">stock.lot</field>
+        <field name="inherit_id" ref="subscription_nocount.view_stock_lot_form_inherit_subscription_fields"/>
+        <field name="priority" eval="222"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='subscription_service_product_id']" position="attributes">
+                <attribute name="invisible">show_delivery_route_e1_minimal_form or not show_subscription_service_fields or not show_delivery_route_e3_billing_fields</attribute>
+            </xpath>
+            <xpath expr="//field[@name='active_subscription_id']" position="attributes">
+                <attribute name="invisible">show_delivery_route_e1_minimal_form or not show_subscription_service_fields or not show_delivery_route_e3_billing_fields</attribute>
+            </xpath>
+        </field>
+    </record>
+</odoo>

@@ -16,6 +16,12 @@ DELIVERY_BILLING_LOT_FIELDS = (
     ('entry_date', 'Fecha Activación Renting'),
 )
 
+# Placas obligatorias al validar E2 (Alistamiento → Salida).
+DELIVERY_E2_LOT_FIELDS = (
+    ('inventory_plate', 'Placa de Inventario'),
+    ('security_plate', 'Placa de Seguridad'),
+)
+
 # Productos con estas clasificaciones (product_suppiles) NO requieren los datos de
 # facturación al validar E4. UPS es la excepción: aunque esté clasificado, sí se exigen.
 DELIVERY_BILLING_EXEMPT_CLASSIFICATIONS = frozenset({
@@ -47,15 +53,40 @@ class StockPickingDeliveryBilling(models.Model):
         store=True,
         index=True,
     )
+    invdash_delivery_route_stage_label = fields.Char(
+        string='Etapa ruta (etiqueta)',
+        compute='_compute_invdash_delivery_route_stage_label',
+    )
 
-    @api.depends('origin')
+    @api.depends('origin', 'location_id', 'location_dest_id')
     def _compute_invdash_delivery_route_stage(self):
         for picking in self:
+            by_location = picking._infer_delivery_route_stage_from_locations()
+            if by_location:
+                picking.invdash_delivery_route_stage = by_location
+                continue
             origin = (picking.origin or '').strip()
             if picking._is_route_wizard_origin(origin):
                 picking.invdash_delivery_route_stage = picking._route_stage_from_origin(origin)
             else:
                 picking.invdash_delivery_route_stage = 0
+
+    @api.depends('invdash_delivery_route_stage', 'origin', 'location_id', 'location_dest_id')
+    def _compute_invdash_delivery_route_stage_label(self):
+        stage_titles = {
+            1: _('E1 — Existencias → Alistamiento'),
+            2: _('E2 — Alistamiento → Salida'),
+            3: _('E3 — Salida → Transporte'),
+            4: _('E4 — Transporte → Cliente'),
+        }
+        for picking in self:
+            stage = picking.invdash_delivery_route_stage
+            if not stage:
+                stage = picking._infer_delivery_route_stage_from_locations()
+            if picking._origin_is_return_route():
+                picking.invdash_delivery_route_stage_label = ''
+            else:
+                picking.invdash_delivery_route_stage_label = stage_titles.get(stage, '')
 
     def _origin_is_return_route(self):
         self.ensure_one()
@@ -67,6 +98,37 @@ class StockPickingDeliveryBilling(models.Model):
         if hasattr(self, '_is_return_picking_type') and self._is_return_picking_type(self):
             return True
         return False
+
+    def _picking_is_existencias_to_alistamiento(self):
+        """Etapa E1: Supp/Existencias → Supp/Alistamiento."""
+        self.ensure_one()
+        if not self.location_id or not self.location_dest_id:
+            return False
+        src = (self.location_id.complete_name or '').lower()
+        dest = (self.location_dest_id.complete_name or '').lower()
+        return 'existencias' in src and 'alistamiento' in dest
+
+    def _picking_is_alistamiento_to_salida(self):
+        """Etapa E2: Supp/Alistamiento → Supp/Salida."""
+        self.ensure_one()
+        if not self.location_id or not self.location_dest_id:
+            return False
+        src = (self.location_id.complete_name or '').lower()
+        dest = (self.location_dest_id.complete_name or '').lower()
+        return 'alistamiento' in src and 'salida' in dest
+
+    def _infer_delivery_route_stage_from_locations(self):
+        """Etapa por ubicaciones (ruta automática desde pedido, sin origin Ruta-…-E#)."""
+        self.ensure_one()
+        if self._picking_is_existencias_to_alistamiento():
+            return 1
+        if self._picking_is_alistamiento_to_salida():
+            return 2
+        if self._picking_is_salida_to_transporte():
+            return 3
+        if self._picking_is_transporte_to_client():
+            return 4
+        return 0
 
     def _picking_is_salida_to_transporte(self):
         """Etapa E3: Supp/Salida → Supp/Transporte."""
@@ -102,6 +164,26 @@ class StockPickingDeliveryBilling(models.Model):
             return True
         src = (self.location_id.complete_name or self.location_id.name or '').lower()
         return 'transporte' in src or 'transito' in src or 'tránsito' in src
+
+    def _is_delivery_route_e1_picking(self):
+        """Albarán E1 de ruta de entrega: Existencias → Alistamiento."""
+        self.ensure_one()
+        if self._origin_is_return_route():
+            return False
+        stage = self._route_stage_from_origin(self.origin or '')
+        if self._is_route_wizard_origin(self.origin) and stage == 1:
+            return True
+        return self._picking_is_existencias_to_alistamiento()
+
+    def _is_delivery_route_e2_picking(self):
+        """Albarán E2 de ruta de entrega: Alistamiento → Salida."""
+        self.ensure_one()
+        if self._origin_is_return_route():
+            return False
+        stage = self._route_stage_from_origin(self.origin or '')
+        if self._is_route_wizard_origin(self.origin) and stage == 2:
+            return True
+        return self._picking_is_alistamiento_to_salida()
 
     def _is_delivery_route_e3_picking(self):
         self.ensure_one()
@@ -171,18 +253,37 @@ class StockPickingDeliveryBilling(models.Model):
             lambda lot: bool(lot.invdash_delivery_billing_missing_labels())
         )
 
+    def _delivery_e2_plates_incomplete_lots(self):
+        return self._billing_serial_lots().filtered(
+            lambda lot: bool(lot.invdash_e2_plates_missing_labels())
+        )
+
+    def _delivery_e2_plates_missing_messages(self):
+        self.ensure_one()
+        lines = []
+        for lot in self._delivery_e2_plates_incomplete_lots():
+            missing = lot.invdash_e2_plates_missing_labels()
+            if missing:
+                label = lot.name or lot.display_name
+                lines.append('%s: %s' % (label, ', '.join(missing)))
+        return lines
+
     def _invdash_is_delivery_billing_menu_candidate(self):
         """True si debe aparecer en Consultas → Facturación."""
         self.ensure_one()
+        if not self.id:
+            return False
         if self.state in ('done', 'cancel'):
             return False
         if self._origin_is_return_route():
             return False
-        if not self._is_route_wizard_origin(self.origin):
+        by_location = self._infer_delivery_route_stage_from_locations()
+        is_route = self._is_route_wizard_origin(self.origin)
+        if not is_route and not by_location:
             return False
         if not self._delivery_billing_incomplete_lots():
             return False
-        stage = self._route_stage_from_origin(self.origin or '')
+        stage = by_location or self._route_stage_from_origin(self.origin or '')
         if stage in (3, 4):
             return True
         if self._is_delivery_route_e3_picking():
@@ -211,6 +312,60 @@ class StockPickingDeliveryBilling(models.Model):
                 lines.append('%s: %s' % (label, ', '.join(missing)))
         return lines
 
+    def _delivery_route_validation_wizard_action(self, validation_type, messages):
+        self.ensure_one()
+        wizard = self.env['delivery.route.validation.wizard'].create({
+            'picking_id': self.id,
+            'validation_type': validation_type,
+            'line_ids': [(0, 0, {'detail': msg}) for msg in messages[:50]],
+        })
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Validación ruta de entrega'),
+            'res_model': 'delivery.route.validation.wizard',
+            'res_id': wizard.id,
+            'view_mode': 'form',
+            'target': 'new',
+        }
+
+    def _delivery_route_pre_validate_action(self):
+        """Abre wizard aqua si faltan datos; si no, None."""
+        for picking in self:
+            if picking.state in ('done', 'cancel'):
+                continue
+            if picking._is_delivery_route_e4_billing_gate():
+                e3 = picking._route_picking_for_stage(3)
+                if e3 and e3.state != 'done':
+                    return picking._delivery_route_validation_wizard_action(
+                        'e4_e3_pending',
+                        [_('Albarán E3 pendiente: %s') % (e3.display_name or e3.name)],
+                    )
+            if picking._is_delivery_route_e2_picking():
+                missing = picking._delivery_e2_plates_missing_messages()
+                if missing:
+                    return picking._delivery_route_validation_wizard_action('e2_plates', missing)
+            if picking._is_delivery_route_e4_billing_gate():
+                missing = picking._delivery_billing_missing_messages()
+                if missing:
+                    return picking._delivery_route_validation_wizard_action('e4_billing', missing)
+        return None
+
+    def _check_delivery_route_e2_plates_before_validate(self):
+        for picking in self:
+            if picking.state in ('done', 'cancel'):
+                continue
+            if not picking._is_delivery_route_e2_picking():
+                continue
+            missing_lines = picking._delivery_e2_plates_missing_messages()
+            if missing_lines:
+                body = '\n'.join(missing_lines[:25])
+                if len(missing_lines) > 25:
+                    body += '\n…'
+                raise UserError(_(
+                    'No puede validar la etapa E2 (Alistamiento → Salida) hasta completar en '
+                    'cada serial: Placa de Inventario y Placa de Seguridad.\n\n%s'
+                ) % body)
+
     def _check_delivery_route_e4_billing_before_validate(self):
         for picking in self:
             if picking.state in ('done', 'cancel'):
@@ -234,6 +389,10 @@ class StockPickingDeliveryBilling(models.Model):
                 ) % body)
 
     def button_validate(self):
+        block = self._delivery_route_pre_validate_action()
+        if block:
+            return block
+        self._check_delivery_route_e2_plates_before_validate()
         self._check_delivery_route_e4_billing_before_validate()
         res = super().button_validate()
         try:
@@ -245,6 +404,7 @@ class StockPickingDeliveryBilling(models.Model):
         return res
 
     def _action_done(self):
+        self._check_delivery_route_e2_plates_before_validate()
         self._check_delivery_route_e4_billing_before_validate()
         res = super()._action_done()
         return res
@@ -262,10 +422,23 @@ class StockPickingDeliveryBilling(models.Model):
         'move_line_ids.lot_id.entry_date',
     )
     def _compute_invdash_delivery_billing_pending(self):
+        if self:
+            self.mapped('state')
         for picking in self:
-            picking.invdash_delivery_billing_pending = (
-                picking._invdash_is_delivery_billing_menu_candidate()
-            )
+            if not picking.id:
+                picking.invdash_delivery_billing_pending = False
+                continue
+            try:
+                picking.invdash_delivery_billing_pending = (
+                    picking._invdash_is_delivery_billing_menu_candidate()
+                )
+            except Exception as exc:
+                _logger.warning(
+                    'No se pudo calcular invdash_delivery_billing_pending para %s: %s',
+                    picking.display_name,
+                    exc,
+                )
+                picking.invdash_delivery_billing_pending = False
 
     @api.depends('invdash_delivery_billing_pending', 'origin')
     def _compute_invdash_delivery_billing_summary(self):
@@ -292,6 +465,27 @@ class StockPickingDeliveryBilling(models.Model):
     def delivery_route_billing_pending_count(self):
         return len(self._search_delivery_billing_pending())
 
+    def _delivery_route_stage_for_lot_context(self):
+        """Etapa E# de la ruta para pasar al editor de serial (modal desde albarán)."""
+        self.ensure_one()
+        by_location = self._infer_delivery_route_stage_from_locations()
+        if by_location:
+            return by_location
+        if self.invdash_delivery_route_stage:
+            return self.invdash_delivery_route_stage
+        return self._route_stage_from_origin(self.origin or '') or 0
+
+    def _delivery_route_lot_form_context(self):
+        """Contexto al abrir el serial desde un albarán de ruta."""
+        self.ensure_one()
+        stage = self._delivery_route_stage_for_lot_context()
+        return {
+            'from_route_lot_editor': True,
+            'delivery_route_stage': stage,
+            'hide_delivery_e3_billing_fields': stage in (1, 2),
+            'route_editor_picking_id': self.id,
+        }
+
     def action_open_delivery_billing_lots(self):
         self.ensure_one()
         lots = self._delivery_billing_incomplete_lots() or self._billing_serial_lots()
@@ -301,7 +495,10 @@ class StockPickingDeliveryBilling(models.Model):
             'res_model': 'stock.lot',
             'view_mode': 'list,form',
             'domain': [('id', 'in', lots.ids)],
-            'context': {'form_view_initial_mode': 'edit'},
+            'context': dict(
+                {'form_view_initial_mode': 'edit'},
+                **self._delivery_route_lot_form_context(),
+            ),
         }
 
     def action_open_delivery_billing_picking(self):
@@ -323,7 +520,10 @@ class StockPickingDeliveryBilling(models.Model):
             ):
                 chains |= picking._get_route_chain_pickings()
             if chains:
-                chains._compute_invdash_delivery_billing_pending()
+                chains.invalidate_recordset([
+                    'invdash_delivery_billing_pending',
+                    'invdash_delivery_billing_summary',
+                ])
         return res
 
     @api.model
@@ -360,12 +560,122 @@ class StockPickingDeliveryBilling(models.Model):
 class StockLotDeliveryBilling(models.Model):
     _inherit = 'stock.lot'
 
+    show_delivery_route_e3_billing_fields = fields.Boolean(
+        string='Mostrar campos facturación (E3+)',
+        compute='_compute_show_delivery_route_e3_billing_fields',
+    )
+    show_delivery_route_cost_fields = fields.Boolean(
+        string='Mostrar campos de costo (E3+)',
+        compute='_compute_show_delivery_route_cost_fields',
+    )
+    show_delivery_route_e1_minimal_form = fields.Boolean(
+        string='Formulario reducido E1',
+        compute='_compute_show_delivery_route_e1_minimal_form',
+    )
+
     invdash_delivery_billing_complete = fields.Boolean(
         string='Facturación completa (ruta entrega)',
         compute='_compute_invdash_delivery_billing_complete',
         store=True,
         index=True,
     )
+
+    @staticmethod
+    def _delivery_route_lot_editor_stage_from_context(env):
+        if not (
+            env.context.get('from_route_lot_editor')
+            or env.context.get('route_editor_picking_id')
+        ):
+            return 0
+        try:
+            stage = int(env.context.get('delivery_route_stage') or 0)
+        except (TypeError, ValueError):
+            stage = 0
+        if stage:
+            return stage
+        picking_id = env.context.get('route_editor_picking_id')
+        if picking_id:
+            picking = env['stock.picking'].browse(picking_id)
+            if picking.exists():
+                return picking._delivery_route_stage_for_lot_context()
+        return 0
+
+    @staticmethod
+    def _delivery_route_lot_visibility_flags(env):
+        """Flags de visibilidad del serial según etapa E# (modal desde albarán)."""
+        if not (
+            env.context.get('from_route_lot_editor')
+            or env.context.get('route_editor_picking_id')
+        ):
+            return {
+                'show_delivery_route_e3_billing_fields': True,
+                'show_delivery_route_cost_fields': True,
+                'show_delivery_route_e1_minimal_form': False,
+            }
+        stage = StockLotDeliveryBilling._delivery_route_lot_editor_stage_from_context(env)
+        if env.context.get('hide_delivery_e3_billing_fields'):
+            show_billing = False
+        else:
+            show_billing = stage >= 3
+        return {
+            'show_delivery_route_e3_billing_fields': show_billing,
+            'show_delivery_route_cost_fields': stage >= 3,
+            'show_delivery_route_e1_minimal_form': stage == 1,
+        }
+
+    @api.depends_context(
+        'from_route_lot_editor', 'delivery_route_stage', 'hide_delivery_e3_billing_fields',
+        'route_editor_picking_id',
+    )
+    def _compute_show_delivery_route_e3_billing_fields(self):
+        """Facturación visible solo desde E3 al editar serial en ruta de entrega."""
+        flags = self._delivery_route_lot_visibility_flags(self.env)
+        for lot in self:
+            lot.show_delivery_route_e3_billing_fields = flags[
+                'show_delivery_route_e3_billing_fields'
+            ]
+
+    @api.depends_context(
+        'from_route_lot_editor', 'delivery_route_stage', 'route_editor_picking_id',
+    )
+    def _compute_show_delivery_route_cost_fields(self):
+        """Costo / costo adicional ocultos en E1 y E2; visibles desde E3."""
+        flags = self._delivery_route_lot_visibility_flags(self.env)
+        for lot in self:
+            lot.show_delivery_route_cost_fields = flags['show_delivery_route_cost_fields']
+
+    @api.depends_context(
+        'from_route_lot_editor', 'delivery_route_stage', 'route_editor_picking_id',
+    )
+    def _compute_show_delivery_route_e1_minimal_form(self):
+        """E1: solo serial, placa inventario, producto, ubicación, foto y hoja de vida."""
+        flags = self._delivery_route_lot_visibility_flags(self.env)
+        for lot in self:
+            lot.show_delivery_route_e1_minimal_form = flags[
+                'show_delivery_route_e1_minimal_form'
+            ]
+
+    def web_read(self, specification):
+        """Odoo 19: asegurar flags de etapa en el modal del serial (depends_context)."""
+        spec = dict(specification or {})
+        flag_names = (
+            'show_delivery_route_e3_billing_fields',
+            'show_delivery_route_cost_fields',
+            'show_delivery_route_e1_minimal_form',
+        )
+        ctx = self.env.context
+        if ctx.get('from_route_lot_editor') or ctx.get('route_editor_picking_id'):
+            for name in flag_names:
+                spec.setdefault(name, {})
+        result = super().web_read(spec)
+        if not (ctx.get('from_route_lot_editor') or ctx.get('route_editor_picking_id')):
+            return result
+        flags = self._delivery_route_lot_visibility_flags(self.env)
+        for vals in result:
+            for name in flag_names:
+                if name in spec:
+                    vals[name] = flags[name]
+        return result
 
     @api.depends(
         'subscription_service_product_id',
@@ -405,10 +715,25 @@ class StockLotDeliveryBilling(models.Model):
                 missing.append(label)
         return missing
 
+    def invdash_e2_plates_missing_labels(self):
+        """Placas faltantes en E2; misma exención por clasificación que facturación E4."""
+        self.ensure_one()
+        if self._invdash_delivery_billing_is_exempt():
+            return []
+        missing = []
+        for field_name, label in DELIVERY_E2_LOT_FIELDS:
+            if field_name not in self._fields:
+                continue
+            value = self[field_name]
+            if value in (False, None, '') or (isinstance(value, str) and not value.strip()):
+                missing.append(label)
+        return missing
+
     def write(self, vals):
         res = super().write(vals)
         billing_fields = {f[0] for f in DELIVERY_BILLING_LOT_FIELDS}
-        if billing_fields.intersection(vals.keys()):
+        e2_fields = {f[0] for f in DELIVERY_E2_LOT_FIELDS}
+        if billing_fields.intersection(vals.keys()) or e2_fields.intersection(vals.keys()):
             pickings = self.env['stock.picking'].search([
                 ('move_line_ids.lot_id', 'in', self.ids),
                 ('state', 'not in', ('done', 'cancel')),
@@ -417,5 +742,8 @@ class StockLotDeliveryBilling(models.Model):
                 ('origin', '=like', 'Ruta:%'),
             ])
             if pickings:
-                pickings._compute_invdash_delivery_billing_pending()
+                pickings.invalidate_recordset([
+                    'invdash_delivery_billing_pending',
+                    'invdash_delivery_billing_summary',
+                ])
         return res

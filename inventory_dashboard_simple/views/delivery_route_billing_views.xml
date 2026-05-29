@@ -6,7 +6,8 @@
         <!-- Prioridad baja: no debe reemplazar la lista estándar del dashboard ni de Inventario -->
         <field name="priority" eval="99"/>
         <field name="arch" type="xml">
-            <list string="Facturación — Ruta de entrega" create="0" delete="0">
+            <list string="Facturación — Ruta de entrega" create="0" delete="0"
+                  class="o_delivery_route_billing_list o_route_wizard_line_list">
                 <field name="name" string="Albarán"/>
                 <field name="origin" string="Ruta"/>
                 <field name="partner_id" string="Cliente"/>
@@ -14,7 +15,7 @@
                         type="object"
                         string="Completar seriales"
                         icon="fa-edit"
-                        class="btn-link"/>
+                        class="btn-primary"/>
             </list>
         </field>
     </record>

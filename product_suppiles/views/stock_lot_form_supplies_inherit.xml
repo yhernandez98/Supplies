@@ -13,9 +13,11 @@
                 <xpath expr="//form" position="attributes">
                     <attribute name="class" add="o_stock_lot_pastel_form" separator=" "/>
                 </xpath>
-                <!-- Cargar clasificación en el formulario para modifiers (invisible) en herencias de otros módulos -->
-                <xpath expr="//sheet" position="inside">
-                    <field name="lot_classification" invisible="1"/>
+                <!-- Clasificación técnica (grupo oculto; ancla: company_id técnico del sheet) -->
+                <xpath expr="//form/sheet/field[@name='company_id']" position="after">
+                    <group invisible="1" class="o_stock_lot_hidden_technical">
+                        <field name="lot_classification" invisible="1"/>
+                    </group>
                 </xpath>
                 <xpath expr="//field[@name='product_id']/parent::group" position="attributes">
                     <attribute name="class" add="o_stock_lot_left_col" separator=" "/>
@@ -27,8 +29,10 @@
                     <attribute name="string">Número de serie</attribute>
                     <attribute name="placeholder">Ingrese el número de serie</attribute>
                 </xpath>
-                <!-- Quitar campos vacíos debajo de Empresa (evita rectángulos fantasma) -->
-                <xpath expr="//sheet//field[@name='company_id'][not(ancestor::notebook)]/following-sibling::field[1]" position="replace"/>
+                <!-- Ocultar clientes de transferencia estándar (rectángulo vacío bajo Empresa) -->
+                <xpath expr="//field[@name='partner_ids']" position="attributes">
+                    <attribute name="invisible">1</attribute>
+                </xpath>
                 <xpath expr="//sheet//field[@name='note'][not(ancestor::notebook)]" position="replace"/>
                 <xpath expr="//sheet//field[@name='lot_properties'][not(ancestor::notebook)]" position="replace"/>
                 <!-- Ocultar Cantidad a la mano en el formulario (como en Studio, sin depender de Studio) -->
