@@ -26,6 +26,7 @@
         <menuitem id="menu_inventory_dashboard_config_root"
                   name="Configuración"
                   parent="menu_inventory_dashboard_simple"
+                  groups="stock.group_stock_manager"
                   sequence="40"/>
 
         <!-- Operaciones (orden alfabético) -->
@@ -94,6 +95,7 @@
                   name="Configurar Grupos"
                   parent="menu_inventory_dashboard_config_root"
                   action="action_inventory_dashboard_config"
+                  groups="stock.group_stock_manager"
                   sequence="10"/>
     </data>
 </odoo>

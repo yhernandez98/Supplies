@@ -1,4 +1,5 @@
 from . import subscription
+from . import recurring_pricelist_services
 from . import subscription_monthly_billable
 from . import account_move
 from . import account_move_line

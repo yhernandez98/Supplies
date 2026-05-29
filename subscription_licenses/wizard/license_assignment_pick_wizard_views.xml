@@ -4,20 +4,38 @@
         <field name="name">license.assignment.pick.wizard.form</field>
         <field name="model">license.assignment.pick.wizard</field>
         <field name="arch" type="xml">
-            <form string="Agregar Asignación" class="o_subscription_form">
-                <group>
+            <form string="Agregar Asignación" class="o_license_assignment_pick_wizard">
+                <sheet>
                     <field name="lot_id" readonly="1" invisible="1"/>
                     <field name="license_tab_type" readonly="1" invisible="1"/>
-                    <field name="related_partner_id" readonly="1" invisible="license_tab_type != 'user'"/>
-                    <field name="assignment_id" widget="many2one"/>
-                </group>
-
+                    <field name="available_assignment_ids" invisible="1"/>
+                    <div class="o_license_pick_wizard_hero">
+                        <div class="o_license_pick_wizard_hero_inner">
+                            <h2 class="o_license_pick_wizard_title">Agregar Asignación</h2>
+                            <p class="o_license_pick_wizard_subtitle">
+                                Elija una o varias asignaciones; agregar y asignar nueva deja este asistente abierto para seguir agregando.
+                            </p>
+                        </div>
+                    </div>
+                    <group>
+                        <field name="related_partner_id"
+                               readonly="1"
+                               invisible="license_tab_type != 'user'"/>
+                        <field name="assignment_ids"
+                               widget="many2many_tags"
+                               options="{'no_create': True}"
+                               placeholder="Seleccione una o varias asignaciones..."/>
+                    </group>
+                </sheet>
                 <footer>
                     <button name="action_confirm" string="Agregar" type="object" class="btn-primary"/>
-                    <button string="Cancelar" special="cancel" type="object" class="btn-secondary"/>
+                    <button name="action_confirm_and_add_more"
+                            string="Agregar y Asignar"
+                            type="object"
+                            class="btn-secondary"/>
+                    <button name="action_cancel" string="Cancelar" type="object" class="btn-secondary"/>
                 </footer>
             </form>
         </field>
     </record>
- </odoo>
-
+</odoo>

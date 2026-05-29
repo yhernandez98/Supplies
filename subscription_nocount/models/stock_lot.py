@@ -16,8 +16,16 @@ class StockLot(models.Model):
     subscription_service_product_id = fields.Many2one(
         'product.product',
         string='Servicio',
-        domain="[('type', '=', 'service')]",
-        help='Servicio que se utilizará en las líneas de suscripción cuando este serial se sincronice desde inventario. Si no se especifica, se usará el servicio del producto.',
+        domain="[('id', 'in', available_subscription_service_product_ids)]",
+        help='Servicios del cliente (lista recurrente) en líneas RENTING DE EQUIPOS y COMOPRINT.',
+    )
+
+    available_subscription_service_product_ids = fields.Many2many(
+        'product.product',
+        string='Servicios disponibles (cliente)',
+        compute='_compute_available_subscription_service_product_ids',
+        store=False,
+        help='Servicios recurrentes de la lista de precios del cliente comercial.',
     )
     
     available_subscription_ids = fields.Many2many(
@@ -179,6 +187,70 @@ class StockLot(models.Model):
                     )
             except Exception:
                 lot.cost_to_date_current = 0.0
+
+    def _get_partner_for_subscription_service_filter(self):
+        """Cliente comercial para filtrar servicios (misma lógica que suscripciones disponibles)."""
+        self.ensure_one()
+        forced_pid = self.env.context.get('force_license_partner_id')
+        if forced_pid:
+            forced = self.env['res.partner'].browse(forced_pid).exists()
+            if forced:
+                return forced.commercial_partner_id or forced
+
+        if hasattr(self, 'location_partner_id') and self.location_partner_id:
+            partner = self.location_partner_id
+            return partner.commercial_partner_id or partner
+
+        if hasattr(self, 'customer_id') and self.customer_id:
+            partner = self.customer_id
+            return partner.commercial_partner_id or partner
+
+        if hasattr(self, 'user_scope_partner_id') and self.user_scope_partner_id:
+            return self.user_scope_partner_id
+
+        if hasattr(self, 'related_partner_id') and self.related_partner_id:
+            rp = self.related_partner_id
+            if rp.parent_id:
+                return rp.parent_id.commercial_partner_id or rp.parent_id
+            return rp.commercial_partner_id or rp
+
+        return False
+
+    @api.depends_context('force_license_partner_id')
+    @api.depends(
+        'location_partner_id',
+        'related_partner_id',
+        'user_scope_partner_id',
+        'active_subscription_id',
+        'active_subscription_id.plan_id',
+        'quant_ids',
+        'quant_ids.location_id',
+        'subscription_service_product_id',
+    )
+    def _compute_available_subscription_service_product_ids(self):
+        Subscription = self.env['subscription.subscription']
+        for lot in self:
+            partner = lot._get_partner_for_subscription_service_filter()
+            if not partner:
+                # Sin cliente: solo el valor ya guardado (si existe) para no romper edición.
+                lot.available_subscription_service_product_ids = (
+                    lot.subscription_service_product_id
+                    if lot.subscription_service_product_id
+                    else False
+                )
+                continue
+            commercial = partner.commercial_partner_id or partner
+            plan = (
+                lot.active_subscription_id.plan_id
+                if lot.active_subscription_id and lot.active_subscription_id.plan_id
+                else False
+            )
+            services = Subscription.get_recurring_service_products_for_partner(
+                commercial, plan=plan
+            )
+            if lot.subscription_service_product_id:
+                services |= lot.subscription_service_product_id
+            lot.available_subscription_service_product_ids = services
 
     @api.depends('quant_ids', 'quant_ids.location_id', 'quant_ids.quantity', 'location_partner_id')
     def _compute_available_subscription_ids(self):

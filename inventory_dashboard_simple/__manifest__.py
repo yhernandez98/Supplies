@@ -11,7 +11,7 @@
     ''',
     'author': 'Supplies De Colombia SAS',
     'category': 'Inventory/Inventory',
-    'version': '19.0.0.0.105',
+    'version': '19.0.0.0.110',
     'depends': [
         'stock',
         'product_suppiles',  # Para usar el campo inventory_plate en stock.lot y mover productos relacionados

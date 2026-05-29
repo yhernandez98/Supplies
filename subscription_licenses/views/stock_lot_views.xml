@@ -18,17 +18,33 @@
                         <field name="license_line_ids" invisible="1"/>
                         <field name="license_equipment_ids" nolabel="1" class="o_license_no_inline_add"
                                context="{'default_lot_id': id, 'search_default_assigned': 1, 'default_assignment_date': context_today(), 'license_tab_type': 'equipment'}">
-                            <list string="Licencias Asignadas al Equipo" default_order="assignment_date desc" decoration-muted="state == 'unassigned'" create="false" edit="false" delete="true">
+                            <list string="Licencias Asignadas al Equipo"
+                                  class="o_license_lot_tab_list"
+                                  default_order="assignment_date desc"
+                                  decoration-muted="state == 'unassigned'"
+                                  create="false"
+                                  edit="false"
+                                  delete="false">
                                 <field name="available_assignment_ids" column_invisible="1"/>
-                                <field name="assignment_id" string="Asignación" domain="[('id', 'in', available_assignment_ids)]" options="{'no_create': True}" readonly="1"/>
-                                <field name="license_id" string="Categoria"/>
+                                <button name="action_open_delete_wizard"
+                                        type="object"
+                                        icon="fa-trash"
+                                        title="Quitar licencia"
+                                        class="btn-link text-danger o_license_lot_row_remove_btn"
+                                        invisible="state != 'assigned'"/>
                                 <field name="service_product_id" string="Licencia"/>
                                 <field name="assignment_date" string="Fecha Asignación"/>
-                                <field name="unassignment_date" string="Fecha Desasignación"/>
                                 <field name="state" widget="badge"
                                        decoration-success="state == 'assigned'"
                                        decoration-muted="state == 'unassigned'"
                                        string="Estado"/>
+                                <field name="assignment_id" string="Asignación"
+                                       domain="[('id', 'in', available_assignment_ids)]"
+                                       options="{'no_create': True}"
+                                       readonly="1"
+                                       optional="hide"/>
+                                <field name="license_id" string="Categoría" optional="hide"/>
+                                <field name="unassignment_date" string="Fecha Desasignación" optional="hide"/>
                             </list>
                         </field>
                     </page>
@@ -43,18 +59,34 @@
                         <field name="related_partner_id" invisible="1"/>
                         <field name="license_user_ids" nolabel="1" class="o_license_no_inline_add"
                                context="{'default_contact_id': related_partner_id, 'default_lot_id': id, 'search_default_assigned': 1, 'default_assignment_date': context_today(), 'license_tab_type': 'user'}">
-                            <list string="Licencias ya asignadas a este usuario (y disponibles en contrato)" default_order="assignment_date desc" decoration-muted="state == 'unassigned'" create="false" edit="false" delete="false">
+                            <list string="Licencias ya asignadas a este usuario (y disponibles en contrato)"
+                                  class="o_license_lot_tab_list"
+                                  default_order="assignment_date desc"
+                                  decoration-muted="state == 'unassigned'"
+                                  create="false"
+                                  edit="false"
+                                  delete="false">
                                 <field name="available_assignment_ids" column_invisible="1"/>
-                                <field name="assignment_id" string="Asignación" domain="[('id', 'in', available_assignment_ids)]" options="{'no_create': True}" readonly="1"/>
                                 <field name="contact_id" column_invisible="1"/>
-                                <field name="license_id" string="Categoria"/>
+                                <button name="action_open_delete_wizard"
+                                        type="object"
+                                        icon="fa-trash"
+                                        title="Quitar licencia"
+                                        class="btn-link text-danger o_license_lot_row_remove_btn"
+                                        invisible="state != 'assigned'"/>
                                 <field name="service_product_id" string="Licencia"/>
                                 <field name="assignment_date" string="Fecha Asignación"/>
-                                <field name="unassignment_date" string="Fecha Desasignación"/>
                                 <field name="state" widget="badge"
                                        decoration-success="state == 'assigned'"
                                        decoration-muted="state == 'unassigned'"
                                        string="Estado"/>
+                                <field name="assignment_id" string="Asignación"
+                                       domain="[('id', 'in', available_assignment_ids)]"
+                                       options="{'no_create': True}"
+                                       readonly="1"
+                                       optional="hide"/>
+                                <field name="license_id" string="Categoría" optional="hide"/>
+                                <field name="unassignment_date" string="Fecha Desasignación" optional="hide"/>
                             </list>
                         </field>
                     </page>

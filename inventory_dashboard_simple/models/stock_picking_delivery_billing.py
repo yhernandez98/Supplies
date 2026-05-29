@@ -16,6 +16,16 @@ DELIVERY_BILLING_LOT_FIELDS = (
     ('entry_date', 'Fecha Activación Renting'),
 )
 
+# Productos con estas clasificaciones (product_suppiles) NO requieren los datos de
+# facturación al validar E4. UPS es la excepción: aunque esté clasificado, sí se exigen.
+DELIVERY_BILLING_EXEMPT_CLASSIFICATIONS = frozenset({
+    'component',   # Componente
+    'peripheral',  # Periférico
+    'complement',  # Complemento
+    'monitor',     # Monitores
+    'spare',       # Repuestos
+})
+
 
 class StockPickingDeliveryBilling(models.Model):
     _inherit = 'stock.picking'
@@ -332,16 +342,17 @@ class StockPickingDeliveryBilling(models.Model):
 
     @api.model
     def action_open_delivery_billing_refreshed(self):
+        """Abre Facturación sin leer ir.actions.act_window como el usuario (Odoo 19)."""
         self._recompute_all_delivery_billing_pending()
-        action = self.env.ref(
+        action = self.env['ir.actions.act_window']._for_xml_id(
             'inventory_dashboard_simple.action_delivery_route_billing_pending'
-        ).read()[0]
+        )
         action['domain'] = self.domain_delivery_route_billing_pending()
         action['views'] = [
             (self.env.ref(
                 'inventory_dashboard_simple.view_delivery_route_billing_picking_list'
-            ).id, 'list'),
-            (self.env.ref('stock.view_picking_form').id, 'form'),
+            ).sudo().id, 'list'),
+            (self.env.ref('stock.view_picking_form').sudo().id, 'form'),
         ]
         return action
 
@@ -361,6 +372,8 @@ class StockLotDeliveryBilling(models.Model):
         'active_subscription_id',
         'reining_plazo',
         'entry_date',
+        'product_id',
+        'product_id.classification',
     )
     def _compute_invdash_delivery_billing_complete(self):
         for lot in self:
@@ -370,8 +383,20 @@ class StockLotDeliveryBilling(models.Model):
         self.ensure_one()
         return not bool(self.invdash_delivery_billing_missing_labels())
 
+    def _invdash_delivery_billing_is_exempt(self):
+        """True si el producto está clasificado y no requiere datos de facturación en E4.
+
+        Cualquier clasificación exime salvo UPS, que sí debe pedir los datos.
+        Los productos sin clasificación (equipos principales) no están exentos.
+        """
+        self.ensure_one()
+        classification = self.product_id.classification if self.product_id else False
+        return classification in DELIVERY_BILLING_EXEMPT_CLASSIFICATIONS
+
     def invdash_delivery_billing_missing_labels(self):
         self.ensure_one()
+        if self._invdash_delivery_billing_is_exempt():
+            return []
         missing = []
         for field_name, label in DELIVERY_BILLING_LOT_FIELDS:
             if field_name not in self._fields:

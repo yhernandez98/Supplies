@@ -116,6 +116,26 @@ class LicenseEquipmentDeleteWarningWizard(models.TransientModel):
                 res['equipment_id'] = equipment_id
         return res
 
+    def _action_return_to_lot_editor_or_close(self):
+        """Tras confirmar/cancelar desde el serial: volver al modal del formulario del lote."""
+        lot_id = self.env.context.get('return_lot_id')
+        if lot_id:
+            lot = self.env['stock.lot'].browse(lot_id).exists()
+            if lot:
+                lot_ctx = {
+                    'license_tab_type': self.env.context.get('license_tab_type'),
+                    'from_route_lot_editor': self.env.context.get('from_route_lot_editor') or False,
+                    'force_license_partner_id': self.env.context.get('force_license_partner_id') or False,
+                    'force_license_location_id': self.env.context.get('force_license_location_id') or False,
+                }
+                return lot.with_context(**lot_ctx)._action_return_license_editor_form(
+                    license_tab_type=self.env.context.get('license_tab_type'),
+                )
+        return {'type': 'ir.actions.act_window_close'}
+
+    def action_cancel(self):
+        return self._action_return_to_lot_editor_or_close()
+
     def action_confirm_delete(self):
         """Confirma y elimina el equipo/usuario."""
         self.ensure_one()
@@ -134,12 +154,5 @@ class LicenseEquipmentDeleteWarningWizard(models.TransientModel):
             }
         
         equipment = self.equipment_id
-        equipment_name = self.equipment_name
-        item_type = self.item_type
-        assignment_quantity = self.assignment_quantity
-        contracting_type = self.contracting_type
-        
         equipment.remove_from_assignment_list(source='manual_delete')
-        
-        # Cerrar el wizard (la ventana se cierra; el listado se actualiza y se ve el cambio)
-        return {'type': 'ir.actions.act_window_close'}
+        return self._action_return_to_lot_editor_or_close()

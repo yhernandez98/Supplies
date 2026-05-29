@@ -19,7 +19,7 @@
                 </sheet>
                 <footer>
                     <button name="action_confirm_delete" string="Confirmar Eliminación" type="object" class="btn-danger"/>
-                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                    <button name="action_cancel" string="Cancelar" type="object" class="btn-secondary"/>
                 </footer>
             </form>
         </field>

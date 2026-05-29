@@ -5,6 +5,11 @@ import logging
 
 _logger = logging.getLogger(__name__)
 
+# Estados Odoo stock.picking para el desglose de la caja TOTAL (sin Hecho ni Cancelado).
+_PICKING_WAITING_FLOW_STATES = frozenset({'draft', 'waiting', 'confirmed'})
+_PICKING_READY_STATE = 'assigned'
+_PICKING_EXCLUDED_STATES = frozenset({'done', 'cancel'})
+
 
 class InventoryDashboardGroup(models.Model):
     """Modelo para agrupar operaciones de inventario por tipo."""
@@ -25,14 +30,50 @@ class InventoryDashboardGroup(models.Model):
     )
     active = fields.Boolean(string='Mostrar en Dashboard', default=True, help='Si está desactivado, este grupo no se mostrará en el dashboard')
     total_count = fields.Integer(string='Total', compute='_compute_counts', store=False)
-    waiting_count = fields.Integer(string='En Espera', compute='_compute_counts', store=False)
+    open_status_count = fields.Integer(
+        string='En Espera',
+        compute='_compute_counts',
+        store=False,
+        help='Albaranes en borrador / en espera / confirmado (no Listo, Hecho ni Cancelado).',
+    )
+    done_status_count = fields.Integer(
+        string='Listo',
+        compute='_compute_counts',
+        store=False,
+        help='Albaranes en estado Listo (assigned). No incluye Hecho.',
+    )
+    open_status_label = fields.Char(
+        string='Etiqueta pendientes',
+        compute='_compute_status_labels',
+        store=False,
+    )
+    done_status_label = fields.Char(
+        string='Etiqueta terminadas',
+        compute='_compute_status_labels',
+        store=False,
+    )
+    waiting_count = fields.Integer(
+        string='Sin Vencer',
+        compute='_compute_counts',
+        store=False,
+        help='Operaciones activas cuya fecha programada no está vencida (hoy, futura o sin fecha).',
+    )
     delay_count = fields.Integer(string='Con Demora', compute='_compute_counts', store=False)
     color = fields.Integer(string='Color', default=0)
     action_open_operations_data = fields.Text(compute='_compute_action_open_operations_data', store=False)
 
     @api.depends('picking_type_ids')
+    def _compute_status_labels(self):
+        """Etiquetas del desglose TOTAL (mismos nombres que en la lista de albaranes)."""
+        label_waiting = _('En Espera')
+        label_ready = _('Listo')
+        for group in self:
+            group.open_status_label = label_waiting
+            group.done_status_label = label_ready
+
+    @api.depends('picking_type_ids')
     def _compute_counts(self):
-        """Calcular conteos de operaciones por estado."""
+        """Conteos: TOTAL = En Espera + Listo; sin Hecho ni Cancelado."""
         from datetime import timedelta
 
         now = fields.Datetime.now()
@@ -41,27 +82,35 @@ class InventoryDashboardGroup(models.Model):
         for group in self:
             if not group.picking_type_ids:
                 group.total_count = 0
+                group.open_status_count = 0
+                group.done_status_count = 0
                 group.waiting_count = 0
                 group.delay_count = 0
                 continue
 
-            # search_read: solo scheduled_date y state para no forzar lectura de
-            # columnas opcionales de stock.picking (p. ej. laboratorio) si la BD
-            # aún no está al día tras un despliegue parcial.
             rows = self.env['stock.picking'].search_read(
                 [
                     ('picking_type_id', 'in', group.picking_type_ids.ids),
-                    ('state', '!=', 'cancel'),
+                    ('state', 'not in', list(_PICKING_EXCLUDED_STATES)),
                 ],
                 ['scheduled_date', 'state'],
             )
 
             delay_count = 0
             waiting_count = 0
+            waiting_flow_count = 0
+            ready_count = 0
             for row in rows:
                 state = row.get('state')
-                if state in ('done', 'cancel'):
+                if state in _PICKING_EXCLUDED_STATES:
                     continue
+                if state == _PICKING_READY_STATE:
+                    ready_count += 1
+                elif state in _PICKING_WAITING_FLOW_STATES:
+                    waiting_flow_count += 1
+                else:
+                    continue
+
                 sched = row.get('scheduled_date')
                 sched_dt = fields.Datetime.to_datetime(sched) if sched else False
                 if sched_dt and sched_dt < yesterday:
@@ -69,9 +118,11 @@ class InventoryDashboardGroup(models.Model):
                 else:
                     waiting_count += 1
 
+            group.open_status_count = waiting_flow_count
+            group.done_status_count = ready_count
+            group.total_count = waiting_flow_count + ready_count
             group.delay_count = delay_count
             group.waiting_count = waiting_count
-            group.total_count = delay_count + waiting_count
 
     @api.depends('picking_type_ids', 'name')
     def _compute_action_open_operations_data(self):
@@ -95,15 +146,17 @@ class InventoryDashboardGroup(models.Model):
     @api.model
     def _stock_picking_dashboard_views(self):
         """Lista/form estándar de Inventario (no la vista custom de Facturación)."""
-        list_view = self.env.ref('stock.vpicktree', raise_if_not_found=False)
-        if not list_view:
-            list_view = self.env.ref('stock.view_picking_tree', raise_if_not_found=False)
-        form_view = self.env.ref('stock.view_picking_form', raise_if_not_found=False)
+        def _view_id(xmlid):
+            view = self.env.ref(xmlid, raise_if_not_found=False)
+            return view.sudo().id if view else False
+
+        list_id = _view_id('stock.vpicktree') or _view_id('stock.view_picking_tree')
+        form_id = _view_id('stock.view_picking_form')
         views = []
-        if list_view:
-            views.append((list_view.id, 'list'))
-        if form_view:
-            views.append((form_view.id, 'form'))
+        if list_id:
+            views.append((list_id, 'list'))
+        if form_id:
+            views.append((form_id, 'form'))
         return views
 
     def open_operations(self):

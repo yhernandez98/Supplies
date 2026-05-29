@@ -1133,7 +1133,11 @@ class LicenseEquipment(models.Model):
                 helpdesk_ticket_id=helpdesk_ticket_id,
                 helpdesk_ticket_name=helpdesk_ticket_name,
             )
-        ctx = dict(self.env.context, skip_license_delete_notification=bool(helpdesk_ticket_id))
+        ctx = dict(
+            self.env.context,
+            skip_license_delete_notification=bool(helpdesk_ticket_id),
+            license_skip_history_on_unlink=True,
+        )
         records.with_context(**ctx).unlink()
         return True
 
@@ -1170,7 +1174,16 @@ class LicenseEquipment(models.Model):
                     }
     
     def unlink(self):
-        """Sobrescribe unlink para mostrar mensaje informativo al eliminar en contratos anuales."""
+        """Historial de desasignación + aviso en contratos anuales al eliminar desde cualquier vista."""
+        if not self.env.context.get('license_skip_history_on_unlink'):
+            to_log = self.filtered(
+                lambda r: r.state == 'assigned'
+                and r.assignment_id
+                and not self._mesa_retiro_history_exists(r)
+            )
+            if to_log:
+                self._create_unassignment_history(to_log, 'manual_delete')
+
         lots = list(set(self.mapped('lot_id').ids))
         partners_before_unlink = self.mapped('contact_id')
         # Guardar información antes de eliminar para el mensaje
@@ -1265,16 +1278,29 @@ class LicenseEquipment(models.Model):
             }
         # Guardar el ID antes de crear el wizard para evitar problemas de contexto
         equipment_id = self.id
+        ctx = {
+            'default_equipment_id': equipment_id,
+            'active_id': equipment_id,
+        }
+        if self.lot_id:
+            ctx['return_lot_id'] = self.lot_id.id
+        elif self.env.context.get('active_model') == 'stock.lot' and self.env.context.get('active_id'):
+            ctx['return_lot_id'] = self.env.context['active_id']
+        for key in (
+            'license_tab_type',
+            'from_route_lot_editor',
+            'force_license_partner_id',
+            'force_license_location_id',
+        ):
+            if self.env.context.get(key):
+                ctx[key] = self.env.context[key]
         return {
             'name': _('Confirmar Eliminación'),
             'type': 'ir.actions.act_window',
             'res_model': 'license.equipment.delete.warning.wizard',
             'view_mode': 'form',
             'target': 'new',
-            'context': {
-                'default_equipment_id': equipment_id,
-                'active_id': equipment_id,
-            }
+            'context': ctx,
         }
 
     def _default_assignment_date(self, assignment):

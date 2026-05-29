@@ -923,7 +923,9 @@ class StockLot(models.Model):
     def action_open_incomplete_fields_refreshed(self):
         """Abre la vista de pendientes forzando refresh previo de campos store."""
         self._refresh_invdash_pending_fields()
-        return self.env.ref('inventory_dashboard_simple.action_stock_lot_incomplete_fields').read()[0]
+        return self.env['ir.actions.act_window']._for_xml_id(
+            'inventory_dashboard_simple.action_stock_lot_incomplete_fields'
+        )
 
     @api.model
     def incomplete_pending_information_count(self):

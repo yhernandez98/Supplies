@@ -4,7 +4,7 @@
 
 {
     'name': 'Subscription Licenses',
-    'version': '19.0.1.0.36',
+    'version': '19.0.1.0.49',
     'author': 'Supplies De Colombia SAS',
     'category': 'Sales/Subscriptions',
     'depends': ['sale', 'stock', 'account', 'product', 'base', 'web', 'product_suppiles', 'subscription_nocount'],
@@ -14,7 +14,9 @@
             'subscription_licenses/static/src/css/list_group_visible.css',
             'subscription_licenses/static/src/css/license_add_multiple_wizard.css',
             'subscription_licenses/static/src/css/subscription_licenses_theme.css',
+            'subscription_licenses/static/src/css/license_assignment_pick_wizard_theme.css',
             'subscription_licenses/static/src/js/subscription_licenses_theme.js',
+            'subscription_licenses/static/src/js/license_assignment_pick_wizard_theme.js',
         ],
     },
     'data': [

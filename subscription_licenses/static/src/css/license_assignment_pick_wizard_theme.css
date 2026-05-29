@@ -1,0 +1,324 @@
+/* Wizard «Agregar Asignación» — mismo tema azul pastel que stock.lot (o_stock_lot_pastel_form).
+   En Odoo 19 la clase del <form> XML va en .o_form_view. */
+
+.o_license_assignment_pick_wizard,
+.o_license_assignment_pick_wizard_dialog,
+.o_dialog:has(.o_license_assignment_pick_wizard),
+.modal:has(.o_license_assignment_pick_wizard),
+[class*="dialog"]:has(.o_license_assignment_pick_wizard),
+[class*="Dialog"]:has(.o_license_assignment_pick_wizard) {
+    --pastel-blue-50: #eef6f9;
+    --pastel-blue-100: #d9ecf3;
+    --pastel-blue-200: #b8dceb;
+    --pastel-blue-300: #8ec8df;
+    --pastel-blue-400: #5eb5d9;
+    --pastel-blue-500: #4aa3c9;
+    --pastel-blue-600: #3a8fb5;
+    --pastel-reflejo: rgba(255, 255, 255, 0.5);
+    --pastel-sombra: rgba(74, 163, 201, 0.22);
+}
+
+.o_dialog:has(.o_license_assignment_pick_wizard) .modal-dialog,
+.modal:has(.o_license_assignment_pick_wizard) .modal-dialog,
+.o_license_assignment_pick_wizard_dialog .modal-dialog {
+    max-width: min(640px, 96vw) !important;
+}
+
+.o_license_assignment_pick_wizard .o_form_sheet,
+.o_license_assignment_pick_wizard_dialog .o_form_sheet {
+    background: linear-gradient(180deg, var(--pastel-blue-50) 0%, #fff 120px) !important;
+    padding: 1.15rem 1.35rem 1.35rem !important;
+    border-radius: 12px;
+    border: 1px solid rgba(74, 163, 201, 0.16);
+    box-shadow: 0 2px 16px var(--pastel-sombra);
+}
+
+.o_license_assignment_pick_wizard .o_license_pick_wizard_hero,
+.o_license_assignment_pick_wizard_dialog .o_license_pick_wizard_hero {
+    position: relative;
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.1rem;
+    overflow: hidden;
+    background: linear-gradient(
+        125deg,
+        var(--pastel-blue-500) 0%,
+        var(--pastel-blue-400) 45%,
+        var(--pastel-blue-300) 100%
+    ) !important;
+    box-shadow: 0 4px 14px var(--pastel-sombra);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.o_license_assignment_pick_wizard .o_license_pick_wizard_hero::before,
+.o_license_assignment_pick_wizard_dialog .o_license_pick_wizard_hero::before {
+    content: "";
+    position: absolute;
+    top: -40%;
+    right: -15%;
+    width: 55%;
+    height: 140%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.28) 0%, transparent 68%);
+    pointer-events: none;
+}
+
+.o_license_assignment_pick_wizard .o_license_pick_wizard_hero_inner,
+.o_license_assignment_pick_wizard_dialog .o_license_pick_wizard_hero_inner {
+    position: relative;
+    z-index: 1;
+}
+
+.o_license_assignment_pick_wizard .o_license_pick_wizard_title,
+.o_license_assignment_pick_wizard_dialog .o_license_pick_wizard_title {
+    margin: 0 0 0.35rem;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #fff !important;
+    letter-spacing: 0.02em;
+}
+
+.o_license_assignment_pick_wizard .o_license_pick_wizard_subtitle,
+.o_license_assignment_pick_wizard_dialog .o_license_pick_wizard_subtitle {
+    margin: 0;
+    font-size: 0.88rem;
+    line-height: 1.45;
+    color: rgba(255, 255, 255, 0.95) !important;
+}
+
+.o_license_assignment_pick_wizard .o_group .o_td_label .o_form_label,
+.o_license_assignment_pick_wizard_dialog .o_group .o_td_label .o_form_label {
+    color: var(--pastel-blue-600) !important;
+    font-weight: 600;
+}
+
+.o_license_assignment_pick_wizard .o_field_many2many_tags .badge,
+.o_license_assignment_pick_wizard_dialog .o_field_many2many_tags .badge {
+    background: linear-gradient(180deg, var(--pastel-blue-100) 0%, var(--pastel-blue-200) 100%) !important;
+    color: var(--pastel-blue-600) !important;
+    border: 1px solid var(--pastel-blue-300) !important;
+}
+
+.o_license_assignment_pick_wizard footer,
+.o_license_assignment_pick_wizard_dialog footer,
+.o_license_assignment_pick_wizard_dialog .modal-footer {
+    background: linear-gradient(180deg, #f8fbfd 0%, var(--pastel-blue-50) 100%) !important;
+    border-top: 1px solid rgba(74, 163, 201, 0.12) !important;
+    padding: 0.85rem 1.25rem !important;
+}
+
+.o_dialog:has(.o_license_assignment_pick_wizard) .btn-primary,
+.o_dialog:has(.o_license_assignment_pick_wizard) .btn-secondary,
+.modal:has(.o_license_assignment_pick_wizard) .btn-primary,
+.modal:has(.o_license_assignment_pick_wizard) .btn-secondary,
+[class*="dialog"]:has(.o_license_assignment_pick_wizard) .btn-primary,
+[class*="dialog"]:has(.o_license_assignment_pick_wizard) .btn-secondary,
+[class*="Dialog"]:has(.o_license_assignment_pick_wizard) .btn-primary,
+[class*="Dialog"]:has(.o_license_assignment_pick_wizard) .btn-secondary,
+.o_license_assignment_pick_wizard_dialog .btn-primary,
+.o_license_assignment_pick_wizard_dialog .btn-secondary,
+.o_license_assignment_pick_wizard .btn-primary,
+.o_license_assignment_pick_wizard .btn-secondary {
+    border-radius: 6px !important;
+    font-weight: 600;
+    transition: box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+.o_dialog:has(.o_license_assignment_pick_wizard) .btn-primary,
+.modal:has(.o_license_assignment_pick_wizard) .btn-primary,
+[class*="dialog"]:has(.o_license_assignment_pick_wizard) .btn-primary,
+[class*="Dialog"]:has(.o_license_assignment_pick_wizard) .btn-primary,
+.o_license_assignment_pick_wizard_dialog .btn-primary,
+.o_license_assignment_pick_wizard .btn-primary {
+    background: linear-gradient(
+        180deg,
+        var(--pastel-blue-300) 0%,
+        var(--pastel-blue-400) 50%,
+        var(--pastel-blue-500) 100%
+    ) !important;
+    color: #fff !important;
+    border: 1px solid var(--pastel-blue-600) !important;
+    box-shadow: 0 1px 3px var(--pastel-sombra), inset 0 1px 0 var(--pastel-reflejo) !important;
+}
+
+.o_dialog:has(.o_license_assignment_pick_wizard) .btn-primary:hover,
+.modal:has(.o_license_assignment_pick_wizard) .btn-primary:hover,
+[class*="dialog"]:has(.o_license_assignment_pick_wizard) .btn-primary:hover,
+[class*="Dialog"]:has(.o_license_assignment_pick_wizard) .btn-primary:hover,
+.o_license_assignment_pick_wizard_dialog .btn-primary:hover,
+.o_license_assignment_pick_wizard .btn-primary:hover {
+    background: linear-gradient(
+        180deg,
+        var(--pastel-blue-400) 0%,
+        var(--pastel-blue-500) 50%,
+        var(--pastel-blue-600) 100%
+    ) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px var(--pastel-sombra), inset 0 2px 12px var(--pastel-reflejo) !important;
+}
+
+.o_dialog:has(.o_license_assignment_pick_wizard) .btn-secondary,
+.modal:has(.o_license_assignment_pick_wizard) .btn-secondary,
+[class*="dialog"]:has(.o_license_assignment_pick_wizard) .btn-secondary,
+[class*="Dialog"]:has(.o_license_assignment_pick_wizard) .btn-secondary,
+.o_license_assignment_pick_wizard_dialog .btn-secondary,
+.o_license_assignment_pick_wizard .btn-secondary {
+    background: linear-gradient(
+        180deg,
+        var(--pastel-blue-100) 0%,
+        var(--pastel-blue-200) 50%,
+        var(--pastel-blue-300) 100%
+    ) !important;
+    color: var(--pastel-blue-600) !important;
+    border: 1px solid var(--pastel-blue-400) !important;
+    box-shadow: 0 1px 3px var(--pastel-sombra), inset 0 1px 0 var(--pastel-reflejo) !important;
+}
+
+.o_dialog:has(.o_license_assignment_pick_wizard) .btn-secondary:hover,
+.modal:has(.o_license_assignment_pick_wizard) .btn-secondary:hover,
+[class*="dialog"]:has(.o_license_assignment_pick_wizard) .btn-secondary:hover,
+[class*="Dialog"]:has(.o_license_assignment_pick_wizard) .btn-secondary:hover,
+.o_license_assignment_pick_wizard_dialog .btn-secondary:hover,
+.o_license_assignment_pick_wizard .btn-secondary:hover {
+    background: linear-gradient(
+        180deg,
+        var(--pastel-blue-200) 0%,
+        var(--pastel-blue-300) 50%,
+        var(--pastel-blue-400) 100%
+    ) !important;
+    color: #2d6a8a !important;
+    transform: translateY(-1px);
+}
+
+/* ---- Alerta «Operación no válida» / sin licencias disponibles (UserError estándar) ---- */
+.o_license_capacity_alert_dialog {
+    --pastel-blue-50: #eef6f9;
+    --pastel-blue-100: #d9ecf3;
+    --pastel-blue-200: #b8dceb;
+    --pastel-blue-300: #8ec8df;
+    --pastel-blue-400: #5eb5d9;
+    --pastel-blue-500: #4aa3c9;
+    --pastel-blue-600: #3a8fb5;
+    --pastel-reflejo: rgba(255, 255, 255, 0.5);
+    --pastel-sombra: rgba(74, 163, 201, 0.22);
+}
+
+.o_license_capacity_alert_dialog .modal-dialog {
+    max-width: min(560px, 94vw) !important;
+}
+
+.o_license_capacity_alert_dialog .modal-content,
+.o_license_capacity_alert_dialog > div:first-child {
+    border-radius: 12px !important;
+    overflow: hidden;
+    border: 1px solid rgba(74, 163, 201, 0.2) !important;
+    box-shadow: 0 8px 28px var(--pastel-sombra) !important;
+}
+
+.o_license_capacity_alert_dialog .modal-header,
+.o_license_capacity_alert_dialog header,
+.o_license_capacity_alert_dialog [class*="dialog_header"],
+.o_license_capacity_alert_dialog .o_dialog_header {
+    background: linear-gradient(
+        125deg,
+        var(--pastel-blue-500) 0%,
+        var(--pastel-blue-400) 45%,
+        var(--pastel-blue-300) 100%
+    ) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
+    padding: 1rem 1.25rem !important;
+}
+
+.o_license_capacity_alert_dialog .modal-title,
+.o_license_capacity_alert_dialog header h4,
+.o_license_capacity_alert_dialog header .modal-title,
+.o_license_capacity_alert_dialog [class*="dialog_header"] h4,
+.o_license_capacity_alert_dialog .o_dialog_title {
+    color: #fff !important;
+    font-weight: 700 !important;
+    font-size: 1.05rem !important;
+    letter-spacing: 0.02em;
+}
+
+.o_license_capacity_alert_dialog .btn-close,
+.o_license_capacity_alert_dialog header .btn-close {
+    filter: brightness(0) invert(1);
+    opacity: 0.85;
+}
+
+.o_license_capacity_alert_body,
+.o_license_capacity_alert_dialog .modal-body,
+.o_license_capacity_alert_dialog main,
+.o_license_capacity_alert_dialog .o_dialog_body {
+    background: linear-gradient(180deg, var(--pastel-blue-50) 0%, #fff 100%) !important;
+    padding: 1.1rem 1.25rem 1.25rem !important;
+    color: #2c3e50 !important;
+    font-size: 0.92rem;
+    line-height: 1.5;
+}
+
+.o_license_capacity_alert_body > p:first-child,
+.o_license_capacity_alert_dialog .modal-body > p:first-child {
+    font-weight: 600;
+    color: var(--pastel-blue-600) !important;
+    margin-bottom: 0.75rem !important;
+}
+
+.o_license_capacity_alert_body pre,
+.o_license_capacity_alert_dialog .modal-body pre,
+.o_license_capacity_alert_body p,
+.o_license_capacity_alert_dialog .modal-body p {
+    white-space: pre-wrap;
+    margin-bottom: 0.5rem;
+}
+
+.o_license_capacity_alert_body pre,
+.o_license_capacity_alert_dialog .modal-body pre {
+    background: #fff !important;
+    border: 1px solid rgba(74, 163, 201, 0.2) !important;
+    border-left: 4px solid var(--pastel-blue-400) !important;
+    border-radius: 8px !important;
+    padding: 0.85rem 1rem !important;
+    font-family: inherit;
+    font-size: 0.88rem;
+    color: #334155 !important;
+    box-shadow: 0 1px 6px rgba(74, 163, 201, 0.1);
+}
+
+.o_license_capacity_alert_dialog footer,
+.o_license_capacity_alert_dialog .modal-footer,
+.o_license_capacity_alert_dialog [class*="dialog_footer"] {
+    background: linear-gradient(180deg, #f8fbfd 0%, var(--pastel-blue-50) 100%) !important;
+    border-top: 1px solid rgba(74, 163, 201, 0.12) !important;
+    padding: 0.85rem 1.25rem !important;
+}
+
+.o_license_capacity_alert_dialog footer .btn,
+.o_license_capacity_alert_dialog .modal-footer .btn,
+.o_license_capacity_alert_dialog .btn-primary,
+.o_license_capacity_alert_dialog .btn-secondary {
+    border-radius: 6px !important;
+    font-weight: 600 !important;
+    min-width: 5.5rem;
+    background: linear-gradient(
+        180deg,
+        var(--pastel-blue-300) 0%,
+        var(--pastel-blue-400) 50%,
+        var(--pastel-blue-500) 100%
+    ) !important;
+    color: #fff !important;
+    border: 1px solid var(--pastel-blue-600) !important;
+    box-shadow: 0 1px 3px var(--pastel-sombra), inset 0 1px 0 var(--pastel-reflejo) !important;
+}
+
+.o_license_capacity_alert_dialog footer .btn:hover,
+.o_license_capacity_alert_dialog .modal-footer .btn:hover,
+.o_license_capacity_alert_dialog .btn-primary:hover {
+    background: linear-gradient(
+        180deg,
+        var(--pastel-blue-400) 0%,
+        var(--pastel-blue-500) 50%,
+        var(--pastel-blue-600) 100%
+    ) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px var(--pastel-sombra), inset 0 2px 12px var(--pastel-reflejo) !important;
+}

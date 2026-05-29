@@ -401,19 +401,25 @@ class ComponentLabAssignment(models.Model):
 
     def action_open_assign_tech_wizard(self):
         self.ensure_one()
-        action = self.env.ref('inventory_dashboard_simple.action_component_lab_assign_tech_wizard').read()[0]
+        action = self.env['ir.actions.act_window']._for_xml_id(
+            'inventory_dashboard_simple.action_component_lab_assign_tech_wizard'
+        )
         action['context'] = {'default_assignment_ids': [(6, 0, self.ids)]}
         return action
 
     def action_open_tech_return_wizard(self):
         self.ensure_one()
-        action = self.env.ref('inventory_dashboard_simple.action_component_lab_tech_return_wizard').read()[0]
+        action = self.env['ir.actions.act_window']._for_xml_id(
+            'inventory_dashboard_simple.action_component_lab_tech_return_wizard'
+        )
         action['context'] = {'default_assignment_ids': [(6, 0, self.ids)]}
         return action
 
     def action_open_responsible_return_wizard(self):
         self.ensure_one()
         line_cmd = [(0, 0, {'assignment_id': self.id, 'quantity': 1.0})]
-        action = self.env.ref('inventory_dashboard_simple.action_component_lab_responsible_return_wizard').read()[0]
+        action = self.env['ir.actions.act_window']._for_xml_id(
+            'inventory_dashboard_simple.action_component_lab_responsible_return_wizard'
+        )
         action['context'] = {'default_line_ids': line_cmd}
         return action

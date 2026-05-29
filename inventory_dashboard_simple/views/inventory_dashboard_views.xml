@@ -10,6 +10,10 @@
                     <field name="name"/>
                     <field name="sequence"/>
                     <field name="total_count"/>
+                    <field name="open_status_count"/>
+                    <field name="done_status_count"/>
+                    <field name="open_status_label"/>
+                    <field name="done_status_label"/>
                     <field name="waiting_count"/>
                     <field name="delay_count"/>
                     <field name="color"/>
@@ -34,14 +38,33 @@
                                 <div class="o_kanban_card_content" style="padding: 20px; background: #ffffff;">
                                     <div class="row mb-3">
                                         <div class="col-12 text-center mb-3">
-                                            <div style="background: linear-gradient(135deg, #c5e3ee 0%, #a8d4e6 100%); border: 2px solid rgba(94,181,217,0.5); color: #3a8fb5; padding: 18px; border-radius: 18px; box-shadow: 0 4px 16px rgba(74,163,201,0.2), inset 0 1px 0 rgba(255,255,255,0.5); position: relative; overflow: hidden;">
-                                                <div style="position: absolute; top: -50%; right: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%);"></div>
-                                                <div style="font-size: 11px; opacity: 0.9; margin-bottom: 6px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; position: relative; display: flex; align-items: center; justify-content: center; gap: 6px;">
-                                                    <span style="font-size: 14px;">📈</span>
+                                            <div class="o_dashboard_total_box">
+                                                <div class="o_dashboard_total_box_shine"/>
+                                                <div class="o_dashboard_total_heading">
+                                                    <span class="o_dashboard_total_icon">📈</span>
                                                     <span>TOTAL</span>
                                                 </div>
-                                                <div style="font-size: 32px; font-weight: 800; position: relative; text-shadow: 0 2px 4px rgba(58,143,181,0.15); color: #2d6a8a;">
+                                                <div class="o_dashboard_total_number">
                                                     <field name="total_count"/>
+                                                </div>
+                                                <div class="o_dashboard_total_split">
+                                                    <div class="o_dashboard_total_split_part">
+                                                        <span class="o_dashboard_total_split_count">
+                                                            <field name="open_status_count"/>
+                                                        </span>
+                                                        <span class="o_dashboard_total_split_label">
+                                                            <field name="open_status_label"/>
+                                                        </span>
+                                                    </div>
+                                                    <div class="o_dashboard_total_split_divider"/>
+                                                    <div class="o_dashboard_total_split_part">
+                                                        <span class="o_dashboard_total_split_count">
+                                                            <field name="done_status_count"/>
+                                                        </span>
+                                                        <span class="o_dashboard_total_split_label">
+                                                            <field name="done_status_label"/>
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -52,7 +75,7 @@
                                                 <div style="position: absolute; top: -30%; left: -30%; width: 160%; height: 160%; background: radial-gradient(circle, rgba(255,255,255,0.4) 0%, transparent 70%);"></div>
                                                 <div style="font-size: 9px; color: #856404; font-weight: 700; margin-bottom: 6px; letter-spacing: 0.5px; text-transform: uppercase; position: relative; display: flex; align-items: center; justify-content: center; gap: 4px;">
                                                     <span style="font-size: 12px;">⏱️</span>
-                                                    <span>EN ESPERA</span>
+                                                    <span>SIN VENCER</span>
                                                 </div>
                                                 <div style="font-size: 22px; font-weight: 800; color: #856404; position: relative; text-shadow: 0 1px 3px rgba(133,100,4,0.2);">
                                                     <field name="waiting_count"/>
@@ -79,7 +102,7 @@
                                                 <div style="position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%);"></div>
                                                 <span style="position: relative; display: flex; align-items: center; justify-content: center; gap: 6px;">
                                                     <span style="font-size: 14px;">⏳</span>
-                                                    <span>Atención: Hay operaciones en espera</span>
+                                                    <span>Atención: Hay operaciones sin vencer</span>
                                                 </span>
                                             </div>
                                         </div>
@@ -121,6 +144,8 @@
                     <field name="sequence" widget="handle"/>
                     <field name="name"/>
                     <field name="total_count"/>
+                    <field name="open_status_count"/>
+                    <field name="done_status_count"/>
                     <field name="waiting_count"/>
                     <field name="delay_count"/>
                 </list>
@@ -145,6 +170,10 @@
                         </group>
                         <group>
                             <field name="total_count" readonly="1"/>
+                            <field name="open_status_count" readonly="1"/>
+                            <field name="done_status_count" readonly="1"/>
+                            <field name="open_status_label" readonly="1"/>
+                            <field name="done_status_label" readonly="1"/>
                             <field name="waiting_count" readonly="1"/>
                             <field name="delay_count" readonly="1"/>
                         </group>

@@ -53,8 +53,8 @@ class LicenseEquipmentUnassignmentHistory(models.Model):
         required=True,
         default='manual_delete',
     )
-    helpdesk_ticket_id = fields.Integer(string='Ticket helpdesk (id)', index=True)
-    helpdesk_ticket_name = fields.Char(string='Ticket helpdesk')
+    helpdesk_ticket_id = fields.Integer(string='Referencia (ID)', index=True)
+    helpdesk_ticket_name = fields.Char(string='Referencia')
     removed_by_id = fields.Many2one('res.users', string='Registrado por', ondelete='set null')
     removed_at = fields.Datetime(string='Fecha registro', default=fields.Datetime.now)
     notes = fields.Text(string='Notas')

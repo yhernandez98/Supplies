@@ -417,7 +417,9 @@ class InventoryLabHubController(http.Controller):
         url_back = base_url + '/web'
         url_backend = '%s/web#action=%s' % (
             base_url,
-            request.env.ref('inventory_dashboard_simple.action_supplies_assignment').id,
+            request.env['ir.model.data']._xmlid_to_res_id(
+                'inventory_dashboard_simple.action_supplies_assignment'
+            ),
         )
 
         state_labels = dict(Assignment._fields['state'].selection)

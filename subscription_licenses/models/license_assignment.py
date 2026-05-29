@@ -1063,18 +1063,89 @@ class LicenseAssignment(models.Model):
     # cantidad, precio y fechas, para alinear con los reportes del proveedor (múltiples líneas por cliente/producto).
     # Ya no se aplica _check_duplicate_active_assignment.
     
+    def _capacity_license_label(self):
+        """Nombre legible de la licencia/contrato para mensajes al usuario."""
+        self.ensure_one()
+        return self.license_display_name or self.display_name or _('Asignación')
+
+    def _capacity_counts(self):
+        """(equipos sin usuario, usuarios, total en uso, contratadas, disponibles)."""
+        self.ensure_one()
+        equipment_without_user = self.equipment_count
+        users = self.user_count
+        total = equipment_without_user + users
+        quantity = self.quantity
+        available = max(0, quantity - total)
+        return equipment_without_user, users, total, quantity, available
+
+    def _raise_quantity_capacity_error(self):
+        """Error detallado: qué licencia/contrato no tiene cupo."""
+        self.ensure_one()
+        _eq, us, _total, qty, avail = self._capacity_counts()
+        raise ValidationError(
+            _('Licencia: %(license)s\n'
+              'Cliente: %(partner)s\n'
+              'Contratadas: %(qty)s\n'
+              'En uso: %(us)s usuarios\n'
+              'Disponibles: %(avail)s')
+            % {
+                'license': self._capacity_license_label(),
+                'partner': self.partner_id.display_name or '-',
+                'qty': qty,
+                'us': us,
+                'avail': avail,
+            }
+        )
+
+    def _would_add_user_slot(self, contact):
+        """True si agregar este usuario consumiría un cupo nuevo."""
+        self.ensure_one()
+        if not contact:
+            return False
+        existing = self.equipment_ids.filtered(
+            lambda e: e.state == 'assigned' and e.contact_id.id == contact.id
+        )
+        return not existing
+
+    def _would_add_equipment_slot(self, lot):
+        """True si agregar este equipo (sin usuario) consumiría un cupo nuevo."""
+        self.ensure_one()
+        if not lot:
+            return False
+        existing = self.equipment_ids.filtered(
+            lambda e: (
+                e.state == 'assigned'
+                and e.lot_id.id == lot.id
+                and not e.contact_id
+            )
+        )
+        return not existing
+
+    def check_capacity_before_add_user(self, contact):
+        """Valida cupo antes de crear línea de licencia de usuario."""
+        self.ensure_one()
+        if not self._would_add_user_slot(contact):
+            return
+        _eq, _us, total, qty, _avail = self._capacity_counts()
+        if total + 1 > qty:
+            self._raise_quantity_capacity_error()
+
+    def check_capacity_before_add_equipment(self, lot):
+        """Valida cupo antes de crear línea de licencia de equipo."""
+        self.ensure_one()
+        if not self._would_add_equipment_slot(lot):
+            return
+        _eq, _us, total, qty, _avail = self._capacity_counts()
+        if total + 1 > qty:
+            self._raise_quantity_capacity_error()
+
     @api.constrains('quantity', 'equipment_ids')
     def _check_equipment_quantity(self):
         """Valida que no haya más asignaciones (equipos sin usuario + usuarios únicos) que la cantidad de licencias"""
         for rec in self:
-            # Contar total de asignaciones: equipos sin usuario + usuarios únicos
-            total_assignments = rec.equipment_count + rec.user_count
-            if total_assignments > rec.quantity:
-                raise ValidationError(
-                    _('No puede tener más asignaciones (%d equipos sin usuario + %d usuarios = %d total) '
-                      'que la cantidad de licencias (%d).')
-                    % (rec.equipment_count, rec.user_count, total_assignments, rec.quantity)
-                )
+            _eq, _us, total, qty, _avail = rec._capacity_counts()
+            if total > qty:
+                rec._raise_quantity_capacity_error()
 
     def action_activate(self):
         """Activa la asignación de licencia"""

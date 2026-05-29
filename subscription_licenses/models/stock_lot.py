@@ -33,8 +33,9 @@ class StockLot(models.Model):
         'license.equipment',
         string='Licencias Asignadas al Usuario',
         compute='_compute_license_user_ids',
+        inverse='_inverse_license_user_ids',
         store=False,
-        readonly=True,
+        readonly=False,
         help='Listado del contacto «Usuario»: licencias de usuario ya asignadas. Use «Agregar asignación» '
              'para vincular una licencia contratada que aún no tenga este usuario.',
     )
@@ -54,12 +55,26 @@ class StockLot(models.Model):
             lot.license_equipment_ids = Le._equipment_tab_lines_for_lot(lot)
 
     def _inverse_license_equipment_ids(self):
-        """Eliminar líneas que ya no están en la grilla de equipo."""
+        """Quitar licencias de equipo desde el serial: historial + liberar cupo."""
         Le = self.env['license.equipment']
         for lot in self:
             before = Le._equipment_tab_lines_for_lot(lot)
             after = lot.license_equipment_ids
-            (before - after).unlink()
+            removed = before - after
+            if removed:
+                removed.remove_from_assignment_list(source='manual_delete')
+
+    def _inverse_license_user_ids(self):
+        """Quitar licencias de usuario desde el serial: historial + liberar cupo."""
+        Le = self.env['license.equipment']
+        for lot in self:
+            if not getattr(lot, 'related_partner_id', None):
+                continue
+            before = Le._user_tab_lines_for_lot(lot)
+            after = lot.license_user_ids
+            removed = before - after
+            if removed:
+                removed.remove_from_assignment_list(source='manual_delete')
 
     @api.depends('related_partner_id')
     def _compute_license_user_ids(self):
@@ -191,6 +206,43 @@ class StockLot(models.Model):
             'target': 'current',
         }
 
+    def _action_return_license_editor_form(self, license_tab_type=None):
+        """Vuelve al formulario del serial en modal (p. ej. tras agregar licencias)."""
+        self.ensure_one()
+        tab_type = license_tab_type or self.env.context.get('license_tab_type') or 'equipment'
+        if tab_type not in ('equipment', 'user'):
+            tab_type = 'equipment'
+
+        form_view = self.env.ref('stock.view_production_lot_form', raise_if_not_found=False)
+        ctx = {
+            'active_id': self.id,
+            'active_model': 'stock.lot',
+            'default_lot_id': self.id,
+            'form_view_initial_mode': 'edit',
+            'license_tab_type': tab_type,
+        }
+        if self.env.context.get('force_license_partner_id'):
+            ctx['force_license_partner_id'] = self.env.context['force_license_partner_id']
+        if self.env.context.get('force_license_location_id'):
+            ctx['force_license_location_id'] = self.env.context['force_license_location_id']
+        if self.env.context.get('from_route_lot_editor'):
+            ctx['from_route_lot_editor'] = True
+
+        title = _('Editar Elementos Asociados - %s') % (self.name or '')
+        if not ctx.get('from_route_lot_editor'):
+            title = self.display_name
+
+        return {
+            'type': 'ir.actions.act_window',
+            'name': title,
+            'res_model': 'stock.lot',
+            'res_id': self.id,
+            'view_mode': 'form',
+            'view_id': form_view.id if form_view else False,
+            'target': 'new',
+            'context': ctx,
+        }
+
     def action_open_license_assignment_pick_wizard(self):
         """Abre un wizard para seleccionar la asignación sin usar el dropdown inline.
 
@@ -216,5 +268,6 @@ class StockLot(models.Model):
                 'default_license_tab_type': tab_type,
                 'force_license_partner_id': self.env.context.get('force_license_partner_id') or False,
                 'force_license_location_id': self.env.context.get('force_license_location_id') or False,
-            }
+                'from_route_lot_editor': self.env.context.get('from_route_lot_editor') or False,
+            },
         }
