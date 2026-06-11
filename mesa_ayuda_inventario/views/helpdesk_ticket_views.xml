@@ -56,9 +56,6 @@
                 <xpath expr="//field[@name='email_cc']" position="after">
                     <field name="date_deadline_response" readonly="1"/>
                     <field name="date_deadline_resolution" readonly="1"/>
-                    <div class="alert alert-info mesa_ticket_exec_alert" role="alert" style="margin-top: 12px;">
-                        Al cerrar el ticket puede enviarse una encuesta de satisfacción al cliente (app Rating / Valoración de Odoo).
-                    </div>
                 </xpath>
                 <!-- Urgencia / impacto / sede: columna izquierda (más equilibrio con la derecha) -->
                 <xpath expr="//field[@name='priority']" position="after">
@@ -96,7 +93,7 @@
                     <field name="mesa_acta_request_type" invisible="1"/>
                     <field name="mesa_acta_origin_visit_ticket_id" readonly="1" string="Origen"
                            invisible="not mesa_acta_origin_visit_ticket_id"/>
-                    <button name="action_escalate_ticket" type="object" string="Escalar a otro equipo / responsable" class="btn-secondary" icon="fa-level-up" help="Cambiar equipo (ej. Nivel 2) o asignar a otra persona" invisible="mesa_ticket_edit_blocked"/>
+                    <button name="action_escalate_ticket" type="object" string="Escalar" class="btn-secondary" icon="fa-level-up" help="Cambiar equipo (ej. Nivel 2) o asignar a otra persona" invisible="mesa_ticket_edit_blocked"/>
                     <field name="mesa_show_visit_child_relations" invisible="1"/>
                     <field name="mesa_parent_visit_ticket_id" readonly="1"
                            invisible="not mesa_parent_visit_ticket_id"

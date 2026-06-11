@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_return_route_e4_classification_wizard_form" model="ir.ui.view">
+        <field name="name">return.route.e4.classification.wizard.form</field>
+        <field name="model">return.route.e4.classification.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Verificación E4"
+                  class="o_delivery_route_validation_wizard o_route_trigger_wizard">
+                <sheet>
+                    <field name="picking_id" invisible="1"/>
+                    <field name="wizard_mode" invisible="1"/>
+                    <div class="o_route_wizard_hero">
+                        <div class="o_route_wizard_hero_inner">
+                            <div class="o_route_wizard_title o_route_wizard_title_inline">
+                                <span invisible="wizard_mode != 'logistics'">
+                                    Asignación Técnicos
+                                </span>
+                                <span invisible="wizard_mode != 'technician'">
+                                    Consulta mis tickets E4
+                                </span>
+                            </div>
+                            <p class="o_route_wizard_subtitle mb-0">
+                                <span invisible="wizard_mode != 'logistics'">
+                                    Asigne técnicos; ellos serán responsables de realizar la verificación
+                                    y dictar el destino. La verificación se cierra cuando todos los equipos
+                                    estén trasladados.
+                                </span>
+                                <span invisible="wizard_mode != 'technician'">
+                                    Consulte el estado; el destino y el cierre se gestionan desde el ticket E4.
+                                </span>
+                            </p>
+                            <p class="mb-0 mt-2" invisible="not dictamen_progress">
+                                <strong>Progreso:</strong>
+                                <field name="dictamen_progress" class="oe_inline" nolabel="1"/>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="o_route_wizard_lines_hint">
+                        Las filas están <strong>agrupadas por conjunto</strong> (serial principal):
+                        <strong>Principal</strong>, <strong>Asociados</strong> y <strong>Componentes</strong> empaquetados (sin costo adicional).
+                        Asigne el técnico solo en la fila <strong>Principal</strong>: se propaga al grupo y se crea <strong>un ticket</strong>.
+                        Solo se listan miembros del equipo de soporte <strong>Nivel 1</strong>.
+                        Los componentes heredan destino del principal; el técnico los verá en el ticket.
+                    </div>
+                    <field name="line_ids" nolabel="1" class="o_return_e4_wizard_lines_field">
+                        <list editable="bottom" create="0" delete="0"
+                              default_group_by="group_lot_id"
+                              expand="1"
+                              decoration-bf="line_role == 'principal'"
+                              decoration-muted="line_role == 'associated'"
+                              decoration-info="line_role == 'bundled'"
+                              class="o_route_wizard_line_list o_return_e4_wizard_line_list">
+                            <field name="sequence" column_invisible="1"/>
+                            <field name="state" column_invisible="1"/>
+                            <field name="wizard_mode" column_invisible="1"/>
+                            <field name="dictamen_line_id" column_invisible="1"/>
+                            <field name="group_lot_id" string="Conjunto"/>
+                            <field name="state_label" string="Estado" readonly="1"/>
+                            <field name="line_role" string="Rol" readonly="1"/>
+                            <field name="principal_lot_id" string="Del conjunto" readonly="1" optional="hide"/>
+                            <field name="lot_id" string="Serial" readonly="1"/>
+                            <field name="product_id" string="Producto" readonly="1"/>
+                            <field name="technician_user_id" string="Técnico"
+                                   readonly="wizard_mode == 'technician' or line_role in ('associated', 'bundled')"/>
+                            <field name="helpdesk_ticket_id" string="Ticket"
+                                   readonly="1" optional="show"/>
+                            <field name="destination_label" string="Destino" readonly="1"/>
+                            <field name="destination" column_invisible="1"/>
+                            <field name="dictamen_note" column_invisible="1"/>
+                            <field name="to_execute" column_invisible="1"/>
+                        </list>
+                    </field>
+                </sheet>
+                <footer>
+                    <button name="action_save_assignments"
+                            string="Guardar asignaciones"
+                            type="object"
+                            class="btn-primary"
+                            invisible="wizard_mode != 'logistics'"/>
+                    <button string="Cerrar" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_stock_picking_return_e4_dictamen_line_tree" model="ir.ui.view">
+        <field name="name">stock.picking.return.e4.dictamen.line.tree</field>
+        <field name="model">stock.picking.return.e4.dictamen.line</field>
+        <field name="arch" type="xml">
+            <list create="0" delete="0">
+                <field name="picking_id" string="Albarán E4"/>
+                <field name="lot_id" string="Serial"/>
+                <field name="product_id" string="Producto"/>
+                <field name="technician_user_id" string="Técnico"/>
+                <field name="destination_label" string="Destino"/>
+                <field name="state" string="Estado" widget="badge"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Acción principal de técnicos: tickets (ver helpdesk_ticket_return_e4_views.xml) -->
+</odoo>

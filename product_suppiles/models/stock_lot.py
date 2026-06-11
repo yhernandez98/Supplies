@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError, RedirectWarning
+from odoo.osv import expression
 import logging
 from urllib.parse import quote
 import json
@@ -749,9 +750,91 @@ class StockLot(models.Model):
         return result
 
     @api.model
+    def _context_res_id(self, value):
+        """Normaliza IDs de contexto Odoo 19 (int, str, [id, name], dict)."""
+        if value is None or value is False:
+            return None
+        if isinstance(value, int):
+            return value if value > 0 else None
+        if isinstance(value, str):
+            value = value.strip()
+            if value.isdigit():
+                return int(value)
+            return None
+        if isinstance(value, (list, tuple)) and value:
+            return self._context_res_id(value[0])
+        if isinstance(value, dict):
+            return self._context_res_id(value.get('id'))
+        return None
+
+    @api.model
+    def _supply_line_serial_pick_active(self):
+        ctx = self.env.context
+        return bool(
+            ctx.get('supply_line_serial_pick')
+            or (
+                self._context_res_id(ctx.get('supply_line_product_id'))
+                and self._context_res_id(ctx.get('supply_line_parent_lot_id'))
+            )
+        )
+
+    @api.model
+    def _supply_line_serial_pick_domain(self, domain):
+        """Dominio servidor para el Many2one Serial en líneas de suministro (Odoo 19)."""
+        if not self._supply_line_serial_pick_active():
+            return domain
+        ctx = self.env.context
+        product_id = self._context_res_id(ctx.get('supply_line_product_id'))
+        parent_lot_id = self._context_res_id(ctx.get('supply_line_parent_lot_id'))
+        if not product_id or not parent_lot_id:
+            return expression.AND([domain or [], [('id', '=', 0)]])
+        SupplyLine = self.env['stock.lot.supply.line']
+        product = self.env['product.product'].browse(product_id)
+        parent_lot = self.browse(parent_lot_id)
+        if not product.exists() or not parent_lot.exists():
+            return expression.AND([domain or [], [('id', '=', 0)]])
+        has_cost = bool(ctx.get('supply_line_has_cost'))
+        exclude_id = (
+            self._context_res_id(ctx.get('supply_line_id'))
+            or self._context_res_id(ctx.get('active_id'))
+        )
+        available_ids = SupplyLine._supply_line_available_related_lot_ids(
+            product,
+            parent_lot,
+            has_cost,
+            exclude_line_id=exclude_id,
+        )
+        pick_domain = (
+            [('id', 'in', available_ids)] if available_ids else [('id', '=', 0)]
+        )
+        return expression.AND([domain or [], pick_domain])
+
+    @api.model
+    def name_search(self, name='', domain=None, operator='ilike', limit=100, **kwargs):
+        domain = list(domain or [])
+        if self._supply_line_serial_pick_active():
+            domain = self._supply_line_serial_pick_domain(domain)
+        return super().name_search(name, domain, operator, limit, **kwargs)
+
+    @api.model
+    def web_search_read(
+        self, domain, specification, offset=0, limit=None, order=None, count_limit=None,
+    ):
+        domain = self._supply_line_serial_pick_domain(domain or [])
+        return super().web_search_read(
+            domain,
+            specification,
+            offset=offset,
+            limit=limit,
+            order=order,
+            count_limit=count_limit,
+        )
+
+    @api.model
     def _name_search(self, name='', args=None, operator='ilike', limit=100, order=None):
         """Permite buscar por placa de inventario, número de serie o nombre del producto."""
-        args = args or []
+        args = list(args or [])
+        args = self._supply_line_serial_pick_domain(args)
         domain = args[:]
         if name:
             # Buscar por placa de inventario (prioridad), número de serie o nombre del producto

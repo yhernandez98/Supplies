@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="helpdesk_team_view_form_invdash_responsible" model="ir.ui.view">
+        <field name="name">helpdesk.team.form.invdash.responsible</field>
+        <field name="model">helpdesk.team</field>
+        <field name="inherit_id" ref="helpdesk.helpdesk_team_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//setting[.//field[@name='member_ids']]" position="after">
+                <setting string="Responsable"
+                         help="Usuario asignado a los tickets generados desde traslados E4 de devoluciones.">
+                    <field name="invdash_responsible_user_id"
+                           widget="many2one_avatar_user"
+                           options="{'no_create': True}"/>
+                </setting>
+            </xpath>
+        </field>
+    </record>
+</odoo>

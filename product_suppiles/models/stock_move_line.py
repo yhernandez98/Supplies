@@ -219,6 +219,7 @@ class StockMoveLine(models.Model):
                 'default_lot_id': self.lot_id.id,
                 'form_view_initial_mode': 'edit',
                 'from_route_lot_editor': True,
+                'route_editor_picking_id': picking.id if picking else False,
                 'force_license_location_id': final_location.id if final_location else False,
                 'force_license_partner_id': final_partner.id if final_partner else False,
             },
@@ -341,6 +342,8 @@ class StockMoveLine(models.Model):
         Así todas las líneas quedan con lot_id y la consolidación puede detectar duplicados.
         """
         if not picking or not picking.exists() or not picking.move_line_ids:
+            return
+        if getattr(picking, 'invdash_is_return_e4_classification', False):
             return
         picking_lines = picking.move_line_ids.filtered(lambda ml: ml.id and ml.exists())
         principal_lines = picking_lines.filtered(
@@ -907,7 +910,9 @@ class StockMoveLine(models.Model):
         for picking in self.mapped("picking_id"):
             if not picking or not picking.exists():
                 continue
-            
+            if getattr(picking, 'invdash_is_return_e4_classification', False):
+                continue
+
             # Buscar líneas principales que se han movido
             principal_lines = picking.move_line_ids.filtered(
                 lambda ml: ml.supply_kind == 'parent' 

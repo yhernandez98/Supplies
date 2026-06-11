@@ -7,14 +7,33 @@
         <field name="arch" type="xml">
             <list editable="bottom" create="true" delete="true"
                   class="o_route_wizard_line_list"
-                  decoration-muted="not lot_id">
+                  decoration-muted="not product_id or not lot_id">
+                <field name="wizard_id" column_invisible="1"/>
+                <field name="available_product_ids" column_invisible="1"/>
+                <field name="available_lot_ids" column_invisible="1"/>
+                <field name="product_id"
+                       string="Producto"
+                       options="{'no_create': True, 'no_open': True, 'no_quick_create': True, 'no_create_edit': True, 'search_threshold': 1}"
+                       context="{'delivery_route_wizard_id': wizard_id}"
+                       placeholder="Escriba para buscar producto..."/>
                 <field name="lot_id"
                        string="Número de Serie"
-                       options="{'no_create': True, 'no_open': True}"
-                       placeholder="Buscar por número de serie..."/>
-                <field name="product_id" readonly="1" optional="show"/>
+                       options="{'no_create': True, 'no_open': True, 'no_quick_create': True, 'no_create_edit': True, 'search_threshold': 1}"
+                       context="{'delivery_route_wizard_id': wizard_id, 'delivery_route_product_id': product_id}"
+                       placeholder="Escriba para buscar serial..."/>
                 <field name="quantity"/>
                 <field name="product_uom_id" readonly="1" optional="hide"/>
+                <field name="dup_plus"
+                       string="+"
+                       widget="boolean"
+                       class="o_route_dup_plus_cell"
+                       invisible="not product_id"
+                       nolabel="1"/>
+                <field name="dup_extra_count"
+                       string="+N"
+                       class="o_route_dup_extra_cell"
+                       invisible="not product_id"
+                       placeholder="9"/>
             </list>
         </field>
     </record>
@@ -28,12 +47,14 @@
                   class="o_route_trigger_wizard">
                 <sheet>
                     <field name="available_route_ids" invisible="1"/>
+                    <field name="route_available_lot_ids" invisible="1"/>
+                    <field name="route_available_product_ids" invisible="1"/>
                     <div class="o_route_wizard_hero">
                         <div class="o_route_wizard_hero_inner">
                             <h2 class="o_route_wizard_title">Procesar Ruta</h2>
                             <p class="o_route_wizard_subtitle">
                                 Elija el tipo de operación y el cliente; la ruta se completa automáticamente.
-                                Agregue los seriales principales del movimiento.
+                                Agregue producto y serial de cada equipo principal.
                             </p>
                         </div>
                     </div>
@@ -57,8 +78,16 @@
                     <notebook>
                         <page string="Bienes" name="route_serial_lines">
                             <div class="o_route_wizard_lines_hint">
-                                Busque por número de serie. Solo aparecen equipos disponibles
-                                en la ubicación correspondiente (Existencias o cliente).
+                                Elija primero el <strong>producto</strong> y luego el <strong>serial</strong>.
+                                Columna <strong>+</strong>: marque la casilla para copiar la fila (solo cambia el serial).
+                                Columna <strong>+N</strong>: escriba cuántas filas más del mismo producto (ej. <strong>9</strong> para 10 equipos) y pulse Tab.
+                            </div>
+                            <div class="o_route_wizard_line_tools mb-2">
+                                <button name="action_duplicate_last_line"
+                                        type="object"
+                                        string="Duplicar última fila"
+                                        icon="fa-plus"
+                                        class="btn-link o_route_dup_control_btn"/>
                             </div>
                             <field name="line_ids" nolabel="1"/>
                         </page>

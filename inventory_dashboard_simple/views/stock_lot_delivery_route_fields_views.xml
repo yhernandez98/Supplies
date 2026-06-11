@@ -15,6 +15,8 @@
                     <field name="show_delivery_route_e3_billing_fields" invisible="1"/>
                     <field name="show_delivery_route_cost_fields" invisible="1"/>
                     <field name="show_delivery_route_e1_minimal_form" invisible="1"/>
+                    <field name="show_delivery_route_e2_plates_form" invisible="1"/>
+                    <field name="lot_valuated" invisible="1"/>
                 </group>
             </xpath>
         </field>

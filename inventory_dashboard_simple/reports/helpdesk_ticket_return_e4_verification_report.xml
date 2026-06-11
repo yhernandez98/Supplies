@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="report_return_e4_ticket_review">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="ticket">
+                <t t-call="web.basic_layout">
+                    <div class="page">
+                        <h2>Informe de revisión E4</h2>
+                        <table class="table table-sm table-bordered mb-3">
+                            <tr>
+                                <th>Ticket</th>
+                                <td><span t-esc="ticket.name or ''"/></td>
+                                <th>Fecha</th>
+                                <td><span t-esc="ticket.create_date and ticket.create_date.strftime('%d/%m/%Y %H:%M') or ''"/></td>
+                            </tr>
+                            <tr>
+                                <th>Cliente</th>
+                                <td><span t-esc="ticket.partner_id.display_name or ''"/></td>
+                                <th>Técnico</th>
+                                <td><span t-esc="ticket.user_id.display_name or ''"/></td>
+                            </tr>
+                            <tr>
+                                <th>Albarán E4</th>
+                                <td><span t-esc="ticket.invdash_return_e4_picking_id.name or ''"/></td>
+                                <th>Equipo principal</th>
+                                <td><span t-esc="ticket.invdash_return_e4_principal_lot_id.display_name or ''"/></td>
+                            </tr>
+                            <tr>
+                                <th>Estado informe</th>
+                                <td>
+                                    <span t-if="ticket.invdash_return_e4_report_state == 'done'">Finalizado</span>
+                                    <span t-elif="ticket.invdash_return_e4_report_state == 'draft'">Borrador</span>
+                                    <span t-elif="ticket.invdash_return_e4_report_state == 'none'">Sin iniciar</span>
+                                    <span t-else="" t-esc="ticket.invdash_return_e4_report_state or ''"/>
+                                </td>
+                                <th>Fecha informe</th>
+                                <td>
+                                    <span t-if="ticket.invdash_return_e4_report_state == 'done' and ticket.invdash_return_e4_report_final_at"
+                                          t-esc="ticket.invdash_return_e4_report_final_at.strftime('%d/%m/%Y %H:%M')"/>
+                                    <span t-elif="ticket.invdash_return_e4_report_state == 'draft' and ticket.invdash_return_e4_report_draft_at"
+                                          t-esc="ticket.invdash_return_e4_report_draft_at.strftime('%d/%m/%Y %H:%M')"/>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <p t-if="ticket.invdash_return_e4_report_observation">
+                            <strong>Observaciones:</strong><br/>
+                            <span t-esc="ticket.invdash_return_e4_report_observation"/>
+                        </p>
+
+                        <h4 class="mt-3">Equipos incluidos en el informe</h4>
+                        <table class="table table-sm table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Rol</th>
+                                    <th>Serial</th>
+                                    <th>Producto</th>
+                                    <th>Placa inventario</th>
+                                    <th>Placa seguridad</th>
+                                    <th>Destino</th>
+                                    <th>Estado</th>
+                                    <th>Nota</th>
+                                    <th>Informe</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-set="rows" t-value="(report_rows or {}).get(ticket.id, [])"/>
+                                <tr t-foreach="rows" t-as="row">
+                                    <td><span t-esc="row['role']"/></td>
+                                    <td><span t-esc="row['serial']"/></td>
+                                    <td><span t-esc="row['product']"/></td>
+                                    <td><span t-esc="row['inventory_plate']"/></td>
+                                    <td><span t-esc="row['security_plate']"/></td>
+                                    <td><span t-esc="row['destination']"/></td>
+                                    <td><span t-esc="row['state']"/></td>
+                                    <td><span t-esc="row['note']"/></td>
+                                    <td><span t-esc="row['review_note']"/></td>
+                                </tr>
+                                <tr t-if="not rows">
+                                    <td colspan="9" class="text-center text-muted">
+                                        No hay equipos seleccionados.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <t t-set="item_details" t-value="(report_item_details or {}).get(ticket.id, [])"/>
+                        <t t-foreach="item_details" t-as="detail">
+                            <div class="mt-4" style="page-break-inside: avoid;">
+                                <h4 class="mt-3 mb-2"><span t-esc="detail['title']"/></h4>
+                                <div t-out="detail['informe_html']"/>
+                            </div>
+                        </t>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+
+    <record id="action_report_return_e4_ticket_review" model="ir.actions.report">
+        <field name="name">Informe revisión E4</field>
+        <field name="model">helpdesk.ticket</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">inventory_dashboard_simple.report_return_e4_ticket_review</field>
+        <field name="report_file">inventory_dashboard_simple.report_return_e4_ticket_review</field>
+        <field name="print_report_name">'Informe_E4_%s' % (object.name or object.id)</field>
+    </record>
+</odoo>

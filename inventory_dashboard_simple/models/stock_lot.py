@@ -3,6 +3,7 @@ from collections import defaultdict
 
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError
+from odoo.osv import expression
 import logging
 
 _logger = logging.getLogger(__name__)
@@ -717,6 +718,78 @@ class StockLot(models.Model):
                     lot.internal_ref_id = False
                     lot.ref = False
 
+    def _delivery_route_wizard_lot_domain(self, domain):
+        wizard_id = self.env.context.get('delivery_route_wizard_id')
+        if not wizard_id:
+            return domain
+        wizard = self.env['delivery.route.trigger.wizard'].browse(
+            int(wizard_id)
+        )
+        if not wizard.exists():
+            return domain
+        lots = wizard.route_available_lot_ids
+        product_id = self.env.context.get('delivery_route_product_id')
+        if product_id:
+            lots = lots.filtered(
+                lambda lot: lot.product_id.id == int(product_id)
+            )
+        if not lots:
+            return [('id', '=', 0)]
+        return expression.AND([domain or [], [('id', 'in', lots.ids)]])
+
+    @api.model
+    def name_search(self, name='', domain=None, operator='ilike', limit=100, **kwargs):
+        """Procesar Ruta: catálogo precalculado del wizard (Odoo 19 name_search)."""
+        legacy_args = kwargs.pop('args', None)
+        if legacy_args is not None and domain is None:
+            domain = legacy_args
+        kwargs.pop('order', None)
+
+        # Selector Serial en líneas de suministro: no aplicar filtros del dashboard.
+        ctx = self.env.context
+        if ctx.get('supply_line_serial_pick') or (
+            ctx.get('supply_line_product_id') and ctx.get('supply_line_parent_lot_id')
+        ):
+            return super().name_search(name, domain, operator, limit)
+
+        domain = self._delivery_route_wizard_lot_domain(domain)
+        if domain == [('id', '=', 0)]:
+            return []
+        return super().name_search(name, domain, operator, limit)
+
+    @api.model
+    def web_search_read(
+        self, domain, specification, offset=0, limit=None, order=None, count_limit=None,
+    ):
+        # Selector Serial en líneas de suministro: delegar a product_suppiles sin filtros propios.
+        ctx = self.env.context
+        if ctx.get('supply_line_serial_pick') or (
+            ctx.get('supply_line_product_id') and ctx.get('supply_line_parent_lot_id')
+        ):
+            return super().web_search_read(
+                domain,
+                specification,
+                offset=offset,
+                limit=limit,
+                order=order,
+                count_limit=count_limit,
+            )
+
+        if self.env.context.get('delivery_route_wizard_id'):
+            domain = self._delivery_route_wizard_lot_domain(domain)
+            if domain == [('id', '=', 0)]:
+                return {'length': 0, 'records': []}
+            specification = {'display_name': {}}
+            limit = min(limit or 80, 80)
+        return super().web_search_read(
+            domain,
+            specification,
+            offset=offset,
+            limit=limit,
+            order=order,
+            count_limit=count_limit,
+        )
+
     @api.model
     def _name_search(self, name='', args=None, operator='ilike', limit=100, order=None):
         """Permitir búsqueda por número de serie y placa de inventario, con filtro de ubicación según el contexto.
@@ -725,7 +798,15 @@ class StockLot(models.Model):
         """
         if args is None:
             args = []
-        
+
+        ctx = self.env.context
+        if ctx.get('supply_line_serial_pick') or (
+            ctx.get('supply_line_product_id') and ctx.get('supply_line_parent_lot_id')
+        ):
+            return super(StockLot, self)._name_search(
+                name=name, args=args, operator=operator, limit=limit, order=order,
+            )
+
         # Verificar si se debe filtrar por ubicación desde el contexto
         filter_by_location = self.env.context.get('filter_by_location', False)
         operation_type = self.env.context.get('wizard_operation_type', False)

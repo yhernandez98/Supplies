@@ -57,7 +57,140 @@ class DeliveryRouteTriggerWizard(models.TransientModel):
         'wizard_id',
         string='Productos por Número de Serie'
     )
-    
+
+    route_available_lot_ids = fields.Many2many(
+        'stock.lot',
+        string='Seriales disponibles (ruta)',
+        compute='_compute_route_available_catalog',
+        store=False,
+        help='Catálogo calculado una vez por wizard (Existencias o cliente).',
+    )
+    route_available_product_ids = fields.Many2many(
+        'product.product',
+        string='Productos disponibles (ruta)',
+        compute='_compute_route_available_catalog',
+        store=False,
+    )
+
+    def _get_route_location_ids(self):
+        """Ubicaciones donde se busca stock según operación."""
+        self.ensure_one()
+        if self.operation_type == 'delivery':
+            supplies_location = self.env['stock.location'].search([
+                ('complete_name', 'ilike', 'Supp/Existencias'),
+                ('usage', '=', 'internal'),
+            ], limit=1)
+            if not supplies_location:
+                return []
+            return self.env['stock.location'].search([
+                ('id', 'child_of', supplies_location.id),
+            ]).ids
+        if self.operation_type == 'return' and self.partner_id:
+            customer_location = self.partner_id.property_stock_customer
+            if not customer_location:
+                return []
+            return self.env['stock.location'].search([
+                ('id', 'child_of', customer_location.id),
+            ]).ids
+        return []
+
+    @staticmethod
+    def _read_group_m2o_ids(rows, field_name):
+        ids = []
+        for row in rows:
+            val = row.get(field_name)
+            if not val:
+                continue
+            ids.append(val[0] if isinstance(val, (list, tuple)) else val)
+        return ids
+
+    @api.depends('operation_type', 'partner_id')
+    def _compute_route_available_catalog(self):
+        """Una sola consulta agrupada por wizard (no por cada línea ni por Buscar más)."""
+        Lot = self.env['stock.lot']
+        Product = self.env['product.product']
+        quant_model = self.env['stock.quant']
+        for wizard in self:
+            location_ids = wizard._get_route_location_ids()
+            if not location_ids:
+                wizard.route_available_lot_ids = Lot
+                wizard.route_available_product_ids = Product
+                continue
+            quant_domain = [
+                ('location_id', 'in', location_ids),
+                ('quantity', '>', 0),
+                ('lot_id', '!=', False),
+            ]
+            lot_rows = quant_model.read_group(
+                quant_domain,
+                ['lot_id'],
+                ['lot_id'],
+                lazy=False,
+            )
+            product_rows = quant_model.read_group(
+                quant_domain,
+                ['product_id'],
+                ['product_id'],
+                lazy=False,
+            )
+            lot_ids = wizard._read_group_m2o_ids(lot_rows, 'lot_id')
+            product_ids = wizard._read_group_m2o_ids(product_rows, 'product_id')
+            wizard.route_available_lot_ids = Lot.browse(lot_ids)
+            wizard.route_available_product_ids = Product.browse(product_ids)
+
+    @api.onchange('line_ids', 'line_ids.dup_plus', 'line_ids.dup_extra_count')
+    def _onchange_line_ids_duplicate_helpers(self):
+        """Duplicar filas sin botones object (Odoo exige guardar antes del RPC)."""
+        new_commands = []
+        warning_msg = None
+        for line in self.line_ids:
+            if line.dup_plus:
+                line.dup_plus = False
+                if not line.product_id:
+                    warning_msg = _(
+                        'Seleccione un producto antes de duplicar la línea.'
+                    )
+                    continue
+                new_commands.append((0, 0, line._prepare_duplicate_line_vals()))
+            extra = line.dup_extra_count or 0
+            if extra:
+                line.dup_extra_count = 0
+                if extra < 1 or extra > 99:
+                    warning_msg = _(
+                        'Indique entre 1 y 99 líneas adicionales.'
+                    )
+                    continue
+                if not line.product_id:
+                    warning_msg = _(
+                        'Seleccione un producto antes de agregar más líneas.'
+                    )
+                    continue
+                vals = line._prepare_duplicate_line_vals()
+                for _ in range(int(extra)):
+                    new_commands.append((0, 0, vals))
+        if not new_commands and not warning_msg:
+            return
+        result = {}
+        if new_commands:
+            result['value'] = {'line_ids': new_commands}
+        if warning_msg:
+            result['warning'] = {
+                'title': _('Procesar Ruta'),
+                'message': warning_msg,
+            }
+        return result
+
+    def action_duplicate_last_line(self):
+        """Duplica la última fila con producto (botón en cabecera de la lista)."""
+        self.ensure_one()
+        lines = self.line_ids.filtered('product_id')
+        if not lines:
+            raise UserError(_('Agregue al menos una línea con producto.'))
+        self.env['delivery.route.trigger.wizard.line'].create(
+            lines[-1]._prepare_duplicate_line_vals()
+        )
+        return False
+
     @api.depends('partner_id', 'operation_type')
     def _compute_available_route_ids(self):
         """Calcular rutas disponibles según el cliente y tipo de operación seleccionados."""
@@ -276,16 +409,23 @@ class DeliveryRouteTriggerWizard(models.TransientModel):
         """Recalcula rutas y asigna ruta/código según cliente y tipo de operación."""
         if self.partner_id:
             self._apply_auto_route_selection()
+            self._compute_route_available_catalog()
             for line in self.line_ids:
-                line._compute_available_lot_ids()
-                if line.lot_id and line.lot_id not in line.available_lot_ids:
+                if line.lot_id and line.lot_id not in self.route_available_lot_ids:
                     line.lot_id = False
+                if (
+                    line.product_id
+                    and line.product_id not in self.route_available_product_ids
+                ):
+                    line.product_id = False
         else:
             self.route_id = False
             self.route_code = False
             self.available_route_ids = False
+            self.route_available_lot_ids = False
+            self.route_available_product_ids = False
             for line in self.line_ids:
-                line.available_lot_ids = False
+                line.product_id = False
                 line.lot_id = False
 
     @api.onchange('route_code')
@@ -468,27 +608,22 @@ class DeliveryRouteTriggerWizard(models.TransientModel):
             raise UserError(_('Debe seleccionar una ruta.'))
 
         if not self.line_ids:
-            raise UserError(_('Debe agregar al menos un producto por número de serie.'))
+            raise UserError(_('Debe agregar al menos una línea con producto y serial.'))
 
-        component_lines = self.line_ids.filtered(
-            lambda line: (
-                line.lot_id
-                and line._product_is_excluded_route_component(line.lot_id.product_id)
-            )
+        incomplete = self.line_ids.filtered(
+            lambda line: not line.product_id or not line.lot_id
         )
-        if component_lines:
-            details = '\n'.join(
-                '%s — %s (Clasificación: Componente, Categoría: %s)' % (
-                    line.lot_id.name or line.lot_id.display_name,
-                    line.lot_id.product_id.display_name,
-                    line.lot_id.product_id.asset_category_id.name or '-',
-                )
-                for line in component_lines[:15]
-            )
+        if incomplete:
             raise UserError(_(
-                'No puede procesar la ruta con productos que tengan Clasificación '
-                '«Componente» y Categoría de activo «COMPONENTES».\n\n%s'
-            ) % details)
+                'Cada línea debe tener producto y número de serie antes de procesar.'
+            ))
+
+        lot_ids = self.line_ids.mapped('lot_id').ids
+        if len(lot_ids) != len(set(lot_ids)):
+            raise UserError(_(
+                'Hay números de serie repetidos en las líneas. '
+                'Cada equipo debe tener un serial distinto.'
+            ))
 
         _logger.info("Procesando ruta %s para cliente %s con %d productos (Tipo: %s)",
                     self.route_id.name, self.partner_id.name, len(self.line_ids), self.operation_type)
@@ -666,7 +801,7 @@ class DeliveryRouteTriggerWizard(models.TransientModel):
                     'picking_type_id': rule_picking_type.id,
                     'location_id': rule_location_src.id,
                     'location_dest_id': rule_location_dest.id,
-                    'origin': '%s-E%d' % (origin_base, rule_idx + 2),
+                    'origin': '%s-E%d' % (origin_base, rule_idx + 1),
                     'company_id': self.env.company.id,
                 }
 
@@ -765,9 +900,8 @@ class DeliveryRouteTriggerWizard(models.TransientModel):
                 'Por favor, verifique la configuración de las reglas de la ruta y los productos seleccionados.'
             ) % error_msg)
 
-
 class DeliveryRouteTriggerWizardLine(models.TransientModel):
-    """Líneas del wizard para productos por número de serie."""
+    """Líneas del wizard: primero producto, luego serial."""
     _name = 'delivery.route.trigger.wizard.line'
     _description = 'Línea de Producto por Número de Serie'
 
@@ -778,153 +912,42 @@ class DeliveryRouteTriggerWizardLine(models.TransientModel):
         ondelete='cascade'
     )
 
-    lot_id = fields.Many2one(
-        'stock.lot',
-        string='Número de Serie',
-        required=True,
-        domain="[('id', 'in', available_lot_ids)]",
-        help='Seriales según operación y ubicación. No se listan si Clasificación = Componente y Categoría de activo = COMPONENTES.'
-    )
-    
-    available_lot_ids = fields.Many2many(
-        'stock.lot',
-        string='Lotes Disponibles',
-        compute='_compute_available_lot_ids',
-        store=False,
-        help='Lotes disponibles en Supp/Existencias'
-    )
-    
-    @api.model
-    def _asset_category_is_componentes(self, category):
-        """True si la categoría de activo es COMPONENTES (o equivalente)."""
-        if not category:
-            return False
-        name = (category.name or '').strip().upper().replace('Á', 'A')
-        return name in ('COMPONENTES', 'COMPONENTE') or name.startswith('COMPONENTE')
-
-    @api.model
-    def _product_is_excluded_route_component(self, product):
-        """Excluir solo si cumple las dos: Clasificación Componente + Categoría COMPONENTES."""
-        if not product:
-            return False
-        if getattr(product, 'classification', None) != 'component':
-            return False
-        if 'asset_category_id' not in product._fields:
-            return False
-        return self._asset_category_is_componentes(product.asset_category_id)
-
-    def _filter_lots_excluding_route_components(self, lots):
-        """Quita seriales con Clasificación Componente y Categoría de activo COMPONENTES."""
-        if not lots:
-            return lots
-        return lots.filtered(
-            lambda lot: not self._product_is_excluded_route_component(lot.product_id)
-        )
-
-    @api.depends('wizard_id', 'wizard_id.operation_type', 'wizard_id.partner_id')
-    def _compute_available_lot_ids(self):
-        """Calcular lotes disponibles según el tipo de operación."""
-        _logger.info("=== _compute_available_lot_ids ===")
-        _logger.info("Procesando %d líneas", len(self))
-        
-        for line in self:
-            # Verificar si wizard_id existe de forma segura
-            if not line.wizard_id:
-                _logger.debug("Línea sin wizard_id, disponible_lot_ids = False")
-                line.available_lot_ids = False
-                continue
-            
-            wizard = line.wizard_id
-            if not wizard.exists():
-                _logger.debug("Wizard no existe, available_lot_ids = False")
-                line.available_lot_ids = False
-                continue
-            
-            # Acceder a los campos del wizard directamente
-            # Si no existen, usar valores por defecto
-            operation_type = getattr(wizard, 'operation_type', False)
-            partner = getattr(wizard, 'partner_id', False)
-            
-            _logger.info("Línea - Operación: %s, Cliente: %s", 
-                        operation_type, partner.name if partner else 'None')
-            
-            if not operation_type:
-                _logger.debug("Sin tipo de operación, available_lot_ids = False")
-                line.available_lot_ids = False
-                continue
-            
-            # Determinar la ubicación según el tipo de operación
-            if operation_type == 'delivery':
-                # ENTREGA: Buscar lotes en Supp/Existencias
-                supplies_location = self.env['stock.location'].search([
-                    ('complete_name', 'ilike', 'Supp/Existencias'),
-                    ('usage', '=', 'internal'),
-                ], limit=1)
-                
-                if not supplies_location:
-                    _logger.warning("No se encontró la ubicación Supp/Existencias")
-                    line.available_lot_ids = False
-                    continue
-                
-                # Obtener todas las ubicaciones hijas
-                location_ids = self.env['stock.location'].search([
-                    ('id', 'child_of', supplies_location.id)
-                ]).ids
-                
-            elif operation_type == 'return':
-                # DEVOLUCIÓN: Buscar lotes en la ubicación del cliente
-                if not partner:
-                    _logger.warning("DEVOLUCIÓN: No hay cliente seleccionado en el wizard")
-                    line.available_lot_ids = False
-                    continue
-                
-                # Acceder a la ubicación del cliente
-                customer_location = partner.property_stock_customer
-                if not customer_location:
-                    _logger.warning("DEVOLUCIÓN: Cliente %s (ID: %s) no tiene ubicación configurada (property_stock_customer)", 
-                                  partner.name, partner.id)
-                    line.available_lot_ids = False
-                    continue
-                
-                _logger.info("DEVOLUCIÓN: Buscando lotes en ubicación del cliente: %s (ID: %s)", 
-                           customer_location.complete_name, customer_location.id)
-                
-                # Obtener todas las ubicaciones hijas del cliente
-                location_ids = self.env['stock.location'].search([
-                    ('id', 'child_of', customer_location.id)
-                ]).ids
-                
-                _logger.debug("DEVOLUCIÓN: Ubicaciones incluidas (hijas): %s", location_ids)
-            else:
-                line.available_lot_ids = False
-                continue
-            
-            # Buscar quants en la ubicación correspondiente con cantidad > 0
-            quants = self.env['stock.quant'].search([
-                ('location_id', 'in', location_ids),
-                ('quantity', '>', 0),
-                ('lot_id', '!=', False),
-            ])
-            
-            _logger.debug("%s: Quants encontrados: %d en ubicaciones %s", 
-                         operation_type.upper(), len(quants), location_ids[:5] if location_ids else [])
-            
-            # Sin seriales: Clasificación Componente + Categoría de activo COMPONENTES
-            lot_ids = line._filter_lots_excluding_route_components(
-                quants.mapped('lot_id')
-            )
-            line.available_lot_ids = lot_ids
-            
-            _logger.info("Lotes disponibles para línea (operación: %s, cliente: %s): %d lotes", 
-                         operation_type or 'N/A', partner.name if partner else 'N/A', len(lot_ids))
-
     product_id = fields.Many2one(
         'product.product',
         string='Producto',
-        related='lot_id.product_id',
-        readonly=True,
-        store=False
+        domain="[('id', 'in', available_product_ids)]",
+        help='Productos con stock disponible en la ubicación de la operación.',
     )
+
+    lot_id = fields.Many2one(
+        'stock.lot',
+        string='Número de Serie',
+        domain="[('id', 'in', available_lot_ids)]",
+        help='Seriales del producto elegido en la ubicación correspondiente.',
+    )
+
+    available_product_ids = fields.Many2many(
+        'product.product',
+        related='wizard_id.route_available_product_ids',
+        readonly=True,
+    )
+
+    available_lot_ids = fields.Many2many(
+        'stock.lot',
+        string='Lotes disponibles',
+        compute='_compute_available_lot_ids',
+        store=False,
+    )
+
+    @api.depends('product_id', 'wizard_id.route_available_lot_ids')
+    def _compute_available_lot_ids(self):
+        for line in self:
+            lots = line.wizard_id.route_available_lot_ids
+            if line.product_id:
+                lots = lots.filtered(
+                    lambda lot: lot.product_id == line.product_id
+                )
+            line.available_lot_ids = lots
 
     quantity = fields.Float(
         string='Cantidad',
@@ -940,25 +963,43 @@ class DeliveryRouteTriggerWizardLine(models.TransientModel):
         readonly=True
     )
 
-    @api.model_create_multi
-    def create(self, vals_list):
-        """Forzar cálculo de available_lot_ids al crear líneas."""
-        lines = super().create(vals_list)
-        # Forzar recálculo del campo computed después de crear
-        for line in lines:
-            if line.wizard_id:
-                line._compute_available_lot_ids()
-        return lines
-    
+    dup_plus = fields.Boolean(
+        string='+',
+        default=False,
+        help='Marque para copiar esta fila (mismo producto, serial vacío).',
+    )
+    dup_extra_count = fields.Integer(
+        string='+N',
+        default=0,
+        help='Escriba cuántas filas más del mismo producto (ej. 9 para completar 10).',
+    )
+
     @api.onchange('wizard_id')
     def _onchange_wizard_id(self):
-        """Recalcular lotes disponibles cuando se asigna el wizard."""
         if self.wizard_id:
             self._compute_available_lot_ids()
 
+    @api.onchange('product_id')
+    def _onchange_product_id(self):
+        if self.lot_id and (
+            not self.product_id
+            or self.lot_id.product_id != self.product_id
+        ):
+            self.lot_id = False
+
     @api.onchange('lot_id')
     def _onchange_lot_id(self):
-        """Actualizar cantidad por defecto cuando se selecciona un lote."""
-        if self.lot_id and self.lot_id.product_id and not self.quantity:
-            self.quantity = 1.0
+        if self.lot_id:
+            self.product_id = self.lot_id.product_id
+            if not self.quantity:
+                self.quantity = 1.0
+
+    def _prepare_duplicate_line_vals(self):
+        self.ensure_one()
+        return {
+            'wizard_id': self.wizard_id.id,
+            'product_id': self.product_id.id,
+            'quantity': self.quantity,
+            'lot_id': False,
+        }
 

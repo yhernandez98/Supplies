@@ -210,19 +210,31 @@ def mesa_acta_lot_devolucion_ticket_detail_html(env, lot):
                 ('state', '=', 'assigned'),
                 ('contact_id', '=', False),
             ])
-    return Markup('').join([
-        Markup(mesa_ticket_html_section_title_helpdesk(env._('Información del equipo'))),
-        Markup(mesa_ticket_html_kv_table(_mesa_lot_main_info_rows(env, lot))),
-        Markup(mesa_ticket_html_section_title_helpdesk(env._('Licencias del equipo'))),
-        Markup(mesa_ticket_html_data_table(
+    parts = []
+    kv_html = mesa_ticket_html_kv_table(
+        _mesa_lot_main_info_rows(env, lot),
+        skip_empty_values=True,
+    )
+    if kv_html:
+        parts.append(Markup(
+            mesa_ticket_html_section_title_helpdesk(env._('Información del equipo'))
+        ))
+        parts.append(Markup(kv_html))
+    license_rows = _mesa_license_equipment_rows(eq_lines)
+    if license_rows:
+        parts.append(Markup(
+            mesa_ticket_html_section_title_helpdesk(env._('Licencias del equipo'))
+        ))
+        parts.append(Markup(mesa_ticket_html_data_table(
             [
                 env._('Asignación'), env._('Categoría'), env._('Licencia'),
                 env._('Fecha asignación'), env._('Fecha desasignación'), env._('Estado'),
             ],
-            _mesa_license_equipment_rows(eq_lines),
-            empty_hint=env._('Sin licencias del equipo asignadas.'),
-        )),
-    ])
+            license_rows,
+        )))
+    if not parts:
+        return Markup('')
+    return Markup('').join(parts)
 
 
 def _mesa_license_equipment_snapshot_rows(env, snapshots):

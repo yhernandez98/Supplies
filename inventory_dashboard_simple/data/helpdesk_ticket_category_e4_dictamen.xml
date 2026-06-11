@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="helpdesk_category_return_e4_dictamen" model="helpdesk.ticket.category">
+        <field name="name">Verificación E4 — Devolución</field>
+        <field name="default_priority">1</field>
+        <field name="default_urgency">2</field>
+        <field name="default_impact">2</field>
+    </record>
+</odoo>

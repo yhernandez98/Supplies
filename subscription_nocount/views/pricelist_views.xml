@@ -1,5 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <!-- Al abrir la lista de precios, mostrar primero "Precios recurrentes" (pestaña por defecto). -->
+    <record id="view_pricelist_form_recurring_tab_first" model="ir.ui.view">
+        <field name="name">product.pricelist.form.recurring.tab.first</field>
+        <field name="model">product.pricelist</field>
+        <field name="inherit_id" ref="sale_subscription.product_pricelist_view"/>
+        <field name="priority" eval="55"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[.//field[@name='item_ids']]" position="before">
+                <xpath expr="//page[.//field[@name='subscription_item_ids']]" position="move"/>
+            </xpath>
+        </field>
+    </record>
+
     <!-- Odoo 19: Precios recurrentes = product.pricelist.item con plan_id (pestaña Recurring Prices).
          Añadimos columnas Cantidad y Moneda para discriminar COP/USD (suscripciones dependen de esto). -->
     <record id="view_pricelist_form_inherit_currency" model="ir.ui.view">

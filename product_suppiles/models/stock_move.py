@@ -298,6 +298,7 @@ class StockMove(models.Model):
                 'form_view_initial_mode': 'edit',  # Abrir en modo edición
                 # En el modal por ruta no propagar usuario a otros seriales relacionados.
                 'from_route_lot_editor': True,
+                'route_editor_picking_id': picking.id if picking else False,
                 # Licencias (equipo/usuario): usar alcance del destino final de la ruta.
                 'force_license_location_id': final_location.id if final_location else False,
                 'force_license_partner_id': final_partner.id if final_partner else False,

@@ -249,8 +249,22 @@ def mesa_ticket_html_section_title_helpdesk(title):
     ) % (_MESA_TICKET_SECTION_TITLE, escape(title), _MESA_TICKET_DETAIL_BAR)
 
 
-def mesa_ticket_html_kv_table(rows):
+def _mesa_kv_cell_has_content(value):
+    if value is None:
+        return False
+    text = str(value).strip()
+    return bool(text) and text not in ('—', '-', '&#160;', '&nbsp;')
+
+
+def mesa_ticket_html_kv_table(rows, skip_empty_values=False):
     """Tabla dos columnas (etiqueta azul claro / valor blanco)."""
+    if skip_empty_values:
+        rows = [
+            (label, value) for label, value in rows
+            if _mesa_kv_cell_has_content(value)
+        ]
+    if not rows:
+        return ''
     body = []
     for label, value in rows:
         body.append(

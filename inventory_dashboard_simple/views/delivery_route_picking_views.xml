@@ -19,8 +19,13 @@
                                    readonly="1"
                                    nolabel="1"/>
                         </div>
-                        <p class="o_route_wizard_subtitle">
+                        <p class="o_route_wizard_subtitle"
+                           invisible="invdash_delivery_route_stage_label and 'Cliente' in invdash_delivery_route_stage_label">
                             Ruta de entrega Supplies — complete los datos del serial en cada etapa antes de validar.
+                        </p>
+                        <p class="o_route_wizard_subtitle"
+                           invisible="not invdash_delivery_route_stage_label or 'Cliente' not in invdash_delivery_route_stage_label">
+                            Ruta de devolución Supplies — en E4 clasifique el destino de cada serial y asociado.
                         </p>
                     </div>
                 </div>

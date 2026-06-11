@@ -1,0 +1,369 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_helpdesk_ticket_return_e4_item_tree" model="ir.ui.view">
+        <field name="name">helpdesk.ticket.return.e4.item.tree</field>
+        <field name="model">helpdesk.ticket.return.e4.item</field>
+        <field name="arch" type="xml">
+            <list editable="bottom" create="0" delete="0">
+                <field name="line_role" string="Rol" readonly="1"/>
+                <field name="lot_id" string="Serial" readonly="1"/>
+                <field name="product_id" string="Producto" readonly="1"/>
+                <field name="destination" string="Destino"
+                       readonly="is_bundled_component"/>
+                <field name="dictamen_state" string="Estado E4" optional="show"/>
+                <field name="line_note" string="Nota" optional="hide"/>
+                <field name="is_bundled_component" column_invisible="1"/>
+                <field name="dictamen_line_id" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_helpdesk_ticket_form_return_e4_dictamen" model="ir.ui.view">
+        <field name="name">helpdesk.ticket.form.return.e4.dictamen</field>
+        <field name="model">helpdesk.ticket</field>
+        <field name="inherit_id" ref="mesa_ayuda_inventario.view_helpdesk_ticket_form_inherit_category"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='category_id']" position="after">
+                <field name="mesa_ticket_edit_blocked" invisible="1"/>
+                <field name="invdash_return_e4_is_dictamen_ticket" invisible="1"/>
+                <field name="invdash_return_e4_dictamen_line_id" invisible="1"/>
+                <field name="invdash_return_e4_item_count" invisible="1"/>
+                <field name="invdash_return_e4_transfers_done" invisible="1"/>
+                <field name="invdash_return_e4_can_mark_resolved" invisible="1"/>
+                <field name="invdash_return_e4_show_close_ticket_button" invisible="1"/>
+                <field name="invdash_return_e4_transfer_picking_ids" invisible="1"/>
+                <field name="invdash_return_e4_report_state" invisible="1"/>
+                <field name="invdash_return_e4_report_can_edit" invisible="1"/>
+                <field name="invdash_return_e4_principal_lot_id" readonly="1"
+                       invisible="not invdash_return_e4_is_dictamen_ticket"/>
+            </xpath>
+
+            <xpath expr="//field[@name='mesa_acta_origin_visit_ticket_id']" position="after">
+                <field name="invdash_return_e4_origin_ticket_id" readonly="1" string="Origen"
+                       invisible="not invdash_return_e4_origin_ticket_id"/>
+            </xpath>
+
+            <!-- Ocultar pestaña Descripción (el detalle va en Informe de revisión) -->
+            <xpath expr="//field[@name='description']/ancestor::page[1]" position="attributes">
+                <attribute name="invisible">invdash_return_e4_is_dictamen_ticket</attribute>
+            </xpath>
+
+            <!-- Menos ruido en la cabecera del ticket E4 -->
+            <xpath expr="//field[@name='urgency']" position="attributes">
+                <attribute name="invisible">invdash_return_e4_is_dictamen_ticket</attribute>
+            </xpath>
+            <xpath expr="//field[@name='impact']" position="attributes">
+                <attribute name="invisible">invdash_return_e4_is_dictamen_ticket</attribute>
+            </xpath>
+            <xpath expr="//field[@name='location_site']" position="attributes">
+                <attribute name="invisible">invdash_return_e4_is_dictamen_ticket</attribute>
+            </xpath>
+            <xpath expr="//field[@name='date_deadline_response']" position="attributes">
+                <attribute name="invisible">invdash_return_e4_is_dictamen_ticket</attribute>
+            </xpath>
+            <xpath expr="//field[@name='date_deadline_resolution']" position="attributes">
+                <attribute name="invisible">invdash_return_e4_is_dictamen_ticket</attribute>
+            </xpath>
+            <xpath expr="//field[@name='custom_timer_display']" position="attributes">
+                <attribute name="invisible">invdash_return_e4_is_dictamen_ticket</attribute>
+            </xpath>
+            <xpath expr="//field[@name='maintenance_order_id']" position="attributes">
+                <attribute name="invisible">invdash_return_e4_is_dictamen_ticket</attribute>
+            </xpath>
+
+            <xpath expr="//field[@name='email_cc']" position="after">
+                <div class="o_return_e4_ticket_header_actions d-flex flex-row flex-nowrap align-items-center gap-2 mt-2 mb-2"
+                     invisible="not invdash_return_e4_is_dictamen_ticket">
+                    <button name="action_return_e4_execute_transfers"
+                            type="object"
+                            string="Ejecutar Traslados"
+                            class="btn-primary o_return_e4_header_btn"
+                            invisible="invdash_return_e4_transfers_done"
+                            confirm="¿Ejecutar traslados internos según los destinos indicados en la tabla?"/>
+                    <button name="action_return_e4_mark_resolved"
+                            type="object"
+                            string="Cerrar Ticket"
+                            class="btn-success o_return_e4_header_btn"
+                            invisible="not invdash_return_e4_show_close_ticket_button"
+                            confirm="¿Cerrar este ticket de verificación E4?"/>
+                    <button name="action_escalate_ticket"
+                            type="object"
+                            string="Escalar"
+                            class="btn-secondary o_return_e4_header_btn"
+                            icon="fa-level-up"
+                            title="Cambiar equipo o asignar a otra persona"
+                            invisible="not invdash_return_e4_is_dictamen_ticket or mesa_ticket_edit_blocked"/>
+                </div>
+            </xpath>
+
+            <xpath expr="//button[@name='action_escalate_ticket']" position="attributes">
+                <attribute name="invisible">mesa_ticket_edit_blocked or invdash_return_e4_is_dictamen_ticket</attribute>
+            </xpath>
+
+            <xpath expr="//field[@name='description']/ancestor::page[1]" position="after">
+                <page string="Equipos a Verificar" name="return_e4_verification"
+                      invisible="not invdash_return_e4_is_dictamen_ticket">
+                    <div class="o_return_e4_ticket_panel">
+                        <div class="o_return_e4_ticket_hero">
+                            <div>
+                                <h2 class="o_return_e4_ticket_hero__title">
+                                    Verificación E4 — Devolución
+                                </h2>
+                                <p class="o_return_e4_ticket_hero__subtitle">
+                                    Indique el destino de cada serial y ejecute los traslados internos.
+                                </p>
+                            </div>
+                            <field name="invdash_return_e4_dictamen_state" readonly="1"
+                                   class="o_return_e4_ticket_hero__badge fw-bold"/>
+                        </div>
+
+                        <div class="o_return_e4_ticket_cards">
+                            <div class="o_return_e4_ticket_card">
+                                <field name="invdash_return_e4_picking_id" readonly="1"
+                                       string="Albarán E4"/>
+                            </div>
+                            <div class="o_return_e4_ticket_card">
+                                <field name="invdash_return_e4_item_count" readonly="1"
+                                       string="Equipos en ticket"/>
+                            </div>
+                            <div class="o_return_e4_ticket_card"
+                                 invisible="not invdash_return_e4_transfer_at">
+                                <field name="invdash_return_e4_transfer_at" readonly="1"
+                                       string="Traslados ejecutados"/>
+                            </div>
+                            <div class="o_return_e4_ticket_card"
+                                 invisible="not invdash_return_e4_transfer_at">
+                                <field name="invdash_return_e4_transfer_user_id" readonly="1"
+                                       string="Ejecutado por"/>
+                            </div>
+                        </div>
+
+                        <button name="action_open_return_e4_transfer_pickings"
+                                type="object"
+                                string="Ver traslados ejecutados"
+                                class="btn-link mb-3"
+                                invisible="not invdash_return_e4_transfer_picking_ids"/>
+
+                        <div class="alert o_return_e4_ticket_guide" role="alert"
+                             invisible="invdash_return_e4_transfers_done">
+                            <p class="mb-0">1) Indique el <strong>destino</strong> de cada serial en la tabla.</p>
+                            <p class="mb-0">2) Pulse <strong>Ejecutar Traslados</strong> para mover el inventario.</p>
+                            <p class="mb-0">3) Use <strong>Cerrar Ticket</strong> cuando todos tengan destino definido.</p>
+                        </div>
+
+                        <field name="invdash_return_e4_transfer_summary_html"
+                               invisible="not invdash_return_e4_transfer_summary_html"
+                               nolabel="1"/>
+
+                        <div class="o_return_e4_ticket_items_block">
+                            <field name="invdash_return_e4_item_ids" nolabel="1"
+                                   string="Equipos a verificar" readonly="0">
+                                <list editable="bottom" create="0" delete="0">
+                                    <field name="line_role_label" string="Rol" readonly="1"/>
+                                    <field name="line_role" column_invisible="1"/>
+                                    <field name="lot_id" string="Serial" readonly="1"/>
+                                    <field name="product_id" string="Producto" readonly="1"/>
+                                    <field name="destination" string="Destino"
+                                           readonly="is_bundled_component or dictamen_state == 'transferred'"/>
+                                    <field name="equipment_estado" string="Estado"
+                                           readonly="is_bundled_component or dictamen_state == 'transferred'"/>
+                                    <field name="verification_state" column_invisible="1"/>
+                                    <field name="dictamen_state" column_invisible="1"/>
+                                    <field name="state_label" column_invisible="1"/>
+                                    <field name="dictamen_line_id" column_invisible="1"/>
+                                    <field name="is_bundled_component" column_invisible="1"/>
+                                    <field name="report_include" column_invisible="1"/>
+                                </list>
+                            </field>
+                        </div>
+                    </div>
+                </page>
+
+                <page string="Tickets Origen" name="return_e4_origin_followup"
+                      invisible="not invdash_return_e4_is_dictamen_ticket">
+                    <div class="o_return_e4_ticket_panel">
+                        <div class="o_return_e4_ticket_hero">
+                            <div>
+                                <h2 class="o_return_e4_ticket_hero__title">Tickets Origen</h2>
+                                <p class="o_return_e4_ticket_hero__subtitle">
+                                    Seguimiento generado al ejecutar traslados (excepto Existencias).
+                                </p>
+                            </div>
+                        </div>
+                        <field name="invdash_return_e4_followup_ticket_ids" nolabel="1" readonly="1">
+                            <list create="false" delete="false" edit="false">
+                                <field name="name" string="Asunto"/>
+                                <field name="invdash_return_e4_followup_destination_label" string="Destino"/>
+                                <field name="invdash_return_e4_followup_picking_id" string="Albarán traslado"/>
+                                <field name="stage_id" string="Etapa" optional="show"/>
+                                <field name="user_id" string="Asignado a" optional="show"/>
+                                <field name="category_id" string="Categoría" optional="hide"/>
+                            </list>
+                        </field>
+                    </div>
+                </page>
+
+                <page string="Informe de revisión" name="return_e4_review_report"
+                      invisible="not invdash_return_e4_is_dictamen_ticket">
+                    <div class="o_return_e4_ticket_panel">
+                        <div class="o_return_e4_ticket_hero">
+                            <div>
+                                <h2 class="o_return_e4_ticket_hero__title">
+                                    Informe de revisión E4
+                                </h2>
+                                <p class="o_return_e4_ticket_hero__subtitle">
+                                    Guarde borradores mientras avanza y finalice cuando termine la revisión.
+                                </p>
+                            </div>
+                            <field name="invdash_return_e4_report_state" widget="statusbar"
+                                   statusbar_visible="none,draft,done"
+                                   readonly="1"/>
+                        </div>
+
+                        <div class="o_return_e4_ticket_cards">
+                            <div class="o_return_e4_ticket_card"
+                                 invisible="not invdash_return_e4_report_draft_at">
+                                <field name="invdash_return_e4_report_draft_at" readonly="1"
+                                       string="Último borrador"/>
+                            </div>
+                            <div class="o_return_e4_ticket_card"
+                                 invisible="not invdash_return_e4_report_draft_user_id">
+                                <field name="invdash_return_e4_report_draft_user_id" readonly="1"
+                                       string="Borrador por"/>
+                            </div>
+                            <div class="o_return_e4_ticket_card"
+                                 invisible="not invdash_return_e4_report_final_at">
+                                <field name="invdash_return_e4_report_final_at" readonly="1"
+                                       string="Finalizado el"/>
+                            </div>
+                            <div class="o_return_e4_ticket_card"
+                                 invisible="not invdash_return_e4_report_final_user_id">
+                                <field name="invdash_return_e4_report_final_user_id" readonly="1"
+                                       string="Finalizado por"/>
+                            </div>
+                        </div>
+
+                        <div class="alert o_return_e4_ticket_guide" role="alert"
+                             invisible="invdash_return_e4_report_state == 'done'">
+                            <p class="mb-0">1) Marque los equipos e ingrese el <strong>informe</strong> de cada uno.</p>
+                            <p class="mb-0">2) Use <strong>Guardar borrador</strong> para ir avanzando sin cerrar el informe.</p>
+                            <p class="mb-0">3) Al terminar, pulse <strong>Finalizar informe</strong> para guardar el PDF en el ticket.</p>
+                        </div>
+
+                        <div class="alert alert-success o_return_e4_ticket_guide" role="alert"
+                             invisible="invdash_return_e4_report_state != 'done'">
+                            <p class="mb-0">Informe finalizado. El PDF quedó adjunto al ticket.</p>
+                        </div>
+
+                        <div class="o_return_e4_ticket_notes">
+                            <field name="invdash_return_e4_report_observation"
+                                   string="Observaciones del informe"
+                                   placeholder="Observaciones generales que aparecerán en el informe PDF…"
+                                   readonly="not invdash_return_e4_report_can_edit"/>
+                        </div>
+
+                        <div class="o_return_e4_ticket_actions">
+                            <button name="action_return_e4_save_report_draft"
+                                    type="object"
+                                    string="Guardar borrador"
+                                    class="btn-secondary"
+                                    invisible="not invdash_return_e4_report_can_edit"/>
+                            <button name="action_return_e4_finalize_report"
+                                    type="object"
+                                    string="Finalizar informe"
+                                    class="btn-primary"
+                                    invisible="not invdash_return_e4_report_can_edit"
+                                    confirm="¿Finalizar el informe E4? Se generará el PDF y quedará guardado en el ticket."/>
+                            <button name="action_return_e4_reopen_report_draft"
+                                    type="object"
+                                    string="Reabrir borrador"
+                                    class="btn-warning"
+                                    invisible="invdash_return_e4_report_can_edit"/>
+                            <button name="action_return_e4_report_select_all_items"
+                                    type="object"
+                                    string="Seleccionar todos"
+                                    class="btn-secondary"
+                                    invisible="not invdash_return_e4_report_can_edit"/>
+                            <button name="action_return_e4_report_clear_items"
+                                    type="object"
+                                    string="Quitar selección"
+                                    class="btn-secondary"
+                                    invisible="not invdash_return_e4_report_can_edit"/>
+                            <button name="action_return_e4_generate_verification_report"
+                                    type="object"
+                                    string="Vista previa PDF"
+                                    class="btn-link"/>
+                        </div>
+
+                        <div class="o_return_e4_ticket_card mb-3"
+                             invisible="not invdash_return_e4_report_pdf_attachment_id">
+                            <field name="invdash_return_e4_report_pdf_attachment_id"
+                                   string="PDF guardado" readonly="1"/>
+                        </div>
+
+                        <div class="o_return_e4_ticket_items_block">
+                            <field name="invdash_return_e4_item_ids" nolabel="1"
+                                   string="Equipos para el informe"
+                                   readonly="not invdash_return_e4_report_can_edit">
+                                <list editable="bottom" create="0" delete="0">
+                                    <field name="report_include" string="Incluir en informe"
+                                           readonly="parent.invdash_return_e4_report_state == 'done'"/>
+                                    <field name="line_role_label" string="Rol" readonly="1"/>
+                                    <field name="line_role" column_invisible="1"/>
+                                    <field name="lot_id" string="Serial" readonly="1"/>
+                                    <field name="product_id" string="Producto" readonly="1"/>
+                                    <field name="state_label" string="Estado" readonly="1"/>
+                                    <field name="has_report_informe" column_invisible="1"/>
+                                    <field name="show_informe_button" column_invisible="1"/>
+                                    <field name="report_informe_html" column_invisible="1"/>
+                                    <button name="action_open_informe_wizard" type="object"
+                                            string="Informe"
+                                            title="Redactar informe de revisión"
+                                            class="btn-link text-success"
+                                            invisible="not show_informe_button or not has_report_informe"/>
+                                    <button name="action_open_informe_wizard" type="object"
+                                            string="Informe"
+                                            title="Redactar informe de revisión"
+                                            class="btn-link"
+                                            invisible="not show_informe_button or has_report_informe"/>
+                                    <field name="report_review_note" column_invisible="1"/>
+                                    <field name="line_note" string="Nota E4" optional="hide" readonly="1"/>
+                                    <field name="dictamen_state" column_invisible="1"/>
+                                    <field name="dictamen_line_id" column_invisible="1"/>
+                                    <field name="is_bundled_component" column_invisible="1"/>
+                                </list>
+                            </field>
+                        </div>
+                    </div>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_helpdesk_ticket_list_return_e4_dictamen" model="ir.ui.view">
+        <field name="name">helpdesk.ticket.list.return.e4.dictamen</field>
+        <field name="model">helpdesk.ticket</field>
+        <field name="inherit_id" ref="mesa_ayuda_inventario.view_helpdesk_ticket_list"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='user_id']" position="after">
+                <field name="invdash_return_e4_item_count" string="# Equipos E4" optional="show"/>
+                <field name="invdash_return_e4_dictamen_state" string="Estado E4" optional="show"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="action_return_e4_my_dictamen_tickets" model="ir.actions.act_window">
+        <field name="name">Tickets</field>
+        <field name="res_model">helpdesk.ticket</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[
+            ('invdash_return_e4_is_dictamen_ticket', '=', True),
+            ('user_id', '=', uid),
+        ]</field>
+        <field name="context">{}</field>
+        <field name="help" type="html">
+            <p>Tickets de verificación E4. Desde el albarán E4 use el botón
+            <strong>Tickets</strong> para ver solo los de esa orden.</p>
+        </field>
+    </record>
+</odoo>

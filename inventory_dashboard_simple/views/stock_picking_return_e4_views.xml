@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Pestaña dedicada: equipos clasificados (tabla completa, no cortada) -->
+    <record id="view_picking_form_return_e4_classified_archive" model="ir.ui.view">
+        <field name="name">stock.picking.form.return.e4.classified.archive</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.view_picking_form"/>
+        <field name="priority" eval="60"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="Historial de traslados E4"
+                      name="return_e4_classified_archive"
+                      class="o_return_e4_classified_page"
+                      invisible="not invdash_return_e4_show_classified_archive">
+                    <field name="invdash_return_e4_classified" invisible="1"/>
+                    <field name="invdash_return_e4_show_classified_archive" invisible="1"/>
+                    <div class="alert alert-info mb-3" role="alert">
+                        <p class="mb-1">
+                            <strong>E4 verificado.</strong>
+                            El inventario ya se movió con los traslados del bloque
+                            <em>«Traslados internos E4»</em> en este formulario.
+                        </p>
+                        <p class="mb-0">
+                            Resumen de cada serial y el destino al que se envió desde Verificación.
+                        </p>
+                    </div>
+                    <field name="invdash_return_e4_classified_line_ids" nolabel="1" readonly="1"
+                           class="o_return_e4_classified_lines_list">
+                        <list create="0" delete="0" edit="0"
+                              class="o_return_e4_classified_line_list"
+                              default_group_by="group_label"
+                              expand="0">
+                            <field name="group_label" string="Equipo principal"/>
+                            <field name="group_lot_id" column_invisible="1"/>
+                            <field name="group_product_id" column_invisible="1"/>
+                            <field name="line_role" column_invisible="1"/>
+                            <field name="line_role_label" string="Tipo"
+                                   decoration-bf="line_role == 'principal'"
+                                   decoration-info="line_role == 'associated'"
+                                   decoration-muted="line_role == 'bundled'"/>
+                            <field name="product_id" string="Producto"/>
+                            <field name="lot_id" string="Serial"/>
+                            <field name="quantity" string="Cantidad"/>
+                            <field name="destination_label" string="Destino"/>
+                            <field name="destination" column_invisible="1"/>
+                            <field name="line_role_sort" column_invisible="1"/>
+                        </list>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_picking_form_return_e4_classification" model="ir.ui.view">
+        <field name="name">stock.picking.form.return.e4.classification</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.view_picking_form"/>
+        <field name="priority" eval="55"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <field name="invdash_show_return_e4_classify_button" invisible="1"/>
+                <field name="invdash_show_return_e4_my_dictamen_button" invisible="1"/>
+                <field name="invdash_return_e4_classified" invisible="1"/>
+                <field name="invdash_return_e4_dictamen_progress" invisible="1"/>
+                <button name="action_open_return_e4_classification_wizard"
+                        string="Asignación Técnicos"
+                        type="object"
+                        class="btn-primary"
+                        invisible="not invdash_show_return_e4_classify_button"/>
+                <button name="action_open_return_e4_my_dictamen_wizard"
+                        string="Tickets"
+                        type="object"
+                        class="btn-secondary"
+                        invisible="not invdash_show_return_e4_my_dictamen_button"/>
+            </xpath>
+            <xpath expr="//sheet" position="before">
+                <field name="invdash_return_e4_all_dictamen_done" invisible="1"/>
+            </xpath>
+            <xpath expr="//sheet" position="inside">
+                <div class="alert alert-secondary mb-2" role="status"
+                     invisible="not invdash_return_e4_dictamen_progress or invdash_return_e4_all_dictamen_done">
+                    <strong>Verificación E4:</strong>
+                    <field name="invdash_return_e4_dictamen_progress" class="oe_inline" nolabel="1"/>
+                </div>
+            </xpath>
+            <xpath expr="//sheet" position="inside">
+                <field name="invdash_is_return_e4_classification" invisible="1"/>
+                <field name="invdash_return_e4_classified" invisible="1"/>
+                <group string="Traslados internos E4"
+                       class="o_return_e4_classif_pickings_block"
+                       colspan="2"
+                       col="1"
+                       invisible="not invdash_return_e4_classified">
+                    <field name="invdash_return_e4_classification_picking_ids"
+                           nolabel="1"
+                           readonly="1">
+                        <list create="0" delete="0" edit="0">
+                            <field name="name" string="Referencia" optional="hide"/>
+                            <field name="location_id" string="Desde"/>
+                            <field name="location_dest_id" string="A"/>
+                            <field name="scheduled_date" string="Fecha programada"/>
+                            <field name="origin" string="Documento origen"/>
+                            <field name="state" string="Estado" widget="badge"
+                                   decoration-success="state == 'done'"
+                                   decoration-info="state in ('draft', 'waiting', 'confirmed')"
+                                   decoration-warning="state == 'assigned'"/>
+                        </list>
+                    </field>
+                </group>
+                <group string="Seriales del traslado E4"
+                       class="o_return_e4_transfer_serials_block"
+                       colspan="2"
+                       col="1"
+                       invisible="not invdash_is_return_e4_classification">
+                    <field name="move_line_ids" nolabel="1" readonly="1">
+                        <list create="0" delete="0" edit="0">
+                            <field name="product_id" string="Producto"/>
+                            <field name="lot_id" string="Serial"/>
+                            <field name="quantity" string="Cantidad"/>
+                            <field name="location_id" string="Desde"/>
+                            <field name="location_dest_id" string="Hacia"/>
+                        </list>
+                    </field>
+                </group>
+            </xpath>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,74 @@
+/* Clasificación E4 devolución — tablas a ancho completo */
+.o_return_e4_classified_page .o_field_x2many_list,
+.o_return_e4_classif_pickings_block .o_field_x2many_list,
+.o_return_e4_transfer_serials_block .o_field_x2many_list {
+    width: 100%;
+}
+
+.o_return_e4_classified_page .o_list_table,
+.o_return_e4_classif_pickings_block .o_list_table,
+.o_return_e4_transfer_serials_block .o_list_table {
+    width: 100% !important;
+}
+
+.o_return_e4_classified_page .o_field_x2many_list .o_list_renderer,
+.o_return_e4_classif_pickings_block .o_field_x2many_list .o_list_renderer {
+    min-height: 140px;
+}
+
+/* Wizard clasificación E4 — grilla completa */
+.o_return_e4_wizard_lines_field .o_list_renderer {
+    min-height: 200px;
+}
+
+.o_return_e4_wizard_line_list .o_list_table {
+    width: 100% !important;
+}
+
+/* Asignación técnicos E4 — grupos por serial principal */
+.o_return_e4_wizard_lines_field .o_group_header {
+    background: linear-gradient(90deg, #e8fbfb 0%, #f8fdfd 100%) !important;
+    font-weight: 700;
+    color: #2f9493;
+}
+
+.o_return_e4_wizard_line_list tr.o_data_row.text-muted td,
+.o_return_e4_wizard_line_list tr.o_data_row.text-info td {
+    padding-left: 1.25rem;
+}
+
+.o_return_e4_wizard_line_list tr.o_data_row.text-info {
+    font-style: italic;
+}
+
+/* Historial E4 — grupos por producto principal */
+.o_return_e4_classified_page .o_return_e4_classified_line_list .o_group_header {
+    background: linear-gradient(90deg, #d4edda 0%, #f4faf6 55%, #ffffff 100%) !important;
+    font-weight: 700 !important;
+    color: #1e5631 !important;
+    border-top: 2px solid #9fd4a8 !important;
+    padding-top: 0.55rem !important;
+    padding-bottom: 0.55rem !important;
+}
+
+.o_return_e4_classified_page .o_return_e4_classified_line_list .o_group_header .o_group_name {
+    font-size: 0.95rem;
+}
+
+.o_return_e4_classified_page .o_return_e4_classified_line_list tbody tr.o_data_row.fw-bold td {
+    background-color: #f0fdf4 !important;
+}
+
+.o_return_e4_classified_page .o_return_e4_classified_line_list tbody tr.o_data_row.text-info td {
+    background-color: #f8fcfb !important;
+}
+
+.o_return_e4_classified_page .o_return_e4_classified_line_list tbody tr.o_data_row.text-muted td {
+    background-color: #fafbfc !important;
+    font-size: 0.92em;
+}
+
+.o_return_e4_classified_page .o_return_e4_classified_line_list tbody tr.o_data_row.text-info td:first-child,
+.o_return_e4_classified_page .o_return_e4_classified_line_list tbody tr.o_data_row.text-muted td:first-child {
+    padding-left: 1.35rem;
+}

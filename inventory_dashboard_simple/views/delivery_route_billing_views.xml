@@ -11,6 +11,7 @@
                 <field name="name" string="Albarán"/>
                 <field name="origin" string="Ruta"/>
                 <field name="partner_id" string="Cliente"/>
+                <field name="invdash_delivery_route_stage_label" string="Etapa" optional="show"/>
                 <button name="action_open_delivery_billing_lots"
                         type="object"
                         string="Completar seriales"
@@ -52,9 +53,9 @@
                 No hay órdenes pendientes de datos de facturación.
             </p>
             <p>
-                Tras validar la etapa E2 (Alistamiento → Salida), las rutas de entrega en E3 o E4
-                aparecen aquí si falta Servicio, Suscripción, Plazo Renting o Fecha Activación
-                Renting en algún serial. Complete los datos y valide E3 y luego E4.
+                Tras validar la etapa E2 (Alistamiento → Salida), los albaranes en <strong>E3</strong>
+                (Salida → Transporte) aparecen aquí si falta Servicio, Suscripción, Plazo Renting
+                o Fecha Activación Renting en algún serial. Complete los datos y valide E3.
             </p>
         </field>
     </record>

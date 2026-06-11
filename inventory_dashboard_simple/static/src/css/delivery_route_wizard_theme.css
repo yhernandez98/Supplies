@@ -417,3 +417,20 @@
     border-radius: 8px !important;
     font-weight: 600;
 }
+
+/* Duplicar filas — Procesar Ruta */
+.o_route_wizard_line_list .o_route_dup_plus_cell {
+    text-align: center;
+    min-width: 2.5rem;
+}
+.o_route_wizard_line_list .o_route_dup_plus_cell .form-check-input {
+    cursor: pointer;
+    border-color: var(--route-aqua-500);
+}
+.o_route_wizard_line_list .o_route_dup_extra_cell {
+    max-width: 4.5rem;
+}
+.o_route_wizard_line_list .o_route_dup_control_btn {
+    color: var(--route-aqua-600) !important;
+    font-weight: 600;
+}

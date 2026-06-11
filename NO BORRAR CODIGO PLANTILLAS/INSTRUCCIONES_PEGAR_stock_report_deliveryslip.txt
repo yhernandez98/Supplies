@@ -1,0 +1,42 @@
+INSTRUCCIONES — Pegar plantilla stock.report_deliveryslip en Odoo (sin actualizar módulos)
+========================================================================================
+
+1) Modo desarrollador activo.
+
+2) Ir a: Ajustes → Técnico → Interfaz de usuario → Vistas
+
+3) Buscar la vista con Clave (Key): stock.report_deliveryslip
+
+4) Abrir la pestaña ARQUITECTURA.
+
+5) Seleccionar TODO el contenido actual (Ctrl+A) y borrarlo.
+
+6) Abrir el archivo: PASTEAR_EN_ODOO_stock_report_deliveryslip.txt
+
+7) Copiar TODO desde la primera línea:
+   <t t-name="stock.report_deliveryslip">
+   hasta la última línea:
+   </t>
+
+   IMPORTANTE:
+   - No copiar este archivo de instrucciones.
+   - No agregar texto antes ni después del XML.
+   - No copiar desde Word (puede agregar caracteres raros). Usar Notepad++ o VS Code.
+
+8) Pegar en Arquitectura y Guardar.
+
+9) Si da error de validación:
+   - Verificar que la primera línea sea exactamente:
+     <t t-name="stock.report_deliveryslip">
+   - Verificar que NO haya bloque <style> al inicio (Odoo 19 no lo acepta en QWeb).
+
+10) Probar imprimir un albarán de ENTREGA.
+
+11) Revisar Formato de papel "Supplies":
+    - Margen superior recomendado: 45 mm (NO 200 mm).
+
+Layouts requeridos (deben existir como vistas QWeb aparte):
+- custom.layout_acta_entrega
+- custom.layout_acta_devolucion
+
+Archivo de layouts: PASTEAR_EN_ODOO_layouts_encabezado_actas.txt

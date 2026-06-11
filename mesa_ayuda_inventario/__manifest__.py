@@ -13,7 +13,7 @@
     ''',
     'author': 'Supplies De Colombia SAS',
     'category': 'Inventory/Helpdesk',
-    'version': '19.0.1.0.157',
+    'version': '19.0.1.0.161',
     'pre_init_hook': 'mesa_ayuda_inventario.hooks.pre_init_hook',
     'post_init_hook': 'mesa_ayuda_inventario.hooks.post_init_hook',
     'depends': [

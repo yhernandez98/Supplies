@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from odoo import api, fields, models, _
-from odoo.exceptions import UserError
+from odoo.exceptions import AccessError, UserError
+from odoo.osv import expression
 import logging
 
 _logger = logging.getLogger(__name__)
@@ -29,6 +30,16 @@ class InventoryDashboardGroup(models.Model):
         string='Tipos de Operación',
     )
     active = fields.Boolean(string='Mostrar en Dashboard', default=True, help='Si está desactivado, este grupo no se mostrará en el dashboard')
+    access_user_ids = fields.Many2many(
+        'res.users',
+        'inventory_dashboard_group_access_user_rel',
+        'group_id',
+        'user_id',
+        string='Acceso',
+        domain="[('share', '=', False)]",
+        help='Usuarios que ven esta tarjeta en el dashboard. '
+             'Vacío = todos los usuarios internos.',
+    )
     total_count = fields.Integer(string='Total', compute='_compute_counts', store=False)
     open_status_count = fields.Integer(
         string='En Espera',
@@ -61,6 +72,64 @@ class InventoryDashboardGroup(models.Model):
     delay_count = fields.Integer(string='Con Demora', compute='_compute_counts', store=False)
     color = fields.Integer(string='Color', default=0)
     action_open_operations_data = fields.Text(compute='_compute_action_open_operations_data', store=False)
+
+    @api.model
+    def _invdash_dashboard_access_domain(self):
+        """Grupos visibles para el usuario actual en el dashboard kanban."""
+        return [
+            '|',
+            ('access_user_ids', '=', False),
+            ('access_user_ids', 'in', self.env.user.ids),
+        ]
+
+    @api.model
+    def _invdash_apply_dashboard_access_domain(self, domain):
+        if not self.env.context.get('invdash_filter_dashboard_access'):
+            return domain
+        return expression.AND([
+            list(domain or []),
+            self._invdash_dashboard_access_domain(),
+        ])
+
+    @api.model
+    def search(self, domain, offset=0, limit=None, order=None, **kwargs):
+        domain = self._invdash_apply_dashboard_access_domain(domain)
+        return super().search(
+            domain, offset=offset, limit=limit, order=order, **kwargs,
+        )
+
+    @api.model
+    def _search(self, domain, offset=0, limit=None, order=None, **kwargs):
+        domain = self._invdash_apply_dashboard_access_domain(domain)
+        return super()._search(
+            domain, offset=offset, limit=limit, order=order, **kwargs,
+        )
+
+    @api.model
+    def web_search_read(
+        self, domain, specification, offset=0, limit=None, order=None, count_limit=None,
+    ):
+        domain = self._invdash_apply_dashboard_access_domain(domain)
+        return super().web_search_read(
+            domain,
+            specification,
+            offset=offset,
+            limit=limit,
+            order=order,
+            count_limit=count_limit,
+        )
+
+    def _invdash_check_dashboard_access(self):
+        """Bloquea abrir operaciones si el usuario no está en Acceso."""
+        self.ensure_one()
+        if self.env.su:
+            return
+        if self.env.user.has_group('stock.group_stock_manager'):
+            return
+        if self.access_user_ids and self.env.user not in self.access_user_ids:
+            raise AccessError(_(
+                'No tiene acceso al grupo «%s» en el dashboard de inventario.'
+            ) % (self.name,))
 
     @api.depends('picking_type_ids')
     def _compute_status_labels(self):
@@ -162,6 +231,7 @@ class InventoryDashboardGroup(models.Model):
     def open_operations(self):
         """Abrir las operaciones de este grupo (método estándar para kanban click)."""
         self.ensure_one()
+        self._invdash_check_dashboard_access()
         if not self.picking_type_ids:
             return False
 
@@ -242,6 +312,18 @@ class InventoryDashboardGroup(models.Model):
                 'filter_name': 'verificación',
             },
             {
+                'name': 'Garantías',
+                'sequence': 55,
+                'code': 'internal',
+                'filter_name': 'garantía',
+            },
+            {
+                'name': 'PreBaja',
+                'sequence': 58,
+                'code': 'internal',
+                'filter_name': 'prebaja',
+            },
+            {
                 'name': 'Reparaciones',
                 'sequence': 60,
                 'code': 'internal',
@@ -271,39 +353,43 @@ class InventoryDashboardGroup(models.Model):
         existing_groups = self.search([])
         existing_names = existing_groups.mapped('name')
         
-        # Crear grupos que no existen
         for group_config in groups_config:
-            if group_config['name'] in existing_names:
-                continue
-                
-            # Buscar tipos de operación
             domain = [('code', '=', group_config['code'])]
             picking_types = PickingType.search(domain)
-            
-            # Filtrar por nombre si es necesario
             if group_config['filter_name']:
                 picking_types = picking_types.filtered(
                     lambda pt: group_config['filter_name'].lower() in pt.name.lower()
                 )
-            
-            # Si no hay tipos específicos pero hay del código general, usar todos
-            if not picking_types and group_config['filter_name']:
-                picking_types = PickingType.search([('code', '=', group_config['code'])])
-            
-            # Crear el grupo solo si hay tipos de operación
-            if picking_types:
-                try:
-                    group = self.create({
-                        'name': group_config['name'],
-                        'sequence': group_config['sequence'],
-                        'operation_type': group_config['code'],
-                        'picking_type_ids': [(6, 0, picking_types.ids)],
-                    })
-                    _logger.info("Grupo creado: %s con %d tipos de operación", group_config['name'], len(picking_types))
-                except Exception as e:
-                    # Si falla, loguear y continuar con el siguiente
-                    _logger.warning("Error creando grupo %s: %s", group_config['name'], str(e))
-                    continue
+            if not picking_types:
+                continue
+
+            existing = existing_groups.filtered(
+                lambda g: g.name == group_config['name'],
+            )
+            if existing:
+                group = existing[:1]
+                to_add = picking_types - group.picking_type_ids
+                if to_add:
+                    group.picking_type_ids = [(4, pid) for pid in to_add.ids]
+                    _logger.info(
+                        "Grupo %s: añadidos %d tipo(s) de operación",
+                        group_config['name'], len(to_add),
+                    )
+                continue
+
+            try:
+                self.create({
+                    'name': group_config['name'],
+                    'sequence': group_config['sequence'],
+                    'operation_type': group_config['code'],
+                    'picking_type_ids': [(6, 0, picking_types.ids)],
+                })
+                _logger.info(
+                    "Grupo creado: %s con %d tipos de operación",
+                    group_config['name'], len(picking_types),
+                )
+            except Exception as e:
+                _logger.warning("Error creando grupo %s: %s", group_config['name'], str(e))
         
         _logger.info("Inicialización de grupos completada")
 

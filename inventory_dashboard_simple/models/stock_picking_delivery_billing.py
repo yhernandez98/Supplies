@@ -61,6 +61,13 @@ class StockPickingDeliveryBilling(models.Model):
     @api.depends('origin', 'location_id', 'location_dest_id')
     def _compute_invdash_delivery_route_stage(self):
         for picking in self:
+            if picking._origin_is_return_route() and hasattr(
+                picking, '_infer_return_route_stage_from_locations'
+            ):
+                return_stage = picking._infer_return_route_stage_from_locations()
+                if return_stage:
+                    picking.invdash_delivery_route_stage = return_stage
+                    continue
             by_location = picking._infer_delivery_route_stage_from_locations()
             if by_location:
                 picking.invdash_delivery_route_stage = by_location
@@ -84,7 +91,13 @@ class StockPickingDeliveryBilling(models.Model):
             if not stage:
                 stage = picking._infer_delivery_route_stage_from_locations()
             if picking._origin_is_return_route():
-                picking.invdash_delivery_route_stage_label = ''
+                return_titles = {
+                    1: _('E1 — Cliente → Transporte'),
+                    2: _('E2 — Transporte → Devolución'),
+                    3: _('E3 — Devolución → Verificación'),
+                    4: _('E4 — Verificación → clasificar destinos'),
+                }
+                picking.invdash_delivery_route_stage_label = return_titles.get(stage, '')
             else:
                 picking.invdash_delivery_route_stage_label = stage_titles.get(stage, '')
 
@@ -268,37 +281,40 @@ class StockPickingDeliveryBilling(models.Model):
                 lines.append('%s: %s' % (label, ', '.join(missing)))
         return lines
 
+    def _is_delivery_route_e3_billing_menu_picking(self):
+        """Solo albarán E3 (Salida → Transporte) de ruta de entrega — menú Facturación."""
+        self.ensure_one()
+        if self._origin_is_return_route():
+            return False
+        if self._picking_is_transporte_to_client():
+            return False
+        stage_loc = self._infer_delivery_route_stage_from_locations()
+        if stage_loc and stage_loc != 3:
+            return False
+        origin = (self.origin or '').strip()
+        stage_origin = self._route_stage_from_origin(origin)
+        if self._is_route_wizard_origin(origin):
+            return stage_origin == 3
+        if stage_origin == 3:
+            return True
+        return bool(stage_loc == 3 and self._picking_is_salida_to_transporte())
+
     def _invdash_is_delivery_billing_menu_candidate(self):
-        """True si debe aparecer en Consultas → Facturación."""
+        """True si debe aparecer en Consultas → Facturación (solo E3)."""
         self.ensure_one()
         if not self.id:
             return False
         if self.state in ('done', 'cancel'):
             return False
-        if self._origin_is_return_route():
-            return False
-        by_location = self._infer_delivery_route_stage_from_locations()
-        is_route = self._is_route_wizard_origin(self.origin)
-        if not is_route and not by_location:
-            return False
         if not self._delivery_billing_incomplete_lots():
             return False
-        stage = by_location or self._route_stage_from_origin(self.origin or '')
-        if stage in (3, 4):
-            return True
-        if self._is_delivery_route_e3_picking():
-            return True
-        if self._is_delivery_route_e4_billing_gate():
-            return True
-        return False
+        return self._is_delivery_route_e3_billing_menu_picking()
 
     @api.model
     def _search_delivery_billing_pending(self):
         candidates = self.search([
             ('state', 'not in', ('done', 'cancel')),
-            '|',
-            ('origin', '=like', 'Ruta-%'),
-            ('origin', '=like', 'Ruta:%'),
+            ('origin', '=like', 'Ruta%'),
         ])
         return candidates.filtered(lambda p: p._invdash_is_delivery_billing_menu_candidate())
 
@@ -389,6 +405,9 @@ class StockPickingDeliveryBilling(models.Model):
                 ) % body)
 
     def button_validate(self):
+        e4_classify = self._return_route_e4_pre_validate_action()
+        if e4_classify:
+            return e4_classify
         block = self._delivery_route_pre_validate_action()
         if block:
             return block
@@ -529,11 +548,7 @@ class StockPickingDeliveryBilling(models.Model):
     @api.model
     def _recompute_all_delivery_billing_pending(self):
         """Recalcula pendientes (p. ej. tras actualizar el módulo)."""
-        candidates = self.search([
-            '|',
-            ('origin', '=like', 'Ruta-%'),
-            ('origin', '=like', 'Ruta:%'),
-        ])
+        candidates = self.search([('origin', '=like', 'Ruta%')])
         if candidates:
             candidates._compute_invdash_delivery_route_stage()
             candidates._compute_invdash_delivery_billing_pending()
@@ -571,6 +586,12 @@ class StockLotDeliveryBilling(models.Model):
     show_delivery_route_e1_minimal_form = fields.Boolean(
         string='Formulario reducido E1',
         compute='_compute_show_delivery_route_e1_minimal_form',
+    )
+    # Obsoleto: se mantiene por compatibilidad con vistas XML antiguas en servidor.
+    # Siempre False: en E2 deben verse elementos asociados y licencias.
+    show_delivery_route_e2_plates_form = fields.Boolean(
+        string='Formulario reducido E2 (obsoleto)',
+        compute='_compute_show_delivery_route_e2_plates_form',
     )
 
     invdash_delivery_billing_complete = fields.Boolean(
@@ -655,26 +676,50 @@ class StockLotDeliveryBilling(models.Model):
                 'show_delivery_route_e1_minimal_form'
             ]
 
+    @api.depends_context(
+        'from_route_lot_editor', 'delivery_route_stage', 'route_editor_picking_id',
+    )
+    def _compute_show_delivery_route_e2_plates_form(self):
+        for lot in self:
+            lot.show_delivery_route_e2_plates_form = False
+
     def web_read(self, specification):
         """Odoo 19: asegurar flags de etapa en el modal del serial (depends_context)."""
         spec = dict(specification or {})
-        flag_names = (
+        visibility_flag_names = (
             'show_delivery_route_e3_billing_fields',
             'show_delivery_route_cost_fields',
             'show_delivery_route_e1_minimal_form',
+            'show_delivery_route_e2_plates_form',
+        )
+        # Campos usados en invisible= de la vista; solo asegurar que entren al spec.
+        modifier_field_names = (
+            'lot_valuated',
+            'lot_classification',
+            'show_subscription_service_fields',
         )
         ctx = self.env.context
-        if ctx.get('from_route_lot_editor') or ctx.get('route_editor_picking_id'):
-            for name in flag_names:
+        is_route_editor = bool(
+            ctx.get('from_route_lot_editor') or ctx.get('route_editor_picking_id')
+        )
+        # Solo en lectura del formulario principal del serial (no sublecturas de componentes).
+        is_main_lot_form = is_route_editor and (
+            'inventory_plate' in spec
+            or 'lot_supply_line_sin_costo_ids' in spec
+            or 'lot_supply_line_con_costo_ids' in spec
+        )
+        if is_main_lot_form:
+            for name in visibility_flag_names + modifier_field_names:
                 spec.setdefault(name, {})
         result = super().web_read(spec)
-        if not (ctx.get('from_route_lot_editor') or ctx.get('route_editor_picking_id')):
+        if not is_main_lot_form:
             return result
         flags = self._delivery_route_lot_visibility_flags(self.env)
+        flags['show_delivery_route_e2_plates_form'] = False
         for vals in result:
-            for name in flag_names:
+            for name in visibility_flag_names:
                 if name in spec:
-                    vals[name] = flags[name]
+                    vals[name] = flags.get(name, False)
         return result
 
     @api.depends(

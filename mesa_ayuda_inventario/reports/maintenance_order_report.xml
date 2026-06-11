@@ -109,7 +109,7 @@
                                     </td>
                                     <td class="mesa-os-label">Teléfono</td>
                                     <td>
-                                        <t t-if="partner"><t t-esc="partner.phone or partner.mobile or '—'"/></t>
+                                        <t t-if="partner"><t t-esc="partner.phone or '—'"/></t>
                                         <t t-else="">—</t>
                                     </td>
                                 </tr>

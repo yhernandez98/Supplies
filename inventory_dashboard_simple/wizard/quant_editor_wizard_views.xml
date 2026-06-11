@@ -64,51 +64,7 @@
             <field name="binding_model_id" ref="stock.model_stock_lot"/>
             <field name="binding_view_types">form</field>
             <field name="state">code</field>
-            <field name="code">
-# Obtener el lote activo
-if context.get('active_ids'):
-    lot_ids = context.get('active_ids')
-else:
-    lot_ids = [context.get('active_id')] if context.get('active_id') else []
-
-if not lot_ids:
-    raise UserError('No se encontró el lote seleccionado.')
-
-lot = env['stock.lot'].browse(lot_ids[0])
-if not lot.exists():
-    raise UserError('El lote seleccionado no existe.')
-
-# Verificar que el lote tenga ID (esté guardado)
-if not lot.id or lot._origin.id == False:
-    raise UserError('Debe guardar el lote primero antes de actualizar la cantidad.')
-
-# Buscar ubicación Supp/Existencias por defecto
-supplies_location = env['stock.location'].search([
-    ('complete_name', 'ilike', 'Supp/Existencias'),
-    ('usage', '=', 'internal'),
-], limit=1)
-
-# Construir contexto con TODA la información necesaria
-wizard_context = {
-    'default_lot_id': lot.id,
-    'default_location_id': supplies_location.id if supplies_location else False,
-    'active_id': lot.id,
-    'active_model': 'stock.lot',
-}
-
-# CRÍTICO: Agregar producto del lote SIEMPRE si existe
-if lot.product_id:
-    wizard_context['default_product_id'] = lot.product_id.id
-
-action = {
-    'type': 'ir.actions.act_window',
-    'name': 'Actualizar Cantidad de Inventario',
-    'res_model': 'quant.editor.wizard',
-    'view_mode': 'form',
-    'target': 'new',
-    'context': wizard_context,
-}
-            </field>
+            <field name="code">action = records.action_open_quant_editor()</field>
         </record>
 
         <!-- Corregir cantidad a 1 (menú Acciones en lista de stock.quant) -->

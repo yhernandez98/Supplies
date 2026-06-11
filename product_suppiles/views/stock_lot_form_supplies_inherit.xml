@@ -123,10 +123,11 @@
                                             <field name="available_product_ids" invisible="1" column_invisible="1"/>
                                             <field name="product_id" domain="[('id', 'in', available_product_ids)]" options="{'no_create': True}"/>
                                             <field name="quantity" invisible="1" column_invisible="1"/>
-                                            <field name="related_lot_id" required="1" string="Serial"/>
+                                            <field name="related_lot_id" required="1" string="Serial"
+                                                   context="{'supply_line_serial_pick': True, 'supply_line_product_id': product_id, 'supply_line_parent_lot_id': lot_id, 'supply_line_has_cost': has_cost, 'supply_line_id': id}"
+                                                   options="{'no_create': True}"/>
                                             <field name="has_associated_items" column_invisible="1"/>
                                             <field name="associated_items_summary" string="Tiene asociado" readonly="1" widget="text" decoration-info="has_associated_items == True"/>
-                                            <field name="associated_items_serials" column_invisible="1" invisible="1" widget="many2many" options="{'no_create': True, 'no_open': True}"/>
                                             <field name="associated_items_serials_display" string="Serial" readonly="1" widget="text" decoration-info="has_associated_items == True"/>
                                             <field name="uom_id" invisible="1" column_invisible="1"/>
                                         </list>
@@ -138,7 +139,9 @@
                                                     <field name="available_product_ids" invisible="1"/>
                                                     <field name="product_id" domain="[('id', 'in', available_product_ids)]" options="{'no_create': True}"/>
                                                     <field name="quantity"/>
-                                                    <field name="related_lot_id" required="1"/>
+                                                    <field name="related_lot_id" required="1"
+                                                           context="{'supply_line_serial_pick': True, 'supply_line_product_id': product_id, 'supply_line_parent_lot_id': lot_id, 'supply_line_has_cost': has_cost, 'supply_line_id': id}"
+                                                           options="{'no_create': True}"/>
                                                     <field name="uom_id"/>
                                                 </group>
                                             </sheet>
@@ -154,7 +157,9 @@
                                             <field name="available_product_ids" invisible="1" column_invisible="1"/>
                                             <field name="product_id" domain="[('id', 'in', available_product_ids)]" options="{'no_create': True}"/>
                                             <field name="quantity" invisible="1" column_invisible="1"/>
-                                            <field name="related_lot_id" required="1" string="Serial"/>
+                                            <field name="related_lot_id" required="1" string="Serial"
+                                                   context="{'supply_line_serial_pick': True, 'supply_line_product_id': product_id, 'supply_line_parent_lot_id': lot_id, 'supply_line_has_cost': has_cost, 'supply_line_id': id}"
+                                                   options="{'no_create': True}"/>
                                             <field name="cost_additional"
                                                    string="Costo Adicional"
                                                    invisible="1"
@@ -162,7 +167,6 @@
                                             <field name="cost_additional_value" string="Costo Adicional (Valor)"/>
                                             <field name="has_associated_items" column_invisible="1"/>
                                             <field name="associated_items_summary" string="Tiene asociado" readonly="1" widget="text" decoration-info="has_associated_items == True"/>
-                                            <field name="associated_items_serials" column_invisible="1" invisible="1" widget="many2many" options="{'no_create': True, 'no_open': True}"/>
                                             <field name="associated_items_serials_display" string="Serial" readonly="1" widget="text" decoration-info="has_associated_items == True"/>
                                             <field name="uom_id" invisible="1" column_invisible="1"/>
                                         </list>
@@ -177,7 +181,9 @@
                                                            string="Costo Adicional"
                                                            invisible="1"/>
                                                     <field name="quantity"/>
-                                                    <field name="related_lot_id" required="1"/>
+                                                    <field name="related_lot_id" required="1"
+                                                           context="{'supply_line_serial_pick': True, 'supply_line_product_id': product_id, 'supply_line_parent_lot_id': lot_id, 'supply_line_has_cost': has_cost, 'supply_line_id': id}"
+                                                           options="{'no_create': True}"/>
                                                     <field name="cost_additional_value" string="Costo Adicional (Valor)" readonly="1"/>
                                                     <field name="uom_id"/>
                                                 </group>

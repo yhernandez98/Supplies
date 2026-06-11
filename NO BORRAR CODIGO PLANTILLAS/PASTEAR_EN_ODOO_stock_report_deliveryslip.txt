@@ -1,14 +1,4 @@
 <t t-name="stock.report_deliveryslip">
-    <style type="text/css">
-        /* Sustituye al antiguo div.page: evita conflicto con span.page/span.topage del motor PDF */
-        .o_stock_delivery_sheet {
-            width: 100%;
-            box-sizing: border-box;
-        }
-        .o_acta_header_repeat {
-            display: block;
-        }
-    </style>
     <t t-call="web.html_container">
         <t t-if="not docs and doc" t-set="docs" t-value="doc"/>
         <t t-foreach="docs" t-as="picking">
@@ -17,7 +7,6 @@
             <t t-if="_is_devolucion">
                 <t t-set="o" t-value="picking"/>
                 <t t-call="custom.layout_acta_devolucion">
-                    <div class="page o_report_layout_standard" t-att-data-oe-model="picking._name" t-att-data-oe-id="picking.id" t-att-data-oe-lang="env.lang">
                         <div class="o_stock_delivery_sheet" style="font-family:Helvetica, Arial, sans-serif; font-size:9px;">
 
                         <!-- ========== ACTA DE DEVOLUCIÓN ========== -->
@@ -72,7 +61,7 @@
                             <tr>
                                 <td style="border:none; padding:4px 8px 4px 0; font-weight:bold; text-align:left; vertical-align:top;">TEL:</td>
                                 <td style="border:none; padding:4px 0; text-align:left; vertical-align:top;">
-                                    <span t-esc="((picking.partner_id.phone or picking.partner_id.mobile) if picking.partner_id else '')"/>
+                                    <span t-esc="(picking.partner_id.phone if picking.partner_id else '')"/>
                                 </td>
                             </tr>
                             <tr>
@@ -117,8 +106,8 @@
                                 <td style="border:none; padding:5px 3px; text-align:center; vertical-align:middle;">PLACA<br/>INVENTARIO</td>
                                 <td style="border:none; padding:5px 3px; text-align:center; vertical-align:middle;">PLACA<br/>SEGURIDAD</td>
                             </tr>
-                            <t t-foreach="sorted(picking.move_line_ids or [], key=lambda l: (l.product_id.display_name or '', l.lot_id.name or ''))" t-as="line">
-                                <tr>
+                            <t t-foreach="picking.move_line_ids" t-as="line">
+                                <tr t-if="line.product_id">
                                     <td style="border:1px solid #000; border-top:1px solid #000; padding:3px 2px; text-align:center; vertical-align:middle; word-wrap:break-word;">
                                         <span t-esc="(line.product_id.product_tmpl_id.asset_class_id.name if line.product_id and line.product_id.product_tmpl_id and line.product_id.product_tmpl_id.asset_class_id else (line.product_id.categ_id.name if line.product_id and line.product_id.categ_id else ''))"/>
                                     </td>
@@ -182,12 +171,11 @@
                             <div style="margin-top:6px; display:inline-block; max-width:8cm; text-align:left;">
                                 <img t-att-src="image_data_uri(picking.signature)" style="max-height:4cm; max-width:8cm; display:block;"/>
                                 <div t-if="picking.partner_id.name" style="margin-top:8px;">
-                                    <span t-field="picking.partner_id.name"/>
+                                    <span t-esc="picking.partner_id.name"/>
                                 </div>
                             </div>
                         </div>
                         </div>
-                    </div>
                 </t>
             </t>
             <t t-elif="picking.picking_type_id.code == 'incoming'">
@@ -321,7 +309,6 @@
             <t t-else="">
                 <t t-set="o" t-value="picking"/>
                 <t t-call="custom.layout_acta_entrega">
-                    <div class="page o_report_layout_standard" t-att-data-oe-model="picking._name" t-att-data-oe-id="picking.id" t-att-data-oe-lang="env.lang">
                         <div class="o_stock_delivery_sheet" style="font-family:Helvetica, Arial, sans-serif; font-size:9px;">
 
                         <!-- ========== ACTA DE ENTREGA ========== -->
@@ -375,7 +362,7 @@
                             <tr>
                                 <td style="border:none; padding:4px 8px 4px 0; font-weight:bold; text-align:left; vertical-align:top;">TEL:</td>
                                 <td style="border:none; padding:4px 0; text-align:left; vertical-align:top;">
-                                    <span t-esc="((picking.partner_id.phone or picking.partner_id.mobile) if picking.partner_id else '')"/>
+                                    <span t-esc="(picking.partner_id.phone if picking.partner_id else '')"/>
                                 </td>
                             </tr>
                             <tr>
@@ -419,8 +406,8 @@
                                 <td style="border:none; padding:5px 3px; text-align:center; vertical-align:middle;">PLACA<br/>INVENTARIO</td>
                                 <td style="border:none; padding:5px 3px; text-align:center; vertical-align:middle;">PLACA<br/>SEGURIDAD</td>
                             </tr>
-                            <t t-foreach="sorted(picking.move_line_ids or [], key=lambda l: (l.product_id.display_name or '', l.lot_id.name or ''))" t-as="line">
-                                <tr>
+                            <t t-foreach="picking.move_line_ids" t-as="line">
+                                <tr t-if="line.product_id">
                                     <td style="border:1px solid #000; border-top:1px solid #000; padding:3px 2px; text-align:center; vertical-align:middle; word-wrap:break-word;">
                                         <span t-esc="(line.product_id.product_tmpl_id.asset_class_id.name if line.product_id and line.product_id.product_tmpl_id and line.product_id.product_tmpl_id.asset_class_id else (line.product_id.categ_id.name if line.product_id and line.product_id.categ_id else ''))"/>
                                     </td>
@@ -443,7 +430,6 @@
                             </t>
                         </table>
 
-                        <t t-set="_main_lines_delivery" t-value="sorted((picking.move_line_ids or []).filtered_domain([('supply_kind', '=', 'parent')]), key=lambda l: (l.product_id.display_name or '', l.lot_id.name or ''))"/>
                         <table style="width:100%; border-collapse:collapse; font-size:9px; margin-top:8px;">
                             <tr>
                                 <td style="background-color:#0068b3; color:#fff; text-align:center; font-weight:bold; border:1px solid #000; padding:2px;">
@@ -458,57 +444,40 @@
                                             <span t-esc="picking.note"/>
                                         </div>
                                     </t>
-                                    <t t-if="_main_lines_delivery">
-                                        <div style="font-weight:bold; margin:2px 0 6px 0;">
-                                            DETALLES:
-                                        </div>
-                                        <t t-foreach="_main_lines_delivery" t-as="ml">
+                                    <div style="font-weight:bold; margin:2px 0 6px 0;">
+                                        DETALLES:
+                                    </div>
+                                    <t t-foreach="picking.move_line_ids" t-as="ml">
+                                        <t t-if="ml.supply_kind == 'parent'">
                                             <div style="margin:0 0 6px 0; padding:4px 6px; border:1px solid #d0d0d0;">
                                                 <t t-set="_ml_lot" t-value="ml.lot_id"/>
                                                 <t t-set="_ml_user_name" t-value="(_ml_lot and _ml_lot.related_partner_id and _ml_lot.related_partner_id.name) or ''"/>
-                                                <t t-set="_ml_user_lics" t-value="(_ml_lot and _ml_lot.license_user_ids.filtered_domain([('state', '=', 'assigned')])) or env['license.equipment'].browse([])"/>
-                                                <t t-set="_ml_eq_lics" t-value="(_ml_lot and _ml_lot.license_equipment_ids.filtered_domain([('state', '=', 'assigned')])) or env['license.equipment'].browse([])"/>
-                                                <t t-set="_ml_costo_acta" t-value="_ml_lot.id and _ml_lot.get_acta_entrega_subscription_service_price_safe() or ''"/>
-                                                <t t-set="_ml_costo_acta_show" t-value="(_ml_costo_acta[:-3] if _ml_costo_acta.endswith(',00') else (_ml_costo_acta[:-3] if _ml_costo_acta.endswith('.00') else _ml_costo_acta)) if _ml_costo_acta else ''"/>
                                                 <div style="font-weight:bold;">
                                                     <span t-esc="(ml.product_id and ml.product_id.name) or ''"/>
-                                                    <t t-if="ml.product_id and ml.product_id.product_tmpl_id and ml.product_id.product_tmpl_id.model_name and (ml.product_id.product_tmpl_id.model_name not in ((ml.product_id.name or '').upper()))">
-                                                        <span> </span><span t-esc="ml.product_id.product_tmpl_id.model_name"/>
-                                                    </t>
                                                     <t t-if="ml.lot_id and ml.lot_id.name">
                                                         <span>, Serial: </span><span t-esc="ml.lot_id.name"/>
                                                     </t>
                                                 </div>
                                                 <t t-if="_ml_user_name">
-                                                    <div>
-                                                        <strong>Usuario:</strong>
-                                                        <span t-esc="_ml_user_name"/>
-                                                    </div>
+                                                    <div><strong>Usuario:</strong> <span t-esc="_ml_user_name"/></div>
                                                 </t>
-                                                <t t-if="_ml_costo_acta">
-                                                    <div>
-                                                        <strong>Costo:</strong>
-                                                        <span t-esc="_ml_costo_acta_show"/>
-                                                    </div>
+                                                <t t-if="_ml_lot">
+                                                    <t t-set="_ml_costo_raw" t-value="_ml_lot.get_acta_entrega_subscription_service_price_safe()"/>
+                                                    <t t-if="_ml_costo_raw">
+                                                        <div><strong>Costo:</strong> <span t-esc="_ml_costo_raw"/></div>
+                                                    </t>
                                                 </t>
                                                 <t t-if="_ml_lot and _ml_lot.subscription_service_product_id">
-                                                    <div>
-                                                        <strong>Servicio:</strong>
-                                                        <span t-esc="_ml_lot.subscription_service_product_id.display_name"/>
-                                                    </div>
+                                                    <div><strong>Servicio:</strong> <span t-esc="_ml_lot.subscription_service_product_id.display_name"/></div>
                                                 </t>
                                                 <t t-if="_ml_lot and _ml_lot.active_subscription_id">
-                                                    <div>
-                                                        <strong>Suscripción:</strong>
-                                                        <span t-esc="_ml_lot.active_subscription_id.display_name"/>
-                                                    </div>
+                                                    <div><strong>Suscripción:</strong> <span t-esc="_ml_lot.active_subscription_id.display_name"/></div>
                                                 </t>
-                                                <t t-set="_ml_plazo_acta" t-value="_ml_lot.get_acta_reining_plazo_label() if _ml_lot else ''"/>
-                                                <t t-if="_ml_plazo_acta">
-                                                    <div>
-                                                        <strong>Plazo renting:</strong>
-                                                        <span t-esc="_ml_plazo_acta"/>
-                                                    </div>
+                                                <t t-if="_ml_lot">
+                                                    <t t-set="_ml_plazo_acta" t-value="_ml_lot.get_acta_reining_plazo_label()"/>
+                                                    <t t-if="_ml_plazo_acta">
+                                                        <div><strong>Plazo renting:</strong> <span t-esc="_ml_plazo_acta"/></div>
+                                                    </t>
                                                 </t>
                                                 <t t-if="ml.associated_components">
                                                     <div><strong>Componentes:</strong> <span t-esc="ml.associated_components"/></div>
@@ -519,17 +488,8 @@
                                                 <t t-if="ml.associated_peripherals">
                                                     <div><strong>Periféricos:</strong> <span t-esc="ml.associated_peripherals"/></div>
                                                 </t>
-                                                <t t-if="_ml_eq_lics">
-                                                    <div>
-                                                        <strong>Licencias por equipo:</strong>
-                                                        <span t-esc="', '.join(_ml_eq_lics.mapped('service_product_id.display_name'))"/>
-                                                    </div>
-                                                </t>
-                                                <t t-if="_ml_user_lics">
-                                                    <div>
-                                                        <strong>Licencias por usuario:</strong>
-                                                        <span t-esc="', '.join(_ml_user_lics.mapped('service_product_id.display_name'))"/>
-                                                    </div>
+                                                <t t-if="ml.associated_licenses">
+                                                    <div><strong>Licencias:</strong> <span t-esc="ml.associated_licenses"/></div>
                                                 </t>
                                             </div>
                                         </t>
@@ -570,12 +530,11 @@
                             <div style="margin-top:6px; display:inline-block; max-width:8cm; text-align:left;">
                                 <img t-att-src="image_data_uri(picking.signature)" style="max-height:4cm; max-width:8cm; display:block;"/>
                                 <div t-if="picking.partner_id.name" style="margin-top:8px;">
-                                    <span t-field="picking.partner_id.name"/>
+                                    <span t-esc="picking.partner_id.name"/>
                                 </div>
                             </div>
                         </div>
                         </div>
-                    </div>
                 </t>
             </t>
         </t>

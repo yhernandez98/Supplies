@@ -80,7 +80,7 @@ class StockLotSupplyLine(models.Model):
     related_lot_id = fields.Many2one(
         "stock.lot",
         string="Serial",
-        domain="[('id', 'in', available_related_lot_ids)]",
+        index=True,
         help="Serie/Lote del componente; filtrado por producto, ubicación y excluyendo los ya usados.",
     )
     
@@ -114,6 +114,135 @@ class StockLotSupplyLine(models.Model):
     )
 
     @api.model
+    def _supply_line_invalidate_pick_cache(self):
+        if hasattr(self.env, '_supply_line_blocked_cache'):
+            del self.env._supply_line_blocked_cache
+
+    @api.model
+    def _supply_line_location_ids_for_search(self, location):
+        """Ubicaciones (incl. hijas) donde buscar stock para asociar seriales."""
+        if not location:
+            return []
+        cache = getattr(self.env, '_supply_line_loc_child_cache', None)
+        if cache is None:
+            cache = {}
+            self.env._supply_line_loc_child_cache = cache
+        if location.id not in cache:
+            cache[location.id] = self.env['stock.location'].search([
+                ('id', 'child_of', location.id),
+                ('usage', 'in', ('internal', 'transit')),
+            ]).ids
+        return cache[location.id]
+
+    def _resolve_supply_parent_stock_location(self, parent_lot):
+        """Ubicación donde buscar seriales disponibles para asociar al padre."""
+        if not parent_lot:
+            return self.env['stock.location']
+        ctx = self.env.context
+        picking_id = ctx.get('route_editor_picking_id')
+        if ctx.get('from_route_lot_editor') and picking_id:
+            picking = self.env['stock.picking'].browse(int(picking_id))
+            if picking.exists() and picking.location_id:
+                return picking.location_id
+        if getattr(parent_lot, 'current_location_id', False):
+            return parent_lot.current_location_id
+        if parent_lot.location_id:
+            return parent_lot.location_id
+        quant = self.env['stock.quant'].search([
+            ('lot_id', '=', parent_lot.id),
+            ('quantity', '>', 0),
+            ('location_id.usage', 'in', ('internal', 'transit')),
+        ], order='in_date desc, id desc', limit=1)
+        return quant.location_id if quant else self.env['stock.location']
+
+    @api.model
+    def _supply_line_blocked_related_lot_ids(self, exclude_line_id=None, parent_lot=None):
+        """Seriales no disponibles: ya asociados a otro equipo o son equipos principales."""
+        parent_lot_id = parent_lot.id if parent_lot else 0
+        exclude_id = (
+            exclude_line_id
+            if isinstance(exclude_line_id, int) and exclude_line_id > 0
+            else 0
+        )
+        cache = getattr(self.env, '_supply_line_blocked_cache', None)
+        if cache is None:
+            cache = {}
+            self.env._supply_line_blocked_cache = cache
+        cache_key = (exclude_id, parent_lot_id)
+        if cache_key in cache:
+            return cache[cache_key]
+
+        blocked = set()
+        try:
+            cr = self.env.cr
+            if exclude_id:
+                cr.execute(
+                    """
+                    SELECT DISTINCT related_lot_id
+                    FROM stock_lot_supply_line
+                    WHERE related_lot_id IS NOT NULL AND id != %s
+                    """,
+                    (exclude_id,),
+                )
+            else:
+                cr.execute(
+                    """
+                    SELECT DISTINCT related_lot_id
+                    FROM stock_lot_supply_line
+                    WHERE related_lot_id IS NOT NULL
+                    """,
+                )
+            blocked.update(row[0] for row in cr.fetchall())
+            cr.execute(
+                """
+                SELECT DISTINCT lot_id
+                FROM stock_lot_supply_line
+                WHERE lot_id IS NOT NULL
+                """,
+            )
+            blocked.update(row[0] for row in cr.fetchall())
+            if parent_lot_id:
+                blocked.add(parent_lot_id)
+        except Exception:
+            pass
+        cache[cache_key] = blocked
+        return blocked
+
+    def _supply_line_available_related_lot_ids(
+        self, product, parent_lot, has_cost=False, exclude_line_id=None,
+    ):
+        """Seriales candidatos: mismo producto, stock en ubicación del padre/albarán."""
+        if not product or not parent_lot:
+            return []
+        location = self._resolve_supply_parent_stock_location(parent_lot)
+        if not location:
+            return []
+        loc_ids = self._supply_line_location_ids_for_search(location)
+        if not loc_ids:
+            return []
+        quant_domain = [
+            ('product_id', '=', product.id),
+            ('location_id', 'in', loc_ids),
+            ('lot_id', '!=', False),
+            ('quantity', '>', 0),
+        ]
+        if has_cost:
+            quant_domain.append(('lot_id.cost_additional', '=', True))
+        else:
+            quant_domain.append(('lot_id.cost_additional', '=', False))
+        try:
+            candidate_ids = set(
+                self.env['stock.quant'].search(quant_domain).mapped('lot_id').ids
+            )
+        except Exception:
+            candidate_ids = set()
+        blocked = self._supply_line_blocked_related_lot_ids(
+            exclude_line_id=exclude_line_id,
+            parent_lot=parent_lot,
+        )
+        return list(candidate_ids - blocked)
+
+    @api.model
     def default_get(self, fields_list):
         """Asegurar has_cost desde contexto al crear desde Con Costo / Sin Costo."""
         res = super().default_get(fields_list)
@@ -137,6 +266,9 @@ class StockLotSupplyLine(models.Model):
             else:
                 rec.cost_additional_value = 0.0
 
+    @api.depends_context(
+        'from_route_lot_editor', 'route_editor_picking_id', 'delivery_route_stage',
+    )
     @api.depends('item_type', 'lot_id', 'lot_id.location_id', 'has_cost')
     def _compute_available_product_ids(self):
         """Calcular productos disponibles por tipo y ubicación del cliente."""
@@ -149,15 +281,14 @@ class StockLotSupplyLine(models.Model):
             if r.item_type:
                 product_domain.append(('classification', '=', r.item_type))
 
-            # Si no hay lote/ubicación, mantener solo filtro base
-            location = r.lot_id.location_id if r.lot_id else False
+            location = r._resolve_supply_parent_stock_location(r.lot_id)
             if not location:
                 r.available_product_ids = Product.search(product_domain)
                 continue
 
-            # Filtrar productos que realmente tienen serial/lote con stock en la ubicación del cliente.
+            loc_ids = r._supply_line_location_ids_for_search(location)
             quant_domain = [
-                ('location_id', '=', location.id),
+                ('location_id', 'in', loc_ids or [location.id]),
                 ('lot_id', '!=', False),
                 ('quantity', '>', 0),
             ]
@@ -169,12 +300,20 @@ class StockLotSupplyLine(models.Model):
                 quant_domain.append(('lot_id.cost_additional', '=', False))
 
             quants = Quant.search(quant_domain)
-            product_ids_in_location = quants.mapped('product_id').ids
+            exclude_id = r.id if isinstance(r.id, int) and r.id > 0 else None
+            blocked = r._supply_line_blocked_related_lot_ids(
+                exclude_line_id=exclude_id,
+                parent_lot=r.lot_id,
+            )
+            free_product_ids = list({
+                q.product_id.id
+                for q in quants
+                if q.lot_id.id not in blocked
+            })
 
-            if product_ids_in_location:
-                product_domain.append(('id', 'in', product_ids_in_location))
+            if free_product_ids:
+                product_domain.append(('id', 'in', free_product_ids))
             else:
-                # Nada disponible en esa ubicación: dominio vacío.
                 product_domain.append(('id', '=', 0))
 
             r.available_product_ids = Product.search(product_domain)
@@ -201,9 +340,10 @@ class StockLotSupplyLine(models.Model):
             }
 
             # Aviso amigable cuando no hay productos disponibles en la ubicación del cliente.
-            if r.lot_id and r.lot_id.location_id and not r.available_product_ids:
+            location = r._resolve_supply_parent_stock_location(r.lot_id)
+            if r.lot_id and location and not r.available_product_ids:
                 tab_label = _("Elementos Con Costo") if r.has_cost else _("Elementos Sin Costo")
-                location_name = r.lot_id.location_id.display_name or r.lot_id.location_id.name or ''
+                location_name = location.display_name or location.name or ''
                 result['warning'] = {
                     'title': _("Sin Productos Disponibles"),
                     'message': _(
@@ -255,8 +395,24 @@ class StockLotSupplyLine(models.Model):
                     classification = r.product_id.product_tmpl_id.classification
                     if classification in ('component', 'peripheral', 'complement', 'monitor', 'ups', 'spare'):
                         r.item_type = classification
-                        # Forzar recálculo de available_product_ids
                         r._compute_available_product_ids()
+
+            exclude_id = r.id if isinstance(r.id, int) else None
+            available_ids = r._supply_line_available_related_lot_ids(
+                r.product_id,
+                r.lot_id,
+                r.has_cost,
+                exclude_line_id=exclude_id,
+            ) if r.product_id and r.lot_id else []
+            if r.related_lot_id and r.related_lot_id.id not in available_ids:
+                r.related_lot_id = False
+            return {
+                'domain': {
+                    'related_lot_id': (
+                        [('id', 'in', available_ids)] if available_ids else [('id', '=', 0)]
+                    ),
+                },
+            }
 
     @api.constrains("quantity")
     def _check_quantity_positive(self):
@@ -318,156 +474,82 @@ class StockLotSupplyLine(models.Model):
     @api.onchange("product_id", "lot_id")
     def _onchange_filter_related_lot_by_location(self):
         """Filtra lotes disponibles por ubicación, protegido contra errores de instalación."""
-        Quant = self.env["stock.quant"]
         for r in self:
             domain = [("id", "=", 0)]
-            r.related_lot_id = False
-
-            # Proteger contra errores durante instalación
+            if not r.product_id or not r.lot_id:
+                r.related_lot_id = False
+                return {"domain": {"related_lot_id": domain}}
             try:
-                if not r.product_id or not r.lot_id:
-                    return {"domain": {"related_lot_id": domain}}
-                
-                # Verificar que location_id existe y es accesible
-                try:
-                    if not r.lot_id.location_id:
-                        return {"domain": {"related_lot_id": domain}}
-                except Exception:
-                    return {"domain": {"related_lot_id": domain}}
-
-                try:
-                    quants = Quant.search([
-                        ("product_id", "=", r.product_id.id),
-                        ("location_id", "=", r.lot_id.location_id.id),
-                        ("lot_id", "!=", False),
-                        ("quantity", ">", 0),
-                    ])
-                    lot_ids = set(quants.mapped("lot_id").ids)
-                except Exception:
-                    lot_ids = set()
-
-                try:
-                    used_ids_global = set(self.search([
-                        ("related_lot_id", "!=", False),
-                    ]).mapped("related_lot_id").ids)
-                except Exception:
-                    used_ids_global = set()
-
-                try:
-                    used_ids_same_parent = set(self.search([
-                        ("lot_id", "=", r.lot_id.id),
-                        ("related_lot_id", "!=", False),
-                    ]).mapped("related_lot_id").ids)
-                except Exception:
-                    used_ids_same_parent = set()
-
-                blocked = used_ids_global | used_ids_same_parent
-                available_ids = list(lot_ids - blocked)
-
+                exclude_id = r.id if isinstance(r.id, int) else None
+                available_ids = r._supply_line_available_related_lot_ids(
+                    r.product_id,
+                    r.lot_id,
+                    r.has_cost,
+                    exclude_line_id=exclude_id,
+                )
                 if available_ids:
                     domain = [("id", "in", available_ids)]
-
-                if len(available_ids) == 1:
-                    r.related_lot_id = available_ids[0]
+                    if len(available_ids) == 1 and not r.related_lot_id:
+                        r.related_lot_id = available_ids[0]
+                elif not r.related_lot_id:
+                    r.related_lot_id = False
             except Exception:
-                # Si hay error, retornar dominio vacío
                 domain = [("id", "=", 0)]
-
             return {"domain": {"related_lot_id": domain}}
 
 
 
-    @api.model
-    def create(self, vals):
-        # Odoo 19: create() puede recibir lista de dicts (batch); evitar .get sobre list
-        if isinstance(vals, list):
-            return super().create(vals)
+    @api.model_create_multi
+    def create(self, vals_list):
+        if isinstance(vals_list, dict):
+            vals_list = [vals_list]
         ctx = self._context or {}
-        if not vals.get("lot_id") and ctx.get("default_lot_id"):
-            vals["lot_id"] = ctx["default_lot_id"]
-        if not vals.get("item_type") and ctx.get("default_item_type"):
-            vals["item_type"] = ctx["default_item_type"]
-        # Aplicar default_has_cost del contexto para que las líneas creadas desde cada pestaña conserven su tipo (también si la clave está en context aunque sea False)
-        if "has_cost" not in vals and "default_has_cost" in ctx:
-            vals["has_cost"] = bool(ctx["default_has_cost"])
-
-        # IMPORTANTE: Si no se especificó item_type, intentar obtenerlo de la clasificación del producto
-        if not vals.get("item_type") and vals.get("product_id"):
-            product = self.env['product.product'].browse(vals["product_id"])
-            if product.exists() and product.product_tmpl_id and hasattr(product.product_tmpl_id, 'classification'):
-                classification = product.product_tmpl_id.classification
-                if classification in ('component', 'peripheral', 'complement', 'monitor', 'ups', 'spare'):
-                    vals["item_type"] = classification
-
-        rec = super().create(vals)
-
-        # Fallback: si el contexto pedía has_cost=True y no se aplicó en vals, forzar tras crear (p. ej. cuando el inverse se ejecuta antes que el create)
-        if not rec.has_cost and ctx.get("default_has_cost"):
-            rec.has_cost = True
-
-        # Asignar automáticamente el usuario del serial padre al elemento asociado
-        try:
-            if rec.related_lot_id and rec.lot_id:
-                # Obtener el usuario del serial padre
-                parent_user = rec.lot_id.related_partner_id
-                if parent_user:
-                    # Actualizar el usuario del elemento asociado
-                    rec.related_lot_id.related_partner_id = parent_user.id
-        except Exception:
-            # Si hay error (campo no existe, etc.), continuar sin asignar
-            pass
-
-        # Proteger contra errores durante instalación/actualización
-        try:
-            if not rec.related_lot_id and rec.product_id and rec.lot_id:
-                # Verificar que location_id existe y es accesible
-                try:
-                    if not rec.lot_id.location_id:
-                        return rec
-                except Exception:
-                    return rec
-
-                Quant = self.env["stock.quant"]
-
-                try:
-                    quants = Quant.search([
-                        ("product_id", "=", rec.product_id.id),
-                        ("location_id", "=", rec.lot_id.location_id.id),
-                        ("lot_id", "!=", False),
-                        ("quantity", ">", 0),
-                    ])
-                    lot_ids = set(quants.mapped("lot_id").ids)
-                except Exception:
-                    lot_ids = set()
-
-                try:
-                    used_ids_global = set(self.search([
-                        ("related_lot_id", "!=", False),
-                    ]).mapped("related_lot_id").ids)
-                except Exception:
-                    used_ids_global = set()
-
-                try:
-                    used_ids_same_parent = set(self.search([
-                        ("lot_id", "=", rec.lot_id.id),
-                        ("related_lot_id", "!=", False),
-                    ]).mapped("related_lot_id").ids)
-                except Exception:
-                    used_ids_same_parent = set()
-
-                blocked = used_ids_global | used_ids_same_parent
-                available_ids = list(lot_ids - blocked)
-                if available_ids:
-                    rec.related_lot_id = available_ids[0]
-        except Exception:
-            # Si hay error durante instalación, continuar sin asignar related_lot_id
-            pass
-
-        return rec
-
+        prepared = []
+        for vals in vals_list:
+            vals = dict(vals)
+            if not vals.get("lot_id") and ctx.get("default_lot_id"):
+                vals["lot_id"] = ctx["default_lot_id"]
+            if not vals.get("item_type") and ctx.get("default_item_type"):
+                vals["item_type"] = ctx["default_item_type"]
+            if "has_cost" not in vals and "default_has_cost" in ctx:
+                vals["has_cost"] = bool(ctx["default_has_cost"])
+            if not vals.get("item_type") and vals.get("product_id"):
+                product = self.env['product.product'].browse(vals["product_id"])
+                if product.exists() and product.product_tmpl_id and hasattr(product.product_tmpl_id, 'classification'):
+                    classification = product.product_tmpl_id.classification
+                    if classification in ('component', 'peripheral', 'complement', 'monitor', 'ups', 'spare'):
+                        vals["item_type"] = classification
+            prepared.append(vals)
+        records = super().create(prepared)
+        self._supply_line_invalidate_pick_cache()
+        for rec in records:
+            if not rec.has_cost and ctx.get("default_has_cost"):
+                rec.has_cost = True
+            try:
+                if rec.related_lot_id and rec.lot_id:
+                    parent_user = rec.lot_id.related_partner_id
+                    if parent_user:
+                        rec.related_lot_id.related_partner_id = parent_user.id
+            except Exception:
+                pass
+            try:
+                if not rec.related_lot_id and rec.product_id and rec.lot_id:
+                    available_ids = rec._supply_line_available_related_lot_ids(
+                        rec.product_id,
+                        rec.lot_id,
+                        rec.has_cost,
+                        exclude_line_id=rec.id,
+                    )
+                    if available_ids:
+                        rec.related_lot_id = available_ids[0]
+            except Exception:
+                pass
+        return records
 
     def write(self, vals):
         res = super().write(vals)
+        if {'related_lot_id', 'lot_id', 'product_id'} & set(vals):
+            self._supply_line_invalidate_pick_cache()
         
         # Asignar automáticamente el usuario del serial padre a los elementos asociados
         try:
@@ -486,6 +568,8 @@ class StockLotSupplyLine(models.Model):
         
         # Proteger contra errores durante instalación/actualización
         try:
+            if self.env.context.get('invdash_skip_supply_autofill'):
+                return res
             for rec in self:
                 need_autofill = (
                     not rec.related_lot_id and
@@ -493,47 +577,15 @@ class StockLotSupplyLine(models.Model):
                     rec.lot_id
                 )
                 if need_autofill:
-                    # Verificar que location_id existe y es accesible
-                    try:
-                        if not rec.lot_id.location_id:
-                            continue
-                    except Exception:
-                        continue
-
-                    Quant = self.env["stock.quant"]
-
-                    try:
-                        quants = Quant.search([
-                            ("product_id", "=", rec.product_id.id),
-                            ("location_id", "=", rec.lot_id.location_id.id),
-                            ("lot_id", "!=", False),
-                            ("quantity", ">", 0),
-                        ])
-                        lot_ids = set(quants.mapped("lot_id").ids)
-                    except Exception:
-                        lot_ids = set()
-
-                    try:
-                        used_ids_global = set(self.search([
-                            ("related_lot_id", "!=", False),
-                        ]).mapped("related_lot_id").ids)
-                    except Exception:
-                        used_ids_global = set()
-
-                    try:
-                        used_ids_same_parent = set(self.search([
-                            ("lot_id", "=", rec.lot_id.id),
-                            ("related_lot_id", "!=", False),
-                        ]).mapped("related_lot_id").ids)
-                    except Exception:
-                        used_ids_same_parent = set()
-
-                    blocked = used_ids_global | used_ids_same_parent
-                    available_ids = list(lot_ids - blocked)
+                    available_ids = rec._supply_line_available_related_lot_ids(
+                        rec.product_id,
+                        rec.lot_id,
+                        rec.has_cost,
+                        exclude_line_id=rec.id,
+                    )
                     if available_ids:
                         rec.related_lot_id = available_ids[0]
         except Exception:
-            # Si hay error durante instalación, continuar sin asignar related_lot_id
             pass
         return res
 
@@ -546,69 +598,38 @@ class StockLotSupplyLine(models.Model):
         return
 
 
-    @api.depends("product_id", "lot_id")
+    @api.depends_context(
+        'from_route_lot_editor', 'route_editor_picking_id', 'delivery_route_stage',
+    )
+    @api.depends('product_id', 'lot_id', 'has_cost')
     def _compute_available_related_lot_ids(self):
         """Calcula los lotes disponibles para relacionar, evitando problemas durante instalación."""
-        Quant = self.env["stock.quant"]
-        SupplyLine = self.env["stock.lot.supply.line"]
-        # Lotes ya usados en cualquier otra línea (bloqueo global)
-        try:
-            used_global = set(SupplyLine.search([
-                ("related_lot_id", "!=", False),
-            ]).mapped("related_lot_id").ids)
-        except Exception:
-            used_global = set()
-
         for r in self:
-            r.available_related_lot_ids = [(5, 0, 0)]
-            if not r.product_id or not r.lot_id:
-                continue
-            
-            # Verificar que location_id existe y es accesible
-            try:
-                if not r.lot_id.location_id:
-                    continue
-            except Exception:
-                continue
+            exclude_id = r.id if isinstance(r.id, int) else None
+            available_ids = r._supply_line_available_related_lot_ids(
+                r.product_id,
+                r.lot_id,
+                r.has_cost,
+                exclude_line_id=exclude_id,
+            )
+            r.available_related_lot_ids = (
+                [(6, 0, available_ids)] if available_ids else [(5, 0, 0)]
+            )
 
-            try:
-                quants = Quant.search([
-                    ("product_id", "=", r.product_id.id),
-                    ("location_id", "=", r.lot_id.location_id.id),
-                    ("lot_id", "!=", False),
-                    ("quantity", ">", 0),
-                ])
-                candidate_ids = set(quants.mapped("lot_id").ids)
-            except Exception:
-                candidate_ids = set()
+    @staticmethod
+    def _strip_virtual_m2m_from_web_spec(specification):
+        """M2M calculados sin tabla rompen _parseServerValues en listas editables (Odoo 19)."""
+        spec = dict(specification or {})
+        for virtual_m2m in ('available_related_lot_ids', 'associated_items_serials'):
+            spec.pop(virtual_m2m, None)
+        return spec
 
-            try:
-                used_same_parent = set(SupplyLine.search([
-                    ("lot_id", "=", r.lot_id.id),
-                    ("related_lot_id", "!=", False),
-                ]).mapped("related_lot_id").ids)
-            except Exception:
-                used_same_parent = set()
+    def web_read(self, specification):
+        return super().web_read(self._strip_virtual_m2m_from_web_spec(specification))
 
-            # Bloquear lotes ya usados globalmente o en el mismo padre.
-            blocked = used_global | used_same_parent
+    def web_save(self, vals, specification):
+        return super().web_save(vals, self._strip_virtual_m2m_from_web_spec(specification))
 
-            available_ids = list(candidate_ids - blocked)
-
-            # NUEVA LÓGICA: filtrar por Costo Adicional según la pestaña:
-            # - En "Elementos Con Costo" (has_cost=True) solo lotes con cost_additional=True.
-            # - En "Elementos Sin Costo" (has_cost=False) solo lotes con cost_additional=False.
-            if available_ids:
-                lots = self.env["stock.lot"].browse(available_ids)
-                if getattr(r, "has_cost", False):
-                    lots = lots.filtered(lambda l: getattr(l, "cost_additional", False))
-                else:
-                    lots = lots.filtered(lambda l: not getattr(l, "cost_additional", False))
-                available_ids = lots.ids
-
-            if available_ids:
-                r.available_related_lot_ids = [(6, 0, available_ids)]
-    
     @api.depends('related_lot_id', 'related_lot_id.lot_supply_line_ids', 
                  'related_lot_id.lot_supply_line_ids.item_type',
                  'related_lot_id.lot_supply_line_ids.product_id',
